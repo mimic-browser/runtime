@@ -416,3 +416,13 @@ one-second first-evaluation deadline. Focused snapshot lifetime, cancellation,
 serialization, restored callback and author-stack checks pass on Windows and
 Linux. This is a bounded local responsiveness result, not a broad performance
 comparison or a claim that GitHub CI has passed.
+
+The consolidated commit still failed Windows CI: the suspended-navigation
+first evaluation exceeded one second, and visible focus in a large document
+exceeded five seconds. The execution owner's QoS admission previously occurred
+after isolate construction. It now covers construction and snapshot restoration
+as well, with an outer thread pin preserving restoration ownership even on
+constructor failure. Failed post-construction initialization also closes the
+isolate and releases its snapshot instead of abandoning native ownership.
+Both unchanged deadline tests pass three local repetitions; hosted CI remains
+the acceptance check. No assertion deadlines or reference expectations changed.

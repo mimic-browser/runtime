@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"runtime"
 	"sync"
 
 	gov8 "github.com/maclof/gov8"
@@ -87,15 +88,30 @@ func newRuntime(snapshot *gov8.StartupData) (*Runtime, error) {
 }
 
 func (r *Runtime) loop(ready chan<- error) {
+	// Isolate construction and snapshot restoration are latency-sensitive too.
+	// Keep an outer pin until the owner exits: gov8 owns a separate pin and
+	// releases it when construction fails or the isolate is disposed.
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	restorePolicy := configurePageThreadPolicy()
 	// Each Page has an independent isolate. Process-sized nursery defaults
 	// retain 16 MiB per tiny Page after bootstrap with under 2 MiB in use.
 	// Bound only the young generation; the old generation keeps V8 defaults.
 	var iso *gov8.Isolate
 	var err error
-	references, err := bootstrapNativeReferences()
-	if err != nil {
+	fail := func(err error) {
+		if restorePolicy != nil {
+			err = errors.Join(err, restorePolicy())
+		}
+		if iso != nil {
+			err = errors.Join(err, iso.Close())
+		}
 		ready <- errors.Join(err, r.releaseSnapshot())
 		close(r.done)
+	}
+	references, err := bootstrapNativeReferences()
+	if err != nil {
+		fail(err)
 		return
 	}
 	if r.snapshot == nil {
@@ -110,15 +126,12 @@ func (r *Runtime) loop(ready chan<- error) {
 		}
 	}
 	if err != nil {
-		err = errors.Join(err, r.releaseSnapshot())
-		ready <- err
-		close(r.done)
+		fail(err)
 		return
 	}
 	r.actorTID = currentThreadID() // NewIsolate has locked the OS thread.
 	if err := iso.SetCaptureStackTraceForUncaughtExceptions(true, 32); err != nil {
-		ready <- err
-		close(r.done)
+		fail(err)
 		return
 	}
 	// Chrome performs Promise jobs at browser event-loop microtask checkpoints,
@@ -127,13 +140,10 @@ func (r *Runtime) loop(ready chan<- error) {
 	// host Function::Call, bypassing Mimic's scheduler and deadlocking async Web
 	// APIs whose completion is queued as a browser task.
 	if err := iso.SetMicrotasksPolicy(gov8.PolicyExplicit); err != nil {
-		_ = iso.Close()
-		err = errors.Join(err, r.releaseSnapshot())
-		ready <- err
-		close(r.done)
+		fail(err)
 		return
 	}
-	s := &state{isolate: iso, realms: make(map[uint64]*gov8.Context), restoreThreadPolicy: configurePageThreadPolicy()}
+	s := &state{isolate: iso, realms: make(map[uint64]*gov8.Context), restoreThreadPolicy: restorePolicy}
 	r.actorState = s
 	ready <- nil
 	for {
