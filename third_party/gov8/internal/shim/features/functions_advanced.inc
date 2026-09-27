@@ -223,11 +223,16 @@ __declspec(dllexport) int64_t gov8_fa_function_bound_target(
   }
 }
 
-__declspec(dllexport) int64_t gov8_fa_compile_function(
+extern "C" const v8::Function* v8__Mimic__CompilePlatformFunction(
+    const v8::Context*, v8::ScriptCompiler::Source*, size_t, const v8::String**,
+    size_t, const v8::Object**, v8::ScriptCompiler::CompileOptions,
+    v8::ScriptCompiler::NoCacheReason);
+static int64_t CompileFunctionAdvanced(
     v8::Isolate* iso, void* ctxw, void* scope, void* tcw, const char* source,
     int64_t source_length, const char* const* parameters,
     int64_t parameter_count, const char* cache, int64_t cache_length,
-    int32_t consume_cache, void** out, int32_t* cache_rejected) {
+    int32_t consume_cache, void** out, int32_t* cache_rejected,
+    bool platform_bootstrap) {
   ClearErr();
   CtxWrap* context_wrapper = AsCtx(ctxw);
   if (iso == nullptr || context_wrapper == nullptr || !ScopeIs(iso, scope) ||
@@ -292,7 +297,10 @@ __declspec(dllexport) int64_t gov8_fa_compile_function(
     v8__ScriptCompiler__Source__CONSTRUCT(
         source_storage, gov8_snap_impl::DerefLocal(source_string), nullptr,
         cached_data);
-    const v8::Function* compiled = v8__ScriptCompiler__CompileFunction(
+    const auto compile = platform_bootstrap
+        ? v8__Mimic__CompilePlatformFunction
+        : gov8_fa_impl::v8__ScriptCompiler__CompileFunction;
+    const v8::Function* compiled = compile(
         &gov8_snap_impl::DerefLocal(context),
         reinterpret_cast<v8::ScriptCompiler::Source*>(source_storage),
         args.size(), reinterpret_cast<const v8::String**>(args.data()), 0,
@@ -317,6 +325,26 @@ __declspec(dllexport) int64_t gov8_fa_compile_function(
     SetErr("C++ exception in advanced compile function");
     return kErrCpp;
   }
+}
+
+__declspec(dllexport) int64_t gov8_fa_compile_function(
+    v8::Isolate* iso, void* ctxw, void* scope, void* tcw, const char* source,
+    int64_t source_length, const char* const* parameters,
+    int64_t parameter_count, const char* cache, int64_t cache_length,
+    int32_t consume_cache, void** out, int32_t* cache_rejected) {
+  return CompileFunctionAdvanced(
+      iso, ctxw, scope, tcw, source, source_length, parameters, parameter_count,
+      cache, cache_length, consume_cache, out, cache_rejected, false);
+}
+
+__declspec(dllexport) int64_t gov8_fa_compile_platform_function(
+    v8::Isolate* iso, void* ctxw, void* scope, void* tcw, const char* source,
+    int64_t source_length, const char* const* parameters,
+    int64_t parameter_count, const char* cache, int64_t cache_length,
+    int32_t consume_cache, void** out, int32_t* cache_rejected) {
+  return CompileFunctionAdvanced(
+      iso, ctxw, scope, tcw, source, source_length, parameters, parameter_count,
+      cache, cache_length, consume_cache, out, cache_rejected, true);
 }
 
 __declspec(dllexport) void* gov8_fa_function_code_cache_new(

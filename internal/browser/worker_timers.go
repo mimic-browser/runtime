@@ -12,9 +12,9 @@ import (
 // Like Window timers, an interval keeps its public registration ID while its
 // scheduler task changes on every tick. Only the callback outlives registration.
 type workerTimer struct {
-	taskID   uint64
-	active   bool
-	function engine.Value
+	taskID uint64
+	active bool
+	timerInvocation
 }
 
 func (w *DedicatedWorker) hostTimer(_ engine.Value, args []engine.Value) (engine.Value, error) {
@@ -26,10 +26,13 @@ func (w *DedicatedWorker) hostTimer(_ engine.Value, args []engine.Value) (engine
 	if w.timers == nil {
 		w.timers = make(map[uint64]*workerTimer)
 	}
-	registration := &workerTimer{active: true, function: retainRuntimeValue(w.runtime, args[0])}
+	invocation, err := newTimerInvocation(w.runtime, args)
+	if err != nil {
+		return nil, err
+	}
+	registration := &workerTimer{active: true, timerInvocation: invocation}
 	release := func() {
-		releaseRuntimeValues(w.runtime, registration.function)
-		registration.function = nil
+		registration.release(w.runtime)
 	}
 	var id uint64
 	var callback scheduler.Callback
@@ -43,8 +46,8 @@ func (w *DedicatedWorker) hostTimer(_ engine.Value, args []engine.Value) (engine
 		}
 		invoke := func(ctx context.Context) error {
 			receiver := w.runtime.Get("self")
-			result, err := w.runtime.Call(ctx, registration.function, receiver)
-			releaseRuntimeValues(w.runtime, result, receiver)
+			err := registration.invoke(ctx, w.runtime, receiver, w.policy.TrustedTypes().EvalBlocked != "")
+			releaseRuntimeValues(w.runtime, receiver)
 			if !repeat || err != nil || !registration.active || w.isClosed() {
 				release()
 			}
@@ -79,8 +82,7 @@ func (w *DedicatedWorker) hostClearTimer(_ engine.Value, args []engine.Value) (e
 		registration.active = false
 		w.scheduler.Cancel(registration.taskID)
 		delete(w.timers, id)
-		releaseRuntimeValues(w.runtime, registration.function)
-		registration.function = nil
+		registration.release(w.runtime)
 	}
 	return nil, nil
 }

@@ -32,7 +32,7 @@ for (const key of ['xmlEncoding', 'xmlVersion', 'xmlStandalone'])
           }
           value = String(value);
           if (value !== '1.0')
-            throw new DOMException('Only XML version 1.0 is supported', 'NotSupportedError');
+            throw platformDOMException('Only XML version 1.0 is supported', 'NotSupportedError');
           s[key] = value;
         },
   );

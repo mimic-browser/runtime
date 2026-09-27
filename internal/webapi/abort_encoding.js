@@ -7,7 +7,7 @@ const abort = (signal, reason) => {
   s.aborted = true;
   s.reason =
     reason === undefined
-      ? new DOMException('signal is aborted without reason', 'AbortError')
+      ? platformDOMException('signal is aborted without reason', 'AbortError')
       : reason;
   dispatchTrusted(signal, new Event('abort'));
 };
@@ -41,7 +41,7 @@ class AbortSignal extends EventTarget {
     ms = Number(ms);
     if (ms < 0 || !Number.isFinite(ms)) throw new RangeError('Invalid timeout');
     const signal = new AbortSignal(hostToken);
-    setTimeout(() => abort(signal, new DOMException('signal timed out', 'TimeoutError')), ms);
+    setTimeout(() => abort(signal, platformDOMException('signal timed out', 'TimeoutError')), ms);
     return signal;
   }
   static any(signals) {

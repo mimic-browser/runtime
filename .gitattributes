@@ -3,6 +3,7 @@
 *.js text eol=lf
 *.json text eol=lf
 *.py text eol=lf
+*.patch text eol=lf whitespace=-blank-at-eol
 *.md text eol=lf
 *.sum text eol=lf
 *.mod text eol=lf

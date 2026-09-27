@@ -13,35 +13,102 @@ import (
 // operation. The wire contains private reference records, never author objects.
 // Keeping it encoded between owners avoids exporting intermediate JS records
 // through Go and reentering V8 for each argument and result field.
-const frameTransactionSource = `((decodeArgument,decodeKey,encodeKey)=>(reflect,encode)=>{
- const parse=JSON.parse,stringify=JSON.stringify,create=Object.create,keys=Object.keys,setPrototype=Object.setPrototypeOf,isArray=Array.isArray,integer=BigInt;
- const plain=value=>{if(value===null||typeof value!=='object')return value;const out=isArray(value)?setPrototype([],null):create(null),names=keys(value);for(let i=0;i<names.length;i++){const key=names[i];out[key]=plain(value[key])}return out};
- const json=value=>stringify(plain(value));
- const argument=a=>{if(a.kind==='value')return a.value;if(a.kind==='undefined')return undefined;if(a.kind==='bigint')return integer(a.value);if(a.kind==='special-number')return a.value==='NaN'?NaN:a.value==='-0'?-0:a.value==='Infinity'?Infinity:-Infinity;return decodeArgument(json(a))};
- const key=k=>k.kind==='string'?k.value:decodeKey(json(k));
- const argumentsOf=encoded=>{const out=setPrototype([],null);for(let i=0;i<encoded.length;i++)out[i]=argument(encoded[i]);return out};
- const outcome=record=>'{'+'"threw":'+(record.threw?'true':'false')+',"value":'+encode(record.value)+'}';
- return(op,object,wire)=>{
-  const data=parse(wire);
-  if(op==='get')return encode(reflect('get',object,key(data)).value);
-  if(op==='has')return reflect('has',object,key(data))?'true':'false';
-  if(op==='prototype')return encode(reflect('prototype',object));
-  if(op==='keys'){const source=reflect('keys',object),out=[];for(let i=0;i<source.length;i++)out[i]=source[i].kind==='string'?{kind:'string',value:source[i].value}:encodeKey(source[i]);return json(out)};
-  if(op==='descriptor'){
-   const d=reflect('descriptor',object,key(data));if(!d.exists)return '{"exists":false}';
-   const out=create(null);out.exists=true;out.accessor=d.accessor;out.enumerable=d.enumerable;out.configurable=d.configurable;
-   if(d.accessor){out.get=parse(encode(d.get));out.set=parse(encode(d.set))}else{out.writable=d.writable;out.value=parse(encode(d.value))}return json(out);
-  }
-  if(op==='apply')return outcome(reflect(data[2]?'arrayIteratorOutcome':'applyOutcome',object,argument(data[0]),data[2]?undefined:argumentsOf(data[1])));
-  if(op==='construct')return outcome(reflect('construct',object,argumentsOf(data[1]),argument(data[0])));
-  if(op==='set')return outcome(reflect('setOutcome',object,key(data[0]),argument(data[1])));
-  if(op==='mutateDefine'||op==='mutateDelete')return outcome(reflect(op,object,key(data[0]),argument(data[1])));
-  throw new Error('Invalid frame transaction');
- };
-})`
+const frameTransactionSource = `(decodeArgument, decodeKey, encodeKey) => (reflect, encode) => {
+  const parse = JSON.parse,
+    stringify = JSON.stringify,
+    create = Object.create,
+    keys = Object.keys,
+    setPrototype = Object.setPrototypeOf,
+    isArray = Array.isArray,
+    integer = BigInt;
+  const plain = (value) => {
+    if (value === null || typeof value !== 'object') return value;
+    const out = isArray(value) ? setPrototype([], null) : create(null),
+      names = keys(value);
+    for (let i = 0; i < names.length; i++) {
+      const key = names[i];
+      out[key] = plain(value[key]);
+    }
+    return out;
+  };
+  const json = (value) => stringify(plain(value));
+  const argument = (a) => {
+    if (a.kind === 'value') return a.value;
+    if (a.kind === 'undefined') return undefined;
+    if (a.kind === 'bigint') return integer(a.value);
+    if (a.kind === 'special-number')
+      return a.value === 'NaN'
+        ? NaN
+        : a.value === '-0'
+          ? -0
+          : a.value === 'Infinity'
+            ? Infinity
+            : -Infinity;
+    return decodeArgument(json(a));
+  };
+  const key = (k) => (k.kind === 'string' ? k.value : decodeKey(json(k)));
+  const argumentsOf = (encoded) => {
+    const out = setPrototype([], null);
+    for (let i = 0; i < encoded.length; i++) out[i] = argument(encoded[i]);
+    return out;
+  };
+  const outcome = (record) =>
+    '{' + '"threw":' + (record.threw ? 'true' : 'false') + ',"value":' + encode(record.value) + '}';
+  return (op, object, wire) => {
+    const data = parse(wire);
+    if (op === 'get') return encode(reflect('get', object, key(data)).value);
+    if (op === 'has') return reflect('has', object, key(data)) ? 'true' : 'false';
+    if (op === 'prototype') return encode(reflect('prototype', object));
+    if (op === 'extensible') return reflect('extensible', object) ? 'true' : 'false';
+    if (op === 'preventExtensions') return outcome(reflect('preventExtensionsOutcome', object));
+    if (op === 'keys') {
+      const source = reflect('keys', object),
+        out = [];
+      for (let i = 0; i < source.length; i++)
+        out[i] =
+          source[i].kind === 'string'
+            ? { kind: 'string', value: source[i].value }
+            : encodeKey(source[i]);
+      return json(out);
+    }
+    if (op === 'descriptor') {
+      const d = reflect('descriptor', object, key(data));
+      if (!d.exists) return '{"exists":false}';
+      const out = create(null);
+      out.exists = true;
+      out.accessor = d.accessor;
+      out.enumerable = d.enumerable;
+      out.configurable = d.configurable;
+      if (d.accessor) {
+        out.get = parse(encode(d.get));
+        out.set = parse(encode(d.set));
+      } else {
+        out.writable = d.writable;
+        out.value = parse(encode(d.value));
+      }
+      return json(out);
+    }
+    if (op === 'apply')
+      return outcome(
+        reflect(
+          data[2] ? 'arrayIteratorOutcome' : 'applyOutcome',
+          object,
+          argument(data[0]),
+          data[2] ? undefined : argumentsOf(data[1]),
+        ),
+      );
+    if (op === 'construct')
+      return outcome(reflect('construct', object, argumentsOf(data[1]), argument(data[0])));
+    if (op === 'set')
+      return outcome(reflect('setOutcome', object, key(data[0]), argument(data[1])));
+    if (op === 'mutateDefine' || op === 'mutateDelete')
+      return outcome(reflect(op, object, key(data[0]), argument(data[1])));
+    throw new Error('Invalid frame transaction');
+  };
+};`
 
 func (r *Realm) prepareFrameTransaction() error {
-	factory, err := r.runtime.Eval(context.Background(), frameTransactionSource, "mimic:frame-transaction")
+	factory, err := evalPlatformExpression(r.runtime, frameTransactionSource, "mimic:frame-transaction")
 	if err != nil {
 		return err
 	}

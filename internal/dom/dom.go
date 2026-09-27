@@ -979,6 +979,10 @@ func (d *Document) TextContent(id int64) string {
 	return collect(id)
 }
 func (d *Document) SetTextContent(id int64, value string) error {
+	return d.setTextContent(id, value, "")
+}
+
+func (d *Document) setTextContent(id int64, value, encoded string) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	n := d.nodes[id]
@@ -988,7 +992,7 @@ func (d *Document) SetTextContent(id int64, value string) error {
 	if n.Type == "text" || n.Type == "comment" {
 		d.markConnectedMutationLocked(id)
 		n.Text = value
-		n.TextJSON = ""
+		n.TextJSON = encoded
 		return nil
 	}
 	d.markConnectedMutationLocked(id)
@@ -1000,7 +1004,7 @@ func (d *Document) SetTextContent(id int64, value string) error {
 	n.Children = nil
 	if value != "" {
 		d.next++
-		text := &Node{ID: d.next, Type: "text", Text: value, Parent: id, OwnerDocument: d.ownerDocumentLocked(id)}
+		text := &Node{ID: d.next, Type: "text", Text: value, TextJSON: encoded, Parent: id, OwnerDocument: d.ownerDocumentLocked(id)}
 		d.nodes[text.ID] = text
 		n.Children = append(n.Children, text.ID)
 	}

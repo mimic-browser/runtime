@@ -1,0 +1,47 @@
+{
+  "captureMetadata": {
+    "schemaVersion": 1,
+    "chromeVersion": "152.0.7977.82",
+    "chromiumRevision": 1669021,
+    "chromiumCommit": "d04cdb24d67b081f6cf80200ffc5233f44b61109",
+    "v8Version": "15.2.124.21",
+    "platform": "windows-x64",
+    "browserMode": "headful",
+    "commandLineFeatureOverrides": [],
+    "environmentProfileId": "chrome-152-windows-x64-headful-controlled-v1",
+    "profileFreshness": "fresh-controlled",
+    "viewport": {
+      "width": 1272,
+      "height": 653,
+      "deviceScaleFactor": 1
+    },
+    "window": {
+      "left": 593,
+      "top": 328,
+      "width": 1280,
+      "height": 800,
+      "windowState": "normal"
+    },
+    "secureContextState": true,
+    "isolationState": false,
+    "visibilityState": "visible",
+    "hasFocus": true
+  },
+  "fixtureOrigin": "http://127.0.0.1:59368",
+  "fixture": "internal/browser/testdata/object_url_worker_owner_oracle.js",
+  "fixtureSHA256": "98e93cb135ba7b3088cdb165650c8dd571227ac85c933560f2f1db18e525b926",
+  "worker": false,
+  "result": {
+    "result": {
+      "type": "object",
+      "value": {
+        "beforeTermination": {
+          "body": "worker-owned"
+        },
+        "afterTermination": {
+          "error": "TypeError"
+        }
+      }
+    }
+  }
+}

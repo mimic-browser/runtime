@@ -27,9 +27,10 @@ var (
 	// resolved *syscall.Proc values (not LazyProc) so per-call dispatch is
 	// a direct SyscallN on the cached entry — no lazy-find check on the
 	// hot path.
-	procTable   atomic.Pointer[map[string]*syscall.Proc]
-	procMu      sync.Mutex
-	shimLoadErr error
+	procTable    atomic.Pointer[map[string]*syscall.Proc]
+	procMu       sync.Mutex
+	shimLoadErr  error
+	shimIdentity string // SHA-256 of the artifact admitted by the one-time loader.
 )
 
 // shimDLLPath returns the native library path. GOV8_SHIM_LIBRARY (or the legacy
@@ -67,9 +68,20 @@ func loadShim() error {
 			shimLoadErr = err
 			return
 		}
+		identity, err := nativeLibraryDigest(path)
+		if err != nil {
+			shimLoadErr = err
+			return
+		}
 		dll, err := loadShimDLL(path)
 		if err != nil {
 			shimLoadErr = fmt.Errorf("gov8: loading %s: %w", path, err)
+			return
+		}
+		loadedIdentity, err := nativeLibraryDigest(path)
+		if err != nil || identity != loadedIdentity {
+			_ = dll.Release()
+			shimLoadErr = fmt.Errorf("gov8: native shim changed during loading: %s: %v", path, err)
 			return
 		}
 		abiProc, err := dll.FindProc("gov8_abi_version")
@@ -84,6 +96,7 @@ func loadShim() error {
 			return
 		}
 		shimDLL = dll
+		shimIdentity = identity
 		m := map[string]*syscall.Proc{"gov8_abi_version": abiProc}
 		procTable.Store(&m)
 	})

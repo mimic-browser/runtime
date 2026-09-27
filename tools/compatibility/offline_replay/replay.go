@@ -65,6 +65,9 @@ func (t *replay) observe(e trace.Event) {
 			break
 		}
 	}
+	if request.ID == "" {
+		request, _ = responseOnlyDataRequest(e)
+	}
 	local := ""
 	if boolField(d, "fromCache") {
 		local = "cache"
@@ -79,7 +82,7 @@ func (t *replay) observe(e trace.Event) {
 			continue
 		}
 		urlMatches := t.route(f.Request.URL) == t.route(request.URL)
-		if local == "synthetic" {
+		if local == "synthetic" && strings.HasPrefix(f.Request.URL, "blob:") {
 			a, _ := url.Parse(f.Request.URL)
 			b, _ := url.Parse(request.URL)
 			urlMatches = a != nil && b != nil && a.Scheme == b.Scheme
@@ -89,7 +92,7 @@ func (t *replay) observe(e trace.Event) {
 		}
 		t.used[i] = true
 		t.contextMap[request.Context] = f.Request.Context
-		t.events = append(t.events, map[string]any{"kind": "local", "local": local, "fixtureIndex": f.Index, "cycle": f.Cycle, "statusEqual": intField(d, "status") == f.Status})
+		t.events = append(t.events, map[string]any{"kind": "local", "local": local, "fixtureIndex": f.Index, "cycle": f.Cycle, "statusEqual": intField(d, "status") == f.Status, "responseOnlyLocal": f.ResponseOnlyLocal})
 		return
 	}
 	t.events = append(t.events, map[string]any{"kind": "unmatched-local", "local": local, "cycle": t.cycle, "urlHash": shortHash(request.URL)})

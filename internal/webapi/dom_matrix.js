@@ -28,7 +28,7 @@ const DOMMatrix = (() => {
     });
   const expand = (a) => [a[0], a[1], 0, 0, a[2], a[3], 0, 0, 0, 0, 1, 0, a[4], a[5], 0, 1];
   const syntax = () => {
-    throw new DOMException('Failed to parse matrix', 'SyntaxError');
+    throw platformDOMException('Failed to parse matrix', 'SyntaxError');
   };
   const parse = (init) => {
     if (init === undefined) return { m: identity(), two: true };
@@ -255,7 +255,7 @@ const DOMMatrix = (() => {
     toString() {
       const s = slot(this);
       if (s.m.some((v) => !Number.isFinite(v)))
-        throw new DOMException('Matrix is not finite', 'InvalidStateError');
+        throw platformDOMException('Matrix is not finite', 'InvalidStateError');
       return s.two
         ? 'matrix(' + [s.m[0], s.m[1], s.m[4], s.m[5], s.m[12], s.m[13]].join(', ') + ')'
         : 'matrix3d(' + s.m.join(', ') + ')';

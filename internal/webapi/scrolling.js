@@ -217,9 +217,11 @@ compatibilityScrolling = (() => {
         windowScrollY = y;
       }
       revision++;
-      // Scrolling changes viewport geometry without a DOM mutation, so a
-      // surrounding platform observation must not retain its earlier rects.
-      styleReadCache = null;
+      // Clamping may happen inside a geometry read after content shrinks.
+      // Keep that read's style/box scope alive; only viewport projections
+      // depend on the updated offset. Clearing the active scope here leaves
+      // its remaining ancestor reads without their required observation.
+      invalidateRetainedViewportGeometry();
       enqueue(element);
     }
     return { x, y };

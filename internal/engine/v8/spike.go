@@ -33,6 +33,9 @@ type state struct {
 	isolate             *gov8.Isolate
 	realms              map[uint64]*gov8.Context
 	activeAdapter       *adapter
+	adapters            map[uint64]*adapter
+	securityTokens      map[string]*gov8.Global
+	retiredMicrotasks   map[uint64]bool
 	next                uint64
 	restoreThreadPolicy func() error
 }
@@ -89,12 +92,19 @@ func (r *Runtime) loop(ready chan<- error) {
 	// Bound only the young generation; the old generation keeps V8 defaults.
 	var iso *gov8.Isolate
 	var err error
+	references, err := bootstrapNativeReferences()
+	if err != nil {
+		ready <- errors.Join(err, r.releaseSnapshot())
+		close(r.done)
+		return
+	}
 	if r.snapshot == nil {
-		iso, err = gov8.NewIsolateWithParams(gov8.NewCreateParams().SetMaxYoungGenerationSizeInBytes(4 << 20))
+		iso, err = gov8.NewIsolateWithParams(gov8.NewCreateParams().SetExternalReferences(references).SetMaxYoungGenerationSizeInBytes(4 << 20))
 	} else {
 		var params *gov8.SnapshotCreateParams
 		params, err = gov8.NewSnapshotCreateParams(r.snapshot)
 		if err == nil {
+			params.SetExternalReferences(references)
 			params.SetMaxYoungGenerationSizeInBytes(4 << 20)
 			iso, err = gov8.NewIsolateWithSnapshotParams(params)
 		}
@@ -179,8 +189,31 @@ func (r *Runtime) executeCommand(command command, outerOnly bool) (any, error) {
 }
 
 func (r *Runtime) NewRealm() (*Realm, error) {
+	return r.newRealm(false)
+}
+
+func (r *Runtime) newBareRealm() (*Realm, error) {
+	return r.newRealm(true)
+}
+
+func (r *Runtime) newRealm(bare bool) (*Realm, error) {
 	value, err := r.execute(func(s *state) response {
-		ctx, err := s.isolate.NewContext()
+		var ctx *gov8.Context
+		var err error
+		if r.snapshot != nil && !bare {
+			scope, scopeErr := s.isolate.NewScope()
+			if scopeErr != nil {
+				return response{err: scopeErr}
+			}
+			var ok bool
+			ctx, ok, err = scope.ContextFromSnapshotWithOptions(0, nil)
+			err = errors.Join(err, scope.Close())
+			if err == nil && !ok {
+				err = errors.New("platform context is absent from bootstrap snapshot")
+			}
+		} else {
+			ctx, err = s.isolate.NewContext()
+		}
 		if err != nil {
 			return response{err: err}
 		}
@@ -316,6 +349,10 @@ func (r *Runtime) Dispose() error {
 					disposeErr = err
 				}
 				delete(s.realms, id)
+			}
+			for key, token := range s.securityTokens {
+				_ = token.Close()
+				delete(s.securityTokens, key)
 			}
 			// All contexts and adapter roots have been released. Ask V8 to
 			// return empty heap pages before disposal transfers them to its

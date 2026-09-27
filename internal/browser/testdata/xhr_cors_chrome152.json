@@ -1,0 +1,62 @@
+{
+  "sameOrigin": {
+    "event": "load",
+    "status": 200,
+    "visible": "visible",
+    "hidden": "hidden",
+    "cookie": null,
+    "cookie2": null,
+    "allLeaksCookie": false,
+    "text": "body"
+  },
+  "allowed": {
+    "event": "load",
+    "status": 200,
+    "visible": "visible",
+    "hidden": null,
+    "cookie": null,
+    "cookie2": null,
+    "allLeaksCookie": false,
+    "text": "body"
+  },
+  "denied": {
+    "event": "error",
+    "status": 0,
+    "visible": null,
+    "hidden": null,
+    "cookie": null,
+    "cookie2": null,
+    "allLeaksCookie": false,
+    "text": ""
+  },
+  "preflight": {
+    "event": "load",
+    "status": 200,
+    "visible": "visible",
+    "hidden": null,
+    "cookie": null,
+    "cookie2": null,
+    "allLeaksCookie": false,
+    "text": "preflight"
+  },
+  "uploadListener": {
+    "event": "load",
+    "status": 200,
+    "visible": "visible",
+    "hidden": null,
+    "cookie": null,
+    "cookie2": null,
+    "allLeaksCookie": false,
+    "text": "preflight"
+  },
+  "credentialWildcard": {
+    "event": "error",
+    "status": 0,
+    "visible": null,
+    "hidden": null,
+    "cookie": null,
+    "cookie2": null,
+    "allLeaksCookie": false,
+    "text": ""
+  }
+}

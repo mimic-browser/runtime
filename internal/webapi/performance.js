@@ -24,7 +24,7 @@ const perfRequired = (args, n) => {
   if (args.length < n) throw new TypeError(n + ' argument required');
 };
 const perfFail = (name, message) => {
-  throw new DOMException(message || name, name);
+  throw platformDOMException(message || name, name);
 };
 const perfBases = {},
   perfSchema = /* performance_interface_schema */;
@@ -389,9 +389,9 @@ function perfResolveTime(value) {
   perfFail('SyntaxError', "The mark '" + value + "' does not exist.");
 }
 function perfCreateMeasure(name, o, third) {
-  if (o.dictionary && third !== undefined)
-    throw new TypeError('endMark cannot be supplied with options');
   const count = [o.start, o.end, o.duration].filter((v) => v !== undefined).length;
+  if (o.dictionary && (count > 0 || o.detail !== undefined) && third !== undefined)
+    throw new TypeError('endMark cannot be supplied with options');
   if (
     count === 3 ||
     (o.duration !== undefined && count === 1) ||
@@ -1009,7 +1009,7 @@ function finalizePerformanceBindings() {
     value: async function measureUserAgentSpecificMemory() {
       perfBound(this, 'Performance', 'brand');
       host.semanticMissingAt?.('performance.js', 'Performance.measureUserAgentSpecificMemory');
-      throw new DOMException(
+      throw platformDOMException(
         'Agent-cluster memory attribution is not implemented',
         'NotSupportedError',
       );

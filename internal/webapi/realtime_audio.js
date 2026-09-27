@@ -156,23 +156,23 @@ method('AudioContext', 'suspend', function suspend() {
       c.timer = null;
     }
     stateEvent(this);
-    return Promise.resolve();
+    return platformPromiseResolve();
   } catch (e) {
-    return Promise.reject(e);
+    return platformPromiseReject(e);
   }
 });
 method('AudioContext', 'resume', function resume() {
   try {
     const c = requireSlot(contexts, this);
     if (c.state === 'closed') throw exception('InvalidStateError');
-    if (c.state === 'running') return Promise.resolve();
+    if (c.state === 'running') return platformPromiseResolve();
     c.userSuspended = false;
-    return new Promise((resolve, reject) => {
+    return new platformPromise((resolve, reject) => {
       c.pendingResume.push({ resolve, reject });
       if (activated()) startContext(this);
     });
   } catch (e) {
-    return Promise.reject(e);
+    return platformPromiseReject(e);
   }
 });
 method('AudioContext', 'close', function close() {
@@ -187,9 +187,9 @@ method('AudioContext', 'close', function close() {
     realtimeContexts.delete(this);
     for (const pending of c.pendingResume.splice(0)) pending.reject(exception('InvalidStateError'));
     stateEvent(this);
-    return Promise.resolve();
+    return platformPromiseResolve();
   } catch (e) {
-    return Promise.reject(e);
+    return platformPromiseReject(e);
   }
 });
 method('AudioContext', 'getOutputTimestamp', function getOutputTimestamp() {
@@ -215,8 +215,8 @@ method('AudioContext', 'setSinkId', function setSinkId(value) {
       c.sinkId = sink;
       setTimeout(() => emit(this, 'sinkchange'), 0);
     }
-    return Promise.resolve();
+    return platformPromiseResolve();
   } catch (e) {
-    return Promise.reject(e);
+    return platformPromiseReject(e);
   }
 });

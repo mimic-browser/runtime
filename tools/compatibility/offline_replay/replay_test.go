@@ -153,3 +153,56 @@ func TestReadCaptureDoesNotInventMissingBodies(t *testing.T) {
 		})
 	}
 }
+
+func TestReadCaptureResponseOnlyDataIsLocal(t *testing.T) {
+	for _, localURL := range []string{"data:text/plain;base64,aW1hZ2U=", "https://example.test/orphan", "blob:https://example.test/orphan"} {
+		t.Run(localURL, func(t *testing.T) {
+			dir := t.TempDir()
+			events := []trace.Event{
+				{Sequence: 1, Kind: trace.Network, Name: "request", Data: map[string]any{"id": "document", "url": "https://example.test/", "method": "GET", "context": "top", "initiator": "navigation"}},
+				{Sequence: 2, Kind: trace.Network, Name: "response", Data: map[string]any{"id": "document"}},
+				{Sequence: 3, Kind: trace.Network, Name: "response", Data: map[string]any{"id": "local", "url": localURL, "context": "top", "initiator": "image", "synthetic": true, "status": 200}},
+			}
+			data, _ := json.Marshal(map[string]any{"result": map[string]any{"events": events}})
+			if err := os.WriteFile(filepath.Join(dir, "trace.json"), data, 0600); err != nil {
+				t.Fatal(err)
+			}
+			for id, url := range map[string]string{"document": "https://example.test/", "local": localURL} {
+				body, _ := json.Marshal(map[string]any{"response": map[string]any{"url": url, "status": 200}, "result": map[string]any{"body": "image"}})
+				if err := os.WriteFile(filepath.Join(dir, "root-"+id+".json"), body, 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			c, err := readCapture(dir)
+			if !strings.HasPrefix(localURL, "data:") {
+				if err == nil || !strings.Contains(err.Error(), "has no request") {
+					t.Fatalf("orphan request must remain a boundary: %v", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			f := c.Fixtures[1]
+			if !f.ResponseOnlyLocal || f.Local != "synthetic" || f.Request.Method != "" || f.Request.Sequence != 3 || f.Cycle != 1 {
+				t.Fatalf("local response invented a wire request: %+v", f)
+			}
+			_, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			r := newReplay(c, cancel, nil, 10)
+			execute(t, r, "GET", "https://example.test/", "current", "navigation")
+			wrong := events[2]
+			wrong.Data = map[string]any{"id": "wrong", "url": "data:text/plain;base64,b3RoZXI=", "context": "current", "initiator": "image", "synthetic": true, "status": 200}
+			r.observe(wrong)
+			if r.used[1] {
+				t.Fatal("different data bytes consumed the local fixture")
+			}
+			correct := events[2]
+			correct.Data = map[string]any{"id": "correct", "url": localURL, "context": "current", "initiator": "image", "synthetic": true, "status": 200}
+			r.observe(correct)
+			if !r.used[1] || r.events[len(r.events)-1]["statusEqual"] != true {
+				t.Fatal("response-only data load was not accounted for")
+			}
+		})
+	}
+}

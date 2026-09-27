@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/url"
 	"time"
+
+	"github.com/moreveal/mimic/internal/engine"
 )
 
 type profileBootstrapAttempt struct {
@@ -68,29 +70,38 @@ func (b *Browser) buildProfileBootstrap(ctx context.Context, key [32]byte, secur
 		return err
 	}
 	c := b.NewContext()
+	c.bootstrapPreparation = true
 	defer c.Close()
-	for i := 0; i < 2; i++ {
-		p, err := c.NewPage()
-		if err != nil {
-			return err
-		}
-		p.mu.Lock()
-		p.current = u
-		p.documentSecurity = security
-		p.Top.Realm.url = u
-		p.Top.Realm.origin = originOf(address)
-		p.mu.Unlock()
-		_, err = p.Evaluate(ctx, "true")
-		if err == nil && p.Top.Realm.bootstrapSource().key != key {
-			err = fmt.Errorf("profile bootstrap preparation selected a different exposure graph")
-		}
-		c.ClosePage(p.ID)
-		if err != nil {
-			return err
-		}
-		if b.bootstrapSnapshots.hasSnapshotKey(key) {
-			return nil
-		}
+	p, err := c.NewPage()
+	if err != nil {
+		return err
+	}
+	p.mu.Lock()
+	p.current = u
+	p.documentSecurity = security
+	p.Top.Realm.url = u
+	p.Top.Realm.origin = originOf(address)
+	p.mu.Unlock()
+	_, err = p.Evaluate(ctx, "true")
+	if err == nil && p.Top.Realm.bootstrapSource().key != key {
+		err = fmt.Errorf("profile bootstrap preparation selected a different exposure graph")
+	}
+	c.ClosePage(p.ID)
+	if err != nil {
+		return err
+	}
+	if b.bootstrapSnapshots.hasSnapshotKey(key) {
+		return nil
+	}
+	// The seed has already been captured. Admit its build directly instead of
+	// constructing and bootstrapping a second throwaway Page merely to select
+	// the same cache entry. The builder retains Browser lifetime ownership.
+	factory, ok := b.factory.(engine.BootstrapSnapshotFactory)
+	if !ok {
+		return fmt.Errorf("profile bootstrap preparation requires a snapshot factory")
+	}
+	if _, _, err := b.bootstrapSnapshots.selectEntry(b.lifetime, factory, key); err != nil {
+		return err
 	}
 	if err := b.bootstrapSnapshots.wait(ctx); err != nil {
 		return err

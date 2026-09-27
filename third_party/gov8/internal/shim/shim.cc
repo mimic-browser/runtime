@@ -1,4 +1,4 @@
-// shim.cc — gov8 C ABI shim over the pinned prebuilt V8 static library.
+// shim.cc вЂ” gov8 C ABI shim over the pinned prebuilt V8 static library.
 //
 // Build: scripts/setup_windows.ps1 (Windows/MSVC) or scripts/setup_linux.py
 // (Linux/Clang), both linking the pinned rusty_v8 152.2.0 release archive.
@@ -270,7 +270,7 @@ MqWrap* AsMq(void* p) {
 // targets. Every persistent wrapper records the isolate it was created on,
 // so this is a cheap pointer comparison before any engine access; V8
 // requires Global handles and scope objects to be used on their owning
-// isolate. The Go wrapper performs the same check first — this is the
+// isolate. The Go wrapper performs the same check first вЂ” this is the
 // second line of defense at the ABI boundary.
 bool OwnedBy(v8::Isolate* iso, v8::Isolate* wrapper_iso) {
   if (wrapper_iso != iso) {
@@ -295,7 +295,7 @@ T* GlobalPlacementNew(void* storage, Args&&... args) {
 // Why not an unconditional v8::Isolate::Scope: with the isolate entered once
 // at creation (gov8_isolate_new / gov8_isolate_new_snapshot) and exited once
 // before Dispose (gov8_isolate_dispose), a per-call Enter/Exit pair is pure
-// overhead on the hot path — the already-entered Enter still runs
+// overhead on the hot path вЂ” the already-entered Enter still runs
 // Heap::SetStackStart (a VirtualQuery on Windows) and bumps the entry stack,
 // and the non-entered path additionally allocates an EntryStackItem and
 // looks up per-isolate thread data. Every export here is called from the
@@ -307,7 +307,7 @@ T* GlobalPlacementNew(void* storage, Args&&... args) {
 // sequentially on one OS thread (LockOSThread nests). The second isolate's
 // creation Enter pushed a new level, so a call targeting the first isolate
 // observes TryGetCurrent() != iso and performs exactly the Enter/Exit switch
-// the old unconditional scopes performed — V8 restores the previous isolate
+// the old unconditional scopes performed вЂ” V8 restores the previous isolate
 // from the per-isolate entry stack on Exit, so interleaved use and
 // out-of-order Close keep the same observable behavior as before. During
 // engine callbacks the isolate is current by construction, so re-entrant
@@ -438,7 +438,7 @@ __declspec(dllexport) int64_t gov8_initialize_platform(void) {
       SetErr("platform already created");
       return kErrState;
     }
-    // Pinned oracle configuration: new_default_platform(0, false) — default
+    // Pinned oracle configuration: new_default_platform(0, false) вЂ” default
     // worker count, no idle-task support.
     v8::Platform* platform = gov8_cppgc_take_detached_platform();
     if (platform == nullptr) {
@@ -1303,11 +1303,14 @@ __declspec(dllexport) int64_t gov8_tc_start_column(v8::Isolate* iso,
 
 // --- scripts ---------------------------------------------------------------------------
 
-__declspec(dllexport) int64_t gov8_script_compile(v8::Isolate* iso,
+extern "C" const v8::Script* v8__Mimic__CompilePlatformScript(
+    const v8::Context*, const v8::String*);
+
+static int64_t CompileScript(v8::Isolate* iso,
                                                   void* ctxw, void* scope,
                                                   void* tcw,
                                                   const char* src, int64_t len,
-                                                  void** out_script) {
+                                                  void** out_script, bool platform_bootstrap) {
   ClearErr();
   CtxWrap* w = AsCtx(ctxw);
   if (w == nullptr || out_script == nullptr || !ScopeIs(iso, scope) ||
@@ -1348,7 +1351,17 @@ __declspec(dllexport) int64_t gov8_script_compile(v8::Isolate* iso,
       return kErrGeneric;
     }
     v8::Local<v8::Script> script;
-    if (!v8::Script::Compile(ctx, source).ToLocal(&script)) {
+    bool compiled;
+    if (platform_bootstrap) {
+      const v8::Script* result = v8__Mimic__CompilePlatformScript(
+          static_cast<const v8::Context*>(ToWire(ctx)),
+          static_cast<const v8::String*>(ToWire(source)));
+      compiled = result != nullptr;
+      if (compiled) script = FromWire<v8::Script>(const_cast<v8::Script*>(result));
+    } else {
+      compiled = v8::Script::Compile(ctx, source).ToLocal(&script);
+    }
+    if (!compiled) {
       SetErr("compile failed");
       return kErrException;
     }
@@ -1362,6 +1375,18 @@ __declspec(dllexport) int64_t gov8_script_compile(v8::Isolate* iso,
     SetErr("C++ exception in script_compile");
     return kErrCpp;
   }
+}
+
+__declspec(dllexport) int64_t gov8_script_compile(
+    v8::Isolate* iso, void* ctxw, void* scope, void* tcw,
+    const char* src, int64_t len, void** out_script) {
+  return CompileScript(iso, ctxw, scope, tcw, src, len, out_script, false);
+}
+
+__declspec(dllexport) int64_t gov8_script_compile_platform(
+    v8::Isolate* iso, void* ctxw, void* scope, void* tcw,
+    const char* src, int64_t len, void** out_script) {
+  return CompileScript(iso, ctxw, scope, tcw, src, len, out_script, true);
 }
 
 __declspec(dllexport) int64_t gov8_script_run(v8::Isolate* iso, void* ctxw,
@@ -1564,23 +1589,40 @@ __declspec(dllexport) void* gov8_microtask_queue_raw(void* mqw) {
   return w->queue;
 }
 
+extern "C" bool v8__MicrotaskQueue__IsRunningMicrotasks(v8::MicrotaskQueue*);
+extern "C" int v8__MicrotaskQueue__GetMicrotasksScopeDepth(v8::MicrotaskQueue*);
+
 __declspec(dllexport) int64_t gov8_context_set_microtask_queue(void* ctxw,
                                                                void* mqw) {
   ClearErr();
   CtxWrap* c = AsCtx(ctxw);
-  MqWrap* m = AsMq(mqw);
-  if (c == nullptr || m == nullptr) {
+  MqWrap* m = mqw == nullptr ? nullptr : AsMq(mqw);
+  if (c == nullptr || (mqw != nullptr && m == nullptr)) {
     SetErr("invalid argument");
     return kErrBadArg;
   }
-  // Attaching a queue from another isolate would hand V8 a foreign
-  // MicrotaskQueue pointer; reject before touching the context.
-  if (!OwnedBy(c->iso, m->iso)) {
-    return kErrBadArg;
-  }
+  if (m != nullptr && !OwnedBy(c->iso, m->iso)) return kErrBadArg;
   try {
     Gov8IsolateScope iso_scope(c->iso);
-    c->ctx->Get(c->iso)->SetMicrotaskQueue(m->queue);
+    v8::HandleScope hs(c->iso);
+    auto context = c->ctx->Get(c->iso);
+    auto previous = context->GetMicrotaskQueue();
+    if (previous == nullptr) {
+      if (m == nullptr) return kOk;
+      SetErr("cannot attach a queue to a shutdown context");
+      return kErrState;
+    }
+    // Queue virtual layouts differ with V8's cppgc build mode; query through
+    // the pinned flat bindings, never through header-compiled virtual calls.
+    // V8's setter requires an outer boundary. Report misuse before its fatal
+    // API checks; shutdown preserves the context and its retained objects.
+    if (v8__MicrotaskQueue__IsRunningMicrotasks(previous) ||
+        v8__MicrotaskQueue__GetMicrotasksScopeDepth(previous) != 0 ||
+        !c->iso->GetEnteredOrMicrotaskContext().IsEmpty()) {
+      SetErr("microtask queue change requires an idle context boundary");
+      return kErrState;
+    }
+    context->SetMicrotaskQueue(m == nullptr ? nullptr : m->queue);
     return kOk;
   } catch (...) {
     SetErr("C++ exception");
@@ -1738,6 +1780,7 @@ __declspec(dllexport) int64_t gov8_last_error(char* buf, int64_t cap) {
 #include "features/fixed_primitive_arrays.inc"
 #include "features/controls_hooks.inc"
 #include "features/external_references.inc"
+#include "features/property_observation.inc"
 #include "features/create_params_snapshot.inc"
 #include "features/handles_residual.inc"
 #include "features/platform.inc"
@@ -1775,3 +1818,6 @@ int64_t gov8_pc_idle_task_run_delete_words(v8::IdleTask* task, uint64_t value) {
 }
 }
 #endif
+
+#include "features/receiver_dispatch.inc"
+#include "features/exception_state.inc"

@@ -46,6 +46,16 @@ func (d *deferredRuntime) ready() (engine.Runtime, error) {
 		d.realm.runtime = d
 		return nil, err
 	}
+	if d.realm.checkpointClosed {
+		if lifecycle, ok := r.(engine.PromiseJobLifecycleRuntime); ok {
+			if err := lifecycle.DeactivatePromiseJobs(); err != nil {
+				_ = d.realm.runtime.Close()
+				d.err = err
+				d.realm.runtime = d
+				return nil, err
+			}
+		}
+	}
 	d.realm.registerPermissions()
 	return d.realm.runtime, nil
 }
@@ -202,3 +212,12 @@ func (d *deferredRuntime) SetDynamicModuleHandler(handler engine.DynamicModuleHa
 	}
 }
 func (d *deferredRuntime) Diagnostics() (any, error) { return map[string]any{"deferred": true}, nil }
+
+func (d *deferredRuntime) DeactivatePromiseJobs() error {
+	if d.realm.runtime != d {
+		if lifecycle, ok := d.realm.runtime.(engine.PromiseJobLifecycleRuntime); ok {
+			return lifecycle.DeactivatePromiseJobs()
+		}
+	}
+	return nil
+}

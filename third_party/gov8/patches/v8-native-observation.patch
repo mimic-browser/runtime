@@ -1,0 +1,590 @@
+--- a/v8/include/v8-function-callback.h
++++ b/v8/include/v8-function-callback.h
+@@ -129,6 +129,9 @@
+   V8_INLINE Local<Value> operator[](int i) const;
+   /** Returns the receiver. This corresponds to the "this" value. */
+   V8_INLINE Local<Object> This() const;
++  // Use for callbacks constructed with Function::NewStrict. This() keeps its
++  // existing object-only contract for ordinary API callbacks.
++  V8_INLINE Local<Value> ThisValue() const;
+   /** For construct calls, this returns the "new.target" value. */
+   V8_INLINE Local<Value> NewTarget() const;
+   /** Indicates whether this is a regular call or a construct call. */
+@@ -629,6 +632,11 @@
+ }
+ 
+ template <typename T>
++Local<Value> FunctionCallbackInfo<T>::ThisValue() const {
++  return Local<Value>::FromSlot(&values_[kReceiverIndex]);
++}
++
++template <typename T>
+ Local<Value> FunctionCallbackInfo<T>::NewTarget() const {
+   if (IsConstructCall()) {
+     // Can't use &values_[kNewTargetIndex] because of "array index -1 is
+--- a/v8/include/v8-function.h
++++ b/v8/include/v8-function.h
+@@ -36,8 +36,16 @@
+       ConstructorBehavior behavior = ConstructorBehavior::kAllow,
+       SideEffectType side_effect_type = SideEffectType::kHasSideEffect);
+ 
++  // Mimic embedder extension: nonconstructible strict native callbacks receive
++  // the original null, undefined, primitive or object receiver without boxing.
++  static MaybeLocal<Function> NewStrict(
++      Local<Context> context, FunctionCallback callback, Local<Data> data = {},
++      int length = 0,
++      SideEffectType side_effect_type = SideEffectType::kHasSideEffect);
++
+   V8_WARN_UNUSED_RESULT MaybeLocal<Object> NewInstance(
+       Local<Context> context, int argc, Local<Value> argv[]) const;
++
+ 
+   V8_WARN_UNUSED_RESULT MaybeLocal<Object> NewInstance(
+       Local<Context> context) const {
+--- a/v8/include/v8-template.h
++++ b/v8/include/v8-template.h
+@@ -741,6 +741,10 @@
+    * during HasRestrictedGlobalProperty checks for lexical declarations.
+    */
+   kHasDontDeleteProperty = 1 << 3,
++
++  // Callbacks observe accesses but never synthesize, hide or replace properties.
++  // Such observers do not restrict ordinary object integrity operations.
++  kObservationOnly = 1 << 4,
+ 
+   /**
+    * This flag is used to distinguish which callbacks were provided -
+--- a/v8/src/api/api-arguments-inl.h
++++ b/v8/src/api/api-arguments-inl.h
+@@ -304,6 +304,10 @@
+   PREPARE_CALLBACK_INFO_INTERCEPTOR(isolate, f, v8::Integer, interceptor,
+                                     ExceptionContext::kNamedQuery);
+   v8::Intercepted intercepted = f(v8::Utils::ToLocal(name), callback_info);
++  // A successful observer must not replace a result or accept a write. An
++  // exception remains observable through the existing callback error path.
++  CHECK(!interceptor->observation_only() ||
++        intercepted == v8::Intercepted::kNo || isolate->has_exception());
+   if (intercepted == v8::Intercepted::kNo) return {};
+   return GetReturnValue<Object>();
+ }
+@@ -322,6 +326,10 @@
+   PREPARE_CALLBACK_INFO_INTERCEPTOR(isolate, f, v8::Value, interceptor,
+                                     ExceptionContext::kNamedGetter);
+   v8::Intercepted intercepted = f(v8::Utils::ToLocal(name), callback_info);
++  // A successful observer must not replace a result or accept a write. An
++  // exception remains observable through the existing callback error path.
++  CHECK(!interceptor->observation_only() ||
++        intercepted == v8::Intercepted::kNo || isolate->has_exception());
+   if (intercepted == v8::Intercepted::kNo) return {};
+   return GetReturnValue<JSAny>();
+ }
+@@ -361,6 +369,10 @@
+                                     ExceptionContext::kNamedSetter);
+   v8::Intercepted intercepted =
+       f(v8::Utils::ToLocal(name), v8::Utils::ToLocal(value), callback_info);
++  // A successful observer must not replace a result or accept a write. An
++  // exception remains observable through the existing callback error path.
++  CHECK(!interceptor->observation_only() ||
++        intercepted == v8::Intercepted::kNo || isolate->has_exception());
+   return intercepted;
+ }
+ 
+@@ -431,6 +443,10 @@
+   PREPARE_CALLBACK_INFO_INTERCEPTOR(isolate, f, v8::Integer, interceptor,
+                                     ExceptionContext::kIndexedQuery);
+   v8::Intercepted intercepted = f(index, callback_info);
++  // A successful observer must not replace a result or accept a write. An
++  // exception remains observable through the existing callback error path.
++  CHECK(!interceptor->observation_only() ||
++        intercepted == v8::Intercepted::kNo || isolate->has_exception());
+   if (intercepted == v8::Intercepted::kNo) return {};
+   return GetReturnValue<Object>();
+ }
+@@ -450,6 +466,10 @@
+   PREPARE_CALLBACK_INFO_INTERCEPTOR(isolate, f, v8::Value, interceptor,
+                                     ExceptionContext::kIndexedGetter);
+   v8::Intercepted intercepted = f(index, callback_info);
++  // A successful observer must not replace a result or accept a write. An
++  // exception remains observable through the existing callback error path.
++  CHECK(!interceptor->observation_only() ||
++        intercepted == v8::Intercepted::kNo || isolate->has_exception());
+   if (intercepted == v8::Intercepted::kNo) return {};
+   return GetReturnValue<JSAny>();
+ }
+@@ -490,6 +510,10 @@
+                                     ExceptionContext::kIndexedSetter);
+   v8::Intercepted intercepted =
+       f(index, v8::Utils::ToLocal(value), callback_info);
++  // A successful observer must not replace a result or accept a write. An
++  // exception remains observable through the existing callback error path.
++  CHECK(!interceptor->observation_only() ||
++        intercepted == v8::Intercepted::kNo || isolate->has_exception());
+   return intercepted;
+ }
+ 
+--- a/v8/src/api/api.cc
++++ b/v8/src/api/api.cc
+@@ -1605,6 +1605,16 @@
+     Descriptor descriptor, Deleter deleter, Enumerator enumerator,
+     Definer definer, Local<Value> data,
+     base::Flags<PropertyHandlerFlags> flags) {
++  // Observation callbacks cannot provide virtual descriptors or mutate the
++  // property's integrity contract. Access callbacks must always fall through.
++  if (flags & PropertyHandlerFlags::kObservationOnly) {
++    CHECK_NULL(descriptor);
++    CHECK_NULL(deleter);
++    CHECK_NULL(enumerator);
++    CHECK_NULL(definer);
++    CHECK(!(flags & PropertyHandlerFlags::kNonMasking));
++    CHECK(!(flags & PropertyHandlerFlags::kHasDontDeleteProperty));
++  }
+   // TODO(saelo): instead of an in-sandbox struct with a lot of external
+   // pointers (with different tags), consider creating an object in trusted
+   // space instead. That way, only a single reference going out of the sandbox
+@@ -1626,6 +1636,7 @@
+       !(flags & PropertyHandlerFlags::kOnlyInterceptStrings));
+   obj->set_non_masking(flags & PropertyHandlerFlags::kNonMasking);
+   obj->set_has_no_side_effect(flags & PropertyHandlerFlags::kHasNoSideEffect);
++  obj->set_observation_only(flags & PropertyHandlerFlags::kObservationOnly);
+   obj->set_has_dont_delete_property(
+       flags & PropertyHandlerFlags::kHasDontDeleteProperty);
+ 
+@@ -5633,6 +5644,23 @@
+   auto templ =
+       FunctionTemplateNew(i_isolate, callback, data, Local<Signature>(), length,
+                           behavior, true, Local<Private>(), side_effect_type);
++  return Utils::ToLocal(templ)->GetFunction(context);
++}
++
++MaybeLocal<Function> Function::NewStrict(Local<Context> context,
++                                        FunctionCallback callback,
++                                        Local<Data> data, int length,
++                                        SideEffectType side_effect_type) {
++  i::Isolate* i_isolate = i::Isolate::Current();
++  ApiRuntimeCallStatsScope rcs_scope(i_isolate, RCCId::kAPI_Function_New);
++  EnterV8NoScriptNoExceptionScope api_scope(i_isolate);
++  CHECK_NOT_NULL(callback);
++  auto templ = FunctionTemplateNew(
++      i_isolate, callback, data, Local<Signature>(), length,
++      ConstructorBehavior::kThrow, true, Local<Private>(), side_effect_type);
++  auto shared = i::FunctionTemplateInfo::GetOrCreateSharedFunctionInfo(
++      i_isolate, templ, {});
++  shared->set_language_mode(i::LanguageMode::kStrict);
+   return Utils::ToLocal(templ)->GetFunction(context);
+ }
+ 
+@@ -12740,6 +12768,83 @@
+       .str();
+ }
+ 
++namespace {
++// Admission is scoped to compilation, never inferred from author-controlled
++// resource names or held while executing JavaScript.
++thread_local bool platform_bootstrap_compilation = false;
++struct PlatformBootstrapCompilationScope {
++  bool previous = platform_bootstrap_compilation;
++  PlatformBootstrapCompilationScope() { platform_bootstrap_compilation = true; }
++  ~PlatformBootstrapCompilationScope() {
++    platform_bootstrap_compilation = previous;
++  }
++};
++
++template <typename T>
++v8::Local<T> PlatformLocalFromSlot(const T* slot) {
++  static_assert(sizeof(v8::Local<T>) == sizeof(slot));
++  v8::Local<T> local;
++  memcpy(&local, &slot, sizeof(local));
++  return local;
++}
++}  // namespace
++
++// Ordinary Error retains its original constructor message. Platform exception
++// objects deliberately omit that state, allowing V8's lazy formatter to observe
++// their current interface name/message exactly as a native DOMException does.
++extern "C" V8_EXPORT bool v8__Mimic__ClearExceptionOriginalMessage(
++    v8::Isolate* isolate, const v8::Object* object) {
++  auto local = PlatformLocalFromSlot(object);
++  if (!local->IsNativeError()) return false;
++  auto i_isolate = reinterpret_cast<i::Isolate*>(isolate);
++  return i::JSReceiver::DeletePropertyOrElement(
++      i_isolate, Utils::OpenDirectHandle(object),
++      i_isolate->factory()->error_message_symbol(), i::LanguageMode::kSloppy)
++      .FromMaybe(false);
++}
++
++extern "C" V8_EXPORT bool v8__Mimic__IsPlatformBootstrapCompilation() {
++  return platform_bootstrap_compilation;
++}
++
++extern "C" V8_EXPORT const v8::Function* v8__Mimic__CompilePlatformFunction(
++    const v8::Context* context, v8::ScriptCompiler::Source* source,
++    size_t arguments_count, const v8::String** arguments,
++    size_t context_extension_count, const v8::Object** context_extensions,
++    v8::ScriptCompiler::CompileOptions options,
++    v8::ScriptCompiler::NoCacheReason no_cache_reason) {
++  PlatformBootstrapCompilationScope admission;
++  std::vector<v8::Local<v8::String>> argument_handles;
++  argument_handles.reserve(arguments_count);
++  for (size_t index = 0; index < arguments_count; ++index) {
++    argument_handles.push_back(PlatformLocalFromSlot(arguments[index]));
++  }
++  std::vector<v8::Local<v8::Object>> extension_handles;
++  extension_handles.reserve(context_extension_count);
++  for (size_t index = 0; index < context_extension_count; ++index) {
++    extension_handles.push_back(PlatformLocalFromSlot(context_extensions[index]));
++  }
++  v8::Local<v8::Function> result;
++  if (!v8::ScriptCompiler::CompileFunction(
++           PlatformLocalFromSlot(context), source, arguments_count,
++           argument_handles.data(), context_extension_count,
++           extension_handles.data(), options, no_cache_reason).ToLocal(&result)) {
++    return nullptr;
++  }
++  return *result;
++}
++
++extern "C" V8_EXPORT const v8::Script* v8__Mimic__CompilePlatformScript(
++    const v8::Context* context, const v8::String* source) {
++  PlatformBootstrapCompilationScope admission;
++  v8::Local<v8::Script> result;
++  if (!v8::Script::Compile(PlatformLocalFromSlot(context),
++                           PlatformLocalFromSlot(source)).ToLocal(&result)) {
++    return nullptr;
++  }
++  return *result;
++}
++
+ }  // namespace v8
+ 
+ #ifdef ENABLE_SLOW_DCHECKS
+--- a/v8/src/builtins/builtins-api.cc
++++ b/v8/src/builtins/builtins-api.cc
+@@ -51,6 +51,12 @@
+   return false;
+ }
+ 
++bool HasStrictApiReceiver(Tagged<FunctionTemplateInfo> function) {
++  Tagged<Object> shared = function->shared_function_info();
++  return IsSharedFunctionInfo(shared) &&
++         is_strict(Cast<SharedFunctionInfo>(shared)->language_mode());
++}
++
+ // argv and argc are the same as those passed to FunctionCallbackInfo:
+ // - argc is the number of arguments excluding the receiver
+ // - argv is the array arguments. The receiver is stored at argv[-1].
+@@ -87,6 +93,13 @@
+       *receiver_location_on_stack = js_receiver->ptr();
+     }
+ 
++    receiver = js_receiver;
++  } else if (HasStrictApiReceiver(*fun_data)) {
++    // Strict native callbacks have no template signature or access-check
++    // policy. Preserve the exact receiver for the callback's semantic check.
++    CHECK(fun_data->remove_prototype());
++    CHECK(fun_data->accept_any_receiver());
++    CHECK(IsUndefined(fun_data->signature()));
+   } else {
+     DCHECK(IsJSReceiver(*receiver));
+     js_receiver = indirect_handle(Cast<JSReceiver>(receiver), isolate);
+@@ -116,7 +129,7 @@
+                                        *js_receiver, args);
+       raw_result = custom.CallOrConstruct(isolate, *fun_data, is_construct);
+     } else {
+-      FunctionCallbackArguments custom(isolate, *fun_data, *js_receiver, args);
++      FunctionCallbackArguments custom(isolate, *fun_data, *receiver, args);
+       raw_result = custom.CallOrConstruct(isolate, *fun_data, is_construct);
+     }
+     RETURN_EXCEPTION_IF_EXCEPTION(isolate);
+@@ -125,7 +138,7 @@
+     }
+   }
+ 
+-  return js_receiver;
++  return indirect_handle(receiver, isolate);
+ }
+ 
+ }  // anonymous namespace
+@@ -158,7 +171,8 @@
+   RCS_SCOPE(isolate, RuntimeCallCounterId::kInvokeApiFunction);
+ 
+   // Do proper receiver conversion for non-strict mode api functions.
+-  if (!is_construct && !IsJSReceiver(*receiver)) {
++  if (!is_construct && !HasStrictApiReceiver(*function) &&
++      !IsJSReceiver(*receiver)) {
+     ASSIGN_RETURN_ON_EXCEPTION(isolate, receiver,
+                                Object::ConvertReceiver(isolate, receiver));
+   }
+--- a/v8/src/builtins/builtins-call-gen.cc
++++ b/v8/src/builtins/builtins-call-gen.cc
+@@ -757,7 +757,26 @@
+   CodeStubArguments args(this, argc);
+   Label throw_illegal_invocation(this, Label::kDeferred);
+ 
+-  // For API callbacks the receiver is always a JSReceiver (since
++  // A strict native API callback receives its original receiver. Do not enter
++  // the ordinary API path's JSReceiver casts or access/signature checks.
++  Label ordinary_receiver(this);
++  TNode<Object> shared = LoadObjectField(
++      function_template_info,
++      offsetof(FunctionTemplateInfo, shared_function_info_));
++  GotoIf(IsUndefined(shared), &ordinary_receiver);
++  TNode<Uint32T> shared_flags = LoadObjectField<Uint32T>(
++      CAST(shared), offsetof(SharedFunctionInfo, flags_));
++  GotoIfNot(IsSetWord32<SharedFunctionInfo::IsStrictBit>(shared_flags),
++            &ordinary_receiver);
++  CSA_DCHECK(this, IsUndefined(LoadObjectField(
++                      function_template_info,
++                      offsetof(FunctionTemplateInfo, signature_))));
++  TailCallBuiltin(Builtin::kCallApiCallbackGeneric, context,
++                  TruncateIntPtrToInt32(args.GetLengthWithoutReceiver()),
++                  topmost_script_having_context, function_template_info);
++  Bind(&ordinary_receiver);
++
++  // For ordinary API callbacks the receiver is always a JSReceiver (since
+   // they are treated like sloppy mode functions). We might need
+   // to perform access checks in the current {context}, depending
+   // on whether the "needs access check" bit is set on the receiver
+--- a/v8/src/compiler/js-call-reducer.cc
++++ b/v8/src/compiler/js-call-reducer.cc
+@@ -4421,6 +4421,9 @@
+ 
+ Reduction JSCallReducer::ReduceCallApiFunction(Node* node,
+                                                SharedFunctionInfoRef shared) {
++  // Existing API-call reductions box receivers. Strict native callbacks must
++  // use the generic strict call path until an equivalent reduction exists.
++  if (is_strict(shared.language_mode())) return NoChange();
+   JSCallNode n(node);
+   CallParameters const& p = n.Parameters();
+   int const argc = p.arity_without_implicit_args();
+--- a/v8/src/maglev/maglev-graph-builder.cc
++++ b/v8/src/maglev/maglev-graph-builder.cc
+@@ -11021,6 +11021,9 @@
+ MaybeReduceResult MaglevGraphBuilder::TryBuildCallKnownApiFunction(
+     compiler::JSFunctionRef function, compiler::SharedFunctionInfoRef shared,
+     CallArguments& args) {
++  // Keep strict native callbacks on the normal strict function call path;
++  // API-call specialization below assumes and converts to JSReceiver.
++  if (is_strict(shared.language_mode())) return {};
+   compiler::OptionalFunctionTemplateInfoRef maybe_function_template_info =
+       shared.function_template_info(broker());
+   if (!maybe_function_template_info.has_value()) {
+--- a/v8/src/objects/api-callbacks-inl.h
++++ b/v8/src/objects/api-callbacks-inl.h
+@@ -248,6 +248,7 @@
+                HasNewCallbacksSignatureBit::kShift)
+ BOOL_ACCESSORS(InterceptorInfo, flags, has_dont_delete_property,
+                HasDontDeletePropertyBit::kShift)
++BOOL_ACCESSORS(InterceptorInfo, flags, observation_only, ObservationOnlyBit::kShift)
+ 
+ void InterceptorInfo::RemoveCallbackRedirectionForSerialization(
+     IsolateForSandbox isolate) {
+--- a/v8/src/objects/api-callbacks.h
++++ b/v8/src/objects/api-callbacks.h
+@@ -249,6 +249,7 @@
+   // Api deprecation process.
+   DECL_BOOLEAN_ACCESSORS(has_new_callbacks_signature)
+   DECL_BOOLEAN_ACCESSORS(has_dont_delete_property)
++  DECL_BOOLEAN_ACCESSORS(observation_only)
+ 
+   using CanInterceptSymbolsBit = base::BitField<bool, 0, 1, uint32_t>;
+   using NonMaskingBit = CanInterceptSymbolsBit::Next<bool, 1>;
+@@ -256,6 +257,7 @@
+   using HasNoSideEffectBit = NamedBit::Next<bool, 1>;
+   using HasNewCallbacksSignatureBit = HasNoSideEffectBit::Next<bool, 1>;
+   using HasDontDeletePropertyBit = HasNewCallbacksSignatureBit::Next<bool, 1>;
++  using ObservationOnlyBit = HasDontDeletePropertyBit::Next<bool, 1>;
+   enum Flag : uint32_t {
+     kNone = 0,
+     kCanInterceptSymbols = CanInterceptSymbolsBit::kMask,
+@@ -264,6 +266,7 @@
+     kHasNoSideEffect = HasNoSideEffectBit::kMask,
+     kHasNewCallbacksSignature = HasNewCallbacksSignatureBit::kMask,
+     kHasDontDeleteProperty = HasDontDeletePropertyBit::kMask,
++    kObservationOnly = ObservationOnlyBit::kMask,
+   };
+   using Flags = base::Flags<Flag>;
+   static constexpr int kFlagCount = 6;
+--- a/v8/src/objects/api-callbacks.tq
++++ b/v8/src/objects/api-callbacks.tq
+@@ -10,6 +10,7 @@
+   has_no_side_effect: bool: 1 bit;
+   has_new_callbacks_signature: bool: 1 bit;
+   has_dont_delete_property: bool: 1 bit;
++  observation_only: bool: 1 bit;
+ }
+ 
+ @cppObjectLayoutDefinition
+--- a/v8/src/objects/js-objects.cc
++++ b/v8/src/objects/js-objects.cc
+@@ -4430,8 +4430,10 @@
+         isolate, PrototypeIterator::GetCurrent<JSObject>(iter), should_throw);
+   }
+ 
+-  if (object->map()->has_named_interceptor() ||
+-      object->map()->has_indexed_interceptor()) {
++  if ((object->map()->has_named_interceptor() &&
++       !object->GetNamedInterceptor()->observation_only()) ||
++      (object->map()->has_indexed_interceptor() &&
++       !object->GetIndexedInterceptor()->observation_only())) {
+     RETURN_FAILURE(isolate, should_throw,
+                    NewTypeError(MessageTemplate::kCannotPreventExt));
+   }
+@@ -4575,8 +4577,10 @@
+                    NewTypeError(MessageTemplate::kCannotFreeze));
+   }
+ 
+-  if (object->map()->has_named_interceptor() ||
+-      object->map()->has_indexed_interceptor() ||
++  if ((object->map()->has_named_interceptor() &&
++       !object->GetNamedInterceptor()->observation_only()) ||
++      (object->map()->has_indexed_interceptor() &&
++       !object->GetIndexedInterceptor()->observation_only()) ||
+       (object->HasTypedArrayOrRabGsabTypedArrayElements() &&
+        Cast<JSTypedArray>(*object)->IsVariableLength())) {
+     MessageTemplate message = MessageTemplate::kNone;
+--- a/v8/src/snapshot/context-serializer.cc
++++ b/v8/src/snapshot/context-serializer.cc
+@@ -223,6 +223,20 @@
+   // We can't allow scripts to be part of the context snapshot because they
+   // contain a unique ID, and deserializing several context snapshots containing
+   // script would cause dupes.
++  // Function::New creates an uncached template for this function instance.
++  // Its callback data can contain realm-owned closures and backing stores.
++  // Serializing those through the isolate cache would traverse context state
++  // twice and give independent contexts shared ownership of that state.
++  if (IsFunctionTemplateInfo(o) &&
++      !Cast<FunctionTemplateInfo>(o)->is_cacheable()) {
++    return false;
++  }
++  if (IsSharedFunctionInfo(o)) {
++    Tagged<SharedFunctionInfo> shared = Cast<SharedFunctionInfo>(o);
++    if (shared->IsApiFunction() && !shared->api_func_data()->is_cacheable()) {
++      return false;
++    }
++  }
+   return IsName(o) || IsScript(o) || IsSharedFunctionInfo(o) ||
+          IsHeapNumber(o) || IsCode(o) || IsInstructionStream(o) ||
+          IsScopeInfo(o) || IsAccessorInfo(o) || IsInterceptorInfo(o) ||
+--- a/v8/src/codegen/compiler.cc
++++ b/v8/src/codegen/compiler.cc
+@@ -69,8 +69,10 @@
+ #ifdef V8_ENABLE_MAGLEV
+ #include "src/maglev/maglev-concurrent-dispatcher.h"
+ #include "src/maglev/maglev.h"
+ #endif  // V8_ENABLE_MAGLEV
++
++extern "C" bool v8__Mimic__IsPlatformBootstrapCompilation();
+ 
+ namespace v8 {
+ namespace internal {
+ 
+@@ -3748,9 +3750,15 @@
+                          ScriptDetails script_details, NativesFlag natives) {
+   // Create a script object describing the script to be compiled.
+   Handle<Script> script = parse_info->CreateScript(
+       isolate, source, script_details.wrapped_arguments,
+-      script_details.origin_options, natives);
++      script_details.origin_options,
++      v8__Mimic__IsPlatformBootstrapCompilation() ? EXTENSION_CODE : natives);
++  // Allocate non-user parse flags and set native provenance before parsing.
++  // Extension scripts skip snapshot clearing and cannot represent bootstrap.
++  if (v8__Mimic__IsPlatformBootstrapCompilation()) {
++    script->set_type(Script::Type::kNative);
++  }
+   DisallowGarbageCollection no_gc;
+   SetScriptFieldsFromDetails(isolate, *script, script_details, &no_gc);
+   LOG(isolate, ScriptDetails(*script));
+   return script;
+@@ -3932,8 +3940,10 @@
+     void* compile_hint_callback_data,
+     ScriptCompiler::CompileOptions compile_options,
+     ScriptCompiler::NoCacheReason no_cache_reason, NativesFlag natives,
+     ScriptCompiler::CompilationDetails* compilation_details) {
++  const bool platform = v8__Mimic__IsPlatformBootstrapCompilation();
++  if (platform) natives = EXTENSION_CODE;
+   ScriptCompileTimerScope compile_timer(isolate, no_cache_reason,
+                                         compilation_details);
+ 
+   if (compile_options & ScriptCompiler::kConsumeCodeCache) {
+@@ -3963,9 +3973,9 @@
+ 
+   // For extensions or REPL mode scripts neither do a compilation cache lookup,
+   // nor put the compilation result back into the cache.
+   const bool use_compilation_cache =
+-      extension == nullptr && script_details.repl_mode == REPLMode::kNo;
++      !platform && extension == nullptr && script_details.repl_mode == REPLMode::kNo;
+   MaybeDirectHandle<SharedFunctionInfo> maybe_result;
+   MaybeHandle<Script> maybe_script;
+   IsCompiledScope is_compiled_scope;
+   if (use_compilation_cache) {
+@@ -4163,8 +4173,9 @@
+     Isolate* isolate, Handle<String> source, DirectHandle<Context> context,
+     const ScriptDetails& script_details, AlignedCachedData* cached_data,
+     v8::ScriptCompiler::CompileOptions compile_options,
+     v8::ScriptCompiler::NoCacheReason no_cache_reason) {
++  const bool platform = v8__Mimic__IsPlatformBootstrapCompilation();
+   ScriptCompiler::CompilationDetails compilation_details;
+   ScriptCompileTimerScope compile_timer(isolate, no_cache_reason,
+                                         &compilation_details);
+ 
+@@ -4184,11 +4195,13 @@
+   bool can_consume_code_cache =
+       compile_options & ScriptCompiler::kConsumeCodeCache;
+   CompilationCache* compilation_cache = isolate->compilation_cache();
+   // First check per-isolate compilation cache.
+-  CompilationCacheScript::LookupResult lookup_result =
+-      compilation_cache->LookupScript(source, script_details, language_mode);
+-  maybe_result = lookup_result.toplevel_sfi();
++  // Platform programs never share the ordinary author-script compilation cache.
++  if (!platform) {
++    auto lookup_result = compilation_cache->LookupScript(source, script_details, language_mode);
++    maybe_result = lookup_result.toplevel_sfi();
++  }
+   if (maybe_result.ToHandle(&result)) {
+     is_compiled_scope = result->is_compiled_scope(isolate);
+     compile_timer.set_hit_isolate_cache();
+   } else if (can_consume_code_cache) {
+@@ -4199,15 +4212,20 @@
+     TRACE_EVENT(TRACE_DISABLED_BY_DEFAULT("v8.compile"),
+                 "V8.CompileDeserialize");
+     maybe_result = CodeSerializer::Deserialize(isolate, cached_data, source,
+                                                script_details);
++    if (maybe_result.ToHandle(&result) &&
++        Cast<Script>(result->script())->IsUserJavaScript() == platform) {
++      cached_data->Reject();
++      maybe_result = {};
++    }
+     bool consuming_code_cache_succeeded = false;
+     if (maybe_result.ToHandle(&result)) {
+       is_compiled_scope = result->is_compiled_scope(isolate);
+       if (is_compiled_scope.is_compiled()) {
+         consuming_code_cache_succeeded = true;
+         // Promote to per-isolate compilation cache.
+-        compilation_cache->PutScript(source, language_mode, result);
++        if (!platform) compilation_cache->PutScript(source, language_mode, result);
+       }
+     }
+     if (!consuming_code_cache_succeeded) {
+       // Deserializer failed. Fall through to compile.
+@@ -4216,9 +4234,9 @@
+   }
+ 
+   if (maybe_result.is_null()) {
+     UnoptimizedCompileFlags flags = UnoptimizedCompileFlags::ForToplevelCompile(
+-        isolate, true, language_mode, script_details.repl_mode,
++        isolate, !platform, language_mode, script_details.repl_mode,
+         ScriptType::kClassic, v8_flags.lazy);
+     flags.set_is_eval(true);  // Use an eval scope as declaration scope.
+     flags.set_function_syntax_kind(FunctionSyntaxKind::kWrapped);
+     // TODO(delphick): Remove this and instead make the wrapped and wrapper
+@@ -4258,9 +4276,9 @@
+     is_compiled_scope = result->is_compiled_scope(isolate);
+     script = Handle<Script>(Cast<Script>(result->script()), isolate);
+     // Add the result to the isolate cache if there's no context extension.
+     if (maybe_outer_scope_info.is_null()) {
+-      compilation_cache->PutScript(source, language_mode, result);
++      if (!platform) compilation_cache->PutScript(source, language_mode, result);
+     }
+   }
+ 
+   DCHECK(is_compiled_scope.is_compiled());

@@ -25,6 +25,10 @@ func TestPerformanceUserTimingMatchesFrozenChrome(t *testing.T) {
 	parallelBrowserTest(t)
 	documentAllOracle(t, "performance_user_timing")
 }
+func TestPerformanceMeasureOptionsMatchesFrozenChrome(t *testing.T) {
+	parallelBrowserTest(t)
+	documentAllOracle(t, "performance_measure_options")
+}
 func TestPerformanceObserverMatchesFrozenChrome(t *testing.T) {
 	parallelBrowserTest(t)
 
@@ -58,7 +62,7 @@ func TestPerformanceLongTaskFramesMatchFrozenChrome(t *testing.T) {
 
 func TestPerformanceWorkerMatchesFrozenChrome(t *testing.T) {
 	parallelBrowserTest(t)
-	for _, name := range []string{"performance_surface", "performance_user_timing", "performance_observer"} {
+	for _, name := range []string{"performance_surface", "performance_user_timing", "performance_observer", "performance_measure_options"} {
 		t.Run(name, func(t *testing.T) {
 			p := bootstrapSnapshotPage(t)
 			navigateCapabilityFixture(t, p)

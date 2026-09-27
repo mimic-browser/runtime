@@ -1,0 +1,198 @@
+{
+  "captureMetadata": {
+    "schemaVersion": 1,
+    "chromeVersion": "152.0.7977.82",
+    "chromiumRevision": 1669021,
+    "chromiumCommit": "d04cdb24d67b081f6cf80200ffc5233f44b61109",
+    "v8Version": "15.2.124.21",
+    "platform": "windows-x64",
+    "browserMode": "headful",
+    "commandLineFeatureOverrides": [],
+    "environmentProfileId": "chrome-152-windows-x64-headful-local-probe-reused-v1",
+    "profileFreshness": "fresh-at-original-launch; reused process with a new local fixture document",
+    "viewport": {
+      "width": 1272,
+      "height": 653,
+      "deviceScaleFactor": 1
+    },
+    "window": {
+      "left": 593,
+      "top": 328,
+      "width": 1280,
+      "height": 800,
+      "windowState": "normal"
+    },
+    "secureContextState": true,
+    "isolationState": false,
+    "visibilityState": "visible",
+    "hasFocus": true,
+    "provenanceCorrection": "The helper default fresh-controlled label is corrected here. Original captures are retained unchanged; process was directly launched with a dedicated profile and minimal arguments, then reused for local semantic probes."
+  },
+  "fixtureOrigin": "http://127.0.0.1:45728",
+  "fixture": "internal/browser/testdata/xhr_event_handlers_oracle.js",
+  "fixtureSHA256": "cbce52d4e5eb282f1746e00434b925bc72972ed241ee2966d2ca80bb9047ef57",
+  "worker": false,
+  "result": {
+    "result": {
+      "type": "object",
+      "value": {
+        "handlers": [
+          {
+            "name": "onloadstart",
+            "owner": "XMLHttpRequestEventTarget",
+            "enumerable": true,
+            "configurable": true,
+            "initial": null,
+            "roundTrip": true,
+            "cleared": null,
+            "errors": [
+              {
+                "name": "TypeError",
+                "message": "Illegal invocation"
+              },
+              {
+                "name": "TypeError",
+                "message": "Illegal invocation"
+              }
+            ]
+          },
+          {
+            "name": "onprogress",
+            "owner": "XMLHttpRequestEventTarget",
+            "enumerable": true,
+            "configurable": true,
+            "initial": null,
+            "roundTrip": true,
+            "cleared": null,
+            "errors": [
+              {
+                "name": "TypeError",
+                "message": "Illegal invocation"
+              },
+              {
+                "name": "TypeError",
+                "message": "Illegal invocation"
+              }
+            ]
+          },
+          {
+            "name": "onabort",
+            "owner": "XMLHttpRequestEventTarget",
+            "enumerable": true,
+            "configurable": true,
+            "initial": null,
+            "roundTrip": true,
+            "cleared": null,
+            "errors": [
+              {
+                "name": "TypeError",
+                "message": "Illegal invocation"
+              },
+              {
+                "name": "TypeError",
+                "message": "Illegal invocation"
+              }
+            ]
+          },
+          {
+            "name": "onerror",
+            "owner": "XMLHttpRequestEventTarget",
+            "enumerable": true,
+            "configurable": true,
+            "initial": null,
+            "roundTrip": true,
+            "cleared": null,
+            "errors": [
+              {
+                "name": "TypeError",
+                "message": "Illegal invocation"
+              },
+              {
+                "name": "TypeError",
+                "message": "Illegal invocation"
+              }
+            ]
+          },
+          {
+            "name": "onload",
+            "owner": "XMLHttpRequestEventTarget",
+            "enumerable": true,
+            "configurable": true,
+            "initial": null,
+            "roundTrip": true,
+            "cleared": null,
+            "errors": [
+              {
+                "name": "TypeError",
+                "message": "Illegal invocation"
+              },
+              {
+                "name": "TypeError",
+                "message": "Illegal invocation"
+              }
+            ]
+          },
+          {
+            "name": "ontimeout",
+            "owner": "XMLHttpRequestEventTarget",
+            "enumerable": true,
+            "configurable": true,
+            "initial": null,
+            "roundTrip": true,
+            "cleared": null,
+            "errors": [
+              {
+                "name": "TypeError",
+                "message": "Illegal invocation"
+              },
+              {
+                "name": "TypeError",
+                "message": "Illegal invocation"
+              }
+            ]
+          },
+          {
+            "name": "onloadend",
+            "owner": "XMLHttpRequestEventTarget",
+            "enumerable": true,
+            "configurable": true,
+            "initial": null,
+            "roundTrip": true,
+            "cleared": null,
+            "errors": [
+              {
+                "name": "TypeError",
+                "message": "Illegal invocation"
+              },
+              {
+                "name": "TypeError",
+                "message": "Illegal invocation"
+              }
+            ]
+          },
+          {
+            "name": "onreadystatechange",
+            "owner": "XMLHttpRequest",
+            "enumerable": true,
+            "configurable": true,
+            "initial": null,
+            "roundTrip": true,
+            "cleared": null,
+            "errors": [
+              {
+                "name": "TypeError",
+                "message": "Illegal invocation"
+              },
+              {
+                "name": "TypeError",
+                "message": "Illegal invocation"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "originalProbeFixtureSHA256": "8f31867ce5ead4a7c50c7d6f13f019c2432f520c5cb7f6e7e450d24276c1b730",
+  "resultProjection": "Original paired array result wrapped under handlers; entries unchanged; no new live capture."
+}

@@ -11,6 +11,15 @@ import (
 // Resolve the Window's current realm for every operation. Object references
 // returned by descriptors retain their original realm through crossFrameData.
 func (r *Realm) installWindowReflection(host map[string]any) {
+	if native, ok := r.runtime.(engine.ExceptionStateRuntime); ok {
+		host["initializeExceptionState"] = native.ExceptionStateFactory()
+	}
+	if native, ok := r.runtime.(engine.ReceiverDispatchRuntime); ok {
+		host["createReceiverDispatch"] = native.ReceiverDispatchFactory()
+	}
+	if native, ok := r.runtime.(engine.PropertyObservationRuntime); ok {
+		host["createObservedObject"] = native.PropertyObservationFactory()
+	}
 	if native, ok := r.runtime.(engine.InterceptedObjectRuntime); ok {
 		host["createWindowObject"] = r.fn(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
 			return native.NewInterceptedObject(args[0])

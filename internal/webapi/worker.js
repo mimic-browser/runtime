@@ -1,5 +1,8 @@
 (function (host) {
   'use strict';
+  /* shared_promise_intrinsics */
+  let platformDOMException;
+  const webIDLNumber = (value) => +value;
   let cloneCodec;
   const listenerTargets = new WeakMap(),
     handlers = { message: null, messageerror: null, error: null },
@@ -287,7 +290,7 @@
           "Failed to execute 'getRandomValues' on 'Crypto': parameter 1 is not of type 'ArrayBufferView'.",
         );
       if (view.byteLength > 65536)
-        throw new DOMException(
+        throw platformDOMException(
           'The ArrayBufferView byte length exceeds 65536 bytes',
           'QuotaExceededError',
         );
@@ -307,12 +310,14 @@
     digest(algorithm, data) {
       const name = typeof algorithm === 'string' ? algorithm : algorithm && algorithm.name;
       if (!ArrayBuffer.isView(data) && !(data instanceof ArrayBuffer))
-        return Promise.reject(new TypeError('Data must be an ArrayBuffer or ArrayBufferView'));
+        return platformPromiseReject(
+          new TypeError('Data must be an ArrayBuffer or ArrayBufferView'),
+        );
       const bytes =
         data instanceof ArrayBuffer
           ? new Uint8Array(data)
           : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-      return Promise.resolve(host.cryptoDigest(String(name), Array.from(bytes))).then(
+      return platformPromiseResolve(host.cryptoDigest(String(name), Array.from(bytes))).then(
         (result) => new Uint8Array(result).buffer,
       );
     }
@@ -368,10 +373,11 @@
     read() {
       const stream = readerSlots.get(this),
         state = readableSlots.get(stream);
-      if (state.queue.length) return Promise.resolve({ value: state.queue.shift(), done: false });
-      if (state.error) return Promise.reject(state.error);
-      if (state.closed) return Promise.resolve({ value: undefined, done: true });
-      return new Promise((resolve, reject) => {
+      if (state.queue.length)
+        return platformPromiseResolve({ value: state.queue.shift(), done: false });
+      if (state.error) return platformPromiseReject(state.error);
+      if (state.closed) return platformPromiseResolve({ value: undefined, done: true });
+      return new platformPromise((resolve, reject) => {
         state.reads.push(resolve);
         state.rejects.push(reject);
       });
@@ -387,7 +393,7 @@
       const stream = readerSlots.get(this);
       return stream
         ? stream.cancel(reason)
-        : Promise.reject(new TypeError('Reader has been released'));
+        : platformPromiseReject(new TypeError('Reader has been released'));
     }
   }
   class ReadableStream {
@@ -404,7 +410,7 @@
       readableSlots.set(this, state);
       const controller = new ReadableStreamDefaultController(this);
       try {
-        Promise.resolve(
+        platformPromiseResolve(
           typeof source.start === 'function' ? source.start(controller) : undefined,
         ).catch((error) => controller.error(error));
       } catch (error) {
@@ -421,7 +427,7 @@
       const state = readableSlots.get(this);
       state.closed = true;
       state.queue.length = 0;
-      return Promise.resolve(
+      return platformPromiseResolve(
         typeof state.source.cancel === 'function' ? state.source.cancel(reason) : undefined,
       );
     }
@@ -526,7 +532,7 @@
   }
   const workerTimer = (fn, delay, args, repeat) => {
     fn = trustedTimerArgument(fn);
-    delay = Number(delay);
+    delay = webIDLNumber(delay);
     const name = repeat ? 'setInterval' : 'setTimeout';
     const source =
       typeof fn === 'function'
@@ -537,18 +543,7 @@
             'WorkerGlobalScope ' + name,
             "Failed to execute '" + name + "' on 'WorkerGlobalScope': ",
           );
-    const callback = source === null ? () => fn(...args) : () => host.runTimerSource(source);
-    return host.setTimer(
-      () => {
-        try {
-          callback();
-        } catch (error) {
-          reportWorkerException(error);
-        }
-      },
-      delay,
-      repeat,
-    );
+    return host.setTimer(source === null ? fn : source, delay, repeat, reportWorkerException, args);
   };
   const operations = {
     importScripts(...urls) {
@@ -564,7 +559,7 @@
         ),
       );
       const error = host.importScripts(values);
-      if (error) throw new DOMException(error.message, error.name);
+      if (error) throw platformDOMException(error.message, error.name);
     },
     queueMicrotask,
     addEventListener: (...args) => EventTarget.prototype.addEventListener.apply(globalThis, args),
@@ -578,8 +573,8 @@
     close: () => host.close(),
     setTimeout: (fn, delay = 0, ...args) => workerTimer(fn, delay, args, false),
     setInterval: (fn, delay = 0, ...args) => workerTimer(fn, delay, args, true),
-    clearTimeout: (id) => host.clearTimer(Number(id)),
-    clearInterval: (id) => host.clearTimer(Number(id)),
+    clearTimeout: (id) => host.clearTimer(webIDLNumber(id)),
+    clearInterval: (id) => host.clearTimer(webIDLNumber(id)),
   };
   Object.assign(globalThis, operations);
   globalThis.__deliver = (data) =>
@@ -650,7 +645,7 @@
     /* shared_worker_fetch */
     cloneCodec = createStructuredCloneCodec((value) => {
       if (blobSlots.has(value))
-        throw new DOMException(
+        throw platformDOMException(
           'Platform serialization of Blob and File is not supported.',
           'NotSupportedError',
         );

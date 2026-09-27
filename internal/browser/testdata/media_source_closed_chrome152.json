@@ -1,0 +1,84 @@
+{
+  "captureMetadata": {
+    "schemaVersion": 1,
+    "chromeVersion": "152.0.7977.82",
+    "chromiumRevision": 1669021,
+    "chromiumCommit": "d04cdb24d67b081f6cf80200ffc5233f44b61109",
+    "v8Version": "15.2.124.21",
+    "platform": "windows-x64",
+    "browserMode": "headful",
+    "commandLineFeatureOverrides": [],
+    "environmentProfileId": "chrome-152-windows-x64-headful-controlled-v1",
+    "profileFreshness": "fresh-controlled",
+    "viewport": {
+      "width": 1272,
+      "height": 653,
+      "deviceScaleFactor": 1
+    },
+    "window": {
+      "left": 593,
+      "top": 328,
+      "width": 1280,
+      "height": 800,
+      "windowState": "normal"
+    },
+    "secureContextState": true,
+    "isolationState": false,
+    "visibilityState": "visible",
+    "hasFocus": true
+  },
+  "fixtureOrigin": "http://127.0.0.1:14931",
+  "fixture": "internal/browser/testdata/media_source_closed_oracle.js",
+  "fixtureSHA256": "60bf06af70f143c6880c755caf58d746f3dc196e622e5f51a62d23b8d379145c",
+  "worker": false,
+  "result": {
+    "result": {
+      "type": "object",
+      "value": {
+        "constructor": {
+          "tag": "[object MediaSource]",
+          "eventTarget": true,
+          "readyState": "closed",
+          "duration": "NaN",
+          "sameSourceBuffers": true,
+          "sameActiveSourceBuffers": true,
+          "differentLists": true,
+          "listTag": "[object SourceBufferList]",
+          "length": 0,
+          "activeLength": 0
+        },
+        "setDuration": {
+          "error": "InvalidStateError",
+          "message": "Failed to set the 'duration' property on 'MediaSource': The MediaSource's readyState is not 'open'."
+        },
+        "addValidType": {
+          "error": "InvalidStateError",
+          "message": "Failed to execute 'addSourceBuffer' on 'MediaSource': The MediaSource's readyState is not 'open'."
+        },
+        "addInvalidType": {
+          "error": "NotSupportedError",
+          "message": "Failed to execute 'addSourceBuffer' on 'MediaSource': The type provided ('application/x-invalid') is unsupported."
+        },
+        "endOfStream": {
+          "error": "InvalidStateError",
+          "message": "Failed to execute 'endOfStream' on 'MediaSource': The MediaSource's readyState is not 'open'."
+        },
+        "setLiveSeekableRange": {
+          "error": "InvalidStateError",
+          "message": "Failed to execute 'setLiveSeekableRange' on 'MediaSource': The MediaSource's readyState is not 'open'."
+        },
+        "clearLiveSeekableRange": {
+          "error": "InvalidStateError",
+          "message": "Failed to execute 'clearLiveSeekableRange' on 'MediaSource': The MediaSource's readyState is not 'open'."
+        },
+        "listIteration": [],
+        "listItem": true,
+        "objectURL": {
+          "scheme": "blob",
+          "readyState": "closed"
+        },
+        "afterRevocation": "closed"
+      }
+    }
+  }
+}

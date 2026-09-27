@@ -1,0 +1,92 @@
+{
+  "captureMetadata": {
+    "schemaVersion": 1,
+    "chromeVersion": "152.0.7977.82",
+    "chromiumRevision": 1669021,
+    "chromiumCommit": "d04cdb24d67b081f6cf80200ffc5233f44b61109",
+    "v8Version": "15.2.124.21",
+    "platform": "windows-x64",
+    "browserMode": "headful",
+    "commandLineFeatureOverrides": [],
+    "environmentProfileId": "chrome-152-windows-x64-headful-controlled-v1",
+    "profileFreshness": "fresh-controlled",
+    "viewport": {
+      "width": 1272,
+      "height": 653,
+      "deviceScaleFactor": 1
+    },
+    "window": {
+      "left": 593,
+      "top": 328,
+      "width": 1280,
+      "height": 800,
+      "windowState": "normal"
+    },
+    "secureContextState": true,
+    "isolationState": false,
+    "visibilityState": "visible",
+    "hasFocus": true
+  },
+  "fixtureOrigin": "http://127.0.0.1:8141",
+  "fixture": "internal/browser/testdata/html_dir_oracle.js",
+  "fixtureSHA256": "5b36887fdf99ce2de20c5ae1b69155776ce374f2fefe9f46b7031aff1948bfa0",
+  "worker": false,
+  "result": {
+    "result": {
+      "type": "object",
+      "value": {
+        "initial": "",
+        "cases": [
+          {
+            "attribute": "ltr",
+            "value": "ltr"
+          },
+          {
+            "attribute": "RTL",
+            "value": "rtl"
+          },
+          {
+            "attribute": "Auto",
+            "value": "auto"
+          },
+          {
+            "attribute": " ltr ",
+            "value": ""
+          },
+          {
+            "attribute": "unknown",
+            "value": ""
+          },
+          {
+            "attribute": "",
+            "value": ""
+          },
+          {
+            "attribute": "null",
+            "value": ""
+          }
+        ],
+        "authorOverride": {
+          "dir": "rtl",
+          "inputMode": "numeric"
+        },
+        "invalidReceiver": {
+          "name": "TypeError",
+          "message": "Illegal invocation"
+        },
+        "svgReceiver": {
+          "name": "TypeError",
+          "message": "Illegal invocation"
+        },
+        "symbol": {
+          "name": "TypeError",
+          "message": "Failed to set the 'dir' property on 'HTMLElement': Cannot convert a Symbol value to a string"
+        },
+        "descriptor": {
+          "enumerable": true,
+          "configurable": true
+        }
+      }
+    }
+  }
+}

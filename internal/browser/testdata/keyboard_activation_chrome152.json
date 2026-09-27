@@ -1,0 +1,282 @@
+{
+  "version": "Chrome/152.0.7977.82",
+  "results": [
+    {
+      "tag": "a",
+      "text": "",
+      "cancel": false,
+      "setup": "(()=>{document.body.innerHTML='<a id=target href=#ok>go</a>';globalThis.events=[];const e=document.getElementById('target');for(const k of ['keydown','keypress','click','keyup'])e.addEventListener(k,x=>{events.push([x.type,x.isTrusted,x.detail||0]);if(x.type==='click')x.preventDefault()});e.focus();})()",
+      "events": [
+        [
+          "keydown",
+          true,
+          0
+        ],
+        [
+          "click",
+          true,
+          0
+        ],
+        [
+          "keyup",
+          true,
+          0
+        ]
+      ]
+    },
+    {
+      "tag": "a",
+      "text": "",
+      "cancel": true,
+      "setup": "(()=>{document.body.innerHTML='<a id=target href=#ok>go</a>';globalThis.events=[];const e=document.getElementById('target');for(const k of ['keydown','keypress','click','keyup'])e.addEventListener(k,x=>{events.push([x.type,x.isTrusted,x.detail||0]);if(x.type==='click'||x.type==='keydown')x.preventDefault()});e.focus();})()",
+      "events": [
+        [
+          "keydown",
+          true,
+          0
+        ],
+        [
+          "keyup",
+          true,
+          0
+        ]
+      ]
+    },
+    {
+      "tag": "a",
+      "text": "\r",
+      "cancel": false,
+      "setup": "(()=>{document.body.innerHTML='<a id=target href=#ok>go</a>';globalThis.events=[];const e=document.getElementById('target');for(const k of ['keydown','keypress','click','keyup'])e.addEventListener(k,x=>{events.push([x.type,x.isTrusted,x.detail||0]);if(x.type==='click')x.preventDefault()});e.focus();})()",
+      "events": [
+        [
+          "keydown",
+          true,
+          0
+        ],
+        [
+          "click",
+          true,
+          0
+        ],
+        [
+          "keyup",
+          true,
+          0
+        ]
+      ]
+    },
+    {
+      "tag": "a",
+      "text": "\r",
+      "cancel": true,
+      "setup": "(()=>{document.body.innerHTML='<a id=target href=#ok>go</a>';globalThis.events=[];const e=document.getElementById('target');for(const k of ['keydown','keypress','click','keyup'])e.addEventListener(k,x=>{events.push([x.type,x.isTrusted,x.detail||0]);if(x.type==='click'||x.type==='keydown')x.preventDefault()});e.focus();})()",
+      "events": [
+        [
+          "keydown",
+          true,
+          0
+        ],
+        [
+          "keyup",
+          true,
+          0
+        ]
+      ]
+    },
+    {
+      "tag": "button",
+      "text": "",
+      "cancel": false,
+      "setup": "(()=>{document.body.innerHTML='<button id=target type=button>go</button>';globalThis.events=[];const e=document.getElementById('target');for(const k of ['keydown','keypress','click','keyup'])e.addEventListener(k,x=>{events.push([x.type,x.isTrusted,x.detail||0]);if(x.type==='click')x.preventDefault()});e.focus();})()",
+      "events": [
+        [
+          "keydown",
+          true,
+          0
+        ],
+        [
+          "keyup",
+          true,
+          0
+        ]
+      ]
+    },
+    {
+      "tag": "button",
+      "text": "",
+      "cancel": true,
+      "setup": "(()=>{document.body.innerHTML='<button id=target type=button>go</button>';globalThis.events=[];const e=document.getElementById('target');for(const k of ['keydown','keypress','click','keyup'])e.addEventListener(k,x=>{events.push([x.type,x.isTrusted,x.detail||0]);if(x.type==='click'||x.type==='keydown')x.preventDefault()});e.focus();})()",
+      "events": [
+        [
+          "keydown",
+          true,
+          0
+        ],
+        [
+          "keyup",
+          true,
+          0
+        ]
+      ]
+    },
+    {
+      "tag": "button",
+      "text": "\r",
+      "cancel": false,
+      "setup": "(()=>{document.body.innerHTML='<button id=target type=button>go</button>';globalThis.events=[];const e=document.getElementById('target');for(const k of ['keydown','keypress','click','keyup'])e.addEventListener(k,x=>{events.push([x.type,x.isTrusted,x.detail||0]);if(x.type==='click')x.preventDefault()});e.focus();})()",
+      "events": [
+        [
+          "keydown",
+          true,
+          0
+        ],
+        [
+          "keypress",
+          true,
+          0
+        ],
+        [
+          "click",
+          true,
+          0
+        ],
+        [
+          "keyup",
+          true,
+          0
+        ]
+      ]
+    },
+    {
+      "tag": "button",
+      "text": "\r",
+      "cancel": true,
+      "setup": "(()=>{document.body.innerHTML='<button id=target type=button>go</button>';globalThis.events=[];const e=document.getElementById('target');for(const k of ['keydown','keypress','click','keyup'])e.addEventListener(k,x=>{events.push([x.type,x.isTrusted,x.detail||0]);if(x.type==='click'||x.type==='keydown')x.preventDefault()});e.focus();})()",
+      "events": [
+        [
+          "keydown",
+          true,
+          0
+        ],
+        [
+          "keyup",
+          true,
+          0
+        ]
+      ]
+    },
+    {
+      "tag": "input",
+      "text": "",
+      "cancel": false,
+      "setup": "(()=>{document.body.innerHTML='<input id=target type=button>go</input>';globalThis.events=[];const e=document.getElementById('target');for(const k of ['keydown','keypress','click','keyup'])e.addEventListener(k,x=>{events.push([x.type,x.isTrusted,x.detail||0]);if(x.type==='click')x.preventDefault()});e.focus();})()",
+      "events": [
+        [
+          "keydown",
+          true,
+          0
+        ],
+        [
+          "keyup",
+          true,
+          0
+        ]
+      ]
+    },
+    {
+      "tag": "input",
+      "text": "",
+      "cancel": true,
+      "setup": "(()=>{document.body.innerHTML='<input id=target type=button>go</input>';globalThis.events=[];const e=document.getElementById('target');for(const k of ['keydown','keypress','click','keyup'])e.addEventListener(k,x=>{events.push([x.type,x.isTrusted,x.detail||0]);if(x.type==='click'||x.type==='keydown')x.preventDefault()});e.focus();})()",
+      "events": [
+        [
+          "keydown",
+          true,
+          0
+        ],
+        [
+          "keyup",
+          true,
+          0
+        ]
+      ]
+    },
+    {
+      "tag": "input",
+      "text": "\r",
+      "cancel": false,
+      "setup": "(()=>{document.body.innerHTML='<input id=target type=button>go</input>';globalThis.events=[];const e=document.getElementById('target');for(const k of ['keydown','keypress','click','keyup'])e.addEventListener(k,x=>{events.push([x.type,x.isTrusted,x.detail||0]);if(x.type==='click')x.preventDefault()});e.focus();})()",
+      "events": [
+        [
+          "keydown",
+          true,
+          0
+        ],
+        [
+          "keypress",
+          true,
+          0
+        ],
+        [
+          "click",
+          true,
+          0
+        ],
+        [
+          "keyup",
+          true,
+          0
+        ]
+      ]
+    },
+    {
+      "tag": "input",
+      "text": "\r",
+      "cancel": true,
+      "setup": "(()=>{document.body.innerHTML='<input id=target type=button>go</input>';globalThis.events=[];const e=document.getElementById('target');for(const k of ['keydown','keypress','click','keyup'])e.addEventListener(k,x=>{events.push([x.type,x.isTrusted,x.detail||0]);if(x.type==='click'||x.type==='keydown')x.preventDefault()});e.focus();})()",
+      "events": [
+        [
+          "keydown",
+          true,
+          0
+        ],
+        [
+          "keyup",
+          true,
+          0
+        ]
+      ]
+    }
+  ],
+  "provenance": {
+    "browserMode": "headful",
+    "originalWebdriver": false,
+    "profileState": "Reused dedicated profile; isolated local about:blank page",
+    "origin": "null",
+    "rawCapture": ".build/tiktok-password-controlled-20260927/keyboard-enter-probe-v2.json",
+    "launchArtifact": ".build/tiktok-password-controlled-20260927/original-launch.json",
+    "rawCaptureSHA256": "30d2fa0d1a5cdec1e20b2df59deb6490b4f7a8a0c2bde43c3878a9d3cdfd9119"
+  },
+  "captureMetadata": {
+    "chromeVersion": "152.0.7977.82",
+    "chromiumRevision": 1669021,
+    "chromiumCommit": "d04cdb24d67b081f6cf80200ffc5233f44b61109",
+    "v8Version": "15.2.124.21",
+    "platform": "windows-x64",
+    "browserMode": "headful",
+    "commandLineFeatureOverrides": [],
+    "environmentProfileId": "chrome-152-windows-x64-headful-local-probe-reused-v1",
+    "profileFreshness": "Reused dedicated profile, isolated about:blank probe page",
+    "viewport": {
+      "width": 1272,
+      "height": 653,
+      "deviceScaleFactor": 1
+    },
+    "window": {
+      "width": 1280,
+      "height": 800
+    },
+    "secureContextState": false,
+    "isolationState": false
+  }
+}

@@ -1,59 +1,14 @@
-# setup_windows.ps1 - one-command setup for the gov8 Windows amd64 build.
-#
-# Acquires the exact pinned V8 inputs, verifies them fail-closed against the
-# recorded SHA-256 digests, and compiles the C ABI shim DLL with MSVC:
-#
-#   1. rusty_v8 release static library (x86_64-pc-windows-msvc)
-#        crate v8 =152.2.0, GitHub release tag v152.2.0
-#        asset: rusty_v8_release_x86_64-pc-windows-msvc.lib.gz (39,957,087 bytes)
-#        sha256: 0b17ca072bae37dd4ff00e6014d2b413becb031c9342ee11cb8226a5881f62b2
-#   2. V8 C++ headers from the pinned crates.io tarball
-#        https://static.crates.io/crates/v8/v8-152.2.0.crate
-#        sha256: a10fe1a92da5c32c7c7f838ce36c0ccfcfd5edf0865b58bdde820aa64cea9888
-#        (the crate vendors the full V8 source; only v8/include is extracted)
-#   3. internal/shim/shim.cc compiled with cl.exe into build/shim/gov8_shim.dll
-#      linked against the pinned static library. The resulting DLL reports
-#      shim ABI 44, matching the exact version required by ffi.go.
-#
-# Concurrency and atomicity:
-#   - The whole run is serialized by a named OS mutex ("build lock") so two
-#     simultaneous invocations can never interleave writes into build\.
-#     The machine-global namespace is tried first (covers cross-session CI
-#     agents) and the session-local namespace is used as a fallback.
-#   - Every download, decompression, and shim link writes to a staging path
-#     first; only complete files are published to their canonical paths via
-#     an atomic move. A killed or concurrent run therefore cannot leave a
-#     truncated .gz/.lib/.dll behind, and a `go test` process that already
-#     has the DLL mapped keeps running against the old image while the new
-#     one takes the canonical path (rename-aside fallback).
-#
-# Sources are searched in this order (each candidate is hash-verified; a hash
-# mismatch is a hard error):
-#   - $env:GOV8_ARTIFACT_GZ (local path override for the .lib.gz)
-#   - the cargo artifact cache used by the rust-oracle build
-#     (%USERPROFILE%\.cargo\.rusty_v8\...)
-#   - build/third_party from a previous run of this script
-#   - the pinned release URL (download)
-# The same order applies to the crate tarball ($env:GOV8_CRATE overrides), with
-# the cargo registry cache searched for any index hash directory.
-# The verified artifact is additionally seeded into the rusty_v8 cargo cache
-# (if absent) so oracle `cargo` builds never re-download the 40 MB artifact.
-#
-# Reproducibility: the script fail-closes unless (a) the artifact and crate
-# SHA-256 digests match, (b) rust-oracle/Cargo.lock pins the same v8 crate and
-# temporal_capi versions, and (c) internal/shim/temporal/Cargo.lock pins the
-# same temporal_capi version; the temporal closure is built with
-# `cargo build --locked`.
-#
-# After this script succeeds, `go test ./...` works from a clean shell.
-#
-# Usage:
-#   powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup_windows.ps1
+# Build the shim using a verified patched V8 source tree and its matching archive.
+# See README.mimic.md for the pinned crate, source patch and native build commands.
+# Publication remains atomic and serialized by the setup build lock.
+param(
+    [Parameter(Mandatory = $true)][string]$NativeSource,
+    [Parameter(Mandatory = $true)][string]$NativeArchive
+)
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2
 
-# --- pinned inputs (do not edit; see rust-oracle/README.md) ------------------
 $CrateVersion = '152.2.0'
 
 $ArtifactName  = 'rusty_v8_release_x86_64-pc-windows-msvc.lib.gz'
@@ -518,20 +473,14 @@ try {
 
     Assert-OracleLockPinned
 
-    $gz = Get-ArtifactGz
-    $lib = Join-Path $ThirdParty ([System.IO.Path]::GetFileNameWithoutExtension($gz))
-    if ((Test-Path -LiteralPath $lib) -and (Get-Item -LiteralPath $lib).Length -gt $MinPlausibleLibBytes) {
-        Write-Host "[setup] v8 static library already present: $lib"
-    } else {
-        $staged = Join-Path $ThirdParty ('.tmp-' + [guid]::NewGuid().ToString('N'))
-        Write-Host "[setup] decompressing to $lib"
-        Expand-Gzip $gz $staged
-        Publish-FileAtomic $staged $lib
-    }
-    Seed-CargoArtifactCache $gz
-
-    $crate = Get-Crate
-    $v8Include = Expand-CrateHeaders $crate
+    # The stock release archive lacks the native observation and receiver
+    # semantics. Never silently rebuild against it. Headers and the library
+    # must come from the same patched source build described in README.mimic.md.
+    $nativeSourcePath = (Resolve-Path -LiteralPath $NativeSource).Path
+    $lib = (Resolve-Path -LiteralPath $NativeArchive).Path
+    & python (Join-Path $PSScriptRoot 'verify_native_source.py') $nativeSourcePath
+    if ($LASTEXITCODE -ne 0) { throw 'native V8 source verification failed' }
+    $v8Include = Join-Path $nativeSourcePath 'v8\include'
 
     $temporalLib = Build-TemporalStaticLib
 
@@ -547,8 +496,8 @@ try {
         }
     }
 
-    Write-Host ("[setup] pins: v8 crate {0}; artifact sha256 {1}; temporal_capi {2}" -f
-        $CrateVersion, $ArtifactSha, $TemporalCapiVersion)
+    Write-Host ("[setup] pins: v8 crate {0}; native archive sha256 {1}; temporal_capi {2}" -f
+        $CrateVersion, (Get-Sha256 $lib), $TemporalCapiVersion)
     Write-Host '[setup] done. Run: go test ./...'
 } finally {
     Exit-BuildLock

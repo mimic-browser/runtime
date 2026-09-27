@@ -173,11 +173,20 @@ const domExceptionCodes = {
 // DOMException instances inherit Error.prototype, but the interface object
 // inherits Function.prototype. Avoid class extends Error, whose super lookup
 // would also require the incorrect constructor-object inheritance.
+const domExceptionInitialize = host.initializeExceptionState;
+const domExceptionError = Error;
+const domExceptionConstruct = Reflect.construct;
+const domExceptionApply = Reflect.apply;
+const domExceptionCaptureStackTrace = Error.captureStackTrace;
 class DOMException {
   constructor(message = '', name = 'Error') {
     message = domExceptionString(message);
     name = domExceptionString(name);
-    const error = Reflect.construct(Error, [], new.target);
+    const error = domExceptionConstruct(domExceptionError, [], new.target);
+    // DOMException has Error classification, but unlike ordinary Error its
+    // formatter reads the current interface message rather than an original
+    // Error-constructor message. Remove that internal state at creation only.
+    if (typeof domExceptionInitialize === 'function') domExceptionInitialize(error);
     domExceptionSlots.set(error, { message, name });
     // Preserve the engine's Error.isError classification without publishing
     // Error's own stack/message properties on the DOMException instance.
@@ -198,6 +207,15 @@ class DOMException {
   }
 }
 Object.setPrototypeOf(DOMException.prototype, Error.prototype);
+// Chrome's author-created DOMException has no own stack. Platform-created
+// exceptions capture one lazily at their API creation boundary. Capture through
+// the engine; do not format, filter, or replace author-visible frame strings.
+const platformDOMException = (message, name) => {
+  const error = new DOMException(message, name);
+  if (typeof domExceptionCaptureStackTrace === 'function')
+    domExceptionApply(domExceptionCaptureStackTrace, domExceptionError, [error]);
+  return error;
+};
 // WebIDL pair iterators consult current state on every advance. Reaching the
 // current end does not permanently exhaust them: later appends are observable.
 const pairIteratorPrototype = Object.getPrototypeOf(Object.getPrototypeOf([][Symbol.iterator]()));
@@ -435,13 +453,13 @@ class Blob {
     });
   }
   arrayBuffer() {
-    return Promise.resolve(blobState(this).bytes.slice().buffer);
+    return platformPromiseResolve(blobState(this).bytes.slice().buffer);
   }
   bytes() {
-    return Promise.resolve(blobState(this).bytes.slice());
+    return platformPromiseResolve(blobState(this).bytes.slice());
   }
   text() {
-    return Promise.resolve(bytesString(blobState(this).bytes));
+    return platformPromiseResolve(bytesString(blobState(this).bytes));
   }
   stream() {
     const bytes = blobState(this).bytes.slice();
@@ -580,7 +598,7 @@ const installFileReader = () => {
         "Failed to execute '" + kind + "' on 'FileReader': parameter 1 is not of type 'Blob'.",
       );
     if (state.readyState === 1)
-      throw new DOMException('The object is already busy reading Blobs.', 'InvalidStateError');
+      throw platformDOMException('The object is already busy reading Blobs.', 'InvalidStateError');
     state.readyState = 1;
     state.result = null;
     state.error = null;
@@ -608,7 +626,7 @@ const installFileReader = () => {
         current.error =
           error instanceof DOMException
             ? error
-            : new DOMException(String((error && error.message) || error), 'NotReadableError');
+            : platformDOMException(String((error && error.message) || error), 'NotReadableError');
         current.result = null;
         current.readyState = 2;
         emit(reader, 'error');
@@ -648,7 +666,7 @@ const installFileReader = () => {
       }
       state.readyState = 2;
       state.result = null;
-      state.error = new DOMException('An ongoing operation was aborted.', 'AbortError');
+      state.error = platformDOMException('An ongoing operation was aborted.', 'AbortError');
       emit(this, 'abort');
       emit(this, 'loadend');
     }
@@ -679,6 +697,7 @@ const installFileReader = () => {
     });
 };
 const blobURLs = new Map();
+let createMediaSourceObjectURL;
 const urlSlots = new WeakMap(),
   urlState = (value) => urlSlots.get(value),
   urlParts = (value) => host.urlParts(urlState(value).href),
@@ -791,6 +810,10 @@ class URL {
     }
   }
   static createObjectURL(object) {
+    if (createMediaSourceObjectURL) {
+      const result = createMediaSourceObjectURL(object);
+      if (result !== undefined) return result;
+    }
     if (!(object instanceof Blob))
       throw new TypeError(
         "Failed to execute 'createObjectURL' on 'URL': Overload resolution failed.",

@@ -6949,11 +6949,12 @@
       "returns": [],
       "support": {
         "status": "partial",
-        "notes": "Trusted text-control editing, cancellation, beforeinput/input/change, focus, selection and basic deletion/navigation keys. IME/contenteditable/complex editor commands are unsupported. Cross-world listeners are grouped by world.",
+        "notes": "Trusted text-control editing, cancellation, beforeinput/input/change, focus, selection and basic deletion/navigation keys. Enter activates links on keydown and buttons on uncancelled keypress; Space activation remains unsupported. IME/contenteditable/complex editor commands are unsupported. Cross-world listeners are grouped by world.",
         "tests": [
           "internal/browser/input_test.go#TestProtocolKeyboardAndTextMatchChrome152",
           "internal/browser/input_snapshot_test.go#TestProtocolInputRestoredWorldOwnership",
-          "compatibility/cdp_automation.py#dom.form_input_select_dom_click"
+          "compatibility/cdp_automation.py#dom.form_input_select_dom_click",
+          "internal/browser/keyboard_activation_test.go#TestKeyboardActivationMatchesChrome152"
         ]
       }
     },
@@ -12259,11 +12260,12 @@
       ],
       "support": {
         "status": "partial",
-        "notes": "Realm/session-owned handles, by-value JSON, promises, unserializable arguments, exceptions and context/uniqueContextId selection. Deep serialization rejects. Previews, side-effect restrictions, REPL/CLI mode, userGesture and complete debugger options are not implemented.",
+        "notes": "Realm/session-owned handles, by-value JSON, promises, unserializable arguments, exceptions and context/uniqueContextId selection. Deep serialization rejects. Previews, side-effect restrictions, REPL/CLI mode, userGesture and complete debugger options are not implemented. Unnamed evaluation origins and engine-direct function entry preserve author stacks and caller observations without debugger helper frames.",
         "tests": [
           "internal/browser/debugger_test.go#TestDebuggerRemoteValuesMatchChrome152",
           "internal/browser/debugger_test.go#TestDebuggerPreservesHandlesAndDescriptorSemantics",
-          "internal/cdp/runtime_test.go#TestCDPAwaitPromiseAllowsSameSessionResolverAndMultipleWaiters"
+          "internal/cdp/runtime_test.go#TestCDPAwaitPromiseAllowsSameSessionResolverAndMultipleWaiters",
+          "internal/browser/debugger_source_boundary_test.go#TestDebuggerSourceAndInvocationBoundary"
         ]
       }
     },
@@ -12400,11 +12402,12 @@
       ],
       "support": {
         "status": "partial",
-        "notes": "Realm/session-owned handles, by-value JSON, promises, unserializable arguments, exceptions and context/uniqueContextId selection. Deep serialization rejects. Previews, side-effect restrictions, REPL/CLI mode, userGesture and complete debugger options are not implemented.",
+        "notes": "Realm/session-owned handles, by-value JSON, promises, unserializable arguments, exceptions and context/uniqueContextId selection. Deep serialization rejects. Previews, side-effect restrictions, REPL/CLI mode, userGesture and complete debugger options are not implemented. Unnamed evaluation origins and engine-direct function entry preserve author stacks and caller observations without debugger helper frames.",
         "tests": [
           "internal/browser/debugger_test.go#TestDebuggerRemoteValuesMatchChrome152",
           "internal/browser/debugger_test.go#TestDebuggerPreservesHandlesAndDescriptorSemantics",
-          "internal/cdp/runtime_test.go#TestCDPAwaitPromiseAllowsSameSessionResolverAndMultipleWaiters"
+          "internal/cdp/runtime_test.go#TestCDPAwaitPromiseAllowsSameSessionResolverAndMultipleWaiters",
+          "internal/browser/debugger_source_boundary_test.go#TestDebuggerSourceAndInvocationBoundary"
         ]
       }
     },

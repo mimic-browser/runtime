@@ -41,10 +41,13 @@ func TestFrameReflectionPreservesDescriptorsAndKeys(t *testing.T) {
  if(Object.defineProperty(object,'visible',{value:99})!==object||child.eval('(object=>object.visible)')(object)!==99)return 'define owner';
  if(!Reflect.deleteProperty(object,'visible')||child.eval('(object=>"visible" in object)')(object))return 'delete owner';
  Object.defineProperty(object,'visible',{value:1,writable:true,enumerable:true,configurable:true});
- for(const operation of [()=>Object.preventExtensions(object),()=>Object.setPrototypeOf(object,null)]){
+ for(const operation of [()=>Object.setPrototypeOf(object,null)]){
  let rejected=false;try{operation()}catch(error){rejected=error.name==='NotSupportedError'}if(!rejected)return 'unsupported mutation accepted';
  }
  if(object.visible!==1||!Object.isExtensible(object)||!Object.keys(object).includes('visible'))return 'rejected mutation changed source';
+ if(Object.preventExtensions(object)!==object||Object.isExtensible(object)||child.eval('(object=>Object.isExtensible(object))')(object))return 'preventExtensions owner';
+ if(Reflect.set(object,'newProperty',3)||Reflect.defineProperty(object,'newProperty',{value:3}))return 'preventExtensions mutation';
+ if(!Reflect.deleteProperty(object,'visible')||Reflect.ownKeys(object).includes('visible'))return 'nonextensible delete';
  const hostile=child.eval('(()=>{globalThis.conversions=0;const object={toString(){conversions++;throw Error("conversion")}};Object.defineProperty(object,"explosive",{get(){conversions++;throw Error("getter")},enumerable:true,configurable:true});return object})()');
  if(!Reflect.ownKeys(hostile).includes('explosive')||typeof Object.getOwnPropertyDescriptor(hostile,'explosive').get!=='function'||child.eval('conversions')!==0)return 'reflection invoked user code';
  return true;
@@ -75,6 +78,44 @@ func TestFrameNonconfigurableAccessorDescriptorBoundary(t *testing.T) {
 		}
 		if err != nil || value != expected {
 			t.Fatalf("accessor boundary: %v, %v; expected %s", value, err, expected)
+		}
+	})
+}
+
+func TestFrameIntegrityTracksOwnerMutations(t *testing.T) {
+	serialBrowserTest(t)
+	historyTestPages(t, func(t *testing.T, page *Page) {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		value, err := page.Evaluate(ctx, `(() => {
+  const frame = document.createElement('iframe');
+  document.body.appendChild(frame);
+  const child = frame.contentWindow;
+  const values = child.eval(`+"`"+`(() => {
+    const object = { mutable: 1, nested: {} };
+    globalThis.integrityValues = [object, [1, 2], function callable() {}];
+    return integrityValues;
+  })()`+"`"+`);
+  const object = values[0], nested = object.nested;
+  child.eval('integrityValues[0].mutable = 2; Object.freeze(integrityValues[0]); Object.freeze(integrityValues[1]); Object.freeze(integrityValues[2]);');
+  for (const value of [object, values[1], values[2]]) {
+    if (Object.isExtensible(value) || !Object.isFrozen(value)) return 'owner freeze';
+    if (Object.freeze(value) !== value) return 'repeat identity';
+  }
+  if (object.mutable !== 2 || object.nested !== nested) return 'live data identity';
+  if (Reflect.set(object, 'mutable', 3) || Reflect.deleteProperty(object, 'mutable')) return 'frozen mutation';
+  const sealed = child.eval('globalThis.integritySealed = { value: 1 }; Object.seal(integritySealed); integritySealed');
+  if (!Object.isSealed(sealed) || Object.isFrozen(sealed)) return 'owner seal';
+  child.eval('integritySealed.value = 4');
+  if (sealed.value !== 4 || Object.getOwnPropertyDescriptor(sealed, 'value').value !== 4) return 'sealed live value';
+  const open = child.eval('globalThis.integrityOpen = { value: 1 }; Object.preventExtensions(integrityOpen); integrityOpen');
+  if (Object.isExtensible(open)) return 'owner nonextensible';
+  child.eval('delete integrityOpen.value');
+  if (Reflect.ownKeys(open).length || Object.getOwnPropertyDescriptor(open, 'value')) return 'owner deletion';
+  return true;
+})()`)
+		if err != nil || value != true {
+			t.Fatalf("remote integrity ownership: %v, %v", value, err)
 		}
 	})
 }

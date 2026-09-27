@@ -8,7 +8,7 @@
     owners = new WeakMap(),
     cssFaces = new WeakMap(),
     encodeBase64 = globalThis.btoa;
-  const syntax = () => new DOMException('Invalid font descriptor', 'SyntaxError');
+  const syntax = () => platformDOMException('Invalid font descriptor', 'SyntaxError');
   const requireFace = (value) => {
     const s = faces.get(value);
     if (!s) throw new TypeError('Illegal invocation');
@@ -102,7 +102,7 @@
       ...defaults,
       status: 'unloaded',
       sets: new Set(),
-      loaded: new Promise((a, b) => {
+      loaded: new platformPromise((a, b) => {
         resolve = a;
         reject = b;
       }),
@@ -275,7 +275,7 @@
     set.pending.add(s);
     if (set.status !== 'loading') {
       set.status = 'loading';
-      set.ready = new Promise((resolve) => (set.resolveReady = resolve));
+      set.ready = new platformPromise((resolve) => (set.resolveReady = resolve));
       setTimeout(() => loadingEvent(set, 'loading'), 0);
     }
   }
@@ -341,7 +341,7 @@
           .catch(next);
         return;
       }
-      complete(s, new DOMException('A font resource could not be loaded', 'NetworkError'));
+      complete(s, platformDOMException('A font resource could not be loaded', 'NetworkError'));
     };
     next();
     return s.loaded;
@@ -351,7 +351,7 @@
       try {
         return loadFace(requireFace(this));
       } catch (e) {
-        return Promise.reject(e);
+        return platformPromiseReject(e);
       }
     },
     writable: true,
@@ -373,8 +373,8 @@
       status: 'loaded',
       ready:
         typeof document === 'object' && owner === document
-          ? Promise.resolve(value)
-          : new Promise(() => {}),
+          ? platformPromiseResolve(value)
+          : new platformPromise(() => {}),
     };
     sets.set(value, state);
     return value;
@@ -518,9 +518,9 @@
         const s = requireSet(this);
         if (arguments.length < 1) throw new TypeError('Expected font');
         const parsed = parseFont(font);
-        return Promise.all(matching(s, parsed, String(text)).map((face) => face.load()));
+        return platformPromiseAll(matching(s, parsed, String(text)).map((face) => face.load()));
       } catch (e) {
-        return Promise.reject(e);
+        return platformPromiseReject(e);
       }
     },
   };

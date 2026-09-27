@@ -354,7 +354,7 @@
   dispatchEventCore = (target, event, trusted, native = false) => {
     const state = stateOf(event);
     if (state.dispatching || !state.type)
-      throw new DOMException(
+      throw platformDOMException(
         'Event is already being dispatched or uninitialized',
         'InvalidStateError',
       );

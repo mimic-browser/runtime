@@ -107,6 +107,9 @@ func (r *Realm) updateImage(id int64, changed bool) {
 			return finish(ctx, "error")
 		}
 		request := r.elementRequest(u, node.Attributes, network.Image)
+		if err := request.CheckContentPolicy(); err != nil {
+			return finish(ctx, "error")
+		}
 		key := preloadRequestKey(request)
 		if available, ok := r.availableImages.get(key); ok && r.agent.Page().loader.ResourceReuseAllowed(request) {
 			current.currentSrc = u.String()

@@ -1,0 +1,376 @@
+{
+  "captureMetadata": {
+    "schemaVersion": 1,
+    "chromeVersion": "152.0.7977.82",
+    "chromiumRevision": 1669021,
+    "chromiumCommit": "d04cdb24d67b081f6cf80200ffc5233f44b61109",
+    "v8Version": "15.2.124.21",
+    "platform": "windows-x64",
+    "browserMode": "headful",
+    "commandLineFeatureOverrides": [],
+    "environmentProfileId": "chrome-152-windows-x64-headful-local-probe-reused-v1",
+    "profileFreshness": "fresh-at-original-launch; reused process with a new local fixture document",
+    "experiment": "local semantic evaluation; no initialization overrides, browser launch, request interception or live-site traffic",
+    "launchProvenance": ".build/performance-measure-options-20260927/process.json",
+    "webdriver": false,
+    "webdriverDescriptor": {
+      "enumerable": true,
+      "configurable": true,
+      "getter": "function get webdriver() { [native code] }"
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+    "languages": [
+      "ru-RU"
+    ],
+    "viewport": {
+      "width": 1272,
+      "height": 653,
+      "deviceScaleFactor": 1
+    },
+    "window": {
+      "left": 593,
+      "top": 328,
+      "width": 1280,
+      "height": 800
+    },
+    "secureContextState": true,
+    "isolationState": false,
+    "visibilityState": "visible",
+    "hasFocus": true
+  },
+  "fixtureOrigin": "http://127.0.0.1:59234",
+  "fixture": "internal/browser/testdata/observation_integrity_oracle.js",
+  "fixtureSHA256": "8eb02b1e7b8a7155f86f5fd4eac37c0522acb7c2f1caccf01e289720b0749ad0",
+  "worker": false,
+  "result": {
+    "result": {
+      "type": "object",
+      "value": {
+        "preventExtensions.navigator": {
+          "identity": true,
+          "prototype": true,
+          "extensible": false,
+          "sealed": false,
+          "frozen": false,
+          "value": 7,
+          "symbol": 11,
+          "descriptor": {
+            "writable": true,
+            "enumerable": true,
+            "configurable": true
+          },
+          "add": false,
+          "define": false,
+          "write": true,
+          "remove": true
+        },
+        "preventExtensions.screen": {
+          "identity": true,
+          "prototype": true,
+          "extensible": false,
+          "sealed": false,
+          "frozen": false,
+          "value": 7,
+          "symbol": 11,
+          "descriptor": {
+            "writable": true,
+            "enumerable": true,
+            "configurable": true
+          },
+          "add": false,
+          "define": false,
+          "write": true,
+          "remove": true
+        },
+        "preventExtensions.history": {
+          "identity": true,
+          "prototype": true,
+          "extensible": false,
+          "sealed": false,
+          "frozen": false,
+          "value": 7,
+          "symbol": 11,
+          "descriptor": {
+            "writable": true,
+            "enumerable": true,
+            "configurable": true
+          },
+          "add": false,
+          "define": false,
+          "write": true,
+          "remove": true
+        },
+        "preventExtensions.crypto": {
+          "identity": true,
+          "prototype": true,
+          "extensible": false,
+          "sealed": false,
+          "frozen": false,
+          "value": 7,
+          "symbol": 11,
+          "descriptor": {
+            "writable": true,
+            "enumerable": true,
+            "configurable": true
+          },
+          "add": false,
+          "define": false,
+          "write": true,
+          "remove": true
+        },
+        "preventExtensions.document": {
+          "identity": true,
+          "prototype": true,
+          "extensible": false,
+          "sealed": false,
+          "frozen": false,
+          "value": 7,
+          "symbol": 11,
+          "descriptor": {
+            "writable": true,
+            "enumerable": true,
+            "configurable": true
+          },
+          "add": false,
+          "define": false,
+          "write": true,
+          "remove": true
+        },
+        "preventExtensions.element": {
+          "identity": true,
+          "prototype": true,
+          "extensible": false,
+          "sealed": false,
+          "frozen": false,
+          "value": 7,
+          "symbol": 11,
+          "descriptor": {
+            "writable": true,
+            "enumerable": true,
+            "configurable": true
+          },
+          "add": false,
+          "define": false,
+          "write": true,
+          "remove": true
+        },
+        "seal.navigator": {
+          "identity": true,
+          "prototype": true,
+          "extensible": false,
+          "sealed": true,
+          "frozen": false,
+          "value": 7,
+          "symbol": 11,
+          "descriptor": {
+            "writable": true,
+            "enumerable": true,
+            "configurable": false
+          },
+          "add": false,
+          "define": false,
+          "write": true,
+          "remove": false
+        },
+        "seal.screen": {
+          "identity": true,
+          "prototype": true,
+          "extensible": false,
+          "sealed": true,
+          "frozen": false,
+          "value": 7,
+          "symbol": 11,
+          "descriptor": {
+            "writable": true,
+            "enumerable": true,
+            "configurable": false
+          },
+          "add": false,
+          "define": false,
+          "write": true,
+          "remove": false
+        },
+        "seal.history": {
+          "identity": true,
+          "prototype": true,
+          "extensible": false,
+          "sealed": true,
+          "frozen": false,
+          "value": 7,
+          "symbol": 11,
+          "descriptor": {
+            "writable": true,
+            "enumerable": true,
+            "configurable": false
+          },
+          "add": false,
+          "define": false,
+          "write": true,
+          "remove": false
+        },
+        "seal.crypto": {
+          "identity": true,
+          "prototype": true,
+          "extensible": false,
+          "sealed": true,
+          "frozen": false,
+          "value": 7,
+          "symbol": 11,
+          "descriptor": {
+            "writable": true,
+            "enumerable": true,
+            "configurable": false
+          },
+          "add": false,
+          "define": false,
+          "write": true,
+          "remove": false
+        },
+        "seal.document": {
+          "identity": true,
+          "prototype": true,
+          "extensible": false,
+          "sealed": true,
+          "frozen": false,
+          "value": 7,
+          "symbol": 11,
+          "descriptor": {
+            "writable": true,
+            "enumerable": true,
+            "configurable": false
+          },
+          "add": false,
+          "define": false,
+          "write": true,
+          "remove": false
+        },
+        "seal.element": {
+          "identity": true,
+          "prototype": true,
+          "extensible": false,
+          "sealed": true,
+          "frozen": false,
+          "value": 7,
+          "symbol": 11,
+          "descriptor": {
+            "writable": true,
+            "enumerable": true,
+            "configurable": false
+          },
+          "add": false,
+          "define": false,
+          "write": true,
+          "remove": false
+        },
+        "freeze.navigator": {
+          "identity": true,
+          "prototype": true,
+          "extensible": false,
+          "sealed": true,
+          "frozen": true,
+          "value": 7,
+          "symbol": 11,
+          "descriptor": {
+            "writable": false,
+            "enumerable": true,
+            "configurable": false
+          },
+          "add": false,
+          "define": false,
+          "write": false,
+          "remove": false
+        },
+        "freeze.screen": {
+          "identity": true,
+          "prototype": true,
+          "extensible": false,
+          "sealed": true,
+          "frozen": true,
+          "value": 7,
+          "symbol": 11,
+          "descriptor": {
+            "writable": false,
+            "enumerable": true,
+            "configurable": false
+          },
+          "add": false,
+          "define": false,
+          "write": false,
+          "remove": false
+        },
+        "freeze.history": {
+          "identity": true,
+          "prototype": true,
+          "extensible": false,
+          "sealed": true,
+          "frozen": true,
+          "value": 7,
+          "symbol": 11,
+          "descriptor": {
+            "writable": false,
+            "enumerable": true,
+            "configurable": false
+          },
+          "add": false,
+          "define": false,
+          "write": false,
+          "remove": false
+        },
+        "freeze.crypto": {
+          "identity": true,
+          "prototype": true,
+          "extensible": false,
+          "sealed": true,
+          "frozen": true,
+          "value": 7,
+          "symbol": 11,
+          "descriptor": {
+            "writable": false,
+            "enumerable": true,
+            "configurable": false
+          },
+          "add": false,
+          "define": false,
+          "write": false,
+          "remove": false
+        },
+        "freeze.document": {
+          "identity": true,
+          "prototype": true,
+          "extensible": false,
+          "sealed": true,
+          "frozen": true,
+          "value": 7,
+          "symbol": 11,
+          "descriptor": {
+            "writable": false,
+            "enumerable": true,
+            "configurable": false
+          },
+          "add": false,
+          "define": false,
+          "write": false,
+          "remove": false
+        },
+        "freeze.element": {
+          "identity": true,
+          "prototype": true,
+          "extensible": false,
+          "sealed": true,
+          "frozen": true,
+          "value": 7,
+          "symbol": 11,
+          "descriptor": {
+            "writable": false,
+            "enumerable": true,
+            "configurable": false
+          },
+          "add": false,
+          "define": false,
+          "write": false,
+          "remove": false
+        }
+      }
+    }
+  }
+}

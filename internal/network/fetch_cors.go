@@ -11,13 +11,14 @@ import (
 
 var corsSimpleRange = regexp.MustCompile(`^bytes=[0-9]+-[0-9]*$`)
 
-// Fetch policy lives in the shared loader so Window and Worker requests have
-// identical checks, including responses supplied by cache or interceptors.
+// Fetch policy lives in the shared loader so Window, Worker and XHR requests
+// have identical checks, including cache and interceptor responses. XHR uses
+// the Fetch CORS algorithm while retaining its own initiator and lifecycle.
 // Remaining Fetch boundaries: preflight caching,
 // the aggregate 1024-byte safelist limit, and the no-cors author-header guard.
-// Element/module CORS and XHR have separate consumers and are not routed here.
+// Element/module CORS has separate consumers and is not routed here.
 func fetchCrossOrigin(r Request) bool {
-	return r.Initiator == Fetch && r.initiatingURL() != nil && r.URL != nil &&
+	return (r.Initiator == Fetch || r.Initiator == XHR) && r.initiatingURL() != nil && r.URL != nil &&
 		(r.URL.Scheme == "http" || r.URL.Scheme == "https") &&
 		(r.OpaqueOrigin || r.chainSite() != "same-origin")
 }
@@ -81,7 +82,7 @@ func corsSafeHeader(name, value string) bool {
 }
 
 func (l *Loader) prepareFetchCORS(ctx context.Context, r *Request) error {
-	if r.Initiator != Fetch || r.corsPreflight {
+	if r.Initiator != Fetch && r.Initiator != XHR || r.corsPreflight {
 		return nil
 	}
 	// Capture author fields before the loader installs its own browser headers.
@@ -117,7 +118,7 @@ func (l *Loader) prepareFetchCORS(ctx context.Context, r *Request) error {
 	}
 	r.corsUnsafeHeaders = unsafe
 	r.Headers.Set("Origin", fetchOrigin(*r))
-	if (r.Method == "GET" || r.Method == "HEAD" || r.Method == "POST") && len(r.corsUnsafeHeaders) == 0 {
+	if !r.CORSPreflightRequired && (r.Method == "GET" || r.Method == "HEAD" || r.Method == "POST") && len(r.corsUnsafeHeaders) == 0 {
 		return nil
 	}
 	pre := *r
@@ -155,9 +156,15 @@ func (l *Loader) prepareFetchCORS(ctx context.Context, r *Request) error {
 }
 
 func filterFetchResponse(r Request, res Response) Response {
-	if r.Initiator != Fetch || r.corsPreflight {
+	if r.Initiator != Fetch && r.Initiator != XHR || r.corsPreflight {
 		return res
 	}
+	// Accept cookies and retain inspector evidence before applying this script
+	// boundary. Forbidden response fields must never cross into either API's
+	// JavaScript state, including basic same-origin responses.
+	res.Headers = res.Headers.Clone()
+	res.Headers.Del("Set-Cookie")
+	res.Headers.Del("Set-Cookie2")
 	if fetchCrossOrigin(r) {
 		if r.Mode == "no-cors" {
 			return Response{Type: "opaque", Headers: make(http.Header)}
@@ -165,7 +172,6 @@ func filterFetchResponse(r Request, res Response) Response {
 		res.Type = "cors"
 		exposed := headerTokens(res.Headers.Values("Access-Control-Expose-Headers"))
 		wildcard := exposed["*"] && r.Credentials != "include"
-		res.Headers = res.Headers.Clone()
 		for name := range res.Headers {
 			lower := strings.ToLower(name)
 			safe := lower == "cache-control" || lower == "content-language" || lower == "content-length" || lower == "content-type" || lower == "expires" || lower == "last-modified" || lower == "pragma"

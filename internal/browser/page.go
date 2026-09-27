@@ -566,7 +566,7 @@ func (p *Page) commitNavigationResponse(ctx, taskContext context.Context, u *url
 		secureContext:       secureContext,
 		crossOriginIsolated: secureContext && strings.HasPrefix(coop, "same-origin") && (strings.HasPrefix(coep, "require-corp") || strings.HasPrefix(coep, "credentialless")),
 		credentialless:      strings.HasPrefix(coep, "credentialless"),
-		originAgentCluster:  strings.EqualFold(strings.TrimSpace(res.Headers.Get("Origin-Agent-Cluster")), "?1"),
+		originAgentCluster:  originAgentClusterForResponse(secureContext, res.Headers.Get("Origin-Agent-Cluster")),
 		permissionsPolicy:   res.Headers.Get("Permissions-Policy"),
 	}
 	p.mu.Unlock()
@@ -1053,7 +1053,7 @@ func (p *Page) evaluateRealm(ctx context.Context, r *Realm, source string, drain
 	}
 	if err := r.scheduler.RunInline(ctx, func(ctx context.Context) error {
 		var err error
-		v, err = r.Evaluate(ctx, source, "__pyppeteer_evaluation_script__")
+		v, err = r.Evaluate(ctx, source, "")
 		return err
 	}); err != nil {
 		return nil, err

@@ -1,0 +1,85 @@
+{
+  "crate": "v8",
+  "crate_version": "152.2.0",
+  "crate_sha256": "a10fe1a92da5c32c7c7f838ce36c0ccfcfd5edf0865b58bdde820aa64cea9888",
+  "patch": "v8-native-observation.patch",
+  "patch_sha256": "608e438cc1a06801444168367b99045d914b10edef5cfe67f0b18f5cd5e1d3e2",
+  "purpose": "Observation-only property handlers, strict native callback receivers, context-owned API function snapshots and trusted platform compilation provenance",
+  "files": [
+    {
+      "path": "v8/include/v8-function-callback.h",
+      "before_sha256": "f38d5316c99da4b615203142c4f3631a9dc1ff48929b6e5395e18cfc749b60b5",
+      "after_sha256": "7b9d56b22f1f156e28e85026785a64c6911f92f7d84b4fc4391173b1b902ada9"
+    },
+    {
+      "path": "v8/include/v8-function.h",
+      "before_sha256": "9989f4e0e94400326afe09da4d253a9646ed1c2cf80a98ef705dea4d0cd41783",
+      "after_sha256": "94770829d6ac539bedbcae4a9ea40dbbbeb76ee0fa2ec4521ed02e5cdbf1cbfd"
+    },
+    {
+      "path": "v8/include/v8-template.h",
+      "before_sha256": "5ff060cc76e892c0c345a699c0438fe09e23f643a64572f738ec9ff1cfd2d122",
+      "after_sha256": "ce715ff46b9be84377d247d956d1eed360a80df98d6a5c970c9a95da0c2fa66c"
+    },
+    {
+      "path": "v8/src/api/api-arguments-inl.h",
+      "before_sha256": "37096b2e709a92502f0051b8f908c265c68ef8a7cae8776726af663c976532e3",
+      "after_sha256": "3ad8bc4447378b4e26b055a77af9c2cf7a17790b0e6e9a53c74520bee42df966"
+    },
+    {
+      "path": "v8/src/api/api.cc",
+      "before_sha256": "4e41e5b30d1b62a60d4346898d6411f79198b5042977a7542462f010d0bc32c7",
+      "after_sha256": "2f66a8aafddadf3884b92755e868a11ec8d08f4f71f87ca1e4a793303c4b8a91"
+    },
+    {
+      "path": "v8/src/builtins/builtins-api.cc",
+      "before_sha256": "8d2e6462310383a6fdaef0e01fbd5ca8faef10f60ff0e286080ce541380bbbec",
+      "after_sha256": "30cff651dbf28d1d54336d1de36de7b099a09b5267386346145135316f432f87"
+    },
+    {
+      "path": "v8/src/builtins/builtins-call-gen.cc",
+      "before_sha256": "3f7efabcdd0243d0fdd032f34de28371b4c12ac8cb22fcb437808273e80d60a4",
+      "after_sha256": "0f0ee15c602020a8a491fdd0675fc3f3ee44f4d62be50eb2dc03cb67828edd48"
+    },
+    {
+      "path": "v8/src/compiler/js-call-reducer.cc",
+      "before_sha256": "db64738a5e5d8e767fecb3bc5402343e3e6e2a0729212100e4a320f7f2c5d9c2",
+      "after_sha256": "51c12935731e0b20e4851009a2c5e99cc7956c2b86526eef44645387a645eed9"
+    },
+    {
+      "path": "v8/src/maglev/maglev-graph-builder.cc",
+      "before_sha256": "966a52aff8d9c95a49483d4a79c631adfa94342b36554a34c6f05c6fce7b3b32",
+      "after_sha256": "76331452f40f681a52928ac08d483eae40e64eec1012a6b012aaca8c8aaa97f6"
+    },
+    {
+      "path": "v8/src/objects/api-callbacks-inl.h",
+      "before_sha256": "7dd731d71692b3b2a1218b123e6540ccb9e2f7ff96a28a8b165b7a46c1813f0f",
+      "after_sha256": "666a9f5f60ea31d4a8bb72f43b296204969bd8f1a44d5c2c717e9cf09713d27a"
+    },
+    {
+      "path": "v8/src/objects/api-callbacks.h",
+      "before_sha256": "ed44e131d3a8e84b1c39cef80e01e5033d97ff75f98deb9419491da7a088bf85",
+      "after_sha256": "a3b53088d2f623fbb5a2857231234b509420f5dedadd74bfa6c60ca810fcda02"
+    },
+    {
+      "path": "v8/src/objects/api-callbacks.tq",
+      "before_sha256": "fa78630546f8a9e4dce0149283206d3787c9e59bbcd7c8bcaf0a17a9d2587dde",
+      "after_sha256": "e9a19d070343e012e9ff070852b134e3f72769be15c470ef8f278d81dd98b75d"
+    },
+    {
+      "path": "v8/src/objects/js-objects.cc",
+      "before_sha256": "9131de2c95b8b77e9a43483153efe57f4407c7ca0487b739c66d8d34e6f1dfe9",
+      "after_sha256": "3f990eb8fa69bfdd7607b8d03df0c0837f436dd6fbce18ec321d7e56e2ed264e"
+    },
+    {
+      "path": "v8/src/snapshot/context-serializer.cc",
+      "before_sha256": "bc0793e2037e76c6e5eeb9c962c13be15ff58269e78c2390e7cd9291a9726bab",
+      "after_sha256": "157e73e86261a005ad65e0eb2c64436289275acb102b3d7e0c60bee16ee8ecb1"
+    },
+    {
+      "path": "v8/src/codegen/compiler.cc",
+      "before_sha256": "9592c530cdce781eaf5a42e16e1c092aa12d3bab5fecc4e2868399f8b37dbc33",
+      "after_sha256": "235a07f56bb668c7ebedd9291642eb0e466816c13fb136167acd2fa2c94e55b1"
+    }
+  ]
+}

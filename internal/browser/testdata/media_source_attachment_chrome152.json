@@ -1,0 +1,70 @@
+{
+  "captureMetadata": {
+    "schemaVersion": 1,
+    "chromeVersion": "152.0.7977.82",
+    "chromiumRevision": 1669021,
+    "chromiumCommit": "d04cdb24d67b081f6cf80200ffc5233f44b61109",
+    "v8Version": "15.2.124.21",
+    "platform": "windows-x64",
+    "browserMode": "headful",
+    "commandLineFeatureOverrides": [],
+    "environmentProfileId": "chrome-152-windows-x64-headful-controlled-v1",
+    "profileFreshness": "fresh-controlled",
+    "viewport": {
+      "width": 1272,
+      "height": 653,
+      "deviceScaleFactor": 1
+    },
+    "window": {
+      "left": 593,
+      "top": 328,
+      "width": 1280,
+      "height": 800,
+      "windowState": "normal"
+    },
+    "secureContextState": true,
+    "isolationState": false,
+    "visibilityState": "visible",
+    "hasFocus": true
+  },
+  "fixtureOrigin": "http://127.0.0.1:12049",
+  "fixture": "internal/browser/testdata/media_source_attachment_oracle.js",
+  "fixtureSHA256": "78e18e5dbc181dd7784a368ee0995e524189e25c99a2eb4a875612a000ba059d",
+  "worker": false,
+  "result": {
+    "result": {
+      "type": "object",
+      "value": {
+        "events": [
+          {
+            "name": "sourceopen",
+            "trusted": true,
+            "state": "open"
+          },
+          {
+            "name": "sourceclose",
+            "trusted": true,
+            "state": "closed"
+          }
+        ],
+        "immediateAttachment": "closed",
+        "open": {
+          "state": "open",
+          "duration": "NaN",
+          "networkState": 2,
+          "readyState": 0,
+          "currentSrc": true
+        },
+        "fetch": "TypeError",
+        "revokedWhileAttached": "open",
+        "immediateDetachment": "closed",
+        "closed": {
+          "state": "closed",
+          "duration": "NaN",
+          "buffers": 0,
+          "currentSrc": true
+        }
+      }
+    }
+  }
+}

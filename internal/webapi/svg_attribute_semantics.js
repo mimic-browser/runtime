@@ -206,7 +206,7 @@ for (const type of ['SVGSVGElement', 'SVGViewElement'])
     function (value) {
       value = Number(value) >>> 0;
       if (value !== 1 && value !== 2)
-        throw new DOMException('Invalid zoomAndPan', 'NoModificationAllowedError');
+        throw platformDOMException('Invalid zoomAndPan', 'NoModificationAllowedError');
       svgAttr(svgElementCheck(this), 'zoomAndPan', value === 1 ? 'disable' : 'magnify');
     },
   );

@@ -8,6 +8,32 @@ import (
 	"testing"
 )
 
+func TestPermissionQueryCompletionOrderingMatchesFrozenChrome152(t *testing.T) {
+	parallelBrowserTest(t)
+	historyTestPages(t, func(t *testing.T, p *Page) {
+		navigateCapabilityFixture(t, p)
+		// Both retained headful Chrome controls complete conversion failures
+		// before ordinary microtasks, and service successes after them.
+		value, err := p.Evaluate(context.Background(), `(async () => {
+			const events = [];
+			const queries = ['geolocation', 'push', 'speaker', 'camera', 'midi'].map(name =>
+				navigator.permissions.query({ name }).then(
+					status => events.push(name + ':resolved:' + status.state),
+					error => events.push(name + ':rejected:' + error.name),
+				),
+			);
+			Promise.resolve().then(() => events.push('ordinary-promise'));
+			queueMicrotask(() => events.push('queued-microtask'));
+			await Promise.all(queries);
+			return JSON.stringify(events);
+		})()`)
+		want := `["push:rejected:NotSupportedError","speaker:rejected:TypeError","ordinary-promise","queued-microtask","geolocation:resolved:prompt","camera:resolved:prompt","midi:resolved:prompt"]`
+		if err != nil || value != want {
+			t.Fatalf("permission completion ordering: %v, %v", value, err)
+		}
+	})
+}
+
 func TestPermissionDescriptorsMatchFrozenChrome152(t *testing.T) {
 	parallelBrowserTest(t)
 	probe, err := os.ReadFile("testdata/permission_descriptor_oracle.js")

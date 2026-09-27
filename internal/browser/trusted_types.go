@@ -82,12 +82,6 @@ func (r *Realm) installTrustedTypes(host map[string]any) {
 		r.document.SetScriptText(id, text)
 		return nil, nil
 	})
-	host["runTimerSource"] = r.fn(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
-		if r.trustedTypesState().EvalBlocked != "" {
-			return nil, nil
-		}
-		return r.runtime.Eval(context.Background(), strarg(args, 0), "timer")
-	})
 	host["installTrustedTypesEnforcer"] = r.fn(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
 		r.trustedTypesEnforcer = args[0]
 		return nil, nil

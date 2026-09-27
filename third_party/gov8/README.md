@@ -49,7 +49,10 @@ need Rust 1.98, Visual Studio with the MSVC C++ x64 build tools, and PowerShell:
 
 ```powershell
 Set-Location third_party/gov8
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts\setup_windows.ps1
+# Build the patched V8 source first; see README.mimic.md.
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\setup_windows.ps1 `
+  -NativeSource C:\build\v8-152.2.0 `
+  -NativeArchive C:\build\target\release\gn_out\obj\rusty_v8.lib
 $env:GOV8_SHIM_DLL = (Resolve-Path build\shim\gov8_shim.dll)
 go test ./...
 ```
@@ -61,7 +64,10 @@ When intentionally updating the packaged shim after a source change, rebuild
 it and regenerate the deterministic gzip asset:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts\setup_windows.ps1
+# Build the patched V8 source first; see README.mimic.md.
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\setup_windows.ps1 `
+  -NativeSource C:\build\v8-152.2.0 `
+  -NativeArchive C:\build\target\release\gn_out\obj\rusty_v8.lib
 go run ./internal/cmd/package-shim
 ```
 

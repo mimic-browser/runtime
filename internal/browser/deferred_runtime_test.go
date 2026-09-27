@@ -2,6 +2,9 @@ package browser
 
 import (
 	"context"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -53,6 +56,49 @@ func TestInitialBlankRealmIsDeferredAndIndependent(t *testing.T) {
 	}
 	if factory.count != 2 {
 		t.Fatalf("runtime count %d", factory.count)
+	}
+}
+
+func TestNavigationStartsScriptTransportBeforeRuntimeObservation(t *testing.T) {
+	parallelBrowserTest(t)
+	entered, release := make(chan struct{}), make(chan struct{})
+	fixture := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/held.js" {
+			close(entered)
+			select {
+			case <-release:
+			case <-r.Context().Done():
+			}
+			return
+		}
+		fmt.Fprint(w, `<script src="/held.js"></script>`)
+	}))
+	defer fixture.Close()
+	defer close(release)
+	factory := &countingFactory{}
+	b, err := New(factory, chrome152.New())
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := b.NewContext()
+	defer c.Close()
+	p, err := c.NewPage()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	finished := make(chan error, 1)
+	go func() { finished <- p.Navigate(ctx, fixture.URL) }()
+	select {
+	case <-entered:
+	case <-ctx.Done():
+		t.Fatal("external script transport did not start")
+	}
+	cancel()
+	<-finished
+	if factory.count != 0 {
+		t.Fatalf("unobserved parser-suspended document initialized %d runtimes", factory.count)
 	}
 }
 

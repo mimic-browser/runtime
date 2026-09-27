@@ -115,28 +115,29 @@ func (b *Browser) Environment() state.Environment {
 func (b *Browser) Compatibility() compatibility.Bundle { return b.compat }
 
 type Context struct {
-	profileLocked    bool
-	resourcePolicy   *network.ResourcePolicyState
-	env              state.Environment
-	proxy            profile.Proxy
-	files            map[string]*opfsStore
-	indexedDatabases map[string]map[string]*indexedDatabase
-	indexedSequence  uint64
-	cacheNames       map[string]map[string]*cacheBucket
-	cacheSequence    uint64
-	storageMu        sync.Mutex
-	permissionRealms map[*Realm]struct{}
-	lifetime         context.Context
-	cancel           context.CancelFunc
-	mu               sync.RWMutex
-	ID               string
-	browser          *Browser
-	cookies          *network.CookieStore
-	network          *network.SessionState
-	transport        network.Transport
-	storage          map[string]map[string]string
-	capabilities     map[string]*originCapabilities
-	pages            map[string]*Page
+	bootstrapPreparation bool // Private seed capture, never a user Context mode.
+	profileLocked        bool
+	resourcePolicy       *network.ResourcePolicyState
+	env                  state.Environment
+	proxy                profile.Proxy
+	files                map[string]*opfsStore
+	indexedDatabases     map[string]map[string]*indexedDatabase
+	indexedSequence      uint64
+	cacheNames           map[string]map[string]*cacheBucket
+	cacheSequence        uint64
+	storageMu            sync.Mutex
+	permissionRealms     map[*Realm]struct{}
+	lifetime             context.Context
+	cancel               context.CancelFunc
+	mu                   sync.RWMutex
+	ID                   string
+	browser              *Browser
+	cookies              *network.CookieStore
+	network              *network.SessionState
+	transport            network.Transport
+	storage              map[string]map[string]string
+	capabilities         map[string]*originCapabilities
+	pages                map[string]*Page
 
 	permissionDefaults        map[string]string // Context-wide CDP overrides; protected by mu.
 	permissionDefaultFallback string

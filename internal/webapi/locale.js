@@ -123,28 +123,49 @@ if (nativeIntl) {
     },
     construct(target, args, newTarget) {
       if (!args.length) return Reflect.construct(target, args, newTarget);
-      let ms;
-      if (args.length > 1) ms = componentTime(args);
-      else {
-        // [[DateValue]] precedes ToPrimitive, even for foreign realm Dates.
-        try {
-          ms = getTime(args[0]);
-        } catch {
-          const value = primitive(args[0]);
-          ms = typeof value === 'string' ? parse(value) : +value;
-        }
-      }
-      return Reflect.construct(target, [ms], newTarget);
+      // Keep author coercions inside the native Date construction. Computing
+      // the value before entering Date loses its intrinsic frame in stacks
+      // captured by Symbol.toPrimitive/valueOf callbacks.
+      const argument = {
+        [Symbol.toPrimitive]() {
+          if (args.length > 1) return componentTime(args);
+          // [[DateValue]] precedes ToPrimitive, even for foreign realm Dates.
+          try {
+            return getTime(args[0]);
+          } catch {
+            const value = primitive(args[0]);
+            return typeof value === 'string' ? parse(value) : +value;
+          }
+        },
+      };
+      return Reflect.construct(target, [argument], newTarget);
     },
   });
   const install = (name, operation) => {
-    const value = {
+    const nativeMethod = proto[name];
+    let value = {
       [name](...args) {
-        return Reflect.apply(operation, this, args);
+        try {
+          return Reflect.apply(operation, this, args);
+        } catch (error) {
+          // Local operations read [[DateValue]] through getTime. On a wrong
+          // receiver, let the original method produce its own brand error;
+          // getTime's error is not the contract of setters or string methods.
+          // A valid Date's coercion/formatting failure must retain its identity.
+          try {
+            getTime(this);
+          } catch {
+            return Reflect.apply(nativeMethod, this, args);
+          }
+          throw error;
+        }
       },
     }[name];
+    const length = name.startsWith('toLocale') ? 0 : operation.length;
+    if (typeof host.createReceiverDispatch === 'function')
+      value = host.createReceiverDispatch(proto.getTime, nativeMethod, operation, name, length);
     Object.defineProperty(value, 'length', {
-      value: name.startsWith('toLocale') ? 0 : operation.length,
+      value: length,
     });
     markNative(value, name);
     Object.defineProperty(proto, name, { value, writable: true, configurable: true });
@@ -336,9 +357,15 @@ if (nativeIntl) {
   globalThis.Date = MimicDate;
   for (const Constructor of [Number, BigInt]) {
     const valueOf = Function.prototype.call.bind(Constructor.prototype.valueOf);
+    const nativeLocaleString = Constructor.prototype.toLocaleString;
     const method = {
       toLocaleString(locales, options) {
-        const value = valueOf(this);
+        let value;
+        try {
+          value = valueOf(this);
+        } catch {
+          return Reflect.apply(nativeLocaleString, this, arguments);
+        }
         const formatter =
           locales === undefined && options === undefined
             ? (defaultNumberFormat ??= new NumberFormat())
@@ -347,25 +374,46 @@ if (nativeIntl) {
       },
     }.toLocaleString;
     Object.defineProperty(method, 'length', { value: 0 });
-    markNative(method, 'toLocaleString');
+    const publicMethod =
+      typeof host.createReceiverDispatch === 'function'
+        ? host.createReceiverDispatch(
+            Constructor.prototype.valueOf,
+            nativeLocaleString,
+            method,
+            'toLocaleString',
+            0,
+          )
+        : method;
+    markNative(publicMethod, 'toLocaleString');
     Object.defineProperty(Constructor.prototype, 'toLocaleString', {
-      value: method,
+      value: publicMethod,
       writable: true,
       configurable: true,
     });
   }
+  const nativeLocaleCompare = String.prototype.localeCompare;
   const compare = {
     localeCompare(that, locales, options) {
-      if (this == null) throw new TypeError('Invalid receiver');
+      if (this == null) return Reflect.apply(nativeLocaleCompare, this, arguments);
       const left = bindingString(this),
         right = bindingString(that);
       return new Collator(locales, options).compare(left, right);
     },
   }.localeCompare;
   Object.defineProperty(compare, 'length', { value: 1 });
-  markNative(compare, 'localeCompare');
+  const publicCompare =
+    typeof host.createReceiverDispatch === 'function'
+      ? host.createReceiverDispatch(
+          Object.prototype.valueOf,
+          nativeLocaleCompare,
+          compare,
+          'localeCompare',
+          1,
+        )
+      : compare;
+  markNative(publicCompare, 'localeCompare');
   Object.defineProperty(String.prototype, 'localeCompare', {
-    value: compare,
+    value: publicCompare,
     writable: true,
     configurable: true,
   });
@@ -388,7 +436,13 @@ if (nativeIntl) {
       configurable: true,
     });
   }
-  if (typeof Temporal !== 'undefined') {
+  // Conditional native intrinsics are absent while V8 serializes a seed and
+  // become available when restoring its context. Project locale state at both
+  // boundaries, once per namespace, before admitting author code.
+  const temporalLocales = new WeakSet();
+  const installTemporalLocale = () => {
+    if (typeof Temporal === 'undefined' || temporalLocales.has(Temporal)) return;
+    temporalLocales.add(Temporal);
     const now = Temporal.Now;
     const defaultZone = () => (temporalZone ??= new DateTimeFormat().resolvedOptions().timeZone);
     const timeZoneId = {
@@ -448,5 +502,7 @@ if (nativeIntl) {
         configurable: true,
       });
     }
-  }
+  };
+  bootstrapRestoreHooks.push(installTemporalLocale);
+  installTemporalLocale();
 }

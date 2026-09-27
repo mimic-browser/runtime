@@ -1,0 +1,81 @@
+{
+  "captureMetadata": {
+    "schemaVersion": 1,
+    "chromeVersion": "152.0.7977.82",
+    "chromiumRevision": 1669021,
+    "chromiumCommit": "d04cdb24d67b081f6cf80200ffc5233f44b61109",
+    "v8Version": "15.2.124.21",
+    "platform": "windows-x64",
+    "browserMode": "headful",
+    "commandLineFeatureOverrides": [],
+    "environmentProfileId": "chrome-152-windows-x64-headful-controlled-v1",
+    "profileFreshness": "fresh-controlled",
+    "viewport": {
+      "width": 1272,
+      "height": 653,
+      "deviceScaleFactor": 1
+    },
+    "window": {
+      "left": 593,
+      "top": 328,
+      "width": 1280,
+      "height": 800,
+      "windowState": "normal"
+    },
+    "secureContextState": true,
+    "isolationState": false,
+    "visibilityState": "visible",
+    "hasFocus": true
+  },
+  "fixtureOrigin": "http://127.0.0.1:55541",
+  "fixture": "internal/browser/testdata/media_element_buffered_oracle.js",
+  "fixtureSHA256": "61559eb30fb35c6c9dbe356a4302e37b1a74578916bcdddeeaf51ad5dcc4faeb",
+  "worker": false,
+  "result": {
+    "result": {
+      "type": "object",
+      "value": {
+        "video": {
+          "tag": "[object TimeRanges]",
+          "instance": true,
+          "length": 0,
+          "fresh": true,
+          "startMissing": {
+            "name": "TypeError",
+            "message": "Failed to execute 'start' on 'TimeRanges': 1 argument required, but only 0 present."
+          },
+          "startZero": {
+            "name": "IndexSizeError",
+            "message": "Failed to execute 'start' on 'TimeRanges': The index provided (0) is greater than or equal to the maximum bound (0)."
+          },
+          "endNegative": {
+            "name": "IndexSizeError",
+            "message": "Failed to execute 'end' on 'TimeRanges': The index provided (4294967295) is greater than the maximum bound (0)."
+          }
+        },
+        "audio": {
+          "tag": "[object TimeRanges]",
+          "instance": true,
+          "length": 0,
+          "fresh": true,
+          "startMissing": {
+            "name": "TypeError",
+            "message": "Failed to execute 'start' on 'TimeRanges': 1 argument required, but only 0 present."
+          },
+          "startZero": {
+            "name": "IndexSizeError",
+            "message": "Failed to execute 'start' on 'TimeRanges': The index provided (0) is greater than or equal to the maximum bound (0)."
+          },
+          "endNegative": {
+            "name": "IndexSizeError",
+            "message": "Failed to execute 'end' on 'TimeRanges': The index provided (4294967295) is greater than the maximum bound (0)."
+          }
+        },
+        "invalidReceiver": {
+          "name": "TypeError",
+          "message": "Illegal invocation"
+        }
+      }
+    }
+  }
+}

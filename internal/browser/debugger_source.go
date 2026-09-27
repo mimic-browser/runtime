@@ -126,10 +126,12 @@ const debuggerFactorySource = `(() => {
   return function(operation, encoded, value){
     const p=parse(encoded);
     if(operation==='lookup')return get(p.objectId).value;
-    if(operation==='call'){
-      const receiver=p.objectId?get(p.objectId).value:globalThis;
-      const args=array(),supplied=p.arguments||[];for(let index=0;index<supplied.length;index++)append(args,argument(supplied[index]));
-      return apply(value,receiver,args);
+    if (operation === 'prepareCall') {
+      const values = array(),
+        supplied = p.arguments || [];
+      append(values, p.objectId ? get(p.objectId).value : globalThis);
+      for (let index = 0; index < supplied.length; index++) append(values, argument(supplied[index]));
+      return values;
     }
     if(operation==='release'){apply(mapDelete,objects,[p.objectId]);return '{}'}
     if(operation==='clear'){apply(mapClear,objects,[]);return '{}'}

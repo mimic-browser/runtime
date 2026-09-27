@@ -250,6 +250,10 @@ func (f *Function) CreateCodeCache() (*FunctionCodeCache, error) {
 // reports V8's cached-data rejected bit. Arbitrary external bytes cannot be
 // constructed as FunctionCodeCache, preserving the safe deserializer boundary.
 func (c *Context) CompileFunctionAdvanced(s *Scope, source string, params []string, cache *FunctionCodeCache, tc *TryCatch) (function *Function, rejected bool, err error) {
+	return c.compileFunctionAdvanced(s, source, params, cache, tc, false)
+}
+
+func (c *Context) compileFunctionAdvanced(s *Scope, source string, params []string, cache *FunctionCodeCache, tc *TryCatch, platform bool) (function *Function, rejected bool, err error) {
 	if err = c.check(); err != nil {
 		return nil, false, err
 	}
@@ -304,7 +308,11 @@ func (c *Context) CompileFunctionAdvanced(s *Scope, source string, params []stri
 	}
 	var out uintptr
 	var rejectedInt int32
-	r1, _, _ := proc("gov8_fa_compile_function").Call(
+	operation := "gov8_fa_compile_function"
+	if platform {
+		operation = "gov8_fa_compile_platform_function"
+	}
+	r1, _, _ := proc(operation).Call(
 		c.iso.handleAssumingCheck(), c.handle, scopeHandle, tryCatchHandle,
 		bytesArg(sourceBytes), uintptr(len(sourceBytes)), parametersArg,
 		uintptr(len(params)), bytesArg(cacheBytes), uintptr(len(cacheBytes)),

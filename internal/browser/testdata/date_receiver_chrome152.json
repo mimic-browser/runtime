@@ -1,0 +1,1512 @@
+{
+  "captureMetadata": {
+    "chromeVersion": "152.0.7977.82",
+    "chromiumRevision": 1669021,
+    "chromiumCommit": "d04cdb24d67b081f6cf80200ffc5233f44b61109",
+    "v8Version": "15.2.124.21",
+    "platform": "windows-x64",
+    "browserMode": "headful",
+    "commandLineFeatureOverrides": [],
+    "environmentProfileId": "chrome-152-windows-x64-headful-local-probe-reused-v1",
+    "profileFreshness": "Existing dedicated process; new about:blank page. Two identical local repetitions; no website scripts or API instrumentation.",
+    "environment": {
+      "webdriver": false,
+      "origin": "null",
+      "secure": false,
+      "crossOriginIsolated": false,
+      "innerWidth": 1272,
+      "innerHeight": 653,
+      "outerWidth": 1280,
+      "outerHeight": 800,
+      "devicePixelRatio": 1,
+      "visibility": "visible",
+      "focus": true
+    },
+    "originalLaunchArtifact": ".build/performance-measure-options-20260927/process.json",
+    "rawCaptureSha256": "5330d1fd237e0c7838ea169caac539e4bac054a73ddcc684468a597ac94b4bad"
+  },
+  "fixture": "internal/browser/testdata/date_receiver_oracle.js",
+  "fixtureSHA256": "a661c9d27764782c96a78d6cdec8d30b6c425cdfac5f86f689875c02f95888dc",
+  "fixtureOrigin": "about:blank",
+  "result": {
+    "result": {
+      "type": "object",
+      "value": {
+        "toString": {
+          "undefined": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toString called on incompatible receiver undefined",
+            "conversions": 0
+          },
+          "null": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toString called on incompatible receiver null",
+            "conversions": 0
+          },
+          "object": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toString called on incompatible receiver #<Object>",
+            "conversions": 0
+          },
+          "array": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toString called on incompatible receiver [object Array]",
+            "conversions": 0
+          },
+          "number": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toString called on incompatible receiver 0",
+            "conversions": 0
+          },
+          "string": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toString called on incompatible receiver x",
+            "conversions": 0
+          },
+          "boolean": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toString called on incompatible receiver true",
+            "conversions": 0
+          },
+          "symbol": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toString called on incompatible receiver Symbol(x)",
+            "conversions": 0
+          },
+          "bigint": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toString called on incompatible receiver 1",
+            "conversions": 0
+          },
+          "datePrototype": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toString called on incompatible receiver [object Object]",
+            "conversions": 0
+          },
+          "proxiedDate": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toString called on incompatible receiver [object Object]",
+            "conversions": 0
+          }
+        },
+        "toDateString": {
+          "undefined": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toDateString called on incompatible receiver undefined",
+            "conversions": 0
+          },
+          "null": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toDateString called on incompatible receiver null",
+            "conversions": 0
+          },
+          "object": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toDateString called on incompatible receiver #<Object>",
+            "conversions": 0
+          },
+          "array": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toDateString called on incompatible receiver [object Array]",
+            "conversions": 0
+          },
+          "number": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toDateString called on incompatible receiver 0",
+            "conversions": 0
+          },
+          "string": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toDateString called on incompatible receiver x",
+            "conversions": 0
+          },
+          "boolean": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toDateString called on incompatible receiver true",
+            "conversions": 0
+          },
+          "symbol": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toDateString called on incompatible receiver Symbol(x)",
+            "conversions": 0
+          },
+          "bigint": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toDateString called on incompatible receiver 1",
+            "conversions": 0
+          },
+          "datePrototype": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toDateString called on incompatible receiver [object Object]",
+            "conversions": 0
+          },
+          "proxiedDate": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toDateString called on incompatible receiver [object Object]",
+            "conversions": 0
+          }
+        },
+        "toTimeString": {
+          "undefined": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toTimeString called on incompatible receiver undefined",
+            "conversions": 0
+          },
+          "null": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toTimeString called on incompatible receiver null",
+            "conversions": 0
+          },
+          "object": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toTimeString called on incompatible receiver #<Object>",
+            "conversions": 0
+          },
+          "array": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toTimeString called on incompatible receiver [object Array]",
+            "conversions": 0
+          },
+          "number": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toTimeString called on incompatible receiver 0",
+            "conversions": 0
+          },
+          "string": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toTimeString called on incompatible receiver x",
+            "conversions": 0
+          },
+          "boolean": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toTimeString called on incompatible receiver true",
+            "conversions": 0
+          },
+          "symbol": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toTimeString called on incompatible receiver Symbol(x)",
+            "conversions": 0
+          },
+          "bigint": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toTimeString called on incompatible receiver 1",
+            "conversions": 0
+          },
+          "datePrototype": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toTimeString called on incompatible receiver [object Object]",
+            "conversions": 0
+          },
+          "proxiedDate": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toTimeString called on incompatible receiver [object Object]",
+            "conversions": 0
+          }
+        },
+        "toLocaleString": {
+          "undefined": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleString called on incompatible receiver undefined",
+            "conversions": 0
+          },
+          "null": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleString called on incompatible receiver null",
+            "conversions": 0
+          },
+          "object": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleString called on incompatible receiver #<Object>",
+            "conversions": 0
+          },
+          "array": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleString called on incompatible receiver [object Array]",
+            "conversions": 0
+          },
+          "number": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleString called on incompatible receiver 0",
+            "conversions": 0
+          },
+          "string": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleString called on incompatible receiver x",
+            "conversions": 0
+          },
+          "boolean": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleString called on incompatible receiver true",
+            "conversions": 0
+          },
+          "symbol": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleString called on incompatible receiver Symbol(x)",
+            "conversions": 0
+          },
+          "bigint": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleString called on incompatible receiver 1",
+            "conversions": 0
+          },
+          "datePrototype": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleString called on incompatible receiver [object Object]",
+            "conversions": 0
+          },
+          "proxiedDate": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleString called on incompatible receiver [object Object]",
+            "conversions": 0
+          }
+        },
+        "toLocaleDateString": {
+          "undefined": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleDateString called on incompatible receiver undefined",
+            "conversions": 0
+          },
+          "null": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleDateString called on incompatible receiver null",
+            "conversions": 0
+          },
+          "object": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleDateString called on incompatible receiver #<Object>",
+            "conversions": 0
+          },
+          "array": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleDateString called on incompatible receiver [object Array]",
+            "conversions": 0
+          },
+          "number": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleDateString called on incompatible receiver 0",
+            "conversions": 0
+          },
+          "string": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleDateString called on incompatible receiver x",
+            "conversions": 0
+          },
+          "boolean": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleDateString called on incompatible receiver true",
+            "conversions": 0
+          },
+          "symbol": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleDateString called on incompatible receiver Symbol(x)",
+            "conversions": 0
+          },
+          "bigint": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleDateString called on incompatible receiver 1",
+            "conversions": 0
+          },
+          "datePrototype": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleDateString called on incompatible receiver [object Object]",
+            "conversions": 0
+          },
+          "proxiedDate": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleDateString called on incompatible receiver [object Object]",
+            "conversions": 0
+          }
+        },
+        "toLocaleTimeString": {
+          "undefined": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleTimeString called on incompatible receiver undefined",
+            "conversions": 0
+          },
+          "null": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleTimeString called on incompatible receiver null",
+            "conversions": 0
+          },
+          "object": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleTimeString called on incompatible receiver #<Object>",
+            "conversions": 0
+          },
+          "array": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleTimeString called on incompatible receiver [object Array]",
+            "conversions": 0
+          },
+          "number": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleTimeString called on incompatible receiver 0",
+            "conversions": 0
+          },
+          "string": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleTimeString called on incompatible receiver x",
+            "conversions": 0
+          },
+          "boolean": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleTimeString called on incompatible receiver true",
+            "conversions": 0
+          },
+          "symbol": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleTimeString called on incompatible receiver Symbol(x)",
+            "conversions": 0
+          },
+          "bigint": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleTimeString called on incompatible receiver 1",
+            "conversions": 0
+          },
+          "datePrototype": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleTimeString called on incompatible receiver [object Object]",
+            "conversions": 0
+          },
+          "proxiedDate": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.toLocaleTimeString called on incompatible receiver [object Object]",
+            "conversions": 0
+          }
+        },
+        "getFullYear": {
+          "undefined": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "null": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "object": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "array": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "number": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "string": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "boolean": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "symbol": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "bigint": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "datePrototype": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "proxiedDate": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          }
+        },
+        "getMonth": {
+          "undefined": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "null": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "object": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "array": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "number": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "string": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "boolean": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "symbol": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "bigint": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "datePrototype": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "proxiedDate": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          }
+        },
+        "getDate": {
+          "undefined": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "null": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "object": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "array": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "number": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "string": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "boolean": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "symbol": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "bigint": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "datePrototype": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "proxiedDate": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          }
+        },
+        "getDay": {
+          "undefined": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "null": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "object": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "array": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "number": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "string": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "boolean": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "symbol": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "bigint": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "datePrototype": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "proxiedDate": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          }
+        },
+        "getHours": {
+          "undefined": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "null": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "object": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "array": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "number": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "string": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "boolean": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "symbol": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "bigint": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "datePrototype": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "proxiedDate": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          }
+        },
+        "getMinutes": {
+          "undefined": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "null": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "object": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "array": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "number": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "string": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "boolean": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "symbol": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "bigint": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "datePrototype": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "proxiedDate": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          }
+        },
+        "getSeconds": {
+          "undefined": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "null": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "object": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "array": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "number": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "string": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "boolean": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "symbol": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "bigint": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "datePrototype": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "proxiedDate": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          }
+        },
+        "getMilliseconds": {
+          "undefined": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "null": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "object": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "array": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "number": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "string": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "boolean": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "symbol": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "bigint": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "datePrototype": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "proxiedDate": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          }
+        },
+        "getYear": {
+          "undefined": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.getYear called on incompatible receiver undefined",
+            "conversions": 0
+          },
+          "null": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.getYear called on incompatible receiver null",
+            "conversions": 0
+          },
+          "object": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.getYear called on incompatible receiver #<Object>",
+            "conversions": 0
+          },
+          "array": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.getYear called on incompatible receiver [object Array]",
+            "conversions": 0
+          },
+          "number": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.getYear called on incompatible receiver 0",
+            "conversions": 0
+          },
+          "string": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.getYear called on incompatible receiver x",
+            "conversions": 0
+          },
+          "boolean": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.getYear called on incompatible receiver true",
+            "conversions": 0
+          },
+          "symbol": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.getYear called on incompatible receiver Symbol(x)",
+            "conversions": 0
+          },
+          "bigint": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.getYear called on incompatible receiver 1",
+            "conversions": 0
+          },
+          "datePrototype": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.getYear called on incompatible receiver [object Object]",
+            "conversions": 0
+          },
+          "proxiedDate": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.getYear called on incompatible receiver [object Object]",
+            "conversions": 0
+          }
+        },
+        "getTimezoneOffset": {
+          "undefined": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "null": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "object": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "array": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "number": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "string": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "boolean": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "symbol": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "bigint": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "datePrototype": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          },
+          "proxiedDate": {
+            "name": "TypeError",
+            "message": "this is not a Date object.",
+            "conversions": 0
+          }
+        },
+        "setFullYear": {
+          "undefined": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setFullYear called on incompatible receiver undefined",
+            "conversions": 0
+          },
+          "null": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setFullYear called on incompatible receiver null",
+            "conversions": 0
+          },
+          "object": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setFullYear called on incompatible receiver #<Object>",
+            "conversions": 0
+          },
+          "array": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setFullYear called on incompatible receiver [object Array]",
+            "conversions": 0
+          },
+          "number": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setFullYear called on incompatible receiver 0",
+            "conversions": 0
+          },
+          "string": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setFullYear called on incompatible receiver x",
+            "conversions": 0
+          },
+          "boolean": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setFullYear called on incompatible receiver true",
+            "conversions": 0
+          },
+          "symbol": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setFullYear called on incompatible receiver Symbol(x)",
+            "conversions": 0
+          },
+          "bigint": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setFullYear called on incompatible receiver 1",
+            "conversions": 0
+          },
+          "datePrototype": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setFullYear called on incompatible receiver [object Object]",
+            "conversions": 0
+          },
+          "proxiedDate": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setFullYear called on incompatible receiver [object Object]",
+            "conversions": 0
+          }
+        },
+        "setMonth": {
+          "undefined": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMonth called on incompatible receiver undefined",
+            "conversions": 0
+          },
+          "null": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMonth called on incompatible receiver null",
+            "conversions": 0
+          },
+          "object": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMonth called on incompatible receiver #<Object>",
+            "conversions": 0
+          },
+          "array": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMonth called on incompatible receiver [object Array]",
+            "conversions": 0
+          },
+          "number": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMonth called on incompatible receiver 0",
+            "conversions": 0
+          },
+          "string": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMonth called on incompatible receiver x",
+            "conversions": 0
+          },
+          "boolean": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMonth called on incompatible receiver true",
+            "conversions": 0
+          },
+          "symbol": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMonth called on incompatible receiver Symbol(x)",
+            "conversions": 0
+          },
+          "bigint": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMonth called on incompatible receiver 1",
+            "conversions": 0
+          },
+          "datePrototype": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMonth called on incompatible receiver [object Object]",
+            "conversions": 0
+          },
+          "proxiedDate": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMonth called on incompatible receiver [object Object]",
+            "conversions": 0
+          }
+        },
+        "setDate": {
+          "undefined": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setDate called on incompatible receiver undefined",
+            "conversions": 0
+          },
+          "null": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setDate called on incompatible receiver null",
+            "conversions": 0
+          },
+          "object": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setDate called on incompatible receiver #<Object>",
+            "conversions": 0
+          },
+          "array": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setDate called on incompatible receiver [object Array]",
+            "conversions": 0
+          },
+          "number": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setDate called on incompatible receiver 0",
+            "conversions": 0
+          },
+          "string": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setDate called on incompatible receiver x",
+            "conversions": 0
+          },
+          "boolean": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setDate called on incompatible receiver true",
+            "conversions": 0
+          },
+          "symbol": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setDate called on incompatible receiver Symbol(x)",
+            "conversions": 0
+          },
+          "bigint": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setDate called on incompatible receiver 1",
+            "conversions": 0
+          },
+          "datePrototype": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setDate called on incompatible receiver [object Object]",
+            "conversions": 0
+          },
+          "proxiedDate": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setDate called on incompatible receiver [object Object]",
+            "conversions": 0
+          }
+        },
+        "setHours": {
+          "undefined": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setHours called on incompatible receiver undefined",
+            "conversions": 0
+          },
+          "null": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setHours called on incompatible receiver null",
+            "conversions": 0
+          },
+          "object": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setHours called on incompatible receiver #<Object>",
+            "conversions": 0
+          },
+          "array": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setHours called on incompatible receiver [object Array]",
+            "conversions": 0
+          },
+          "number": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setHours called on incompatible receiver 0",
+            "conversions": 0
+          },
+          "string": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setHours called on incompatible receiver x",
+            "conversions": 0
+          },
+          "boolean": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setHours called on incompatible receiver true",
+            "conversions": 0
+          },
+          "symbol": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setHours called on incompatible receiver Symbol(x)",
+            "conversions": 0
+          },
+          "bigint": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setHours called on incompatible receiver 1",
+            "conversions": 0
+          },
+          "datePrototype": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setHours called on incompatible receiver [object Object]",
+            "conversions": 0
+          },
+          "proxiedDate": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setHours called on incompatible receiver [object Object]",
+            "conversions": 0
+          }
+        },
+        "setMinutes": {
+          "undefined": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMinutes called on incompatible receiver undefined",
+            "conversions": 0
+          },
+          "null": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMinutes called on incompatible receiver null",
+            "conversions": 0
+          },
+          "object": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMinutes called on incompatible receiver #<Object>",
+            "conversions": 0
+          },
+          "array": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMinutes called on incompatible receiver [object Array]",
+            "conversions": 0
+          },
+          "number": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMinutes called on incompatible receiver 0",
+            "conversions": 0
+          },
+          "string": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMinutes called on incompatible receiver x",
+            "conversions": 0
+          },
+          "boolean": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMinutes called on incompatible receiver true",
+            "conversions": 0
+          },
+          "symbol": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMinutes called on incompatible receiver Symbol(x)",
+            "conversions": 0
+          },
+          "bigint": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMinutes called on incompatible receiver 1",
+            "conversions": 0
+          },
+          "datePrototype": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMinutes called on incompatible receiver [object Object]",
+            "conversions": 0
+          },
+          "proxiedDate": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMinutes called on incompatible receiver [object Object]",
+            "conversions": 0
+          }
+        },
+        "setSeconds": {
+          "undefined": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setSeconds called on incompatible receiver undefined",
+            "conversions": 0
+          },
+          "null": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setSeconds called on incompatible receiver null",
+            "conversions": 0
+          },
+          "object": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setSeconds called on incompatible receiver #<Object>",
+            "conversions": 0
+          },
+          "array": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setSeconds called on incompatible receiver [object Array]",
+            "conversions": 0
+          },
+          "number": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setSeconds called on incompatible receiver 0",
+            "conversions": 0
+          },
+          "string": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setSeconds called on incompatible receiver x",
+            "conversions": 0
+          },
+          "boolean": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setSeconds called on incompatible receiver true",
+            "conversions": 0
+          },
+          "symbol": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setSeconds called on incompatible receiver Symbol(x)",
+            "conversions": 0
+          },
+          "bigint": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setSeconds called on incompatible receiver 1",
+            "conversions": 0
+          },
+          "datePrototype": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setSeconds called on incompatible receiver [object Object]",
+            "conversions": 0
+          },
+          "proxiedDate": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setSeconds called on incompatible receiver [object Object]",
+            "conversions": 0
+          }
+        },
+        "setMilliseconds": {
+          "undefined": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMilliseconds called on incompatible receiver undefined",
+            "conversions": 0
+          },
+          "null": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMilliseconds called on incompatible receiver null",
+            "conversions": 0
+          },
+          "object": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMilliseconds called on incompatible receiver #<Object>",
+            "conversions": 0
+          },
+          "array": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMilliseconds called on incompatible receiver [object Array]",
+            "conversions": 0
+          },
+          "number": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMilliseconds called on incompatible receiver 0",
+            "conversions": 0
+          },
+          "string": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMilliseconds called on incompatible receiver x",
+            "conversions": 0
+          },
+          "boolean": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMilliseconds called on incompatible receiver true",
+            "conversions": 0
+          },
+          "symbol": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMilliseconds called on incompatible receiver Symbol(x)",
+            "conversions": 0
+          },
+          "bigint": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMilliseconds called on incompatible receiver 1",
+            "conversions": 0
+          },
+          "datePrototype": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMilliseconds called on incompatible receiver [object Object]",
+            "conversions": 0
+          },
+          "proxiedDate": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setMilliseconds called on incompatible receiver [object Object]",
+            "conversions": 0
+          }
+        },
+        "setYear": {
+          "undefined": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setYear called on incompatible receiver undefined",
+            "conversions": 0
+          },
+          "null": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setYear called on incompatible receiver null",
+            "conversions": 0
+          },
+          "object": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setYear called on incompatible receiver #<Object>",
+            "conversions": 0
+          },
+          "array": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setYear called on incompatible receiver [object Array]",
+            "conversions": 0
+          },
+          "number": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setYear called on incompatible receiver 0",
+            "conversions": 0
+          },
+          "string": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setYear called on incompatible receiver x",
+            "conversions": 0
+          },
+          "boolean": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setYear called on incompatible receiver true",
+            "conversions": 0
+          },
+          "symbol": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setYear called on incompatible receiver Symbol(x)",
+            "conversions": 0
+          },
+          "bigint": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setYear called on incompatible receiver 1",
+            "conversions": 0
+          },
+          "datePrototype": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setYear called on incompatible receiver [object Object]",
+            "conversions": 0
+          },
+          "proxiedDate": {
+            "name": "TypeError",
+            "message": "Method Date.prototype.setYear called on incompatible receiver [object Object]",
+            "conversions": 0
+          }
+        },
+        "validReceiverFailure": {
+          "sameError": true,
+          "value": 123
+        },
+        "NumberLocale": {
+          "undefined": {
+            "name": "TypeError",
+            "message": "Number.prototype.toLocaleString requires that 'this' be a Number"
+          },
+          "null": {
+            "name": "TypeError",
+            "message": "Number.prototype.toLocaleString requires that 'this' be a Number"
+          },
+          "object": {
+            "name": "TypeError",
+            "message": "Number.prototype.toLocaleString requires that 'this' be a Number"
+          },
+          "array": {
+            "name": "TypeError",
+            "message": "Number.prototype.toLocaleString requires that 'this' be a Number"
+          },
+          "number": {
+            "value": "0"
+          },
+          "string": {
+            "name": "TypeError",
+            "message": "Number.prototype.toLocaleString requires that 'this' be a Number"
+          },
+          "boolean": {
+            "name": "TypeError",
+            "message": "Number.prototype.toLocaleString requires that 'this' be a Number"
+          },
+          "symbol": {
+            "name": "TypeError",
+            "message": "Number.prototype.toLocaleString requires that 'this' be a Number"
+          },
+          "bigint": {
+            "name": "TypeError",
+            "message": "Number.prototype.toLocaleString requires that 'this' be a Number"
+          },
+          "datePrototype": {
+            "name": "TypeError",
+            "message": "Number.prototype.toLocaleString requires that 'this' be a Number"
+          },
+          "proxiedDate": {
+            "name": "TypeError",
+            "message": "Number.prototype.toLocaleString requires that 'this' be a Number"
+          }
+        },
+        "BigIntLocale": {
+          "undefined": {
+            "name": "TypeError",
+            "message": "BigInt.prototype.toLocaleString requires that 'this' be a BigInt"
+          },
+          "null": {
+            "name": "TypeError",
+            "message": "BigInt.prototype.toLocaleString requires that 'this' be a BigInt"
+          },
+          "object": {
+            "name": "TypeError",
+            "message": "BigInt.prototype.toLocaleString requires that 'this' be a BigInt"
+          },
+          "array": {
+            "name": "TypeError",
+            "message": "BigInt.prototype.toLocaleString requires that 'this' be a BigInt"
+          },
+          "number": {
+            "name": "TypeError",
+            "message": "BigInt.prototype.toLocaleString requires that 'this' be a BigInt"
+          },
+          "string": {
+            "name": "TypeError",
+            "message": "BigInt.prototype.toLocaleString requires that 'this' be a BigInt"
+          },
+          "boolean": {
+            "name": "TypeError",
+            "message": "BigInt.prototype.toLocaleString requires that 'this' be a BigInt"
+          },
+          "symbol": {
+            "name": "TypeError",
+            "message": "BigInt.prototype.toLocaleString requires that 'this' be a BigInt"
+          },
+          "bigint": {
+            "value": "1"
+          },
+          "datePrototype": {
+            "name": "TypeError",
+            "message": "BigInt.prototype.toLocaleString requires that 'this' be a BigInt"
+          },
+          "proxiedDate": {
+            "name": "TypeError",
+            "message": "BigInt.prototype.toLocaleString requires that 'this' be a BigInt"
+          }
+        },
+        "stringLocale": {
+          "undefined": {
+            "name": "TypeError",
+            "message": "String.prototype.localeCompare called on null or undefined"
+          },
+          "null": {
+            "name": "TypeError",
+            "message": "String.prototype.localeCompare called on null or undefined"
+          }
+        }
+      }
+    }
+  },
+  "capturedFixtureSHA256": "dcb303331a1cf1d8f004821b10711febd0fc77315017d5b1ee8caf38930a3cb2",
+  "fixtureTransformation": "Formatting-only derived probe: Prettier 3.6.2, preserving expression form for embedding after await. Raw capture source retained privately as date-receiver-captured-source.js; no oracle result changes."
+}

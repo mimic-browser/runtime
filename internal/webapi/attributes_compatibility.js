@@ -42,16 +42,24 @@ const attributeCompatibility = (() => {
       property,
       function () {
         check(this);
-        return canonicalize(this.getAttribute(attribute), this);
+        return canonicalize(Reflect.apply(intrinsicGetAttribute, this, [attribute]), this);
       },
       function (value) {
         check(this);
-        if (typeof value === 'symbol') throw new TypeError('Cannot convert a Symbol to a string');
+        if (typeof value === 'symbol')
+          throw new TypeError(
+            "Failed to set the '" +
+              property +
+              "' property on '" +
+              C.name +
+              "': Cannot convert a Symbol value to a string",
+          );
         Reflect.apply(setSlotAttribute, this, [attribute, String(value)]);
       },
     );
   };
   for (const [name, keywords] of [
+    ['dir', 'ltr rtl auto'],
     ['inputMode', 'none text tel url email numeric decimal search'],
     ['enterKeyHint', 'enter done go next previous search send'],
   ]) {
@@ -227,7 +235,8 @@ const attributeCompatibility = (() => {
       function (value) {
         control(this);
         value = +value | 0;
-        if (value < 0) throw new DOMException('The value provided is negative.', 'IndexSizeError');
+        if (value < 0)
+          throw platformDOMException('The value provided is negative.', 'IndexSizeError');
         this.setAttribute('maxlength', String(value));
       },
     );
@@ -356,19 +365,7 @@ const attributeCompatibility = (() => {
       namespace,
       "Failed to execute 'setAttributeNS' on 'Element': ",
     );
-    if (
-      !/^[A-Za-z_:][A-Za-z0-9_.:\-]*$/.test(name) &&
-      !/^[\p{L}_:][\p{L}\p{N}_.:\-\u00b7\p{M}]*$/u.test(name)
-    )
-      throw new DOMException('Invalid XML name', 'InvalidCharacterError');
-    const prefix = name.includes(':') ? name.split(':')[0] : null;
-    if (
-      (prefix && !namespace) ||
-      (prefix === 'xml' && namespace !== 'http://www.w3.org/XML/1998/namespace') ||
-      ((name === 'xmlns' || prefix === 'xmlns') && namespace !== 'http://www.w3.org/2000/xmlns/') ||
-      (namespace === 'http://www.w3.org/2000/xmlns/' && name !== 'xmlns' && prefix !== 'xmlns')
-    )
-      throw new DOMException('Invalid namespace', 'NamespaceError');
+    name = validateDOMQualifiedName(namespace, name, true, 'setAttributeNS', 'Element');
     host.setAttributeNS(elementSlot(this).nodeId, namespace, name, value);
   });
   const indexed = (key) =>
@@ -437,7 +434,7 @@ const attributeCompatibility = (() => {
   member(globalThis.NamedNodeMap.prototype, 'removeNamedItem', function (name) {
     const element = owner(this),
       attr = get(element, name);
-    if (!attr) throw new DOMException('Attribute not found', 'NotFoundError');
+    if (!attr) throw platformDOMException('Attribute not found', 'NotFoundError');
     return element.removeAttributeNode(attr);
   });
   member(globalThis.NamedNodeMap.prototype, 'setNamedItem', function (attr) {
@@ -531,8 +528,7 @@ const attributeCompatibility = (() => {
   member(Document.prototype, 'createAttribute', function (name) {
     if (!(this instanceof Document)) throw new TypeError('Illegal invocation');
     name = String(name);
-    if (!name || /[\s<>\/=]/.test(name))
-      throw new DOMException('Invalid attribute name', 'InvalidCharacterError');
+    validateDOMName(name, true, 'createAttribute', 'Document');
     return create(name.toLowerCase(), '', this);
   });
   member(Element.prototype, 'getAttributeNodeNS', function (namespace, local) {
@@ -557,7 +553,7 @@ const attributeCompatibility = (() => {
     if (!(this instanceof Element)) throw new TypeError('Illegal invocation');
     if (!slots.has(attr)) throw new TypeError('Parameter is not an Attr');
     if (attr.ownerElement !== this || get(this, attr.name) !== attr)
-      throw new DOMException('Attribute is not owned by this element', 'NotFoundError');
+      throw platformDOMException('Attribute is not owned by this element', 'NotFoundError');
     this.removeAttribute(attr.name);
     return attr;
   });
@@ -566,7 +562,7 @@ const attributeCompatibility = (() => {
     if (!slots.has(attr)) throw new TypeError('Parameter is not an Attr');
     const value = state(attr);
     if (value.owner && value.owner !== this)
-      throw new DOMException('Attribute is already in use', 'InUseAttributeError');
+      throw platformDOMException('Attribute is already in use', 'InUseAttributeError');
     const previous = get(this, value.name);
     if (previous === attr) return attr;
     const approved = trustedAttributeValue(
@@ -646,5 +642,88 @@ const attributeCompatibility = (() => {
     );
   });
   delete globalThis.Attr.prototype.cloneNode;
+  // Equality observes canonical DOM state, never author-overridable getters or
+  // serialization. Template contents and shadow trees are separate node trees.
+  const equalityState = (node) => {
+    const attribute = slots.get(node);
+    if (attribute) {
+      const value = attribute.owner
+        ? host.nodeData(elementSlot(attribute.owner).nodeId).attributes[attribute.name]
+        : attribute.value;
+      return {
+        type: 'attribute',
+        namespace: attribute.namespace || '',
+        name: attribute.namespace ? attribute.name.split(':').at(-1) : attribute.name,
+        value,
+        children: [],
+      };
+    }
+    const fragment = fragmentSlots.get(node);
+    if (fragment) return { type: 'fragment', children: fragment.children };
+    const id = node === document ? realmDocumentRootID : elementSlot(node).nodeId;
+    const data = host.nodeData(id);
+    return {
+      type: data.type,
+      namespace: data.namespaceURI || '',
+      name: data.qualifiedName || data.tagName,
+      value:
+        data.type === 'text' || data.type === 'comment'
+          ? decodeDOMStringJSON(host.textContentJSON(id))
+          : undefined,
+      attributes: data.attributes,
+      namespaces: data.attributeNamespaces || {},
+      children: data.children.map(wrap),
+    };
+  };
+  const equalAttributes = (a, b) => {
+    const left = Object.keys(a.attributes),
+      right = Object.keys(b.attributes);
+    if (left.length !== right.length) return false;
+    return left.every((name) => {
+      const namespace = a.namespaces[name] || '';
+      const local = namespace ? name.split(':').at(-1) : name;
+      return right.some(
+        (other) =>
+          (b.namespaces[other] || '') === namespace &&
+          (namespace ? other.split(':').at(-1) : other) === local &&
+          a.attributes[name] === b.attributes[other],
+      );
+    });
+  };
+  member(Node.prototype, 'isEqualNode', function (other) {
+    if (!isDOMNode(this)) throw new TypeError('Illegal invocation');
+    if (!arguments.length) throw new TypeError('Argument required');
+    if (other == null) return false;
+    if (!isDOMNode(other)) throw new TypeError('Expected a Node');
+    const pending = [[this, other]];
+    while (pending.length) {
+      const [left, right] = pending.pop();
+      if (left === right) continue;
+      const a = equalityState(left),
+        b = equalityState(right);
+      if (a.type !== b.type) return false;
+      if (
+        a.type === 'element' &&
+        (a.name !== b.name || a.namespace !== b.namespace || !equalAttributes(a, b))
+      )
+        return false;
+      if (
+        a.type === 'attribute' &&
+        (a.name !== b.name || a.namespace !== b.namespace || a.value !== b.value)
+      )
+        return false;
+      if ((a.type === 'text' || a.type === 'comment') && a.value !== b.value) return false;
+      if (
+        a.type === 'doctype' &&
+        (a.name !== b.name ||
+          (a.attributes.public || '') !== (b.attributes.public || '') ||
+          (a.attributes.system || '') !== (b.attributes.system || ''))
+      )
+        return false;
+      if (a.children.length !== b.children.length) return false;
+      for (let i = 0; i < a.children.length; i++) pending.push([a.children[i], b.children[i]]);
+    }
+    return true;
+  });
   return { namedMap };
 })();

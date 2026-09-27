@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"os"
 	"reflect"
 	"strings"
@@ -22,6 +21,8 @@ import (
 // Factory exposes V8 through the same engine-neutral contract as QuickJS.
 // Browser code never imports this package directly.
 type Factory struct{}
+
+func (Factory) ConnectedRealms() bool { return true }
 
 func (Factory) NativeIntl() bool { return true }
 
@@ -57,20 +58,56 @@ func newAdapterWithRelease(owner *Runtime, profile *diagnosticState, release fun
 		_ = release()
 		return nil, fmt.Errorf("create V8 realm: %w", err)
 	}
+	return newAdapterForRealm(owner, realm, profile, release, started)
+}
+
+func newAdapterForRealm(owner *Runtime, realm *Realm, profile *diagnosticState, release func() error, started time.Time) (*adapter, error) {
 	backend := &adapter{owner: owner, realm: realm, release: release, moduleCache: map[string]*gov8.Module{}, moduleNames: map[*gov8.Module]string{}, profile: profile}
+	if err := backend.installPropertyObservationFactory(); err != nil {
+		_ = backend.Close()
+		return nil, err
+	}
+	if err := backend.installReceiverDispatchFactory(); err != nil {
+		_ = backend.Close()
+		return nil, err
+	}
+	if err := backend.installExceptionStateFactory(); err != nil {
+		_ = backend.Close()
+		return nil, err
+	}
 	if os.Getenv("MIMIC_PROFILE_PROCESSORS") == "1" {
 		backend.processorSamples = map[uintptr]uint64{}
 	}
 	if profile != nil {
 		backend.recordCost("factory:context", started)
 	}
-	factory, err := backend.Eval(context.Background(), `(()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b});return[promise,resolve,reject]})`, "mimic-promise-factory.js")
+	factory, err := backend.EvalBootstrap(context.Background(), `return ((IntrinsicPromise) => () => {
+  let resolve, reject;
+  const promise = new IntrinsicPromise((a, b) => {
+    resolve = a;
+    reject = b;
+  });
+  return [promise, resolve, reject];
+})(Promise);`, "mimic-promise-factory.js")
 	if err != nil {
 		_ = backend.Close()
 		return nil, fmt.Errorf("create V8 promise factory: %w", err)
 	}
 	backend.promiseFactory = factory
-	backend.moduleNamespaceFactory, err = backend.Eval(context.Background(), `((then,apply)=>(promise,namespace)=>apply(then,promise,[()=>namespace]))(Promise.prototype.then,Reflect.apply)`, "mimic-module-namespace.js")
+	backend.moduleNamespaceFactory, err = backend.EvalBootstrap(context.Background(), `return ((then, apply) => (promise, namespace) =>
+  apply(then, promise, [() => namespace])
+)(Promise.prototype.then, Reflect.apply);`, "mimic-module-namespace.js")
+	if err != nil {
+		_ = backend.Close()
+		return nil, err
+	}
+	_, err = backend.run(func(s *state, _ *gov8.Context, _ *gov8.Scope) (engine.Value, error) {
+		if s.adapters == nil {
+			s.adapters = make(map[uint64]*adapter)
+		}
+		s.adapters[realm.id] = backend
+		return nil, nil
+	})
 	if err != nil {
 		_ = backend.Close()
 		return nil, err
@@ -93,38 +130,43 @@ type callbackContext struct {
 }
 
 type adapter struct {
-	profile                  *diagnosticState
-	owner                    *Runtime
-	realm                    *Realm
-	release                  func() error
-	now                      func() time.Time
-	observer                 func(string, bool)
-	closed                   bool
-	mu                       sync.Mutex
-	callback                 *callbackContext  // actor-thread only; guarded from foreign readers by actor TID
-	activeIsolate            *gov8.Isolate     // actor-thread only
-	nestedTermination        bool              // clear only after the outer actor turn unwinds
-	activeContext            context.Context   // actor-thread only; inherited by cross-realm calls
-	runDepth                 int               // actor-thread only; includes cooperatively serviced calls
-	transientFrames          []*transientFrame // owner-thread only; bounded scratch storage
-	packedStore              *gov8.BackingStore
-	packedMemory             *[packedBytes]byte
-	packedBuffer             *gov8.Global
-	packedFactories          map[string]*gov8.Global
-	packedFrames             []*packedFrame
-	callbackSeq              uint64
-	promiseFactory           engine.Value
-	globals                  map[*gov8.Global]struct{} // retained engine.Values; released on the isolate thread
-	modules                  []*gov8.Module
-	moduleCache              map[string]*gov8.Module
-	moduleNames              map[*gov8.Module]string
-	importMetaResolveFactory engine.Value
-	moduleNamespaceFactory   engine.Value
-	dynamicModuleHandler     engine.DynamicModuleHandler
-	debuggerUnsafeEval       bool               // owning actor only, scoped to synchronous inspector execution
-	evalSourceResolver       engine.Value       // realm-owned policy; rebound before this adapter enters V8
-	processorSamples         map[uintptr]uint64 // opt-in diagnostic sampling, actor-thread only
-	nativePending            bool               // actor-thread only; foreground/background V8 tasks
+	moduleLoader               engine.ModuleLoader
+	realmOwner                 *connectedRealmOwner // protected by mu
+	profile                    *diagnosticState
+	owner                      *Runtime
+	realm                      *Realm
+	release                    func() error
+	now                        func() time.Time
+	observer                   func(string, bool)
+	closed                     bool
+	mu                         sync.Mutex
+	callback                   *callbackContext  // actor-thread only; guarded from foreign readers by actor TID
+	activeIsolate              *gov8.Isolate     // actor-thread only
+	nestedTermination          bool              // clear only after the outer actor turn unwinds
+	activeContext              context.Context   // actor-thread only; inherited by cross-realm calls
+	runDepth                   int               // actor-thread only; includes cooperatively serviced calls
+	transientFrames            []*transientFrame // owner-thread only; bounded scratch storage
+	packedStore                *gov8.BackingStore
+	packedMemory               *[packedBytes]byte
+	packedBuffer               *gov8.Global
+	packedFactories            map[string]*gov8.Global
+	packedFrames               []*packedFrame
+	callbackSeq                uint64
+	promiseFactory             engine.Value
+	propertyObservationFactory engine.Value
+	receiverDispatchFactory    engine.Value
+	exceptionStateFactory      engine.Value
+	globals                    map[*gov8.Global]struct{} // retained engine.Values; released on the isolate thread
+	modules                    []*gov8.Module
+	moduleCache                map[string]*gov8.Module
+	moduleNames                map[*gov8.Module]string
+	importMetaResolveFactory   engine.Value
+	moduleNamespaceFactory     engine.Value
+	dynamicModuleHandler       engine.DynamicModuleHandler
+	debuggerUnsafeEval         bool               // owning actor only, scoped to synchronous inspector execution
+	evalSourceResolver         engine.Value       // realm-owned policy; rebound before this adapter enters V8
+	processorSamples           map[uintptr]uint64 // opt-in diagnostic sampling, actor-thread only
+	nativePending              bool               // actor-thread only; foreground/background V8 tasks
 }
 
 // Transient arguments cannot escape the synchronous host call. A frame stays
@@ -167,6 +209,15 @@ func (a *adapter) onCallback() *callbackContext {
 }
 
 func (a *adapter) RunNested(ctx context.Context, operation func(context.Context) error) error {
+	return a.runNested(ctx, operation, false)
+}
+
+func (a *adapter) RunRealmCall(ctx context.Context, other engine.Runtime, operation func(context.Context) error) error {
+	peer, ok := other.(*adapter)
+	return a.runNested(ctx, operation, ok && a.owner == peer.owner)
+}
+
+func (a *adapter) runNested(ctx context.Context, operation func(context.Context) error, sharedOwner bool) error {
 	// Owner operations also run Go cleanup after returning from JavaScript.
 	// They still occupy the actor thread, even without an active host callback.
 	if currentThreadID() != a.owner.actorTID {
@@ -183,6 +234,9 @@ func (a *adapter) RunNested(ctx context.Context, operation func(context.Context)
 	}
 	if err := nestedContext.Err(); err != nil {
 		return err
+	}
+	if sharedOwner {
+		return operation(nestedContext)
 	}
 	done := make(chan error, 1)
 	go func() { done <- operation(nestedContext) }()
@@ -274,7 +328,7 @@ func (a *adapter) evalScopedCode(isolate *gov8.Isolate, realm *gov8.Context, sco
 	profileThis := false
 	if a.profile != nil && os.Getenv("MIMIC_V8_CPU_PROFILE") == "1" {
 		filter := os.Getenv("MIMIC_V8_CPU_PROFILE_FILTER")
-		profileThis = filter != "" && strings.Contains(name, filter) || filter == "" && (name == "mimic:webapi-surface" || name == "__pyppeteer_evaluation_script__")
+		profileThis = filter != "" && strings.Contains(name, filter) || filter == "" && (name == "mimic:webapi-surface" || name == "")
 	}
 	if profileThis {
 		finish, err := startNativeProfile(isolate, realm)
@@ -315,7 +369,7 @@ func (a *adapter) evalScopedCode(isolate *gov8.Isolate, realm *gov8.Context, sco
 		key = bootstrapKeyFor(source, name)
 		data := bootstrapCode.get(key)
 		var rejected bool
-		bootstrap, rejected, err = realm.CompileFunctionAdvanced(scope, source+"\n//# sourceURL="+name, nil, data, catcher)
+		bootstrap, rejected, err = realm.CompilePlatformBootstrap(scope, source+"\n//# sourceURL="+name, data, catcher)
 		cached = data != nil && !rejected
 	} else {
 		var lineOffset, columnOffset int32
@@ -388,6 +442,7 @@ func (a *adapter) EvalModule(ctx context.Context, source, name string, loader en
 		return nil, errors.New("module loader is nil")
 	}
 	return a.runContext(ctx, func(s *state, realm *gov8.Context, scope *gov8.Scope) (engine.Value, error) {
+		a.moduleLoader = loader
 		catcher, err := s.isolate.NewTryCatch()
 		if err != nil {
 			return nil, err
@@ -411,6 +466,11 @@ func (a *adapter) EvalModule(ctx context.Context, source, name string, loader en
 		// Keep this tied to module identity, not the currently executing entry:
 		// dependencies and later dynamic imports have their own base URLs.
 		if err := s.isolate.SetHostInitializeImportMetaObjectCallback(func(cs *gov8.CallbackScope, module *gov8.Module, meta *gov8.Object) error {
+			a, err := s.callbackAdapter(cs.Scope())
+			if err != nil {
+				return err
+			}
+			realm := s.realms[a.realm.id]
 			resourceName, ok := a.moduleNames[module]
 			if !ok {
 				return errors.New("import.meta module has no resource name")
@@ -471,6 +531,12 @@ func (a *adapter) EvalModule(ctx context.Context, source, name string, loader en
 			}
 		}
 		if err := s.isolate.SetHostImportModuleDynamicallyCallback(func(request gov8.DynamicImportRequest) (gov8.Promise, error) {
+			a, err := s.callbackAdapter(request.Scope.Scope())
+			if err != nil {
+				return gov8.Promise{}, err
+			}
+			realm := s.realms[a.realm.id]
+			loader := a.moduleLoader
 			referrer, err := request.Scope.ToString(request.ResourceName)
 			if err != nil {
 				return gov8.Promise{}, err
@@ -481,6 +547,9 @@ func (a *adapter) EvalModule(ctx context.Context, source, name string, loader en
 			}
 			if a.dynamicModuleHandler != nil {
 				return a.importModuleAsync(request, specifier, referrer)
+			}
+			if loader == nil {
+				return gov8.Promise{}, errors.New("dynamic module loader is unavailable in the originating realm")
 			}
 			dependencySource, resourceName, err := loader(specifier, referrer)
 			if err != nil {
@@ -1067,7 +1136,34 @@ func (a *adapter) SetTimeSource(now func() time.Time) {
 		// remains the independent high-resolution monotonic clock.
 		return a.Value(a.now().UnixMilli()), nil
 	}))
-	_, _ = a.Eval(context.Background(), `(()=>{const mimicDateNow=globalThis.__mimicDateNow;delete globalThis.__mimicDateNow;const NativeDate=Date;const MimicDate=new Proxy(NativeDate,{apply(target,thisArg,args){return args.length?Reflect.apply(target,thisArg,args):new NativeDate(mimicDateNow()).toString()},construct(target,args,newTarget){return Reflect.construct(target,args.length?args:[mimicDateNow()],newTarget)}});Object.defineProperty(MimicDate,'now',{value:()=>mimicDateNow(),writable:true,configurable:true});Object.defineProperty(MimicDate.prototype,'constructor',{value:MimicDate,writable:true,configurable:true});globalThis.Date=MimicDate})()`, "mimic-clock.js")
+	// Admit the clock wrapper as platform code at compilation: argument
+	// coercion can execute author callbacks and capture their native stacks.
+	_, _ = a.EvalBootstrap(context.Background(), `
+const mimicDateNow = globalThis.__mimicDateNow;
+delete globalThis.__mimicDateNow;
+const NativeDate = Date;
+const MimicDate = new Proxy(NativeDate, {
+  apply(target, thisArg, args) {
+    return args.length
+      ? Reflect.apply(target, thisArg, args)
+      : new NativeDate(mimicDateNow()).toString();
+  },
+  construct(target, args, newTarget) {
+    return Reflect.construct(target, args.length ? args : [mimicDateNow()], newTarget);
+  },
+});
+Object.defineProperty(MimicDate, 'now', {
+  value: () => mimicDateNow(),
+  writable: true,
+  configurable: true,
+});
+Object.defineProperty(MimicDate.prototype, 'constructor', {
+  value: MimicDate,
+  writable: true,
+  configurable: true,
+});
+globalThis.Date = MimicDate;
+`, "mimic-clock.js")
 }
 
 func (a *adapter) MicrotaskCheckpoint() error {
@@ -1152,7 +1248,12 @@ func (a *adapter) Close() error {
 	}
 	a.closed = true
 	a.mu.Unlock()
-	_, _ = a.runCommand(func(_ *state, _ *gov8.Context, _ *gov8.Scope) (engine.Value, error) {
+	_, cleanupErr := a.runCommand(func(s *state, _ *gov8.Context, _ *gov8.Scope) (engine.Value, error) {
+		if s.retiredMicrotasks == nil {
+			s.retiredMicrotasks = make(map[uint64]bool)
+		}
+		s.retiredMicrotasks[a.realm.id] = true
+		delete(s.adapters, a.realm.id)
 		for i := len(a.modules) - 1; i >= 0; i-- {
 			_ = a.modules[i].Close()
 		}
@@ -1173,7 +1274,7 @@ func (a *adapter) Close() error {
 		a.packedFrames = nil
 		return nil, nil
 	}, true)
-	return errors.Join(a.realm.Dispose(), a.release())
+	return errors.Join(cleanupErr, a.realm.Dispose(), a.release())
 }
 
 type realmOperation func(*state, *gov8.Context, *gov8.Scope) (engine.Value, error)
@@ -1215,6 +1316,11 @@ func (a *adapter) runCommand(operation realmOperation, outerOnly bool) (engine.V
 		a.runDepth++
 		result, err := operation(s, realm, scope)
 		a.runDepth--
+		// Reentrant browser callbacks only request retirement. Apply native queue
+		// shutdown after the outer JS stack/microtask run has returned to the owner.
+		if previousAdapter == nil {
+			err = errors.Join(err, s.retireMicrotasks())
+		}
 		if a.nestedTermination && a.runDepth == 0 {
 			_ = s.isolate.CancelTerminateExecution()
 			a.nestedTermination = false
@@ -1744,7 +1850,7 @@ func exportLocalPrimitive(value gov8.Value, realm *gov8.Context) any {
 	}
 	if yes, _ := value.IsNumber(); yes {
 		result, ok, _ := value.NumberValue(realm)
-		if ok && !math.IsNaN(result) && !math.IsInf(result, 0) {
+		if ok {
 			return result
 		}
 		return nil

@@ -1,5 +1,6 @@
 (function (host) {
   'use strict';
+  /* shared_promise_intrinsics */
   /* dev_preview_state */
   let hostToken = host.token();
   // Snapshot restoration rebinds host state without replacing canonical objects.
@@ -273,6 +274,7 @@
   const def = (o, n, d) =>
     Object.defineProperty(o, n, Object.assign({ enumerable: true, configurable: true }, d));
   /* shared_native_functions */
+  /* shared_dom_name_validation */
   // QuickJS intentionally keeps ECMA-402 optional. Chrome does not, so expose
   // the target profile's locale/time-zone through a small deterministic Intl
   // layer while richer CLDR-backed semantics are added behind the same API.
@@ -785,6 +787,8 @@
   const internalEventHandler = (target, type) => {
     if (eventHandlerListeners.get(target)?.has(type)) return null;
     if (elementHandlers.has(target)) return elementHandlers.get(target)[type] || null;
+    if (xhrEventTargetSlots.has(target) && type !== 'readystatechange')
+      return xhrEventTargetSlots.get(target)['on' + type] || null;
     if (xhrSlots.has(target)) return xhrSlots.get(target)['on' + type] || null;
     if (rtcPeerStates.has(target)) return rtcPeerStates.get(target)['on' + type] || null;
     if (rtcDataStates.has(target)) return rtcDataStates.get(target)['on' + type] || null;
@@ -916,7 +920,8 @@
     }
     postMessage(message) {
       const state = broadcastChannelSlots.get(this);
-      if (state.closed) throw new DOMException('BroadcastChannel is closed.', 'InvalidStateError');
+      if (state.closed)
+        throw platformDOMException('BroadcastChannel is closed.', 'InvalidStateError');
       const encoded = cloneCodec.encode(message);
       for (const channel of broadcastChannels.get(state.name) || []) {
         if (channel === this || broadcastChannelSlots.get(channel).closed) continue;
@@ -971,7 +976,10 @@
         transfer: () => {
           const state = browserMessagePortSlots.get(this);
           if (state.closed || state.transferred)
-            throw new DOMException('MessagePort at index 0 is already neutered.', 'DataCloneError');
+            throw platformDOMException(
+              'MessagePort at index 0 is already neutered.',
+              'DataCloneError',
+            );
           state.transferred = true;
           browserMessagePortWrappers.delete(state.id);
           return state.id;
@@ -1072,12 +1080,12 @@
     }
     get textContent() {
       const slot = elementSlot(this);
-      return slot ? host.textContent(slot.nodeId) : null;
+      return slot ? canonicalTextContent(slot.nodeId) : null;
     }
     set textContent(value) {
       const slot = elementSlot(this);
       if (slot) {
-        host.setTextContent(slot.nodeId, value == null ? '' : String(value));
+        setCanonicalTextContent(slot.nodeId, value == null ? '' : String(value));
         invalidateDOMCollections();
       }
     }
@@ -2332,7 +2340,7 @@
     writeCSSEntries = (value, entries) => {
       const state = cssState(value);
       if (state.computed)
-        throw new DOMException(
+        throw platformDOMException(
           'These styles are computed, and therefore the CSSStyleDeclaration is read-only.',
           'NoModificationAllowedError',
         );
@@ -2637,7 +2645,7 @@
       const state = fragmentState(this),
         index = state.children.indexOf(node);
       if (index < 0)
-        throw new DOMException(
+        throw platformDOMException(
           'The node to be removed is not a child of this node.',
           'NotFoundError',
         );
@@ -2782,9 +2790,10 @@
   const insertHostNode = (parent, child, before, node) => {
     if (plainInsertion(child)) {
       const result = host.insertPlain(parent, child.nodeId, before ? before.nodeId : 0);
-      if (result === -1) throw new DOMException('Reference node is not a child.', 'NotFoundError');
+      if (result === -1)
+        throw platformDOMException('Reference node is not a child.', 'NotFoundError');
       if (result === -2)
-        throw new DOMException('Insertion would create a cycle.', 'HierarchyRequestError');
+        throw platformDOMException('Insertion would create a cycle.', 'HierarchyRequestError');
       if (result >= 0) invalidateDOMCollections();
       return result;
     }
@@ -2828,6 +2837,17 @@
       },
       scroll: (params) => compatibilityScrolling.dispatch(receiver(), params),
       rects: () => makeElementClientRects(receiver()),
+      mediaTimeRanges: (kind) => {
+        const slot = elementSlot(element);
+        const tag = slot.tagName;
+        if (tag !== 'VIDEO' && tag !== 'AUDIO') throw new TypeError('Illegal invocation');
+        const source = kind === 'seekable' ? host.mediaSourceState(slot.nodeId) : null;
+        const ranges =
+          source && Number.isFinite(source.duration) && source.duration >= 0
+            ? [[0, source.duration]]
+            : [];
+        return createMediaTimeRanges(ranges);
+      },
     });
   };
   class Element extends Node {
@@ -2892,7 +2912,7 @@
           "Failed to execute 'attachShadow' on 'Element': Failed to read the 'mode' property from 'ShadowRootInit'",
         );
       if (elementShadows.has(this))
-        throw new DOMException(
+        throw platformDOMException(
           'Shadow root cannot be created on a host which already hosts a shadow tree.',
           'NotSupportedError',
         );
@@ -2901,10 +2921,10 @@
       return root;
     }
     get textContent() {
-      return host.textContent(elementSlot(this).nodeId);
+      return canonicalTextContent(elementSlot(this).nodeId);
     }
     set textContent(v) {
-      host.setTextContent(elementSlot(this).nodeId, v == null ? '' : String(v));
+      setCanonicalTextContent(elementSlot(this).nodeId, v == null ? '' : String(v));
       invalidateDOMCollections();
     }
     get innerHTML() {
@@ -2941,7 +2961,7 @@
           this,
         ),
       );
-      if (name) throw new DOMException('Cannot replace this element.', name);
+      if (name) throw platformDOMException('Cannot replace this element.', name);
       invalidateDOMCollections();
     }
     insertAdjacentHTML(position, text) {
@@ -2956,7 +2976,7 @@
         this,
       );
       const name = host.insertAdjacentHTML(id, position, text);
-      if (name) throw new DOMException('Cannot insert adjacent HTML.', name);
+      if (name) throw platformDOMException('Cannot insert adjacent HTML.', name);
       invalidateDOMCollections();
     }
     get parentNode() {
@@ -3003,9 +3023,11 @@
       return cachedDOMAttributeNames(this);
     }
     setAttribute(n, v) {
+      const inputName = String(n);
       n =
-        this.namespaceURI === 'http://www.w3.org/1999/xhtml' ? String(n).toLowerCase() : String(n);
+        this.namespaceURI === 'http://www.w3.org/1999/xhtml' ? inputName.toLowerCase() : inputName;
       v = trustedAttributeValue(this, n, v, '', "Failed to execute 'setAttribute' on 'Element': ");
+      validateDOMName(inputName, true, 'setAttribute', 'Element');
       elementSlot(this).attributes[n] = v;
       host.setAttribute(elementSlot(this).nodeId, n, v);
       // Synthetic shadow descendants are intentionally detached in the native
@@ -3139,7 +3161,7 @@
       const target = elementSlot(this),
         child = elementSlot(node);
       if (!target || !child)
-        throw new DOMException(
+        throw platformDOMException(
           'The operation is not supported for this node.',
           'HierarchyRequestError',
         );
@@ -3155,7 +3177,7 @@
         const state = fragmentState(this),
           index = before == null ? state.children.length : state.children.indexOf(before);
         if (index < 0)
-          throw new DOMException(
+          throw platformDOMException(
             'The node before which the new node is to be inserted is not a child of this node.',
             'NotFoundError',
           );
@@ -3168,7 +3190,7 @@
       const target = elementSlot(this),
         child = elementSlot(node);
       if (!target || !child)
-        throw new DOMException(
+        throw platformDOMException(
           'The operation is not supported for this node.',
           'HierarchyRequestError',
         );
@@ -3184,7 +3206,7 @@
         const state = fragmentState(this),
           index = state.children.indexOf(node);
         if (index < 0)
-          throw new DOMException(
+          throw platformDOMException(
             'The node to be removed is not a child of this node.',
             'NotFoundError',
           );
@@ -3196,7 +3218,10 @@
       const target = this === document ? { nodeId: realmDocumentRootID } : elementSlot(this),
         child = elementSlot(node);
       if (!target || !child)
-        throw new DOMException('The operation is not supported for this node.', 'NotFoundError');
+        throw platformDOMException(
+          'The operation is not supported for this node.',
+          'NotFoundError',
+        );
       if (host.prepareNodeRemoval(child.nodeId)) {
         dispatchTrusted(window, new Event('load'));
         host.completeSynchronousLoad();
@@ -3246,7 +3271,7 @@
       !isDOMFragment(parent) &&
       parent !== document
     )
-      throw new DOMException('Unsupported parent node.', 'HierarchyRequestError');
+      throw platformDOMException('Unsupported parent node.', 'HierarchyRequestError');
     // Canonical ordinary insertion validates membership and cycles together
     // with the mutation in Go. Synthetic parents and callback-bearing resource
     // paths still require validation before their separate insertion steps.
@@ -3266,9 +3291,9 @@
         ? host.parentNode(elementSlot(before).nodeId) !== elementSlot(parent).nodeId
         : !fragmentState(parent).children.includes(before))
     )
-      throw new DOMException('Reference node is not a child.', 'NotFoundError');
+      throw platformDOMException('Reference node is not a child.', 'NotFoundError');
     if (!combined && (node === parent || node.contains(parent)))
-      throw new DOMException('Insertion would create a cycle.', 'HierarchyRequestError');
+      throw platformDOMException('Insertion would create a cycle.', 'HierarchyRequestError');
     if (validateTemplateInsertion && !combined) validateTemplateInsertion(parent, node);
   };
   const detachForInsertion = (parent, node) => {
@@ -3302,9 +3327,10 @@
       fragment.nodeId,
       before ? elementSlot(before).nodeId : 0,
     );
-    if (result === -1) throw new DOMException('Reference node is not a child.', 'NotFoundError');
+    if (result === -1)
+      throw platformDOMException('Reference node is not a child.', 'NotFoundError');
     if (result === -2)
-      throw new DOMException('Insertion would create a cycle.', 'HierarchyRequestError');
+      throw platformDOMException('Insertion would create a cycle.', 'HierarchyRequestError');
     if (result >= 0) invalidateDOMCollections();
     return result;
   };
@@ -4000,6 +4026,15 @@
     enumerable: true,
     configurable: true,
   });
+  class DOMStringMap {
+    constructor() {
+      throw new TypeError("Failed to construct 'DOMStringMap': Illegal constructor");
+    }
+  }
+  Object.defineProperty(DOMStringMap.prototype, Symbol.toStringTag, {
+    value: 'DOMStringMap',
+    configurable: true,
+  });
   const datasetCache = new WeakMap(),
     datasetName = (name) => String(name).replace(/[A-Z]/g, (c) => '-' + c.toLowerCase()),
     datasetKey = (name) =>
@@ -4010,36 +4045,46 @@
     get: function () {
       let value = datasetCache.get(this);
       if (!value) {
-        value = new Proxy(
-          {},
-          {
-            get: (_target, key) =>
-              typeof key === 'string'
-                ? (intrinsicGetAttribute.call(this, 'data-' + datasetName(key)) ?? undefined)
-                : undefined,
-            set: (_target, key, next) => {
-              intrinsicSetAttribute.call(this, 'data-' + datasetName(key), String(next));
-              return true;
-            },
-            deleteProperty: (_target, key) => {
-              intrinsicRemoveAttribute.call(this, 'data-' + datasetName(key));
-              return true;
-            },
-            ownKeys: () =>
-              this.getAttributeNames()
-                .filter((name) => name.startsWith('data-'))
-                .map(datasetKey),
-            getOwnPropertyDescriptor: (_target, key) =>
-              intrinsicHasAttribute.call(this, 'data-' + datasetName(key))
-                ? {
-                    value: intrinsicGetAttribute.call(this, 'data-' + datasetName(key)),
-                    writable: true,
-                    enumerable: true,
-                    configurable: true,
-                  }
-                : undefined,
+        value = new Proxy(Object.create(DOMStringMap.prototype), {
+          // Supported data names shadow inherited properties; missing names
+          // still expose the ordinary DOMStringMap/Object prototype chain.
+          get: (target, key, receiver) => {
+            if (typeof key === 'string') {
+              const attribute = intrinsicGetAttribute.call(this, 'data-' + datasetName(key));
+              if (attribute !== null) return attribute;
+            }
+            return Reflect.get(target, key, receiver);
           },
-        );
+          has: (target, key) =>
+            (typeof key === 'string' &&
+              intrinsicHasAttribute.call(this, 'data-' + datasetName(key))) ||
+            Reflect.has(target, key),
+          set: (target, key, next, receiver) => {
+            if (typeof key !== 'string') return Reflect.set(target, key, next, receiver);
+            intrinsicSetAttribute.call(this, 'data-' + datasetName(key), String(next));
+            return true;
+          },
+          deleteProperty: (target, key) => {
+            if (typeof key !== 'string') return Reflect.deleteProperty(target, key);
+            intrinsicRemoveAttribute.call(this, 'data-' + datasetName(key));
+            return true;
+          },
+          ownKeys: (target) => [
+            ...this.getAttributeNames()
+              .filter((name) => name.startsWith('data-'))
+              .map(datasetKey),
+            ...Reflect.ownKeys(target),
+          ],
+          getOwnPropertyDescriptor: (target, key) =>
+            typeof key === 'string' && intrinsicHasAttribute.call(this, 'data-' + datasetName(key))
+              ? {
+                  value: intrinsicGetAttribute.call(this, 'data-' + datasetName(key)),
+                  writable: true,
+                  enumerable: true,
+                  configurable: true,
+                }
+              : Reflect.getOwnPropertyDescriptor(target, key),
+        });
         datasetCache.set(this, value);
       }
       return value;
@@ -4315,7 +4360,20 @@
   // Loading/reset observations are supported without a media decoder.
   // Playback is an explicit unsupported boundary, never a resolved fake play.
   const mediaControlsLists = new WeakMap();
+  let createMediaTimeRanges;
   class HTMLMediaElement extends HTMLElement {
+    get buffered() {
+      const binding = requireRealmBinding(this, 'ElementGeometry');
+      return callRealmBinding(this, binding, 'mediaTimeRanges', ['buffered']);
+    }
+    get played() {
+      const binding = requireRealmBinding(this, 'ElementGeometry');
+      return callRealmBinding(this, binding, 'mediaTimeRanges', ['played']);
+    }
+    get seekable() {
+      const binding = requireRealmBinding(this, 'ElementGeometry');
+      return callRealmBinding(this, binding, 'mediaTimeRanges', ['seekable']);
+    }
     get controlsList() {
       let list = mediaControlsLists.get(this);
       if (!list) {
@@ -4339,7 +4397,7 @@
       state.networkState = 2;
     }
     get currentSrc() {
-      return mediaState(this).currentSrc;
+      return host.mediaCurrentSrc(elementSlot(this).nodeId);
     }
     get paused() {
       return mediaState(this).paused;
@@ -4348,10 +4406,12 @@
       return false;
     }
     get duration() {
-      return mediaState(this).duration;
+      const source = host.mediaSourceState(elementSlot(this).nodeId);
+      return source ? source.duration : mediaState(this).duration;
     }
     get readyState() {
-      return mediaState(this).readyState;
+      const source = host.mediaSourceState(elementSlot(this).nodeId);
+      return source ? source.readyState : mediaState(this).readyState;
     }
     get networkState() {
       return mediaState(this).networkState;
@@ -4371,10 +4431,10 @@
       if (state.readyState > 0) {
         queueMicrotask(() => dispatchTrusted(this, new Event('play')));
         queueMicrotask(() => dispatchTrusted(this, new Event('playing')));
-        return Promise.resolve();
+        return platformPromiseResolve();
       }
       host.mediaLoad(elementSlot(this).nodeId);
-      return new Promise((resolve, reject) => state.pendingPlay.push({ resolve, reject }));
+      return new platformPromise((resolve, reject) => state.pendingPlay.push({ resolve, reject }));
     }
     pause() {
       const state = mediaState(this);
@@ -4392,7 +4452,7 @@
         const state = mediaState(this),
           number = key === 'muted' ? Boolean(value) : Number(value);
         if (key === 'volume' && (number < 0 || number > 1))
-          throw new DOMException(
+          throw platformDOMException(
             'The volume provided is outside the range [0, 1].',
             'IndexSizeError',
           );
@@ -4401,6 +4461,14 @@
     });
   class HTMLAudioElement extends HTMLMediaElement {}
   class HTMLVideoElement extends HTMLMediaElement {
+    get videoWidth() {
+      const source = host.mediaSourceState(elementSlot(this).nodeId);
+      return source ? source.width : 0;
+    }
+    get videoHeight() {
+      const source = host.mediaSourceState(elementSlot(this).nodeId);
+      return source ? source.height : 0;
+    }
     get poster() {
       const value = intrinsicGetAttribute.call(this, 'poster');
       return value === null ? '' : host.urlParts(value).href;
@@ -4748,7 +4816,7 @@
         state.networkState = 3;
         state.readyState = 0;
         state.paused = true;
-        const error = new DOMException(
+        const error = platformDOMException(
           'The element has no supported sources.',
           'NotSupportedError',
         );
@@ -4976,8 +5044,51 @@
     text,
     type,
   });
-  const freshCharacterData = (id, type, text) =>
-    wrap(/[\uD800-\uDFFF]/.test(text) ? id : freshNodeData(id, type, '', '', text));
+  // Host character data is a trusted JSON string containing exact UTF-16 code
+  // units. Decode it directly: some engines' JSON parsers replace lone
+  // surrogates with U+FFFD, losing canonical DOMString observations.
+  const domStringJSONEncode = JSON.stringify,
+    domStringFromCodeUnit = String.fromCharCode,
+    domStringCodeUnit = String.prototype.charCodeAt,
+    domStringSlice = String.prototype.slice,
+    domStringParseInt = parseInt;
+  const decodeDOMStringJSON = (encoded) => {
+    let text = '';
+    const escapes = { '"': '"', '\\': '\\', '/': '/', b: '\b', f: '\f', n: '\n', r: '\r', t: '\t' };
+    for (let i = 1; i < encoded.length - 1; i++) {
+      if (encoded[i] !== '\\') {
+        text += encoded[i];
+        continue;
+      }
+      const escape = encoded[++i];
+      if (escape === 'u') {
+        text += domStringFromCodeUnit(
+          domStringParseInt(functionSourceApply(domStringSlice, encoded, [i + 1, i + 5]), 16),
+        );
+        i += 4;
+      } else text += escapes[escape];
+    }
+    return text;
+  };
+  const canonicalTextContent = (id) => decodeDOMStringJSON(host.textContentJSON(id));
+  const hasDOMStringSurrogate = (text) => {
+    for (let i = 0; i < text.length; i++) {
+      const unit = functionSourceApply(domStringCodeUnit, text, [i]);
+      if (unit >= 0xd800 && unit <= 0xdfff) return true;
+    }
+    return false;
+  };
+  const setCanonicalTextContent = (id, text) => {
+    if (hasDOMStringSurrogate(text)) host.setTextContent(id, '', domStringJSONEncode(text));
+    else host.setTextContent(id, text);
+  };
+  const freshCharacterData = (id, type, text) => {
+    if (hasDOMStringSurrogate(text)) {
+      host.setCharacterDataJSON(id, domStringJSONEncode(text));
+      return wrap(id);
+    }
+    return wrap(freshNodeData(id, type, '', '', text));
+  };
   class Document extends Node {
     get currentScript() {
       return wrap(host.currentScript());
@@ -5060,6 +5171,7 @@
     }
     createElement(tag) {
       tag = String(tag);
+      validateDOMName(tag, false, 'createElement', 'Document');
       const value = host.create(tag);
       const element = wrap(
         typeof value === 'number'
@@ -5070,9 +5182,15 @@
       return element;
     }
     createElementNS(namespace, qualifiedName) {
-      const element = wrap(
-        host.createNS(namespace == null ? '' : String(namespace), String(qualifiedName)),
+      namespace = namespace == null ? '' : String(namespace);
+      qualifiedName = validateDOMQualifiedName(
+        namespace,
+        String(qualifiedName),
+        false,
+        'createElementNS',
+        'Document',
       );
+      const element = wrap(host.createNS(namespace, qualifiedName));
       invalidateRetainedGeometry(element);
       return element;
     }
@@ -5395,7 +5513,7 @@
         if (hint === 'wow64') out.wow64 = data.wow64;
         if (hint === 'formFactors') out.formFactors = data.formFactors.slice();
       }
-      return Promise.resolve(out);
+      return platformPromiseResolve(out);
     }
     toJSON() {
       return { brands: this.brands, mobile: this.mobile, platform: this.platform };
@@ -5514,7 +5632,7 @@
   // Native V8 cloning handles ECMAScript exotic objects without invoking proxy traps.
   const historyUncloneableHost = (value) => {
     if (blobSlots.has(value) || fileSlots.has(value))
-      throw new DOMException(
+      throw platformDOMException(
         'History storage of Blob and File requires platform serialization support.',
         'NotSupportedError',
       );
@@ -5532,7 +5650,7 @@
     if (cloneCrossRealmHistoryState && referenceGet(value))
       return cloneCrossRealmHistoryState(value);
     const fail = () => {
-      throw new DOMException('The value could not be cloned.', 'DataCloneError');
+      throw platformDOMException('The value could not be cloned.', 'DataCloneError');
     };
     if (historyUncloneableHost(value)) fail();
     return cloneCodec.clone(value);
@@ -5546,7 +5664,7 @@
 
   const requireActiveHistory = () => {
     if (!host.historyIsActive())
-      throw new DOMException('The document is not fully active.', 'SecurityError');
+      throw platformDOMException('The document is not fully active.', 'SecurityError');
   };
   class History {
     constructor() {
@@ -5648,7 +5766,7 @@
       if (state.pulling || state.state !== 'readable' || typeof state.source.pull !== 'function')
         return;
       state.pulling = true;
-      Promise.resolve()
+      platformPromiseResolve()
         .then(() => state.source.pull(state.controller))
         .catch((e) => state.controller.error(e))
         .then(() => {
@@ -5694,10 +5812,10 @@
       const state = readableState(stream),
         closed =
           state.state === 'closed'
-            ? Promise.resolve()
+            ? platformPromiseResolve()
             : state.state === 'errored'
-              ? Promise.reject(state.error)
-              : new Promise((resolve, reject) => {
+              ? platformPromiseReject(state.error)
+              : new platformPromise((resolve, reject) => {
                   state.closed = { resolve, reject };
                 });
       readerSlots.set(this, { stream, closed });
@@ -5709,13 +5827,16 @@
     read() {
       const slot = readerSlots.get(this),
         stream = slot.stream;
-      if (!stream) return Promise.reject(new TypeError('Reader has been released'));
+      if (!stream) return platformPromiseReject(new TypeError('Reader has been released'));
       const state = readableState(stream);
       state.disturbed = true;
-      if (state.queue.length) return Promise.resolve({ done: false, value: state.queue.shift() });
-      if (state.state === 'closed') return Promise.resolve({ done: true, value: undefined });
-      if (state.state === 'errored') return Promise.reject(state.error);
-      const result = new Promise((resolve, reject) => state.reads.push({ resolve, reject }));
+      if (state.queue.length)
+        return platformPromiseResolve({ done: false, value: state.queue.shift() });
+      if (state.state === 'closed') return platformPromiseResolve({ done: true, value: undefined });
+      if (state.state === 'errored') return platformPromiseReject(state.error);
+      const result = new platformPromise((resolve, reject) =>
+        state.reads.push({ resolve, reject }),
+      );
       pullReadable(stream);
       return result;
     }
@@ -5723,7 +5844,7 @@
       const stream = readerSlots.get(this).stream;
       return stream
         ? stream.cancel(reason)
-        : Promise.reject(new TypeError('Reader has been released'));
+        : platformPromiseReject(new TypeError('Reader has been released'));
     }
     releaseLock() {
       const slot = readerSlots.get(this),
@@ -5756,7 +5877,7 @@
           typeof state.source.start === 'function'
             ? state.source.start(state.controller)
             : undefined;
-        Promise.resolve(started).catch((e) => state.controller.error(e));
+        platformPromiseResolve(started).catch((e) => state.controller.error(e));
       } catch (e) {
         state.controller.error(e);
       }
@@ -5766,15 +5887,15 @@
     }
     cancel(reason) {
       const state = readableState(this);
-      if (this.locked) return Promise.reject(new TypeError('Cannot cancel a locked stream'));
+      if (this.locked) return platformPromiseReject(new TypeError('Cannot cancel a locked stream'));
       state.queue.length = 0;
       state.controller.close();
       try {
-        return Promise.resolve(
+        return platformPromiseResolve(
           typeof state.source.cancel === 'function' ? state.source.cancel(reason) : undefined,
         );
       } catch (e) {
-        return Promise.reject(e);
+        return platformPromiseReject(e);
       }
     }
     getReader() {
@@ -5859,11 +5980,11 @@
       this.__stream = stream;
       stream.__writer = this;
       writerSlots.set(this, {
-        ready: Promise.resolve(),
+        ready: platformPromiseResolve(),
         closed:
           stream.__state === 'closed'
-            ? Promise.resolve()
-            : new Promise((resolve, reject) => (stream.__closed = { resolve, reject })),
+            ? platformPromiseResolve()
+            : new platformPromise((resolve, reject) => (stream.__closed = { resolve, reject })),
       });
     }
     write(chunk) {
@@ -5889,7 +6010,7 @@
       this.__state = 'writable';
       this.__closed = null;
       try {
-        Promise.resolve(
+        platformPromiseResolve(
           typeof this.__sink.start === 'function' ? this.__sink.start(this) : undefined,
         ).catch((e) => this.__fail(e));
       } catch (e) {
@@ -5904,41 +6025,41 @@
     }
     __write(chunk) {
       if (this.__state !== 'writable')
-        return Promise.reject(new TypeError('WritableStream is not writable'));
+        return platformPromiseReject(new TypeError('WritableStream is not writable'));
       try {
-        return Promise.resolve(
+        return platformPromiseResolve(
           typeof this.__sink.write === 'function' ? this.__sink.write(chunk, this) : undefined,
         );
       } catch (e) {
-        return Promise.reject(e);
+        return platformPromiseReject(e);
       }
     }
     close() {
       if (this.__state !== 'writable')
-        return Promise.reject(new TypeError('WritableStream is not writable'));
+        return platformPromiseReject(new TypeError('WritableStream is not writable'));
       this.__state = 'closed';
       try {
-        return Promise.resolve(
+        return platformPromiseResolve(
           typeof this.__sink.close === 'function' ? this.__sink.close() : undefined,
         ).then((v) => {
           if (this.__closed) this.__closed.resolve();
           return v;
         });
       } catch (e) {
-        return Promise.reject(e);
+        return platformPromiseReject(e);
       }
     }
     abort(reason) {
       this.__state = 'errored';
       try {
-        return Promise.resolve(
+        return platformPromiseResolve(
           typeof this.__sink.abort === 'function' ? this.__sink.abort(reason) : undefined,
         ).then((v) => {
           if (this.__closed) this.__closed.reject(reason);
           return v;
         });
       } catch (e) {
-        return Promise.reject(e);
+        return platformPromiseReject(e);
       }
     }
     __fail(e) {
@@ -5980,7 +6101,7 @@
             ? transformer.transform(chunk, controller)
             : controller.enqueue(chunk),
         close: () =>
-          Promise.resolve(
+          platformPromiseResolve(
             typeof transformer.flush === 'function' ? transformer.flush(controller) : undefined,
           ).then(() => controller.terminate()),
         abort: (reason) => controller.error(reason),
@@ -6072,18 +6193,18 @@
       try {
         const algorithmName = String(name),
           input = Array.from(cryptoBytes(data));
-        if (!host.executionContextActive()) return new Promise(() => {});
+        if (!host.executionContextActive()) return new platformPromise(() => {});
         const bytes = host.subtleDigest(algorithmName, input),
           result = new Uint8Array(bytes);
-        return Promise.resolve(result.buffer);
+        return platformPromiseResolve(result.buffer);
       } catch (error) {
-        return Promise.reject(error);
+        return platformPromiseReject(error);
       }
     }
     importKey(format, keyData, algorithm, extractable, keyUsages) {
       try {
         if (String(format) !== 'spki' || cryptoAlgorithmName(algorithm) !== 'RSA-OAEP')
-          throw new DOMException('The operation is not supported', 'NotSupportedError');
+          throw platformDOMException('The operation is not supported', 'NotSupportedError');
         const hashName =
             typeof algorithm.hash === 'string'
               ? algorithm.hash
@@ -6092,7 +6213,7 @@
           der = Array.from(cryptoBytes(keyData)),
           usages = Array.from(keyUsages || [], String);
         if (usages.some((usage) => usage !== 'encrypt'))
-          throw new DOMException('Unsupported key usage for an RSA-OAEP key', 'SyntaxError');
+          throw platformDOMException('Unsupported key usage for an RSA-OAEP key', 'SyntaxError');
         const metadata = host.subtleImportRSAOAEP(der),
           key = Object.create(CryptoKey.prototype),
           slot = {
@@ -6109,9 +6230,9 @@
             hash,
           };
         Object.defineProperty(key, cryptoKeySlot, { value: slot });
-        return Promise.resolve(key);
+        return platformPromiseResolve(key);
       } catch (error) {
-        return Promise.reject(error);
+        return platformPromiseReject(error);
       }
     }
     encrypt(algorithm, key, data) {
@@ -6126,7 +6247,7 @@
           slot.algorithm.name !== 'RSA-OAEP' ||
           !slot.usages.includes('encrypt')
         )
-          throw new DOMException(
+          throw platformDOMException(
             'The requested operation is not valid for the provided key',
             'InvalidAccessError',
           );
@@ -6141,54 +6262,54 @@
             label,
           ),
           result = new Uint8Array(bytes);
-        return Promise.resolve(result.buffer);
+        return platformPromiseResolve(result.buffer);
       } catch (error) {
-        return Promise.reject(error);
+        return platformPromiseReject(error);
       }
     }
     decrypt() {
-      return Promise.reject(
-        new DOMException('The operation is not supported', 'NotSupportedError'),
+      return platformPromiseReject(
+        platformDOMException('The operation is not supported', 'NotSupportedError'),
       );
     }
     sign() {
-      return Promise.reject(
-        new DOMException('The operation is not supported', 'NotSupportedError'),
+      return platformPromiseReject(
+        platformDOMException('The operation is not supported', 'NotSupportedError'),
       );
     }
     verify() {
-      return Promise.reject(
-        new DOMException('The operation is not supported', 'NotSupportedError'),
+      return platformPromiseReject(
+        platformDOMException('The operation is not supported', 'NotSupportedError'),
       );
     }
     exportKey() {
-      return Promise.reject(
-        new DOMException('The operation is not supported', 'NotSupportedError'),
+      return platformPromiseReject(
+        platformDOMException('The operation is not supported', 'NotSupportedError'),
       );
     }
     generateKey() {
-      return Promise.reject(
-        new DOMException('The operation is not supported', 'NotSupportedError'),
+      return platformPromiseReject(
+        platformDOMException('The operation is not supported', 'NotSupportedError'),
       );
     }
     deriveKey() {
-      return Promise.reject(
-        new DOMException('The operation is not supported', 'NotSupportedError'),
+      return platformPromiseReject(
+        platformDOMException('The operation is not supported', 'NotSupportedError'),
       );
     }
     deriveBits() {
-      return Promise.reject(
-        new DOMException('The operation is not supported', 'NotSupportedError'),
+      return platformPromiseReject(
+        platformDOMException('The operation is not supported', 'NotSupportedError'),
       );
     }
     wrapKey() {
-      return Promise.reject(
-        new DOMException('The operation is not supported', 'NotSupportedError'),
+      return platformPromiseReject(
+        platformDOMException('The operation is not supported', 'NotSupportedError'),
       );
     }
     unwrapKey() {
-      return Promise.reject(
-        new DOMException('The operation is not supported', 'NotSupportedError'),
+      return platformPromiseReject(
+        platformDOMException('The operation is not supported', 'NotSupportedError'),
       );
     }
   }
@@ -6202,9 +6323,9 @@
       if (format === 'raw' && name === 'AES-GCM') {
         const bytes = Array.from(cryptoBytes(keyData));
         if (![16, 24, 32].includes(bytes.length))
-          throw new DOMException('Invalid AES key length', 'DataError');
+          throw platformDOMException('Invalid AES key length', 'DataError');
         if (usages.some((usage) => !['encrypt', 'decrypt', 'wrapKey', 'unwrapKey'].includes(usage)))
-          throw new DOMException('Unsupported key usage for an AES-GCM key', 'SyntaxError');
+          throw platformDOMException('Unsupported key usage for an AES-GCM key', 'SyntaxError');
         slot = {
           type: 'secret',
           extractable: Boolean(extractable),
@@ -6220,7 +6341,7 @@
           hash = String(hashName).toUpperCase().replaceAll('_', '-'),
           der = Array.from(cryptoBytes(keyData));
         if (usages.some((usage) => usage !== 'encrypt'))
-          throw new DOMException('Unsupported key usage for an RSA-OAEP key', 'SyntaxError');
+          throw platformDOMException('Unsupported key usage for an RSA-OAEP key', 'SyntaxError');
         const metadata = String(host.subtleImportRSAOAEP(der)).split('|');
         slot = {
           type: 'public',
@@ -6235,11 +6356,11 @@
           der,
           hash,
         };
-      } else throw new DOMException('The operation is not supported', 'NotSupportedError');
+      } else throw platformDOMException('The operation is not supported', 'NotSupportedError');
       Object.defineProperty(key, cryptoKeySlot, { value: slot });
-      return Promise.resolve(key);
+      return platformPromiseResolve(key);
     } catch (error) {
-      return Promise.reject(error);
+      return platformPromiseReject(error);
     }
   };
   const aesGCMOperation = (operation, algorithm, key, data) => {
@@ -6256,7 +6377,7 @@
         slot.algorithm.name !== 'AES-GCM' ||
         !slot.usages.includes(operation)
       )
-        throw new DOMException(
+        throw platformDOMException(
           'The requested operation is not valid for the provided key',
           'InvalidAccessError',
         );
@@ -6264,7 +6385,7 @@
         throw new TypeError("Failed to normalize algorithm: 'iv' is required");
       const iv = Array.from(cryptoBytes(algorithm.iv));
       if (!iv.length)
-        throw new DOMException(
+        throw platformDOMException(
           'The operation failed for an operation-specific reason',
           'OperationError',
         );
@@ -6274,7 +6395,7 @@
             : Array.from(cryptoBytes(algorithm.additionalData)),
         tagLength = algorithm.tagLength === undefined ? 128 : Number(algorithm.tagLength);
       if (![32, 64, 96, 104, 112, 120, 128].includes(tagLength))
-        throw new DOMException('Invalid AES-GCM tag length', 'OperationError');
+        throw platformDOMException('Invalid AES-GCM tag length', 'OperationError');
       const bytes = host.subtleAESGCM(
           operation,
           slot.bytes,
@@ -6284,9 +6405,9 @@
           tagLength,
         ),
         result = new Uint8Array(bytes);
-      return Promise.resolve(result.buffer);
+      return platformPromiseResolve(result.buffer);
     } catch (error) {
-      return Promise.reject(error);
+      return platformPromiseReject(error);
     }
   };
   SubtleCrypto.prototype.encrypt = function (algorithm, key, data) {
@@ -6302,7 +6423,7 @@
         slot.algorithm.name !== 'RSA-OAEP' ||
         !slot.usages.includes('encrypt')
       )
-        throw new DOMException(
+        throw platformDOMException(
           'The requested operation is not valid for the provided key',
           'InvalidAccessError',
         );
@@ -6317,9 +6438,9 @@
           label,
         ),
         result = new Uint8Array(bytes);
-      return Promise.resolve(result.buffer);
+      return platformPromiseResolve(result.buffer);
     } catch (error) {
-      return Promise.reject(error);
+      return platformPromiseReject(error);
     }
   };
   SubtleCrypto.prototype.decrypt = function (algorithm, key, data) {
@@ -6344,7 +6465,7 @@
           "Failed to execute 'getRandomValues' on 'Crypto': parameter 1 is not of type 'ArrayBufferView'.",
         );
       if (view.byteLength > 65536)
-        throw new DOMException(
+        throw platformDOMException(
           "The ArrayBufferView's byte length exceeds the number of bytes of entropy available via this API (65536).",
           'QuotaExceededError',
         );
@@ -6497,7 +6618,7 @@
     }
     send() {
       if (rtcDataStates.get(this).readyState !== 'open')
-        throw new DOMException('RTCDataChannel.readyState is not open', 'InvalidStateError');
+        throw platformDOMException('RTCDataChannel.readyState is not open', 'InvalidStateError');
     }
     close() {
       const state = rtcDataStates.get(this);
@@ -6602,10 +6723,10 @@
     }
     createOffer() {
       if (rtcPeerPrivate.get(this).closed)
-        return Promise.reject(
-          new DOMException('The RTCPeerConnection is closed.', 'InvalidStateError'),
+        return platformPromiseReject(
+          platformDOMException('The RTCPeerConnection is closed.', 'InvalidStateError'),
         );
-      return Promise.resolve(
+      return platformPromiseResolve(
         new RTCSessionDescription({
           type: 'offer',
           sdp: 'v=0\r\no=- 0 0 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\n',
@@ -6613,7 +6734,7 @@
       );
     }
     createAnswer() {
-      return Promise.resolve(
+      return platformPromiseResolve(
         new RTCSessionDescription({
           type: 'answer',
           sdp: 'v=0\r\no=- 0 0 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\n',
@@ -6629,7 +6750,7 @@
       state.localDescription = value;
       state.currentLocalDescription = value;
       state.iceGatheringState = 'complete';
-      return Promise.resolve();
+      return platformPromiseResolve();
     }
     setRemoteDescription(description) {
       const state = rtcPeerStates.get(this),
@@ -6639,10 +6760,10 @@
             : new RTCSessionDescription(description);
       state.remoteDescription = value;
       state.currentRemoteDescription = value;
-      return Promise.resolve();
+      return platformPromiseResolve();
     }
     addIceCandidate() {
-      return Promise.resolve();
+      return platformPromiseResolve();
     }
     getSenders() {
       return [];
@@ -6699,7 +6820,7 @@
     value: function (label, options = {}) {
       const state = rtcPeerPrivate.get(this);
       if (state.closed)
-        throw new DOMException('The RTCPeerConnection is closed.', 'InvalidStateError');
+        throw platformDOMException('The RTCPeerConnection is closed.', 'InvalidStateError');
       state.hasDataChannel = true;
       return new RTCDataChannel(hostToken, label, options);
     },
@@ -6714,18 +6835,18 @@
     value: function (description) {
       const state = rtcPeerPrivate.get(this);
       if (state.closed)
-        return Promise.reject(
-          new DOMException('The RTCPeerConnection is closed.', 'InvalidStateError'),
+        return platformPromiseReject(
+          platformDOMException('The RTCPeerConnection is closed.', 'InvalidStateError'),
         );
       const value =
         description instanceof RTCSessionDescription
           ? description
           : new RTCSessionDescription(description || rtcSessionModel.offer(this));
       const observable = rtcPeerStates.get(this);
-      return new Promise((resolve, reject) =>
+      return new platformPromise((resolve, reject) =>
         setTimeout(() => {
           if (state.closed) {
-            reject(new DOMException('The RTCPeerConnection is closed.', 'InvalidStateError'));
+            reject(platformDOMException('The RTCPeerConnection is closed.', 'InvalidStateError'));
             return;
           }
           observable.localDescription = value;
@@ -6910,7 +7031,26 @@
     return handler;
   };
   const observe = (name, target) => {
-    const proxy = new Proxy(target, observationHandler(name));
+    let proxy;
+    if (typeof host.createObservedObject === 'function') {
+      // The native observer falls through before the property's own operation.
+      // Data and properties live on this one object; no Proxy receiver or
+      // independently synchronized target survives into the public API.
+      proxy = host.createObservedObject((object, property, write, supported) => {
+        if (
+          typeof property === 'string' &&
+          !property.startsWith('_') &&
+          (write || property !== 'then' || supported)
+        ) {
+          const key = name + '.' + property;
+          recordAPIAccess(key, supported || targetAbsentProperties.has(key));
+        }
+      });
+      Object.setPrototypeOf(proxy, Object.getPrototypeOf(target));
+      Object.defineProperties(proxy, Object.getOwnPropertyDescriptors(target));
+    } else {
+      proxy = new Proxy(target, observationHandler(name));
+    }
     const binding = bindingGet(target);
     if (binding) bindingSet(proxy, binding);
     if (elementData.has(target)) elementData.set(proxy, elementData.get(target));
@@ -7103,6 +7243,10 @@
   const bridgeOwnKeys = Reflect.ownKeys,
     bridgeDescriptor = Object.getOwnPropertyDescriptor,
     bridgeDefine = Object.defineProperty,
+    bridgeExtensible = Reflect.isExtensible,
+    bridgePreventExtensions = Reflect.preventExtensions,
+    bridgeDelete = Reflect.deleteProperty,
+    bridgeIncludes = Array.prototype.includes,
     bridgeBind = Function.prototype.bind;
   // Only private encoded records enter this codec. Null prototypes prevent
   // author toJSON hooks from observing or changing transport metadata.
@@ -7246,7 +7390,7 @@
   // current document after navigation; saved Document references keep their owner.
   const bridgeAccess = (id, realm) => {
     if (!host.frameCanAccess(id, realm))
-      throw new DOMException('Blocked cross-origin frame access', 'SecurityError');
+      throw platformDOMException('Blocked cross-origin frame access', 'SecurityError');
   };
   const remoteDocument = (id, nullable = false) => {
     if (nullable && !host.frameCanAccess(id)) return null;
@@ -7301,10 +7445,30 @@
       if (bridgeDescriptor(target, name).configurable) delete target[name];
     const unsupported = (operation) => {
       host.semanticMissingAt('surface.js:513', 'CrossRealm.' + operation);
-      throw new DOMException(
+      throw platformDOMException(
         'Cross-realm ' + operation + ' is not implemented',
         'NotSupportedError',
       );
+    };
+    // The remote owner is authoritative. A Proxy target only materializes the
+    // prototype and descriptors required by ECMAScript's integrity invariants;
+    // no getters are invoked and no ordinary property values are cached.
+    const synchronizeIntegrityTarget = () => {
+      const names = frameTransaction(id, result.realm, result.handle, 'keys').map(
+        decodeCrossRealmKey,
+      );
+      for (const name of bridgeOwnKeys(target)) {
+        if (!bridgeApply(bridgeIncludes, names, [name])) bridgeDelete(target, name);
+      }
+      bridgeSetPrototype(
+        target,
+        unwrapCrossRealm(id, frameTransaction(id, result.realm, result.handle, 'prototype')),
+      );
+      for (const name of names) {
+        const descriptor = traps.getOwnPropertyDescriptor(target, name);
+        if (descriptor) bridgeDefine(target, name, descriptor);
+      }
+      return bridgePreventExtensions(target);
     };
     const traps = {
       get(_target, property) {
@@ -7329,6 +7493,7 @@
           ]),
           answer = unwrapCrossRealm(id, outcome.value);
         if (outcome.threw) throw answer;
+        if (answer && !bridgeExtensible(target)) traps.getOwnPropertyDescriptor(target, property);
         return answer;
       },
       has(_target, property) {
@@ -7417,7 +7582,12 @@
         if (outcome.threw) throw value;
         // Materialize only the descriptor required by the local Proxy invariant.
         // The owner remains authoritative for configurable properties.
-        if (value && (descriptor.configurable === false || descriptor.writable === false))
+        if (
+          value &&
+          (!bridgeExtensible(target) ||
+            descriptor.configurable === false ||
+            descriptor.writable === false)
+        )
           traps.getOwnPropertyDescriptor(target, property);
         return value;
       },
@@ -7430,6 +7600,7 @@
           ]),
           value = unwrapCrossRealm(id, outcome.value);
         if (outcome.threw) throw value;
+        if (value) bridgeDelete(target, property);
         return value;
       },
       preventExtensions() {
@@ -7438,7 +7609,17 @@
           bridgeAccess(id, result.realm);
           return false;
         }
-        return unsupported('preventExtensions');
+        bridgeAccess(id, result.realm);
+        const outcome = frameTransaction(id, result.realm, result.handle, 'preventExtensions'),
+          value = unwrapCrossRealm(id, outcome.value);
+        if (outcome.threw) throw value;
+        return value ? synchronizeIntegrityTarget() : false;
+      },
+      isExtensible() {
+        bridgeAccess(id, result.realm);
+        const value = frameTransaction(id, result.realm, result.handle, 'extensible');
+        if (!value) synchronizeIntegrityTarget();
+        return value;
       },
       setPrototypeOf() {
         if (iteratorFields) iteratorFields.valid = false;
@@ -7450,6 +7631,7 @@
       },
       ownKeys() {
         bridgeAccess(id, result.realm);
+        if (!bridgeExtensible(target)) synchronizeIntegrityTarget();
         return frameTransaction(id, result.realm, result.handle, 'keys').map(decodeCrossRealmKey);
       },
       getOwnPropertyDescriptor(_target, property) {
@@ -7461,7 +7643,10 @@
           'descriptor',
           encodeCrossRealmKey(property),
         );
-        if (!raw || !raw.exists) return undefined;
+        if (!raw || !raw.exists) {
+          bridgeDelete(target, property);
+          return undefined;
+        }
         if (raw.accessor && !raw.configurable && !crossRealmAccessorDescriptors)
           return unsupported('nonconfigurableAccessorDescriptor');
         const descriptor = { enumerable: !!raw.enumerable, configurable: !!raw.configurable };
@@ -7474,7 +7659,8 @@
         }
         // Reporting a remote nonconfigurable property requires the same
         // descriptor on the local proxy target (ECMAScript proxy invariants).
-        if (!descriptor.configurable) bridgeDefine(target, property, descriptor);
+        if (!descriptor.configurable || !bridgeExtensible(target))
+          bridgeDefine(target, property, descriptor);
         return descriptor;
       },
     };
@@ -7672,7 +7858,7 @@
           });
       }
       if (p !== 'postMessage' && !accessible)
-        throw new DOMException('Blocked cross-origin frame access', 'SecurityError');
+        throw platformDOMException('Blocked cross-origin frame access', 'SecurityError');
       const encoded = host.frameGlobalGet(id, encodeCrossRealmKey(p));
       if (encoded.intrinsic && p === 'postMessage' && !accessible) return framePost;
       const value = unwrapCrossRealm(id, encoded);
@@ -7851,20 +8037,20 @@
       try {
         parsed = new URL(String(url), location.href);
       } catch (_) {
-        throw new DOMException(`The URL '${String(url)}' is invalid.`, 'SyntaxError');
+        throw platformDOMException(`The URL '${String(url)}' is invalid.`, 'SyntaxError');
       }
       if ((parsed.protocol !== 'ws:' && parsed.protocol !== 'wss:') || parsed.hash)
-        throw new DOMException(
+        throw platformDOMException(
           `The URL's scheme must be either 'ws' or 'wss'. '${parsed.protocol.replace(':', '')}' is not allowed.`,
           'SyntaxError',
         );
       if (parsed.username || parsed.password)
-        throw new DOMException(
+        throw platformDOMException(
           'The URL contains a username and password, which is not allowed.',
           'SyntaxError',
         );
       if (location.protocol === 'https:' && parsed.protocol === 'ws:')
-        throw new DOMException(
+        throw platformDOMException(
           'An insecure WebSocket connection may not be initiated from a page loaded over HTTPS.',
           'SecurityError',
         );
@@ -7873,7 +8059,7 @@
       for (const protocol of list) {
         const value = String(protocol);
         if (!value || /[^!#$%&'*+.^_`|~0-9A-Za-z-]/.test(value) || seen.has(value))
-          throw new DOMException(`The subprotocol '${value}' is invalid.`, 'SyntaxError');
+          throw platformDOMException(`The subprotocol '${value}' is invalid.`, 'SyntaxError');
         seen.add(value);
       }
       const state = {
@@ -7889,7 +8075,7 @@
         binaryType: 'blob',
       };
       webSocketSlots.set(this, state);
-      host.openWebSocket(
+      const admitted = host.openWebSocket(
         (event) => {
           if (event.type === 'open') {
             if (state.readyState !== 0) return;
@@ -7905,9 +8091,11 @@
             }
             dispatchTrusted(this, new MessageEvent('message', { data, origin: parsed.origin }));
           } else if (event.type === 'error') {
+            state.readyState = 3;
             dispatchTrusted(this, new Event('error'));
           } else if (event.type === 'close') {
-            if (state.readyState === 3) return;
+            if (state.closeDispatched) return;
+            state.closeDispatched = true;
             state.readyState = 3;
             dispatchTrusted(
               this,
@@ -7923,12 +8111,13 @@
         state.url,
         list,
       );
+      if (admitted === false) state.readyState = 3;
     }
     send(data) {
       const state = webSocketSlots.get(this);
       if (!state) throw new TypeError('Illegal invocation');
       if (state.readyState === 0)
-        throw new DOMException('Still in CONNECTING state.', 'InvalidStateError');
+        throw platformDOMException('Still in CONNECTING state.', 'InvalidStateError');
       if (state.readyState !== 1) return;
       if (data instanceof ArrayBuffer) host.sendWebSocket(state.id, new Uint8Array(data), true);
       else if (ArrayBuffer.isView(data))
@@ -7947,13 +8136,16 @@
       const state = webSocketSlots.get(this);
       if (!state) throw new TypeError('Illegal invocation');
       if (code !== undefined && code !== 1000 && (Number(code) < 3000 || Number(code) > 4999))
-        throw new DOMException(
+        throw platformDOMException(
           `The code must be either 1000, or between 3000 and 4999.`,
           'InvalidAccessError',
         );
       reason = String(reason);
       if (new TextEncoder().encode(reason).byteLength > 123)
-        throw new DOMException('The message must not be greater than 123 bytes.', 'SyntaxError');
+        throw platformDOMException(
+          'The message must not be greater than 123 bytes.',
+          'SyntaxError',
+        );
       if (state.readyState === 2 || state.readyState === 3) return;
       state.readyState = 2;
       host.closeWebSocket(state.id, code === undefined ? 1000 : Number(code), reason);
@@ -7994,8 +8186,19 @@
     Object.defineProperty(WebSocket.prototype, name, { value, enumerable: true });
   }
   let nextXHRID = 0;
+  const xhrListenerMapForEach = Map.prototype.forEach;
   const xhrSlots = new WeakMap(),
-    xhrState = (xhr) => xhrSlots.get(xhr);
+    xhrEventTargetSlots = new WeakMap(),
+    xhrState = (xhr) => {
+      const state = xhrSlots.get(xhr);
+      if (!state) throw new TypeError('Illegal invocation');
+      return state;
+    },
+    xhrEventTargetState = (target) => {
+      const state = xhrEventTargetSlots.get(target);
+      if (!state) throw new TypeError('Illegal invocation');
+      return state;
+    };
   const fireXHREvent = (xhr, type) => dispatchTrusted(xhr, new Event(type)),
     setXHRState = (xhr, value) => {
       xhrState(xhr).readyState = value;
@@ -8008,6 +8211,22 @@
     constructor(token) {
       if (token !== xhrConstructionToken) throw new TypeError('Illegal constructor');
       super();
+      xhrEventTargetSlots.set(this, {
+        onloadstart: null,
+        onprogress: null,
+        onabort: null,
+        onerror: null,
+        onload: null,
+        ontimeout: null,
+        onloadend: null,
+      });
+    }
+  }
+  class XMLHttpRequestUpload extends XMLHttpRequestEventTarget {
+    constructor(token) {
+      if (token !== xhrConstructionToken)
+        throw new TypeError("Failed to construct 'XMLHttpRequestUpload': Illegal constructor");
+      super(token);
     }
   }
   class XMLHttpRequest extends XMLHttpRequestEventTarget {
@@ -8024,11 +8243,7 @@
         timeout: 0,
         withCredentials: false,
         onreadystatechange: null,
-        onload: null,
-        onerror: null,
-        onabort: null,
-        ontimeout: null,
-        onloadend: null,
+        upload: new XMLHttpRequestUpload(xhrConstructionToken),
         requestHeaders: {},
         requestHeaderOrder: [],
         responseHeaders: {},
@@ -8043,7 +8258,7 @@
     open(method, url, async = true, user, password) {
       method = String(method).toUpperCase();
       if (!method || /[^A-Z-]/.test(method))
-        throw new DOMException('Invalid HTTP method', 'SyntaxError');
+        throw platformDOMException('Invalid HTTP method', 'SyntaxError');
       const state = xhrState(this);
       if (state.sent && typeof host.abortXHR === 'function') host.abortXHR(state.requestID);
       state.generation++;
@@ -8064,11 +8279,11 @@
     setRequestHeader(name, value) {
       const state = xhrState(this);
       if (state.readyState !== 1 || state.sent)
-        throw new DOMException("The object's state must be OPENED.", 'InvalidStateError');
+        throw platformDOMException("The object's state must be OPENED.", 'InvalidStateError');
       name = String(name).trim().toLowerCase();
       value = String(value).trim();
       if (!name || /[^!#$%&'*+.^_`|~0-9a-z-]/i.test(name) || /[\0\r\n]/.test(value))
-        throw new DOMException('Invalid HTTP header', 'SyntaxError');
+        throw platformDOMException('Invalid HTTP header', 'SyntaxError');
       if (state.requestHeaders[name] === undefined) state.requestHeaderOrder.push(name);
       state.requestHeaders[name] = state.requestHeaders[name]
         ? state.requestHeaders[name] + ', ' + value
@@ -8091,10 +8306,22 @@
     send(body = null) {
       const state = xhrState(this);
       if (state.readyState !== 1 || state.sent)
-        throw new DOMException("The object's state must be OPENED.", 'InvalidStateError');
+        throw platformDOMException("The object's state must be OPENED.", 'InvalidStateError');
       state.sent = true;
       const generation = ++state.generation,
         requestID = (state.requestID = 'xhr-' + ++nextXHRID);
+      let uploadListenerFlag = false;
+      // Read the canonical event registry without calling author-replaced
+      // collection methods while a platform operation inspects its listeners.
+      bridgeApply(
+        xhrListenerMapForEach,
+        bridgeApply(bridgeWeakGet, eventListeners, [state.upload]),
+        [
+          (listeners) => {
+            if (listeners.length) uploadListenerFlag = true;
+          },
+        ],
+      );
       host.xhr(
         (result) => {
           if (state.generation !== generation || !state.sent) return;
@@ -8152,6 +8379,7 @@
         Boolean(state.withCredentials),
         body != null,
         requestID,
+        uploadListenerFlag,
       );
     }
     abort() {
@@ -8183,11 +8411,6 @@
     'timeout',
     'withCredentials',
     'onreadystatechange',
-    'onload',
-    'onerror',
-    'onabort',
-    'ontimeout',
-    'onloadend',
   ])
     def(XMLHttpRequest.prototype, key, {
       get() {
@@ -8197,6 +8420,30 @@
         xhrState(this)[key] = value;
       },
     });
+  // XHR and its stable upload object have independent event-handler slots on
+  // the shared intermediate interface, not copies of request state.
+  for (const key of [
+    'onloadstart',
+    'onprogress',
+    'onload',
+    'onerror',
+    'onabort',
+    'ontimeout',
+    'onloadend',
+  ])
+    def(XMLHttpRequestEventTarget.prototype, key, {
+      get() {
+        return xhrEventTargetState(this)[key];
+      },
+      set(value) {
+        xhrEventTargetState(this)[key] = value;
+      },
+    });
+  def(XMLHttpRequest.prototype, 'upload', {
+    get() {
+      return xhrState(this).upload;
+    },
+  });
   def(XMLHttpRequest.prototype, 'responseType', {
     get() {
       return xhrState(this).responseType;
@@ -8207,7 +8454,7 @@
       if (!['', 'text', 'json', 'arraybuffer', 'blob'].includes(type))
         throw new TypeError('Invalid XMLHttpRequest responseType');
       if (state.readyState === 3 || state.readyState === 4)
-        throw new DOMException("The object's state must be OPENED.", 'InvalidStateError');
+        throw platformDOMException("The object's state must be OPENED.", 'InvalidStateError');
       state.responseType = type;
     },
   });
@@ -8215,7 +8462,7 @@
     get() {
       const state = xhrState(this);
       if (state.responseType !== '' && state.responseType !== 'text')
-        throw new DOMException(
+        throw platformDOMException(
           "The value is only accessible if the object's 'responseType' is '' or 'text'.",
           'InvalidStateError',
         );
@@ -8301,7 +8548,7 @@
     text() {
       const state = responseSlots.get(this);
       state.bodyUsed = true;
-      return Promise.resolve(state.body == null ? '' : String(state.body));
+      return platformPromiseResolve(state.body == null ? '' : String(state.body));
     }
     json() {
       return this.text().then(JSON.parse);
@@ -8418,6 +8665,7 @@
     ShadowRoot,
     Element,
     HTMLElement,
+    DOMStringMap,
     SVGElement,
     HTMLScriptElement,
     HTMLImageElement,
@@ -8461,6 +8709,7 @@
     History,
     Storage,
     XMLHttpRequestEventTarget,
+    XMLHttpRequestUpload,
     XMLHttpRequest,
     WebSocket,
     GPU,
@@ -8513,6 +8762,7 @@
     installedWindowFrameCount = ids.length;
     return ids;
   };
+  globalThis.__mimicSyncWindowFrames = syncWindowFrames;
   const replaceableWindowProperty = (name) =>
     function (value) {
       Object.defineProperty(this, name, {
@@ -8753,42 +9003,42 @@
     replaceableWindow(name, () => compatibilityScrolling?.position(null).x ?? windowScrollX);
   for (const name of ['scrollY', 'pageYOffset'])
     replaceableWindow(name, () => compatibilityScrolling?.position(null).y ?? windowScrollY);
-  const timerHandler = (handler, args, name) => {
-    const callback =
-      typeof handler === 'function'
-        ? () => handler.apply(window, args)
-        : (() => {
-            const source = trustedConvert(
-              handler,
-              'TrustedScript',
-              'Window ' + name,
-              "Failed to execute '" + name + "' on 'Window': ",
-            );
-            return () => host.runTimerSource(source);
-          })();
-    return () => {
-      try {
-        callback();
-      } catch (error) {
-        reportWindowException(error);
-      }
-    };
-  };
+  const timerHandler = (handler, name) =>
+    typeof handler === 'function'
+      ? handler
+      : trustedConvert(
+          handler,
+          'TrustedScript',
+          'Window ' + name,
+          "Failed to execute '" + name + "' on 'Window': ",
+        );
   window.setTimeout = function setTimeout(handler, timeout = 0, ...args) {
     handler = trustedTimerArgument(handler);
-    const delay = Number(timeout);
-    return host.setTimer(timerHandler(handler, args, 'setTimeout'), delay, false);
+    const delay = webIDLNumber(timeout);
+    return host.setTimer(
+      timerHandler(handler, 'setTimeout'),
+      delay,
+      false,
+      reportWindowException,
+      args,
+    );
   };
   window.setInterval = function setInterval(handler, timeout = 0, ...args) {
     handler = trustedTimerArgument(handler);
-    const delay = Number(timeout);
-    return host.setTimer(timerHandler(handler, args, 'setInterval'), delay, true);
+    const delay = webIDLNumber(timeout);
+    return host.setTimer(
+      timerHandler(handler, 'setInterval'),
+      delay,
+      true,
+      reportWindowException,
+      args,
+    );
   };
   window.clearTimeout = function clearTimeout(id) {
-    return host.clearTimer(Number(id));
+    return host.clearTimer(webIDLNumber(id));
   };
   window.clearInterval = function clearInterval(id) {
-    return host.clearTimer(Number(id));
+    return host.clearTimer(webIDLNumber(id));
   };
   window.requestAnimationFrame = function requestAnimationFrame(callback) {
     return requestRenderingFrame(callback);
@@ -8808,7 +9058,7 @@
   registerRealmBinding(bridgeOriginalPostMessage, 'WindowPostMessage', {});
   window.queueMicrotask = function queueMicrotask(callback) {
     if (typeof callback !== 'function') throw new TypeError('callback is not a function');
-    Promise.resolve().then(() => {
+    platformPromiseResolve().then(() => {
       if (host.executionContextActive()) callback();
     });
   };
@@ -9253,7 +9503,7 @@
           };
           operations.update = (state, url, replace) => {
             const error = replace ? host.historyReplace(url, state) : host.historyPush(url, state);
-            if (error) throw new DOMException(error, 'SecurityError');
+            if (error) throw platformDOMException(error, 'SecurityError');
           };
         }
         if (kind === 'Storage') {
@@ -9378,6 +9628,11 @@
     const operationWrappers = new Map();
     const operation = (method, name) => {
       if (typeof method !== 'function') return method;
+      const native = platformOperation(
+        method,
+        method.name && method.name !== 'value' ? method.name : name,
+      );
+      if (native !== method) return native;
       let result = method;
       if (
         Object.getOwnPropertyDescriptor(method, 'prototype') ||
@@ -9402,6 +9657,17 @@
       for (const member of Reflect.ownKeys(owner)) {
         if (member === 'constructor' || member === 'prototype') continue;
         const descriptor = Object.getOwnPropertyDescriptor(owner, member);
+        if (descriptor?.configurable) {
+          for (const [kind, prefix] of [
+            ['get', 'get '],
+            ['set', 'set '],
+          ]) {
+            if (typeof descriptor[kind] === 'function') {
+              descriptor[kind] = platformOperation(descriptor[kind], prefix + String(member));
+            }
+          }
+          Object.defineProperty(owner, member, descriptor);
+        }
         const method = operation(descriptor && descriptor.value, String(member));
         if (method !== descriptor?.value)
           Object.defineProperty(owner, member, { ...descriptor, value: method });
@@ -9568,6 +9834,7 @@
       ShadowRoot,
       Element,
       HTMLElement,
+      DOMStringMap,
       SVGElement,
       HTMLScriptElement,
       HTMLImageElement,
@@ -9614,6 +9881,7 @@
       History,
       Storage,
       XMLHttpRequestEventTarget,
+      XMLHttpRequestUpload,
       XMLHttpRequest,
       WebSocket,
       GPU,

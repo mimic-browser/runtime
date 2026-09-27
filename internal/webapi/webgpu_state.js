@@ -8,7 +8,7 @@
   /* shared_wgsl_observations */
   const unsupported = (name) => {
     host.semanticMissingAt('webgpu_state.js:5', 'WebGPU.' + name);
-    throw new DOMException('Unsupported WebGPU operation: ' + name, 'NotSupportedError');
+    throw platformDOMException('Unsupported WebGPU operation: ' + name, 'NotSupportedError');
   };
   const check = (value, type) => {
     const s = slots.get(value);
@@ -87,7 +87,7 @@
     if (!Number.isSafeInteger(n) || n < 0) throw new TypeError('Expected unsigned integer');
     return n;
   };
-  const operation = (message) => new DOMException(message, 'OperationError');
+  const operation = (message) => platformDOMException(message, 'OperationError');
   const validation = (device, message) => {
     if (device.destroyed) return;
     const value = make('GPUValidationError', { message });
@@ -209,7 +209,7 @@
     options = options ?? {};
     const preference = options.powerPreference === undefined ? '' : String(options.powerPreference);
     if (preference && !['low-power', 'high-performance'].includes(preference))
-      return Promise.reject(new TypeError('Invalid powerPreference'));
+      return platformPromiseReject(new TypeError('Invalid powerPreference'));
     return host
       .gpuRequestAdapter(preference, options.forceFallbackAdapter ? 'fallback' : '')
       .then((g) =>
@@ -245,19 +245,19 @@
     Object.defineProperty(navProto, 'gpu', { get, enumerable: true, configurable: true });
   }
   method('GPUAdapter', 'requestDevice', (adapter, descriptor = {}) => {
-    if (adapter.requested) return Promise.reject(operation('Adapter already used'));
+    if (adapter.requested) return platformPromiseReject(operation('Adapter already used'));
     const requested = Array.from(descriptor.requiredFeatures || [], String),
       available = slots.get(adapter.features).values;
     if (requested.some((f) => !available.has(f)))
-      return Promise.reject(new TypeError('Unsupported feature'));
+      return platformPromiseReject(new TypeError('Unsupported feature'));
     const values = { ...gpuLimitDefaults },
       supported = slots.get(adapter.limits).values;
     for (const [name, value] of Object.entries(descriptor.requiredLimits || {})) {
-      if (!(name in values)) return Promise.reject(operation('Unknown limit'));
+      if (!(name in values)) return platformPromiseReject(operation('Unknown limit'));
       const n = number(value),
         minimum = name.startsWith('min');
       if (minimum ? n < supported[name] : n > supported[name])
-        return Promise.reject(operation('Unsupported limit'));
+        return platformPromiseReject(operation('Unsupported limit'));
       values[name] = minimum ? Math.min(values[name], n) : Math.max(values[name], n);
     }
     adapter.requested = true;
@@ -270,7 +270,7 @@
       scopes: [],
       destroyed: false,
       mapped: new Set(),
-      lost: new Promise((resolve) => {
+      lost: new platformPromise((resolve) => {
         resolveLost = resolve;
       }),
       resolveLost: null,
@@ -280,7 +280,7 @@
     device.object = object;
     device.resolveLost = resolveLost;
     device.queue = make('GPUQueue', { device });
-    return Promise.resolve(object);
+    return platformPromiseResolve(object);
   });
   for (const name of ['features', 'limits', 'adapterInfo', 'queue', 'lost'])
     getter('GPUDevice', name, (s) => s[name]);
@@ -300,12 +300,12 @@
   });
   method('GPUDevice', 'popErrorScope', (s) =>
     s.scopes.length
-      ? Promise.resolve(s.scopes.pop().error)
-      : Promise.reject(operation('No error scope')),
+      ? platformPromiseResolve(s.scopes.pop().error)
+      : platformPromiseReject(operation('No error scope')),
   );
   const unmap = (b) => {
     if (b.pending) {
-      b.pending.reject(new DOMException('Mapping aborted', 'AbortError'));
+      b.pending.reject(platformDOMException('Mapping aborted', 'AbortError'));
       b.pending = null;
     }
     for (const range of b.ranges) {
@@ -387,7 +387,7 @@
     offset = number(offset);
     size = size === undefined ? b.size - offset : number(size);
     if (b.mapState !== 'unmapped')
-      return Promise.reject(operation('Buffer already mapped or pending'));
+      return platformPromiseReject(operation('Buffer already mapped or pending'));
     if (
       !b.valid ||
       b.destroyed ||
@@ -399,14 +399,14 @@
       offset + size > b.size
     ) {
       validation(b.device, 'Invalid buffer mapping');
-      return Promise.reject(operation('Invalid mapping'));
+      return platformPromiseReject(operation('Invalid mapping'));
     }
     b.mapState = 'pending';
     b.mode = mode;
     b.mapOffset = offset;
     b.mapSize = size;
     b.device.mapped.add(b);
-    return new Promise((resolve, reject) => {
+    return new platformPromise((resolve, reject) => {
       const pending = { resolve, reject };
       b.pending = pending;
       setTimeout(() => {
@@ -529,7 +529,7 @@
         else op.b.bytes.fill(0, op.destinationOffset, op.destinationOffset + op.size);
     }
   });
-  method('GPUQueue', 'onSubmittedWorkDone', () => Promise.resolve());
+  method('GPUQueue', 'onSubmittedWorkDone', () => platformPromiseResolve());
   method('GPUQueue', 'writeBuffer', (q, buffer, offset, data, dataOffset = 0, size) => {
     const b = check(buffer, 'GPUBuffer');
     offset = number(offset);

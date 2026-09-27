@@ -181,7 +181,7 @@ svgMethod('SVGGeometryElement', 'getPointAtLength', function (distance) {
   const n = check(this);
   distance = svgFloat(distance);
   const m = svgPathMeasure(n);
-  if (!m.contours.length) throw new DOMException('No path', 'InvalidStateError');
+  if (!m.contours.length) throw platformDOMException('No path', 'InvalidStateError');
   distance = Math.max(0, Math.min(m.length, distance));
   const e = m.edges.find((e) => e.length && e.start + e.length >= distance);
   if (!e) return svgPoint(...m.contours.at(-1).at(-1));

@@ -58,16 +58,16 @@
     try {
       check(image);
     } catch (error) {
-      return Promise.reject(error);
+      return platformPromiseReject(error);
     }
-    return new Promise((resolve, reject) => {
+    return new platformPromise((resolve, reject) => {
       const source = image.getAttribute('src'),
         finish = () => {
           image.removeEventListener('load', finish);
           image.removeEventListener('error', finish);
           const current = info(image);
           if (image.getAttribute('src') === source && current.decoded) resolve();
-          else reject(new DOMException('The source image cannot be decoded', 'EncodingError'));
+          else reject(platformDOMException('The source image cannot be decoded', 'EncodingError'));
         };
       if (info(image).complete) queueMicrotask(finish);
       else {

@@ -17,11 +17,13 @@
   for (const name of ['estimate', 'persisted']) {
     const value = {
       [name]() {
-        if (this !== manager) return Promise.reject(new TypeError('Illegal invocation'));
+        if (this !== manager) return platformPromiseReject(new TypeError('Illegal invocation'));
         const state = host.workerStorageState();
         if (state.opaque)
-          return Promise.reject(new TypeError('Storage is unavailable for an opaque origin'));
-        return Promise.resolve(name === 'persisted' ? state.persisted : state.estimate);
+          return platformPromiseReject(
+            new TypeError('Storage is unavailable for an opaque origin'),
+          );
+        return platformPromiseResolve(name === 'persisted' ? state.persisted : state.estimate);
       },
     }[name];
     markNative(value, name);

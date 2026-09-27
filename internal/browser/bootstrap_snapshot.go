@@ -33,6 +33,9 @@ const bootstrapSnapshotBytes = 32 << 20
 // the production default preserve Page isolation and independent event loops.
 const defaultRealmsPerIsolate = 1
 
+// Pool admissions count Page roots. Connected frame realms retain the root's
+// owner instead of taking another lane; they do not consume this capacity.
+
 type pooledBootstrapSnapshot struct {
 	base engine.BootstrapSnapshot
 	pool engine.RuntimePool
@@ -162,6 +165,22 @@ func (r *Realm) bootstrapSource() *bootstrapSource {
 }
 
 func (r *Realm) newRuntime() (engine.Runtime, error) {
+	// Synchronous frame calls stay on their Page owner, but cache admission and
+	// capture remain per exposure graph, including a first encounter in a child.
+	var connected engine.RealmRuntimeFactory
+	var parentRealm *Realm
+	if frame, ok := r.agent.(*Frame); ok && frame.parent != nil && frame.parent.Realm != nil {
+		parentRealm = frame.parent.Realm
+		parent := parentRealm.runtime
+		if deferred, ok := parent.(*deferredRuntime); ok {
+			var err error
+			parent, err = deferred.ready()
+			if err != nil {
+				return nil, err
+			}
+		}
+		connected, _ = parent.(engine.RealmRuntimeFactory)
+	}
 	p := r.agent.Page()
 	c := p.ctx
 	if err := c.lifetime.Err(); err != nil {
@@ -169,10 +188,16 @@ func (r *Realm) newRuntime() (engine.Runtime, error) {
 	}
 	factory, ok := c.browser.factory.(engine.BootstrapSnapshotFactory)
 	if !ok || !factory.BootstrapSnapshotsEnabled() || os.Getenv("MIMIC_DISABLE_BOOTSTRAP_SNAPSHOT") == "1" {
+		if connected != nil {
+			runtime, _, err := connected.NewRealmRuntime(false)
+			return runtime, err
+		}
 		return c.browser.factory.New(), nil
 	}
 	plan := r.bootstrapSource()
-	if c.profileLocked {
+	capability, hasConnected := c.browser.factory.(engine.ConnectedRealmFactory)
+	coldRoot := connected == nil && !c.profileLocked && !c.browser.bootstrapSnapshots.hasSnapshotKey(plan.key)
+	if connected == nil && (c.profileLocked || hasConnected && capability.ConnectedRealms()) && !c.bootstrapPreparation {
 		if err := c.browser.prepareProfileBootstrap(plan.key, r.securityState()); err != nil {
 			p.trace.Add(trace.Error, "profileBootstrapPreparationFailed", map[string]any{"error": err.Error()})
 		}
@@ -182,9 +207,31 @@ func (r *Realm) newRuntime() (engine.Runtime, error) {
 	if issue != nil {
 		p.trace.Add(trace.Error, "bootstrapSnapshotUnavailable", map[string]any{"error": issue.Error()})
 	}
+	if connected != nil {
+		useBootstrap := snapshot != nil && plan.key == parentRealm.bootstrapSource().key
+		runtime, restored, err := connected.NewRealmRuntime(useBootstrap)
+		r.bootstrapRestored = restored
+		return runtime, err
+	}
 	if snapshot != nil {
 		runtime, err := snapshot.NewRuntime()
 		if err == nil {
+			// The first ordinary Page retains cold bootstrap semantics while its
+			// owner carries a reusable seed for later connected frame admissions.
+			if coldRoot && !c.bootstrapPreparation {
+				if realms, ok := runtime.(engine.RealmRuntimeFactory); ok {
+					bare, _, bareErr := realms.NewRealmRuntime(false)
+					closeErr := runtime.Close()
+					if bareErr != nil {
+						return nil, bareErr
+					}
+					if closeErr != nil {
+						_ = bare.Close()
+						return nil, closeErr
+					}
+					return bare, nil
+				}
+			}
 			r.bootstrapRestored = true
 			return runtime, nil
 		}
@@ -451,6 +498,7 @@ func (r *Realm) retryBootstrap(err error) error {
 	r.messageReceiver = nil
 	r.messagePortReceiver = nil
 	r.frameLoadDispatcher = nil
+	r.frameIndexNotifier = nil
 	r.resourceEventDispatcher = nil
 	r.performanceNotifier = nil
 	r.domQueryCallback = nil
@@ -544,7 +592,7 @@ const bootstrapCaptureSource = `(function(original){
  const stringify=JSON.stringify,apply=Reflect.apply,get=Reflect.get;
  let calls=[],captureFailed=false;const engineKeys=Reflect.ownKeys(globalThis).filter(key=>typeof key==='string');
  const shape=Object.fromEntries(Object.getOwnPropertyNames(original).map(name=>[name,typeof original[name]]));
- globalThis.__mimic=new Proxy(original,{get(target,name,receiver){const value=get(target,name,receiver);if(calls===null||typeof value!=='function')return value;return function(...args){const result=apply(value,target,args);if(calls!==null&&!captureFailed){try{calls.push({name,args:stringify(args),result:stringify(result)})}catch{captureFailed=true}}return result}}});
+ globalThis.__mimic=new Proxy(original,{get(target,name,receiver){const value=get(target,name,receiver);if(name==='createObservedObject'||name==='createReceiverDispatch'||name==='initializeExceptionState'||calls===null||typeof value!=='function')return value;return function(...args){const result=apply(value,target,args);if(calls!==null&&!captureFailed){try{calls.push({name,args:stringify(args),result:stringify(result)})}catch{captureFailed=true}}return result}}});
  return function(){globalThis.__mimic=original;if(captureFailed){calls=null;throw new Error('bootstrap capture serialization failed')}const globalKeys=Reflect.ownKeys(globalThis).filter(key=>typeof key==='string');const result=stringify({shape,calls,engineKeys,globalKeys});calls=null;return result};
 })(__mimic)`
 
@@ -606,6 +654,9 @@ func bootstrapSeedSources(source, capture string) []string {
 		`globalThis.__mimicSnapshotData=JSON.parse(` + string(encoded) + `);`,
 		`(function(){
  const stringify=JSON.stringify,apply=Reflect.apply,get=Reflect.get;
+ const observationFactory=globalThis.__mimicPropertyObservationFactory;delete globalThis.__mimicPropertyObservationFactory;
+ const dispatchFactory=globalThis.__mimicReceiverDispatchFactory;delete globalThis.__mimicReceiverDispatchFactory;
+ const exceptionFactory=globalThis.__mimicExceptionStateFactory;delete globalThis.__mimicExceptionStateFactory;
  let data=globalThis.__mimicSnapshotData,replies=data.calls,index=0,live=null;const shape=data.shape,engineKeys=data.engineKeys,globalKeys=data.globalKeys;data=null;
  const seedEngineKeys=new Set(Reflect.ownKeys(globalThis));
  const lateEngineKeys=new Set(engineKeys.filter(key=>!seedEngineKeys.has(key)));
@@ -614,6 +665,9 @@ func bootstrapSeedSources(source, capture string) []string {
  delete globalThis.__mimicSnapshotData;
  const host=new Proxy(Object.create(null),{get(target,name){
   if(live!==null)return get(live,name);
+  if(name==='createObservedObject')return observationFactory;
+  if(name==='createReceiverDispatch')return dispatchFactory;
+  if(name==='initializeExceptionState')return exceptionFactory;
   if(shape[name]!=='function')return undefined;
   return function(...args){
    if(live!==null)return apply(live[name],live,args);

@@ -18,7 +18,7 @@ if (typeof CacheStorage === 'function' && typeof Cache === 'function' && host.ca
           const id =
             proto === Cache.prototype ? cacheSlots.get(this) : this === storage ? 0 : undefined;
           if (!host.hasStorageAccess())
-            throw new DOMException('Access to CacheStorage is denied.', 'SecurityError');
+            throw platformDOMException('Access to CacheStorage is denied.', 'SecurityError');
           if (id === undefined) throw new TypeError('Illegal invocation');
           if (args.length < count)
             throw new TypeError(
@@ -26,7 +26,7 @@ if (typeof CacheStorage === 'function' && typeof Cache === 'function' && host.ca
             );
           return implementation(id, ...args);
         } catch (e) {
-          return Promise.reject(e);
+          return platformPromiseReject(e);
         }
       },
     }[name];
@@ -40,7 +40,7 @@ if (typeof CacheStorage === 'function' && typeof Cache === 'function' && host.ca
     });
   };
   const io = (fn) =>
-    new Promise((resolve, reject) =>
+    new platformPromise((resolve, reject) =>
       host.enqueueWebTask(
         () => {
           try {
@@ -134,7 +134,7 @@ if (typeof CacheStorage === 'function' && typeof Cache === 'function' && host.ca
         for (let i = 0; i < entries.length; i++)
           for (let j = 0; j < i; j++)
             if (matches(entries[j], entries[i].request))
-              throw new DOMException('Duplicate requests in batch', 'InvalidStateError');
+              throw platformDOMException('Duplicate requests in batch', 'InvalidStateError');
         for (const entry of entries) {
           records = records.filter((old) => !matches(old, entry.request));
           records.push(entry);
@@ -213,7 +213,7 @@ if (typeof CacheStorage === 'function' && typeof Cache === 'function' && host.ca
     for (const r of requests)
       if (r.method !== 'GET' || !/^https?:/.test(r.url))
         throw new TypeError('Request scheme or method is unsupported');
-    const entries = await Promise.all(
+    const entries = await platformPromiseAll(
       requests.map(async (r) => {
         const response = await fetch(r);
         if (!response.ok) throw new TypeError('Request failed');

@@ -93,7 +93,7 @@ const textLayout = (target) => {
       s = style(n);
     for (const row of host.nodeChildren(elementSlot(n).nodeId)) {
       if (row.type === 'text') {
-        for (const ch of Array.from(host.textContent(row.nodeId))) {
+        for (const ch of Array.from(canonicalTextContent(row.nodeId))) {
           if (records.length >= 16384) unsupported('textComplexity');
           records.push({ ch, node: n, chain, style: s });
         }
@@ -359,7 +359,7 @@ const svgTextRows = (n) => {
 const svgCharIndex = (rows, index) => {
   index = +index >>> 0;
   if (index >= rows.length)
-    throw new DOMException('Character index out of range', 'IndexSizeError');
+    throw platformDOMException('Character index out of range', 'IndexSizeError');
   return index;
 };
 svgMethod('SVGTextContentElement', 'getNumberOfChars', function () {

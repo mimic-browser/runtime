@@ -153,14 +153,15 @@ const compatibilityElementState = {};
       } catch (error) {
         throw new TypeError('Invalid constructor');
       }
-      if (!validName(name)) throw new DOMException('Invalid custom element name', 'SyntaxError');
+      if (!validName(name))
+        throw platformDOMException('Invalid custom element name', 'SyntaxError');
       if (definitions.has(name) || constructors.has(ctor))
-        throw new DOMException('Already defined', 'NotSupportedError');
+        throw platformDOMException('Already defined', 'NotSupportedError');
       const extendsTag =
         options.extends === undefined ? null : String(options.extends).toLowerCase();
       if (extendsTag && (validName(extendsTag) || !/^[a-z][0-9a-z-]*$/.test(extendsTag)))
-        throw new DOMException('Invalid built-in element name', 'NotSupportedError');
-      if (defining) throw new DOMException('Definition is running', 'NotSupportedError');
+        throw platformDOMException('Invalid built-in element name', 'NotSupportedError');
+      if (defining) throw platformDOMException('Definition is running', 'NotSupportedError');
       let definition;
       defining = true;
       const sequence = (value) => {
@@ -239,11 +240,13 @@ const compatibilityElementState = {};
     whenDefined(name) {
       name = String(name);
       if (!validName(name))
-        return Promise.reject(new DOMException('Invalid custom element name', 'SyntaxError'));
-      if (definitions.has(name)) return Promise.resolve(definitions.get(name).ctor);
+        return platformPromiseReject(
+          platformDOMException('Invalid custom element name', 'SyntaxError'),
+        );
+      if (definitions.has(name)) return platformPromiseResolve(definitions.get(name).ctor);
       if (!waiting.has(name)) {
         let resolve;
-        const promise = new Promise((r) => (resolve = r));
+        const promise = new platformPromise((r) => (resolve = r));
         waiting.set(name, { promise, resolve });
       }
       return waiting.get(name).promise;
@@ -597,17 +600,12 @@ const compatibilityElementState = {};
   accessor(Document.prototype, 'firstChild', function () {
     return wrap(host.firstChild(documentRootID));
   });
-  const characterText = (node) => JSON.parse(host.textContentJSON(elementSlot(node).nodeId));
+  const characterText = (node) =>
+    decodeDOMStringJSON(host.textContentJSON(elementSlot(node).nodeId));
   const setCharacterText = (node, value) => {
     const old = observers.size ? characterText(node) : null;
     value = String(value);
-    host.setCharacterDataJSON(
-      elementSlot(node).nodeId,
-      JSON.stringify(value).replace(
-        /[\ud800-\udfff]/g,
-        (unit) => '\\u' + unit.charCodeAt(0).toString(16).padStart(4, '0'),
-      ),
-    );
+    host.setCharacterDataJSON(elementSlot(node).nodeId, domStringJSONEncode(value));
     queueRecord('characterData', node, { oldValue: old });
   };
   accessor(
@@ -640,7 +638,7 @@ const compatibilityElementState = {};
     offset = unsigned(offset);
     count = unsigned(count);
     if (offset > text.length)
-      throw new DOMException('Offset exceeds data length', 'IndexSizeError');
+      throw platformDOMException('Offset exceeds data length', 'IndexSizeError');
     return text.slice(offset, offset + count);
   });
   member(CharacterData.prototype, 'replaceData', function (offset, count, data) {
@@ -650,7 +648,7 @@ const compatibilityElementState = {};
     count = unsigned(count);
     data = String(data);
     if (offset > text.length)
-      throw new DOMException('Offset exceeds data length', 'IndexSizeError');
+      throw platformDOMException('Offset exceeds data length', 'IndexSizeError');
     setCharacterText(this, text.slice(0, offset) + data + text.slice(offset + count));
   });
   member(CharacterData.prototype, 'appendData', function (data) {
@@ -707,7 +705,7 @@ const compatibilityElementState = {};
     offset = unsigned(offset);
     const text = this.data;
     if (offset > text.length)
-      throw new DOMException('Offset exceeds data length', 'IndexSizeError');
+      throw platformDOMException('Offset exceeds data length', 'IndexSizeError');
     const node = document.createTextNode(text.slice(offset)),
       parent = this.parentNode;
     if (parent) parent.insertBefore(node, this.nextSibling);
@@ -748,7 +746,7 @@ const compatibilityElementState = {};
   member(Node.prototype, 'replaceChild', function (node, child) {
     if (!isDOMNode(node) || !isDOMNode(child)) throw new TypeError('Expected Nodes');
     if (!sameDOMNode(child.parentNode, this))
-      throw new DOMException('Not a child', 'NotFoundError');
+      throw platformDOMException('Not a child', 'NotFoundError');
     if (node === child) return child;
     this.insertBefore(node, child);
     this.removeChild(child);
@@ -757,7 +755,8 @@ const compatibilityElementState = {};
   const removeChildBase = Node.prototype.removeChild;
   member(Node.prototype, 'removeChild', function (node) {
     if (!isDOMNode(node)) throw new TypeError('Expected a Node');
-    if (!sameDOMNode(node.parentNode, this)) throw new DOMException('Not a child', 'NotFoundError');
+    if (!sameDOMNode(node.parentNode, this))
+      throw platformDOMException('Not a child', 'NotFoundError');
     return removeChildBase.call(this, node);
   });
   for (const proto of [Element.prototype, CharacterData.prototype]) {
@@ -891,7 +890,7 @@ const compatibilityElementState = {};
       // can combine these checks with its canonical mutation in Go.
       if (method === 'removeChild') {
         if (!sameDOMNode(node.parentNode, this))
-          throw new DOMException('Not a child', 'NotFoundError');
+          throw platformDOMException('Not a child', 'NotFoundError');
       } else prepareInsertion(this, node, method === 'appendChild' ? null : reference, true);
       const fragment = node instanceof DocumentFragment,
         children = fragment ? Array.from(node.childNodes) : [node],
@@ -1170,9 +1169,9 @@ const compatibilityElementState = {};
   const checkedTokens = (tokens) =>
     tokens.map((value) => {
       const token = String(value);
-      if (!token) throw new DOMException('Empty token', 'SyntaxError');
+      if (!token) throw platformDOMException('Empty token', 'SyntaxError');
       if (/[\t\n\f\r ]/.test(token))
-        throw new DOMException('Whitespace in token', 'InvalidCharacterError');
+        throw platformDOMException('Whitespace in token', 'InvalidCharacterError');
       return token;
     });
   member(DOMTokenList.prototype, 'add', function (...values) {
@@ -1634,7 +1633,7 @@ const compatibilityElementState = {};
         case 'mouseevents':
           return new MouseEvent('');
         default:
-          throw new DOMException('The provided event type is invalid.', 'NotSupportedError');
+          throw platformDOMException('The provided event type is invalid.', 'NotSupportedError');
       }
     },
     writable: true,
@@ -1682,7 +1681,7 @@ const compatibilityElementState = {};
       } else if (this.nodeType === 3) copy = document.createTextNode(this.textContent);
       else if (this.nodeType === 8) copy = document.createComment(this.textContent);
       else if (this.nodeType === 11) copy = document.createDocumentFragment();
-      else throw new DOMException('Node cannot be cloned', 'NotSupportedError');
+      else throw platformDOMException('Node cannot be cloned', 'NotSupportedError');
       if (deep) {
         for (const child of Array.from(this.childNodes)) copy.appendChild(child.cloneNode(true));
         if (
@@ -1898,7 +1897,7 @@ const compatibilityElementState = {};
       async getType(type) {
         const s = items.get(this);
         if (!s.types.includes(String(type)))
-          throw new DOMException('Type not found', 'NotFoundError');
+          throw platformDOMException('Type not found', 'NotFoundError');
         const value = await s.data[type];
         return typeof value === 'string' ? new Blob([value], { type }) : value;
       }

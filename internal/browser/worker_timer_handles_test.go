@@ -166,8 +166,8 @@ func TestWindowTimerTerminalFailureRemovesRegistration(t *testing.T) {
 	}
 	baseline := persistentHandleCount(t, r.runtime)
 	for iteration := 0; iteration < 3; iteration++ {
-		// Public timer wrappers handle author errors in JS and keep intervals
-		// alive. This private callback exercises an actual terminal native error.
+		// Public timers report author errors and keep intervals alive. This
+		// private callback exercises a terminal native error without a reporter.
 		value, err := r.runtime.Eval(ctx, `privateTimer(()=>{throw new Error('terminal timer')},0,true)`, "terminal-timer.js")
 		if err != nil {
 			t.Fatal(err)

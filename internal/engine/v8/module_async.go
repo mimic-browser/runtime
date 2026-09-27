@@ -14,6 +14,10 @@ func (a *adapter) SetDynamicModuleHandler(handler engine.DynamicModuleHandler) {
 	_, _ = a.run(func(s *state, _ *gov8.Context, _ *gov8.Scope) (engine.Value, error) {
 		a.dynamicModuleHandler = handler
 		return nil, s.isolate.SetHostImportModuleDynamicallyCallback(func(request gov8.DynamicImportRequest) (gov8.Promise, error) {
+			a, err := s.callbackAdapter(request.Scope.Scope())
+			if err != nil {
+				return gov8.Promise{}, err
+			}
 			referrer, err := request.Scope.ToString(request.ResourceName)
 			if err != nil {
 				return gov8.Promise{}, err

@@ -149,7 +149,7 @@
       type: 'bytes',
       start(controller) {
         const abort = () => {
-          controller.error(new DOMException('The user aborted a request.', 'AbortError'));
+          controller.error(platformDOMException('The user aborted a request.', 'AbortError'));
           cleanup();
         };
         cleanup = () => signal.removeEventListener('abort', abort);
@@ -502,7 +502,7 @@
       id = 'fetch-' + ++nextFetchID;
     if (signal.aborted) throw signal.reason;
     let abortListener;
-    const aborted = new Promise((resolve, reject) => {
+    const aborted = new platformPromise((resolve, reject) => {
       abortListener = () => {
         if (typeof host.abortFetch === 'function') host.abortFetch(id);
         reject(signal.reason);
@@ -556,7 +556,7 @@
             : responseBody(bodyBytes, signal, list.get('content-type')),
         );
       })();
-      return await Promise.race([operation, aborted]);
+      return await platformPromiseRace([operation, aborted]);
     } finally {
       signal.removeEventListener('abort', abortListener);
     }

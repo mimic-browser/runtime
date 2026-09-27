@@ -40,6 +40,13 @@ func (r *Realm) hostOpenWebSocket(_ engine.Value, args []engine.Value) (engine.V
 	if err != nil || (u.Scheme != "ws" && u.Scheme != "wss") {
 		return nil, errors.New("invalid WebSocket URL")
 	}
+	if !r.contentPolicy().AllowsConnection(r.documentURL(), u) {
+		r.scheduler.Post(scheduler.Network, 0, func(context.Context) error {
+			r.websocketCallback(callback, map[string]any{"type": "error"})
+			return nil
+		})
+		return r.val(false), nil
+	}
 	ctx, cancel := context.WithCancel(r.resourceContext)
 	state := &realmWebSocket{cancel: cancel}
 	if r.webSockets == nil {

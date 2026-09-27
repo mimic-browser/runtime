@@ -51,7 +51,7 @@
     };
     const unsupported = (name) => {
       host.semanticMissingAt('svg_geometry.js:17', 'SVG.getBBox.' + name);
-      throw new DOMException(
+      throw platformDOMException(
         'Unsupported SVG bounding-box observation: ' + name,
         'NotSupportedError',
       );

@@ -4,9 +4,9 @@ package gov8
 
 import (
 	"fmt"
+	syscall "github.com/maclof/gov8/internal/native"
 	"runtime"
 	"sync"
-	syscall "github.com/maclof/gov8/internal/native"
 	"unsafe"
 )
 
@@ -52,6 +52,10 @@ type Script struct {
 // returned. The scope (and TryCatch, when given) must belong to the same
 // isolate as the context.
 func (c *Context) Compile(s *Scope, source string, tc *TryCatch) (*Script, error) {
+	return c.compileScript(s, source, tc, false)
+}
+
+func (c *Context) compileScript(s *Scope, source string, tc *TryCatch, platform bool) (*Script, error) {
 	if err := c.check(); err != nil {
 		return nil, err
 	}
@@ -88,7 +92,11 @@ func (c *Context) Compile(s *Scope, source string, tc *TryCatch) (*Script, error
 		tcv = tc.handle
 	}
 	ensureScriptHotProcs()
-	r1, _, _ := scriptEscapingSyscall9(scriptCompileAddr, 7,
+	compileAddr := scriptCompileAddr
+	if platform {
+		compileAddr = proc("gov8_script_compile_platform").Addr()
+	}
+	r1, _, _ := scriptEscapingSyscall9(compileAddr, 7,
 		c.iso.handleAssumingCheck(), c.handle, sh, tcv, p, uintptr(len(b)),
 		uintptr(unsafe.Pointer(&compiled.handle)), 0, 0)
 	runtime.KeepAlive(b)

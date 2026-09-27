@@ -21,6 +21,7 @@ import (
 	"github.com/andybalholm/brotli"
 	"github.com/google/uuid"
 	"github.com/klauspost/compress/zstd"
+	"github.com/moreveal/mimic/internal/csp"
 	"github.com/moreveal/mimic/internal/monotime"
 	"github.com/moreveal/mimic/internal/state"
 	"github.com/moreveal/mimic/internal/trace"
@@ -41,6 +42,12 @@ const (
 )
 
 type Request struct {
+	// ContentPolicy is captured from the initiating realm and remains fixed
+	// across redirects. Its source URL must not follow the request destination.
+	ContentPolicy          csp.PolicySet
+	ContentPolicyURL       *url.URL
+	ContentPolicyDirective string
+
 	// Kind, Owner and Mechanism describe why the browser requested this URL.
 	// They are policy inputs, separate from wire headers and CDP Initiator.
 	Kind, Owner, Mechanism string
@@ -83,6 +90,9 @@ type Request struct {
 	// default request mode (for example, a crossorigin classic script).
 	Mode        string
 	Destination string
+	// CORSPreflightRequired is the consumer's Fetch preflight flag, such as
+	// XHR upload listeners. It does not change the request's initiator.
+	CORSPreflightRequired bool
 	// Redirect is the Fetch redirect mode; the empty value means follow.
 	Redirect string
 	// PerformanceInitiatorType is the Resource Timing projection. It is kept
@@ -196,6 +206,38 @@ type Loader struct {
 
 func (l *Loader) SetResourcePolicy(policy *ResourcePolicyState) { l.resourcePolicy = policy }
 
+// CheckLocalResourcePolicy applies the shared whole-resource decision to a
+// browser-owned attachment. It does not manufacture a request/response body,
+// acquire a connection, or charge HTTP body/cache budgets.
+func (l *Loader) CheckLocalResourcePolicy(request Request) error {
+	if l.resourcePolicy == nil {
+		return nil
+	}
+	snapshot := l.resourcePolicy.Capture()
+	if snapshot == nil {
+		return nil
+	}
+	decision := snapshot.decide(request)
+	l.resourcePolicy.recordDecision(decision, false)
+	l.trace.Add(trace.Resource, "policyDecision", map[string]any{"url": request.URL.String(), "kind": request.ResourceKind(), "ruleId": decision.RuleID, "generation": decision.Generation, "reportOnly": decision.ReportOnly, "localAttachment": true})
+	_, err := l.checkWholeResourcePolicy(decision, true)
+	return err
+}
+
+func (l *Loader) checkWholeResourcePolicy(decision ResourceDecision, localAttachment bool) (bool, error) {
+	if decision.Work.CacheRead == nil || *decision.Work.CacheRead || decision.Work.Network == nil || *decision.Work.Network {
+		return false, nil
+	}
+	l.resourcePolicy.recordBlocked(decision.ReportOnly)
+	if decision.ReportOnly {
+		return true, nil
+	}
+	if !localAttachment {
+		l.resourcePolicy.recordUnknownAvoidance()
+	}
+	return false, fmt.Errorf("net::ERR_BLOCKED_BY_CLIENT: resource policy rule %q", decision.RuleID)
+}
+
 // ResourceReuseAllowed covers document preloads and already available images,
 // which can satisfy a consumer without entering the transport/cache loader.
 func (l *Loader) ResourceReuseAllowed(request Request) bool {
@@ -297,6 +339,9 @@ func (l *Loader) Load(ctx context.Context, r Request) (response Response, loadEr
 	if r.Headers == nil {
 		r.Headers = make(http.Header)
 	}
+	if err := r.CheckContentPolicy(); err != nil {
+		return Response{}, err
+	}
 	r.beginChain()
 	deferDeniedPreflight := false
 	if r.policySnapshot != nil && !r.policySnapshot.config.ReportOnly {
@@ -379,13 +424,10 @@ func (l *Loader) Load(ctx context.Context, r Request) (response Response, loadEr
 		decision = r.policySnapshot.decide(r)
 		l.resourcePolicy.recordDecision(decision, false)
 		l.trace.Add(trace.Resource, "policyDecision", map[string]any{"id": r.ID, "url": r.URL.String(), "kind": r.ResourceKind(), "ruleId": decision.RuleID, "generation": decision.Generation, "reportOnly": decision.ReportOnly})
-		if decision.Work.CacheRead != nil && !*decision.Work.CacheRead && decision.Work.Network != nil && !*decision.Work.Network {
-			l.resourcePolicy.recordBlocked(decision.ReportOnly)
-			if !decision.ReportOnly {
-				l.resourcePolicy.recordUnknownAvoidance()
-				return Response{}, fmt.Errorf("net::ERR_BLOCKED_BY_CLIENT: resource policy rule %q", decision.RuleID)
-			}
-			reportedWholeBlock = true
+		var policyErr error
+		reportedWholeBlock, policyErr = l.checkWholeResourcePolicy(decision, false)
+		if policyErr != nil {
+			return Response{}, policyErr
 		}
 	}
 	if snapshot.Offline && r.URL.Scheme != "blob" {
@@ -876,7 +918,7 @@ func (l *Loader) after(ctx context.Context, r Request, res Response) (Response, 
 	l.trace.Add(trace.Network, "response", map[string]any{"id": r.ID, "url": r.URL.String(), "status": res.Status, "headers": headerStrings(res.Headers), "mimeType": strings.Split(res.Headers.Get("Content-Type"), ";")[0], "encodedDataLength": len(res.Body), "encodedBodySize": encodedBodySize, "decodedBodySize": len(res.Body), "transferSize": transferSize, "durationMs": float64(res.Duration) / float64(time.Millisecond), "protocol": res.Protocol, "transportTiming": res.TransportTiming, "browserVisibleTiming": res.BrowserVisibleTiming, "connectionReused": res.TransportTiming.Reused, "connectionId": res.TransportTiming.ConnectionID, "fromCache": res.FromCache, "partial": res.Partial, "initiator": r.Initiator, "performanceInitiatorType": performanceInitiatorType,
 		"performanceURL": r.performanceURL(), "performanceRedirectEnd": r.redirectEnd,
 		"performanceRedirectCount": r.redirectCount, "performanceTimingAllowFailed": r.performanceTimingAllowFailed(res.Headers),
-		"performanceCORSAccessible": r.Initiator == Fetch && r.Mode != "no-cors" && corsResponseAllowed(r, res.Headers), "synthetic": res.Synthetic, "context": r.ContextID, "performanceOwner": r.PerformanceOwner, "performanceStart": r.PerformanceStart})
+		"performanceCORSAccessible": (r.Initiator == Fetch || r.Initiator == XHR) && r.Mode != "no-cors" && corsResponseAllowed(r, res.Headers), "synthetic": res.Synthetic, "context": r.ContextID, "performanceOwner": r.PerformanceOwner, "performanceStart": r.PerformanceStart})
 	debugRetain := r.policySnapshot == nil || r.policySnapshot.config.ReportOnly || r.policySnapshot.decide(r).Work.DebugRetain == nil || *r.policySnapshot.decide(r).Work.DebugRetain
 	if debugRetain && !res.Partial {
 		res.policyOwner, res.policySnapshot = l.resourcePolicy, r.policySnapshot
@@ -1121,4 +1163,12 @@ func (r Request) ReferrerValue() string {
 		return referrer.String()
 	}
 	return ""
+}
+
+// CheckContentPolicy runs before reuse, preflight, interception or transport.
+func (r Request) CheckContentPolicy() error {
+	if !r.ContentPolicy.AllowsResource(r.ContentPolicyDirective, r.ContentPolicyURL, r.URL) {
+		return errors.New("resource blocked by Content Security Policy")
+	}
+	return nil
 }

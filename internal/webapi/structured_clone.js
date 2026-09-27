@@ -23,7 +23,7 @@ function createStructuredCloneCodec(rejectHost, foreign) {
   };
   const native = typeof host.serializeClone === 'function';
   const fail = (message) => {
-    throw new DOMException(message || 'The value could not be cloned.', 'DataCloneError');
+    throw platformDOMException(message || 'The value could not be cloned.', 'DataCloneError');
   };
   const encode = (value) => {
     if (foreign) value = foreign(value);

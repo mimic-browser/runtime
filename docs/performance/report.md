@@ -1,5 +1,20 @@
 # Performance architecture pass
 
+## 2026-09-27: connected frame execution owners
+
+The compatibility fix for author stack continuity now keeps connected V8 frame
+realms on one Page owner. Independent Pages keep independent owners by default.
+Frames retain separate contexts and global objects; owner disposal waits for the
+last connected realm. Matching frame contexts restore the platform seed while
+other exposure graphs use a bare context in that same owner.
+
+The first ordinary Page for an unseen exposure graph now synchronously prepares
+its bootstrap artifact through the existing private preparation workflow. This
+adds cold-start work and transient preparation state; it is not claimed as a
+performance improvement. Steady-state frame overhead and cold-start cost need a
+matched performance checkpoint before making any latency or memory claims. This
+change does not alter resource admission or add rendering/media retention.
+
 ## 2026-09-25: generated/manual Context profile PoC
 
 The [profile PoC diagnostic](profile-context-poc.md) runs 300 unique-seed Contexts
@@ -3212,3 +3227,32 @@ first-to-second-POST gap remained about 8–9 s. These live mutable reads cannot
 be memoized without an invalidation model that preserves cross-realm writes;
 the residual latency is not a network-response delay. Temporary diagnostics
 were removed from production source after measurement.
+
+
+## 2026-09-27 -- diagnostic trace retention
+
+A focused attribution probe issued 10,000 queries against a fixed 1,024-node
+result. Live Go heap grew from 22.54 to 103.71 MiB; approximately 83 MiB was
+attributed to retained query-result trace payloads. Clearing the trace returned
+live heap to 20.88 MiB. Persistent V8 handles stayed at 1,272. This establishes
+unbounded diagnostic retention without attributing all memory in a live process
+or excluding other leaks. This was an attribution probe, not an E2E benchmark.
+
+`trace.Recorder` retains full result ID lists and `Mimic.getTrace` copies and
+serializes the complete history. Network retained-body budgets do not cover
+these payloads. A fix is deferred: Window and Worker performance timelines also
+consume network completions through `Recorder.EventsSince`, so bounding diagnostic
+history must preserve semantic delivery independently. No event-dropping policy,
+forced production GC or memory fix is included. Private profiles and live-site traces are excluded from the public changes.
+
+## Bootstrap preparation admission, 2026-09-28
+
+Profile preparation captured its seed in one temporary Page, then initialized a
+second temporary Page solely to select the cache entry and start serialization.
+It now admits the captured entry directly. A focused runtime-creation counter
+reproduced two ordinary runtimes before the change and verifies one afterward,
+with an admitted artifact in both cases. Browser ownership, cache budgets,
+independent Page owners and first ordinary Page cold semantics remain intact.
+Focused cache admission and restored-frame callback/job tests pass on Windows
+and Linux. This removes measured duplicate initialization; no latency percentage,
+memory improvement or Wikipedia E2E result is claimed.

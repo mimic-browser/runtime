@@ -107,7 +107,7 @@ func TestOfflinePolicyAllowsLocalDataAndBlobResources(t *testing.T) {
 	loader := NewLoaderWithSession(testEnvironment, NewCookieStore(), session, trace.New())
 	defer loader.CloseOwnedTransport()
 	loader.Policy().SetOffline(true)
-	session.PutBlob("blob:https://example.test/probe", []byte("blob-value"), "text/plain")
+	session.PutBlob("blob:https://example.test/probe", []byte("blob-value"), "text/plain", "test-owner")
 	for raw, expected := range map[string]string{"data:text/plain,data-value": "data-value", "blob:https://example.test/probe": "blob-value"} {
 		resource, _ := url.Parse(raw)
 		response, err := loader.Load(context.Background(), Request{URL: resource, Initiator: Fetch})

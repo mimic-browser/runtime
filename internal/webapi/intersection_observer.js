@@ -36,7 +36,7 @@ const intersectionMargin = (value) => {
     tokens.length > 4 ||
     tokens.some((v) => !/^[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:px|%)$/.test(v))
   )
-    throw new DOMException('rootMargin must be specified in pixels or percent.', 'SyntaxError');
+    throw platformDOMException('rootMargin must be specified in pixels or percent.', 'SyntaxError');
   const parts = tokens.map((v) => ({
     value: Number.parseFloat(v),
     unit: v.endsWith('%') ? '%' : 'px',

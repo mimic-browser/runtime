@@ -325,7 +325,7 @@ const constructedStyleSheets = (() => {
     get cssRules() {
       const s = requireSheet(this);
       if (s.crossOrigin)
-        throw new DOMException('Cannot access cross-origin stylesheet', 'SecurityError');
+        throw platformDOMException('Cannot access cross-origin stylesheet', 'SecurityError');
       return s.list;
     }
     get rules() {
@@ -384,17 +384,19 @@ const constructedStyleSheets = (() => {
     replaceSync(text) {
       const state = requireSheet(this);
       if (state.owner || state.locked)
-        throw new DOMException('Stylesheet cannot be replaced', 'NotAllowedError');
+        throw platformDOMException('Stylesheet cannot be replaced', 'NotAllowedError');
       state.rules.splice(0, state.rules.length, ...parsedRules(text, this));
       changed();
     }
     replace(text) {
       const state = requireSheet(this);
       if (state.owner || state.locked)
-        return Promise.reject(new DOMException('Stylesheet cannot be replaced', 'NotAllowedError'));
+        return platformPromiseReject(
+          platformDOMException('Stylesheet cannot be replaced', 'NotAllowedError'),
+        );
       text = String(text);
       state.locked = true;
-      return Promise.resolve().then(() => {
+      return platformPromiseResolve().then(() => {
         try {
           state.rules.splice(0, state.rules.length, ...parsedRules(text, this));
           changed();
@@ -407,15 +409,16 @@ const constructedStyleSheets = (() => {
     insertRule(text, index = 0) {
       const state = requireSheet(this);
       index = Number(index) >>> 0;
-      if (state.locked) throw new DOMException('Stylesheet is being replaced', 'NotAllowedError');
+      if (state.locked)
+        throw platformDOMException('Stylesheet is being replaced', 'NotAllowedError');
       if (index > state.rules.length)
-        throw new DOMException('Index exceeds rule count', 'IndexSizeError');
+        throw platformDOMException('Index exceeds rule count', 'IndexSizeError');
       const ast = parse(String(text), { context: 'stylesheet' });
-      if (ast.children.size !== 1) throw new DOMException('Expected one rule', 'SyntaxError');
+      if (ast.children.size !== 1) throw platformDOMException('Expected one rule', 'SyntaxError');
       if (ast.children.first.type === 'Atrule' && ast.children.first.name === 'import')
-        throw new DOMException('Cannot insert @import into a constructed sheet', 'SyntaxError');
+        throw platformDOMException('Cannot insert @import into a constructed sheet', 'SyntaxError');
       const inserted = parsedRules(text, this);
-      if (inserted.length !== 1) throw new DOMException('Invalid rule', 'SyntaxError');
+      if (inserted.length !== 1) throw platformDOMException('Invalid rule', 'SyntaxError');
       state.rules.splice(index, 0, inserted[0]);
       changed();
       return index;
@@ -423,9 +426,10 @@ const constructedStyleSheets = (() => {
     deleteRule(index) {
       const state = requireSheet(this);
       index = Number(index) >>> 0;
-      if (state.locked) throw new DOMException('Stylesheet is being replaced', 'NotAllowedError');
+      if (state.locked)
+        throw platformDOMException('Stylesheet is being replaced', 'NotAllowedError');
       if (index >= state.rules.length)
-        throw new DOMException('Index exceeds rule count', 'IndexSizeError');
+        throw platformDOMException('Index exceeds rule count', 'IndexSizeError');
       const old = state.rules.splice(index, 1)[0];
       rules.get(old).sheet = null;
       changed();
@@ -484,7 +488,7 @@ const constructedStyleSheets = (() => {
       owners.delete(owner);
       return null;
     }
-    const source = tag === 'link' ? resource.body : host.textContent(data.nodeId) || '',
+    const source = tag === 'link' ? resource.body : canonicalTextContent(data.nodeId) || '',
       key = tag === 'link' ? resource.url : source;
     let sheet = prior?.key === key ? prior.sheet : null;
     if (!sheet) {

@@ -39,7 +39,7 @@ if (typeof Navigation === 'function') {
         reference.realm,
         reference.handle,
       );
-      if (!reply[0]) throw new DOMException(reply[2], reply[1]);
+      if (!reply[0]) throw platformDOMException(reply[2], reply[1]);
       return reply[1];
     }
     return cloneCodec.encode(value);
@@ -163,9 +163,9 @@ if (typeof Navigation === 'function') {
     intercept(options = {}) {
       const s = brand(eventData, this);
       if (!s.dispatching || this.defaultPrevented)
-        throw new DOMException('The event is not being dispatched.', 'InvalidStateError');
+        throw platformDOMException('The event is not being dispatched.', 'InvalidStateError');
       if (!s.canIntercept)
-        throw new DOMException('The navigation cannot be intercepted.', 'SecurityError');
+        throw platformDOMException('The navigation cannot be intercepted.', 'SecurityError');
       if (options.handler !== undefined && typeof options.handler !== 'function')
         throw new TypeError('handler must be callable');
       if (
@@ -184,7 +184,7 @@ if (typeof Navigation === 'function') {
     scroll() {
       const s = brand(eventData, this);
       if (!s.intercepted || s.dispatching || !s.committed)
-        throw new DOMException('The navigation is not committed.', 'InvalidStateError');
+        throw platformDOMException('The navigation is not committed.', 'InvalidStateError');
       s.scrolled = true;
     }
   }
@@ -244,14 +244,14 @@ if (typeof Navigation === 'function') {
   });
   const defer = () => {
     let resolve, reject;
-    const promise = new Promise((a, b) => {
+    const promise = new platformPromise((a, b) => {
       resolve = a;
       reject = b;
     });
     promise.catch(() => {});
     return { promise, resolve, reject };
   };
-  const error = () => new DOMException('Navigation was aborted.', 'AbortError');
+  const error = () => platformDOMException('Navigation was aborted.', 'AbortError');
   const fail = (op, e) => {
     if (op.done) return;
     op.done = true;
@@ -349,7 +349,7 @@ if (typeof Navigation === 'function') {
       fail(op, e);
       return;
     }
-    Promise.all(handlers).then(
+    platformPromiseAll(handlers).then(
       () => {
         if (op.done) return;
         op.done = true;
@@ -415,7 +415,7 @@ if (typeof Navigation === 'function') {
     if (arguments.length < 1 || options?.state === undefined)
       throw new TypeError('state is required');
     refresh();
-    if (!current) throw new DOMException('No current entry', 'InvalidStateError');
+    if (!current) throw platformDOMException('No current entry', 'InvalidStateError');
     const stored = encode(options.state);
     host.navigationState(stored);
     refresh();
@@ -426,8 +426,8 @@ if (typeof Navigation === 'function') {
     dispatchNative(nav, e);
   });
   const rejected = (e) => {
-    const a = Promise.reject(e),
-      b = Promise.reject(e);
+    const a = platformPromiseReject(e),
+      b = platformPromiseReject(e);
     a.catch(() => {});
     b.catch(() => {});
     return { committed: a, finished: b };
@@ -450,7 +450,7 @@ if (typeof Navigation === 'function') {
     }
     refresh();
     if (!host.historyIsActive() || !current)
-      return rejected(new DOMException('Document is not active', 'InvalidStateError'));
+      return rejected(platformDOMException('Document is not active', 'InvalidStateError'));
     const kind =
         options.history === 'replace' ||
         ((options.history === undefined || options.history === 'auto') &&
@@ -472,9 +472,12 @@ if (typeof Navigation === 'function') {
   const traverse = (key, options = {}) => {
     refresh();
     const to = list.find((e) => e.key === key);
-    if (!to) return rejected(new DOMException('Invalid key', 'InvalidStateError'));
+    if (!to) return rejected(platformDOMException('Invalid key', 'InvalidStateError'));
     if (to === current)
-      return { committed: Promise.resolve(current), finished: Promise.resolve(current) };
+      return {
+        committed: platformPromiseResolve(current),
+        finished: platformPromiseResolve(current),
+      };
     const op = begin(to.url, 'traverse', entrySlots.get(to).state, options.info, 'traverse', to);
     if (!op.done) host.navigationTraverse(key);
     return result(op);

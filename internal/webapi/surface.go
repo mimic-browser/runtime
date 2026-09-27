@@ -55,6 +55,9 @@ var base64Surface string
 //go:embed native_functions.js
 var nativeFunctionsSurface string
 
+//go:embed dom_name_validation.js
+var domNameValidationSurface string
+
 //go:embed webkit_css_names.js
 var webkitCSSNamesSurface string
 
@@ -93,6 +96,9 @@ var handwrittenWorkerSurface string
 
 //go:embed capabilities.js
 var capabilitySurface string
+
+//go:embed media_source.js
+var mediaSourceSurface string
 
 //go:embed dom_compatibility.js
 var domCompatibilitySurface string
@@ -213,6 +219,9 @@ var fileSystemSurface string
 
 //go:embed fetch_primitives.js
 var fetchPrimitivesSurface string
+
+//go:embed promise_intrinsics.js
+var promiseIntrinsicsSurface string
 
 //go:embed abort_encoding.js
 var abortEncodingSurface string
@@ -406,10 +415,11 @@ func composeSurface(generated, exposureSource string) string {
 	streamPrelude := `{let structuredClone;try{const input=new ArrayBuffer(1),clone=globalThis.structuredClone;if(typeof clone==='function'){const output=clone(input,{transfer:[input]});if(output instanceof ArrayBuffer&&output.byteLength===1&&input.byteLength===0)structuredClone=clone}}catch{}`
 	domCompatibility := strings.Replace(domCompatibilitySurface, "/* dialog_lifecycle */", dialogSurface, 1)
 	parts := []string{capabilitySurface, generated, "installLazyShape();", "finalizeBindings();", exposureSource,
-		"installNavigatorCapabilities();installLazySingletonBindings();", navigatorIdentitySurface, cssSupportsSurface, strings.Replace(domCompatibility, "/* shared_abort_encoding */", abortEncodingSurface, 1),
+		"installNavigatorCapabilities();installLazySingletonBindings();", mediaSourceSurface, navigatorIdentitySurface, cssSupportsSurface, strings.Replace(domCompatibility, "/* shared_abort_encoding */", abortEncodingSurface, 1),
 		templatesCompatibilitySurface, selectorsVendorSurface, selectorsCompatibilitySurface, xpathCompatibilitySurface, cssomCompatibilitySurface, strings.Replace(strings.Replace(strings.Replace(strings.Replace(svgGeometrySurface, "/* shared_svg_boundaries */", svgBoundariesSurface, 1), "/* shared_svg_text */", svgTextSurface, 1), "/* shared_svg_css_transform */", svgCSSTransformSurface, 1), "/* shared_svg_types */", svgTypesSurface+svgCoordinatesSurface+svgReflectionsSurface+svgPathMetricsSurface+svgUseSurface+svgAttributeDefaultsSurface+svgAttributeSemanticsSurface, 1), streamPrelude,
 		streamsVendorSurface, "}", strings.Replace(fetchCompatibilitySurface, "/* cache_storage */", cacheStorageSurface, 1), strings.Replace(formControlsSurface, "/* constraint_validation */", constraintValidationSurface, 1), traversalCompatibilitySurface, strings.Replace(documentCompatibilitySurface, "/* shared_document_state */", documentStateSurface, 1), documentAllSurface, attributesCompatibilitySurface, webAnimationsSurface, imageResourcesSurface, screenFocusSurface, eventsCompatibilitySurface, windowErrorsSurface, inputSurface, windowObservationsSurface, windowServicesSurface, speechSynthesisSurface, documentPictureInPictureSurface, navigationSurface, indexedDBSurface, fileSystemSurface, documentStreamSurface, shadowSerializationSurface, canvasObservationsSource(), fontFacesSurface, rtcSessionSurface, trustedTypesSinksSurface, "trustedCaptureEvents();registerBootstrapCallback('installTrustedTypesEnforcer',trustedEnforceString);", "finalizeDocumentGetterBindings();finalizeSingletonGetterBindings();finalizePerformanceBindings();finalizeCallableBindings();finalizeNativeBindings();globalThis.__mimicNativeFunctionSources=nativeFunctionSourceState;", "finalizeFrameIntrinsicBindings();", marker}
 	base := strings.Replace(handwrittenSurface, "/* shared_fetch_primitives */", fetchPrimitivesSurface, 1)
+	base = strings.Replace(base, "/* shared_promise_intrinsics */", promiseIntrinsicsSurface, 1)
 	base = strings.Replace(base, "/* profile_locale */", localeSurface, 1)
 	base = strings.Replace(base, "/* native_intl */", intlSurface, 1)
 
@@ -418,6 +428,7 @@ func composeSurface(generated, exposureSource string) string {
 	base = strings.Replace(base, "/* shared_structured_clone */", structuredCloneSurface, 1)
 	base = strings.Replace(base, "/* shared_performance */", performanceSource(), 1)
 	base = strings.Replace(base, "/* shared_native_functions */", nativeFunctionsSurface, 1)
+	base = strings.Replace(base, "/* shared_dom_name_validation */", domNameValidationSurface, 1)
 	base = strings.Replace(base, "/* shared_base64 */", base64Surface, 1)
 	base = strings.Replace(base, "/* shared_webkit_css */", webkitCSSNamesSurface+cssPropertyCatalogSurface+cssComputedValuesSurface+webkitCSSSurface+cssShorthandsSurface+cssValueGrammarSurface+cssAnimationGrammarSurface+cssFontMetricsSurface+cssObservableValuesSurface+cssMediaQueriesSurface, 1)
 	base = strings.Replace(base, "/* shared_css_box_geometry */", cssBoxGeometrySurface+elementVisibilitySurface, 1)
@@ -437,11 +448,18 @@ func WorkerSurface(generated string, exposure *compatibility.RealmExposure) stri
 		}
 		exposureSource = "const __workerExposure=" + string(encoded) + ";__applyWorkerExposure(__workerExposure);\n"
 	}
-	shared := structuredCloneSurface + "\n" + fetchPrimitivesSurface + "\ninstallFileReader();Object.assign(globalThis,{TextEncoder,DOMException,URL,URLSearchParams,Blob,File,FormData,FileReader,Headers});\n" + abortEncodingSurface + "\n{let structuredClone;\n" + streamsVendorSurface + "\n}\n" + fetchCompatibilitySurface
+	// Initial Worker algorithms and the shared surface retain the same private
+	// exception factory. The constructor itself stays in the shared surface scope.
+	workerPrimitives := strings.Replace(fetchPrimitivesSurface, "const platformDOMException =", "platformDOMException =", 1)
+	shared := structuredCloneSurface + "\n" + workerPrimitives + "\ninstallFileReader();Object.assign(globalThis,{TextEncoder,DOMException,URL,URLSearchParams,Blob,File,FormData,FileReader,Headers});\n" + abortEncodingSurface + "\n{let structuredClone;\n" + streamsVendorSurface + "\n}\n" + fetchCompatibilitySurface
+	// Preserve one private factory across the Worker's separate platform blocks.
+	// The consuming block removes the transport property before author code.
+	shared += "\nglobalThis.__workerPlatformDOMException=platformDOMException;\n"
 	base := strings.Replace(strings.Replace(handwrittenWorkerSurface, "/* shared_trusted_types */", trustedTypesSurface, 1), "/* shared_worker_fetch */", shared, 1)
 	base = strings.Replace(base, "/* shared_performance */", performanceSource(), 1)
+	base = strings.Replace(base, "/* shared_promise_intrinsics */", promiseIntrinsicsSurface, 1)
 	base += "\n{const host=__workerHost,bootstrapRestoreHooks=[];let intlEnvironment=host.intlEnvironment();const nativeIntl=typeof Intl!=='undefined';const bindingString=value=>{if(typeof value==='symbol')throw new TypeError('Cannot convert a Symbol value to a string');return String(value)};\n" + nativeFunctionsSurface + "\nif(nativeIntl){\n" + intlSurface + "\n}\n" + localeSurface + "\n}\n"
-	return base + "\n" + generated + "\n" + exposureSource + "__finishWorkerSurface();if(typeof __workerExposure!=='undefined')__applyWorkerPrototypeExposure(__workerExposure);delete globalThis.__applyWorkerExposure;delete globalThis.__applyWorkerPrototypeExposure;delete globalThis.__finishWorkerSurface;delete globalThis.__mimic;delete globalThis.__mimicIDLExposure;\n{const host=__workerHost;\n" + nativeFunctionsSurface + navigatorIdentitySurface + workerStorageSurface + fileSystemSurface + "\ndelete globalThis.__mimicClonePlatforms;\n" + consoleSurface + "\nglobalThis.console=consoleObject;\n" + base64Surface + cssColorsSurface + "\nfor(const [name,value] of Object.entries({atob,btoa}))Object.defineProperty(WorkerGlobalScope.prototype,name,{value,writable:true,enumerable:true,configurable:true});\n" + domMatrixSurface + "\n" + canvasObservationsSource() + "\n" + webglObservationsSource() + "\n" + webgpuObservationsSource() + "\n" + fontFacesSurface + `
+	return base + "\n" + generated + "\n" + exposureSource + "__finishWorkerSurface();if(typeof __workerExposure!=='undefined')__applyWorkerPrototypeExposure(__workerExposure);delete globalThis.__applyWorkerExposure;delete globalThis.__applyWorkerPrototypeExposure;delete globalThis.__finishWorkerSurface;delete globalThis.__mimic;delete globalThis.__mimicIDLExposure;\n{const host=__workerHost;\nconst platformDOMException=globalThis.__workerPlatformDOMException;\ndelete globalThis.__workerPlatformDOMException;\n" + promiseIntrinsicsSurface + nativeFunctionsSurface + navigatorIdentitySurface + workerStorageSurface + fileSystemSurface + "\ndelete globalThis.__mimicClonePlatforms;\n" + consoleSurface + "\nglobalThis.console=consoleObject;\n" + base64Surface + cssColorsSurface + "\nfor(const [name,value] of Object.entries({atob,btoa}))Object.defineProperty(WorkerGlobalScope.prototype,name,{value,writable:true,enumerable:true,configurable:true});\n" + domMatrixSurface + "\n" + canvasObservationsSource() + "\n" + webglObservationsSource() + "\n" + webgpuObservationsSource() + "\n" + fontFacesSurface + `
 // Worker operations need the same ordinary function shape and private source
 // registration as Window operations. This does not replace their implementations.
 for(const owner of [globalThis.WorkerGlobalScope?.prototype,globalThis.DedicatedWorkerGlobalScope?.prototype]){
@@ -456,10 +474,15 @@ for(const owner of [globalThis.WorkerGlobalScope?.prototype,globalThis.Dedicated
     Object.defineProperty(d.value,'length',{value:original.length,configurable:true});
     Object.defineProperty(owner,key,d);
    }
+   d.value=platformOperation(d.value,d.value.name||name);
+   Object.defineProperty(owner,key,d);
    markNative(d.value,name);
   }
   for(const [kind,prefix] of [['get','get '],['set','set ']])if(typeof d[kind]==='function'){
-   Object.defineProperty(d[kind],'name',{value:prefix+String(key),configurable:true});markNative(d[kind],String(key),prefix);
+   Object.defineProperty(d[kind],'name',{value:prefix+String(key),configurable:true});
+   d[kind]=platformOperation(d[kind],prefix+String(key));
+   Object.defineProperty(owner,key,d);
+   markNative(d[kind],String(key),prefix);
   }
  }
 }

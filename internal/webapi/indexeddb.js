@@ -28,7 +28,7 @@ if (typeof IDBFactory === 'function' && host.indexedDB) {
       args,
     ]);
   const fail = (name) => {
-      throw new DOMException(name, name);
+      throw platformDOMException(name, name);
     },
     need = (args, n) => {
       if (args.length < n) throw new TypeError('Not enough arguments');
@@ -250,7 +250,7 @@ if (typeof IDBFactory === 'function' && host.indexedDB) {
             reference.handle,
             reference.realm,
           );
-          if (!reply[0]) throw new DOMException(reply[2], reply[1]);
+          if (!reply[0]) throw platformDOMException(reply[2], reply[1]);
           foreign.set(v, decode(reply[1]));
         }
         v = foreign.get(v);
@@ -356,7 +356,7 @@ if (typeof IDBFactory === 'function' && host.indexedDB) {
           v = Object(read(n[2]));
           break;
         case 'DOMException':
-          v = new DOMException(n[2], n[1]);
+          v = platformDOMException(n[2], n[1]);
           break;
         case 'Array':
           v = new Array(n[1]);
@@ -462,9 +462,9 @@ if (typeof IDBFactory === 'function' && host.indexedDB) {
     return compare(key(a), key(b));
   });
   method('IDBFactory', 'databases', 0, function () {
-    return new Promise((resolve, reject) => {
+    return new platformPromise((resolve, reject) => {
       if (!host.hasStorageAccess()) {
-        reject(new DOMException('Access denied', 'SecurityError'));
+        reject(platformDOMException('Access denied', 'SecurityError'));
         return;
       }
       task(() => resolve(call('databases', '')));
@@ -677,7 +677,7 @@ if (typeof IDBFactory === 'function' && host.indexedDB) {
         const r = s.openRequest;
         requestState(r).transaction = null;
         if (commit) completeRequest(r, s.db);
-        else completeRequest(r, undefined, new DOMException('Upgrade aborted', 'AbortError'));
+        else completeRequest(r, undefined, platformDOMException('Upgrade aborted', 'AbortError'));
       }
       call('release', d.name, s.token);
     });
@@ -693,7 +693,7 @@ if (typeof IDBFactory === 'function' && host.indexedDB) {
           completeRequest(
             op.request,
             undefined,
-            new DOMException('Transaction aborted', 'AbortError'),
+            platformDOMException('Transaction aborted', 'AbortError'),
           ),
         );
     finish(tx, false, error);
@@ -723,10 +723,12 @@ if (typeof IDBFactory === 'function' && host.indexedDB) {
         const value = op.run();
         const e = op.request ? completeRequest(op.request, value) : null;
         if (e && eventSlots.get(e).listenerException && !s.finished)
-          abort(tx, new DOMException('A request listener threw', 'AbortError'));
+          abort(tx, platformDOMException('A request listener threw', 'AbortError'));
       } catch (error) {
         const failure =
-          error instanceof DOMException ? error : new DOMException(String(error), 'UnknownError');
+          error instanceof DOMException
+            ? error
+            : platformDOMException(String(error), 'UnknownError');
         if (!op.request) {
           if (!s.finished) abort(tx, failure);
         } else {
@@ -1256,7 +1258,7 @@ if (typeof IDBFactory === 'function' && host.indexedDB) {
     if (p.kind === 'transaction') {
       const s = txState(p.tx);
       if (row.kind === 'error') {
-        abort(p.tx, new DOMException(row.error, row.error));
+        abort(p.tx, platformDOMException(row.error, row.error));
         return;
       }
       s.data = parseData(row.data);
@@ -1270,7 +1272,7 @@ if (typeof IDBFactory === 'function' && host.indexedDB) {
     }
     if (row.kind === 'error') {
       pending.delete(row.token);
-      completeRequest(p.request, undefined, new DOMException(row.error, row.error));
+      completeRequest(p.request, undefined, platformDOMException(row.error, row.error));
       return;
     }
     if (row.kind === 'deleted') {
@@ -1300,7 +1302,7 @@ if (typeof IDBFactory === 'function' && host.indexedDB) {
     rs.transaction = tx;
     const e = emit(p.request, 'upgradeneeded', {}, row);
     if (eventSlots.get(e).listenerException && !s.finished)
-      abort(tx, new DOMException('Upgrade listener threw', 'AbortError'));
+      abort(tx, platformDOMException('Upgrade listener threw', 'AbortError'));
     pump(tx);
   });
 }

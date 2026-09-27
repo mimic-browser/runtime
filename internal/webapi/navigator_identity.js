@@ -74,12 +74,15 @@
         )
           out[hint] = data[hint];
         if (hint === 'fullVersionList')
-          out.fullVersionList = data.uaFullVersionList.map(({ brand, version }) => ({ brand, version }));
+          out.fullVersionList = data.uaFullVersionList.map(({ brand, version }) => ({
+            brand,
+            version,
+          }));
         if (hint === 'formFactors') out.formFactors = data.formFactors.slice();
       }
-      return Promise.resolve(out);
+      return platformPromiseResolve(out);
     } catch (error) {
-      return Promise.reject(error);
+      return platformPromiseReject(error);
     }
   });
 })();

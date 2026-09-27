@@ -11,6 +11,50 @@ type Policy struct {
 }
 type PolicySet []Policy
 
+// AllowsConnection intersects enforced connect-src lists, falling back to
+// default-src only when connect-src is absent. Report-only lists do not block.
+func (set PolicySet) AllowsConnection(documentURL, target *url.URL) bool {
+	return set.AllowsResource("connect-src", documentURL, target)
+}
+
+// AllowsResource applies the selected fetch directive and its default fallback.
+// An empty directive means this request has no source-list admission attached.
+func (set PolicySet) AllowsResource(directive string, documentURL, target *url.URL) bool {
+	if directive == "" {
+		return true
+	}
+	for _, policy := range set {
+		if policy.reportOnly {
+			continue
+		}
+		sources, present := policy.directives[directive]
+		if !present {
+			sources, present = policy.directives["default-src"]
+		}
+		if !present {
+			continue
+		}
+		allowed := false
+		for _, source := range sources {
+			if target == nil {
+				continue
+			}
+			matches := sourceMatches(source, documentURL, target)
+			if directive == "connect-src" {
+				matches = connectionSourceMatches(source, documentURL, target)
+			}
+			if matches {
+				allowed = true
+				break
+			}
+		}
+		if !allowed {
+			return false
+		}
+	}
+	return true
+}
+
 func (set PolicySet) AllowsFormAction(documentURL, target *url.URL) bool {
 	for _, policy := range set {
 		if policy.reportOnly {
@@ -173,4 +217,22 @@ func ParseReportOnly(values ...string) PolicySet {
 		policies[i].reportOnly = true
 	}
 	return policies
+}
+
+func connectionSourceMatches(source string, documentURL, target *url.URL) bool {
+	if target.Scheme == "ws" || target.Scheme == "wss" {
+		if source == "*" {
+			return true
+		}
+		if source == "'self'" {
+			equivalent := *target
+			if equivalent.Scheme == "ws" {
+				equivalent.Scheme = "http"
+			} else {
+				equivalent.Scheme = "https"
+			}
+			return sameOrigin(documentURL, &equivalent)
+		}
+	}
+	return sourceMatches(source, documentURL, target)
 }

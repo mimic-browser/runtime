@@ -91,6 +91,28 @@ func TestScrollingContainers(t *testing.T) {
 	}
 }
 
+func TestFocusAfterScrollRangeShrinks(t *testing.T) {
+	parallelBrowserTest(t)
+	historyTestPages(t, func(t *testing.T, page *Page) {
+		navigateCapabilityFixture(t, page)
+		result, err := page.Evaluate(context.Background(), `(() => {
+  document.body.style.margin = '0';
+  document.body.innerHTML = '<div id="scroller" style="height:100px;width:200px;overflow:auto"><div id="content" style="height:1000px"><input id="field"></div></div>';
+  const scroller = document.getElementById('scroller');
+  const content = document.getElementById('content');
+  const field = document.getElementById('field');
+  scroller.scrollTop = 800;
+  content.style.height = '50px';
+  field.focus();
+  const rect = field.getBoundingClientRect();
+  return document.activeElement === field && scroller.scrollTop === 0 && Number.isFinite(rect.top);
+})()`)
+		if err != nil || result != true {
+			t.Fatalf("focus after range shrink: %v %v", result, err)
+		}
+	})
+}
+
 func TestScrollingAsync(t *testing.T) {
 	serialBrowserTest(t)
 	b, err := New(v8engine.Factory{}, chrome152.New())

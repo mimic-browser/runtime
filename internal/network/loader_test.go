@@ -81,11 +81,18 @@ func (t statusTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return &http.Response{StatusCode: t.status, Header: make(http.Header), Body: io.NopCloser(bytes.NewBufferString("error document")), Request: req}, nil
 }
 
-type recordingTransport struct{ requests []*http.Request }
+type recordingTransport struct {
+	requests        []*http.Request
+	responseHeaders http.Header
+}
 
 func (t *recordingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	t.requests = append(t.requests, req.Clone(req.Context()))
-	return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(bytes.NewReader(nil)), Request: req}, nil
+	headers := t.responseHeaders.Clone()
+	if headers == nil {
+		headers = make(http.Header)
+	}
+	return &http.Response{StatusCode: 200, Header: headers, Body: io.NopCloser(bytes.NewReader(nil)), Request: req}, nil
 }
 
 type criticalCHTransport struct {
@@ -182,7 +189,8 @@ func TestBrowserRequestHeadersDeriveFromResourceType(t *testing.T) {
 
 func TestScriptInitiatedPOSTDerivesOriginFromCanonicalSource(t *testing.T) {
 	l := NewLoader(testEnvironment, NewCookieStore(), trace.New())
-	transport := &recordingTransport{}
+	// The origin assertion uses a cross-origin XHR, whose server must opt in.
+	transport := &recordingTransport{responseHeaders: http.Header{"Access-Control-Allow-Origin": {"https://app.example.test"}}}
 	l.SetTransport(transport)
 	source, _ := url.Parse("https://app.example.test/path")
 	target, _ := url.Parse("https://api.example.test/submit")

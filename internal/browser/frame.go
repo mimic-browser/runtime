@@ -77,7 +77,7 @@ func (r *Realm) ensureChildFrameInternal(elementID int64, shadowConnected, sched
 		if scheduleNavigation {
 			r.scheduleChildFrameNavigation(frame, elementID)
 		}
-		return frame, nil
+		return frame, r.publishWindowFrameIndices()
 	}
 	node, ok := r.document.Get(elementID)
 	if !ok || node.TagName != "IFRAME" || (node.Parent == 0 && !shadowConnected) {
@@ -114,6 +114,9 @@ func (r *Realm) ensureChildFrameInternal(elementID int64, shadowConnected, sched
 	parent.children[frame.ID] = frame
 	page.mu.Unlock()
 	r.childFrames[elementID] = frame
+	if err := r.publishWindowFrameIndices(); err != nil {
+		return nil, err
+	}
 	page.commitHistory(frame, blank, true, nil)
 	page.trace.Add(trace.Lifecycle, "frameAttached", map[string]any{"frameId": frame.ID, "parentFrameId": parent.ID, "elementNodeId": elementID, "realm": realm.ID, "initialContext": scheduleNavigation})
 	if scheduleNavigation {
@@ -373,7 +376,7 @@ func (r *Realm) commitChildFrameNavigation(ctx context.Context, navigation *chil
 	if navigation.performanceOrigin.IsZero() {
 		navigation.performanceOrigin = p.ClockNow()
 	}
-	realm, err := newRealmStateWithNavigation(p, navigation.frame, document, documentURL, false, navigation.performanceOrigin, navigation.loaderID, res.Headers.Get("Permissions-Policy"))
+	realm, err := newRealmStateWithNavigation(p, navigation.frame, document, documentURL, true, navigation.performanceOrigin, navigation.loaderID, realmNavigationPolicies{permissionsPolicy: res.Headers.Get("Permissions-Policy"), originAgentCluster: res.Headers.Get("Origin-Agent-Cluster")})
 	if err != nil {
 		r.finishChildNavigation(navigation)
 		return err
@@ -552,11 +555,27 @@ func (r *Realm) detachChildFrame(elementID int64) {
 		delete(frame.parent.children, frame.ID)
 	}
 	page.mu.Unlock()
+	if err := r.publishWindowFrameIndices(); err != nil {
+		page.trace.Add(trace.Error, "windowFrameIndexPublicationFailed", map[string]any{"error": err.Error()})
+	}
 	// Removing an iframe detaches its browsing context from the active frame
 	// tree, but references to its WindowProxy/functions keep the Window/Realm
 	// alive. Index it for lookup; owner collection traces only exported references.
 	r.retainedFrames[frame.ID] = frame
 	page.trace.Add(trace.Lifecycle, "frameDetached", map[string]any{"frameId": frame.ID, "elementNodeId": elementID})
+}
+
+// Reflect the canonical connected frame tree at the mutation boundary. Reading
+// Window.length must not be necessary to refresh indexed Window properties.
+func (r *Realm) publishWindowFrameIndices() error {
+	if r.frameIndexNotifier == nil {
+		return nil
+	}
+	// Retained detached Windows can initialize their language projection after
+	// resource cancellation. This publication performs no resource operation.
+	value, err := r.runtime.Call(context.Background(), r.frameIndexNotifier, nil)
+	releaseRuntimeValues(r.runtime, value)
+	return err
 }
 
 func (r *Realm) evalInFrame(ctx context.Context, frameID, source string) (engine.Value, error) {

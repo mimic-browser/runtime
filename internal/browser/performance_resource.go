@@ -75,7 +75,10 @@ func performanceResourceEntry(data map[string]any, origin time.Time, securityOri
 	if original, ok := data["performanceURL"].(string); ok && original != "" {
 		name = original
 	}
-	if strings.HasPrefix(resourceURL, "blob:") {
+	// Local URL loads do not create Resource Timing entries in Chrome 152.
+	// Keep this at the shared projection boundary: fetch and browser-owned
+	// resources must agree, regardless of when their completion is observed.
+	if strings.HasPrefix(resourceURL, "blob:") || strings.HasPrefix(resourceURL, "data:") {
 		return nil
 	}
 	start := origin

@@ -36,6 +36,7 @@ import (
 )
 
 type Realm struct {
+	agentClusters            *agentClusterState
 	blitz                    *blitzDocument
 	blitzInputs              engine.Value
 	blitzCalls               map[string]blitzCallStat
@@ -140,6 +141,7 @@ type Realm struct {
 	messageReceiver          engine.Value
 	messagePortReceiver      engine.Value
 	frameLoadDispatcher      engine.Value
+	frameIndexNotifier       engine.Value
 	resourceEventDispatcher  engine.Value
 	performanceNotifier      engine.Value
 	domQueryCallback         engine.Value
@@ -166,6 +168,8 @@ type Realm struct {
 	preloadedModuleLinks     map[int64]bool
 	imageLoads               map[int64]*imageLoad
 	mediaLoads               map[int64]*mediaLoad
+	mediaSources             map[string]*mediaSource
+	mediaSourceNotifier      engine.Value
 	availableImages          *availableImageCache
 	preloads                 map[preloadKey]*resourcePreload
 	preloadsMu               sync.Mutex
@@ -251,6 +255,11 @@ func (r *Realm) securityState() documentSecurity {
 	if r.documentSecurity != nil {
 		security.permissionsPolicy = r.documentSecurity.permissionsPolicy
 	}
+	if r.agentClusters != nil {
+		if choice, exists := r.agentClusters.choice(r.origin); exists {
+			security.originAgentCluster = choice
+		}
+	}
 	if allow, declared := hintPolicy(security.permissionsPolicy, r.origin)["cross-origin-isolated"]; declared && !hintAllows(allow, r.origin) {
 		security.crossOriginIsolated = false
 	}
@@ -275,7 +284,9 @@ func (r *Realm) isolationDelegated(frame *Frame) bool {
 }
 
 func newRealm(p *Page, agent ExecutionAgent, d *dom.Document, u *url.URL) (*Realm, error) {
-	return newRealmState(p, agent, d, u, false)
+	// Commit canonical document and parser state before materializing language
+	// bindings. External script transport must not wait for cold JS admission.
+	return newRealmState(p, agent, d, u, true)
 }
 
 func newRealmState(p *Page, agent ExecutionAgent, d *dom.Document, u *url.URL, deferred bool) (*Realm, error) {
@@ -286,7 +297,12 @@ func newRealmState(p *Page, agent ExecutionAgent, d *dom.Document, u *url.URL, d
 	return newRealmStateWithNavigation(p, agent, d, u, deferred, origin, loaderID)
 }
 
-func newRealmStateWithNavigation(p *Page, agent ExecutionAgent, d *dom.Document, u *url.URL, deferred bool, performanceOrigin time.Time, loaderID string, permissionsPolicy ...string) (*Realm, error) {
+type realmNavigationPolicies struct {
+	permissionsPolicy  string
+	originAgentCluster string
+}
+
+func newRealmStateWithNavigation(p *Page, agent ExecutionAgent, d *dom.Document, u *url.URL, deferred bool, performanceOrigin time.Time, loaderID string, policies ...realmNavigationPolicies) (*Realm, error) {
 	// Every child document, including a navigation replacement, participates
 	// in its tree's authoritative node arena before any IDs are published.
 	if frame, ok := agent.(*Frame); ok && frame.parent != nil && frame.parent.Realm != nil {
@@ -307,14 +323,19 @@ func newRealmStateWithNavigation(p *Page, agent ExecutionAgent, d *dom.Document,
 	if frame, ok := agent.(*Frame); ok && frame.parent == nil {
 		policyHeader = r.securityState().permissionsPolicy
 	}
-	if len(permissionsPolicy) != 0 {
-		policyHeader = permissionsPolicy[0]
+	if len(policies) != 0 {
+		policyHeader = policies[0].permissionsPolicy
 	}
 	// about:blank inherits its creator's origin before installing realm state.
 	if frame, ok := agent.(*Frame); ok && frame.parent != nil && frame.parent.Realm != nil && u.Scheme == "about" && (u.Opaque == "blank" || u.Opaque == "srcdoc") {
 		r.origin = frame.parent.Realm.origin
 		r.policy = append(csp.PolicySet(nil), frame.parent.Realm.contentPolicy()...)
 	}
+	clusterHeader := ""
+	if len(policies) != 0 {
+		clusterHeader = policies[0].originAgentCluster
+	}
+	r.initializeAgentCluster(clusterHeader)
 	r.initializeClientHints(policyHeader)
 	r.updateSelectorTarget(u.Fragment)
 	if deferred {
@@ -505,6 +526,9 @@ func (r *Realm) Close() error {
 		return nil
 	}
 	r.closed = true
+	r.deactivateMediaSources()
+	r.stopMediaLoads()
+	r.agent.Page().ctx.network.RevokeBlobsForOwner(r.ID)
 	r.reportBlitzCalls()
 	var nativeCloseErr error
 	if r.blitz != nil {
@@ -558,6 +582,8 @@ func (r *Realm) Close() error {
 	r.preparedModules = nil
 	r.imageLoads = nil
 	r.mediaLoads = nil
+	r.mediaSources = nil
+	r.mediaSourceNotifier = nil
 	r.availableImages = nil
 	r.fontChoices = nil
 	r.textShapeCache = nil
@@ -790,11 +816,26 @@ func (r *Realm) packedFn(f engine.Function, signature string) any {
 	return r.transientFn(f)
 }
 func (r *Realm) install() error {
+	if native, ok := r.runtime.(engine.RealmSecurityRuntime); ok {
+		if err := native.SetSecurityOrigin(r.nativeSecurityOrigin()); err != nil {
+			return err
+		}
+	}
 	err := r.installBindings()
 	if err != nil && r.bootstrapRestored && r.agent.Page().ctx.lifetime.Err() == nil {
 		return r.retryBootstrap(err)
 	}
 	return err
+}
+
+func (r *Realm) nativeSecurityOrigin() string {
+	if r.origin != "" && r.origin != "null" {
+		return r.origin
+	}
+	if frame, ok := r.agent.(*Frame); ok && frame.parent != nil && frame.parent.Realm != nil && r.url.Scheme == "about" && (r.url.Opaque == "blank" || r.url.Opaque == "srcdoc") {
+		return frame.parent.Realm.nativeSecurityOrigin()
+	}
+	return "opaque:" + r.ID
 }
 
 func (r *Realm) installBindings() error {
@@ -1871,7 +1912,13 @@ func (r *Realm) installBindingsOnOwner() error {
 		if err := r.document.RemoveNode(int64(numarg(a, 0)), childID); err != nil {
 			return nil, err
 		}
-		r.detachChildFrame(childID)
+		// Removing a container disconnects all embedded browsing contexts in
+		// its subtree, not only an iframe which is the removed node itself.
+		for elementID := range r.childFrames {
+			if r.document.Contains(childID, elementID) {
+				r.detachChildFrame(elementID)
+			}
+		}
 		return nil, nil
 	}, "nn")
 	host["prepareNodeRemoval"] = r.packedFn(func(_ engine.Value, a []engine.Value) (engine.Value, error) {
@@ -1897,6 +1944,7 @@ func (r *Realm) installBindingsOnOwner() error {
 		r.updateMedia(int64(numarg(a, 0)), true)
 		return nil, nil
 	}, "n")
+	r.installMediaSourceHosts(host)
 	host["mediaCurrentSrc"] = r.packedFn(func(_ engine.Value, a []engine.Value) (engine.Value, error) {
 		load := r.mediaLoads[int64(numarg(a, 0))]
 		if load == nil {
@@ -1906,7 +1954,13 @@ func (r *Realm) installBindingsOnOwner() error {
 	}, "n")
 	host["setTextContent"] = r.transientFn(func(_ engine.Value, a []engine.Value) (engine.Value, error) {
 		id := int64(numarg(a, 0))
-		if err := r.document.SetTextContent(id, strarg(a, 1)); err != nil {
+		var err error
+		if len(a) > 2 {
+			err = r.document.SetTextContentJSON(id, strarg(a, 2))
+		} else {
+			err = r.document.SetTextContent(id, strarg(a, 1))
+		}
+		if err != nil {
 			return nil, err
 		}
 		return nil, r.prepareChangedScript(id)
@@ -2081,8 +2135,13 @@ func (r *Realm) installBindingsOnOwner() error {
 	r.installWindowExceptionReporting(host)
 	host["createWorker"] = r.fn(r.hostCreateWorker)
 	host["createObjectURL"] = r.fn(func(_ engine.Value, a []engine.Value) (engine.Value, error) {
+		// Chrome returns the empty string when a retained function is called
+		// after its document's execution context has been deactivated.
+		if r.inactive || r.closed {
+			return r.val(""), nil
+		}
 		raw := "blob:" + r.origin + "/" + uuid.NewString()
-		p.ctx.network.PutBlob(raw, byteSlice(arg(a, 0)), strarg(a, 1))
+		p.ctx.network.PutBlob(raw, byteSlice(arg(a, 0)), strarg(a, 1), r.ID)
 		return r.val(raw), nil
 	})
 	host["revokeObjectURL"] = r.fn(func(_ engine.Value, a []engine.Value) (engine.Value, error) {
@@ -2334,11 +2393,15 @@ func (r *Realm) installBindingsOnOwner() error {
 	}
 	r.messagePortReceiver = r.runtime.Get("__receiveMessagePort")
 	r.frameLoadDispatcher = r.runtime.Get("__mimicDispatchFrameLoad")
+	r.frameIndexNotifier = r.runtime.Get("__mimicSyncWindowFrames")
+	if err := r.publishWindowFrameIndices(); err != nil {
+		return err
+	}
 	r.resourceEventDispatcher = r.runtime.Get("__mimicDispatchResourceEvent")
 	r.performanceNotifier = r.runtime.Get("__mimicNotifyPerformanceObservers")
-	_, err = r.runtime.Eval(context.Background(), `delete globalThis.__mimic;delete globalThis.__mimicLazySurface;delete globalThis.__mimicRestoreBootstrap;delete globalThis.__mimicUnsupportedProbe;delete globalThis.__receiveFrameMessage;delete globalThis.__receiveMessagePort;delete globalThis.__mimicDispatchFrameLoad;delete globalThis.__mimicDispatchResourceEvent;delete globalThis.__mimicNotifyPerformanceObservers`, "mimic:hide-internals")
+	_, err = r.runtime.Eval(context.Background(), `delete globalThis.__mimic;delete globalThis.__mimicLazySurface;delete globalThis.__mimicRestoreBootstrap;delete globalThis.__mimicUnsupportedProbe;delete globalThis.__receiveFrameMessage;delete globalThis.__receiveMessagePort;delete globalThis.__mimicDispatchFrameLoad;delete globalThis.__mimicSyncWindowFrames;delete globalThis.__mimicDispatchResourceEvent;delete globalThis.__mimicNotifyPerformanceObservers`, "mimic:hide-internals")
 	if err == nil {
-		r.debuggerFactory, err = r.runtime.Eval(context.Background(), debuggerFactorySource, "mimic:debugger-intrinsics")
+		r.debuggerFactory, err = evalPlatformExpression(r.runtime, debuggerFactorySource, "mimic:debugger-intrinsics")
 	}
 	if err == nil {
 		err = r.installDebuggerBindings()
@@ -2532,6 +2595,9 @@ func (r *Realm) hostFetch(_ engine.Value, a []engine.Value) (engine.Value, error
 		return promise.Value, nil
 	}
 	request := fetchRequest(r.agent.ContextID(), u, r.documentURL(), a)
+	request.ContentPolicyDirective = "connect-src"
+	request.ContentPolicy = r.contentPolicy()
+	request.ContentPolicyURL = r.documentURL()
 	r.applyClientHints(&request)
 	loadContext, cancel := context.WithCancel(r.resourceContext)
 	if requestID != "" {
@@ -2587,7 +2653,11 @@ func (r *Realm) hostXHR(_ engine.Value, a []engine.Value) (engine.Value, error) 
 		headers.Set("Content-Type", xhrStringContentType(headers.Get("Content-Type")))
 	}
 	timeout := time.Duration(numarg(a, 5)) * time.Millisecond
-	request := network.Request{ContextID: r.agent.ContextID(), URL: u, Referrer: r.documentURL(), SourceURL: r.documentURL(), Method: strarg(a, 1), Headers: headers, AuthorHeaderOrder: authorHeaderOrder, Body: body, Initiator: network.XHR, Credentials: "same-origin"}
+	request := network.Request{ContextID: r.agent.ContextID(), URL: u, Referrer: r.documentURL(), SourceURL: r.documentURL(), Method: strarg(a, 1), Headers: headers, AuthorHeaderOrder: authorHeaderOrder, Body: body, Initiator: network.XHR, Mode: "cors", Credentials: "same-origin"}
+	request.ContentPolicyDirective = "connect-src"
+	request.ContentPolicy = r.contentPolicy()
+	request.ContentPolicyURL = r.documentURL()
+	request.CORSPreflightRequired, _ = arg(a, 10).(bool)
 	if value, ok := arg(a, 7).(bool); ok && value {
 		request.Credentials = "include"
 	}
@@ -2760,6 +2830,19 @@ func (r *Realm) prepareConnectedResource(childID int64, loadCallback, errorCallb
 		r.preloadModules()
 		return nil, nil
 	}
+	if tag == "LINK" {
+		relation := node.Attributes["rel"]
+		// Metadata and unrecognized relations do not acquire an HTTP resource or
+		// dispatch load/error. In particular, alternate language URLs must not
+		// be fetched as stylesheets or change the document's cookie/cache state.
+		if !hasLinkRelation(relation, "stylesheet") && !hasLinkRelation(relation, "icon") &&
+			!hasLinkRelation(relation, "prefetch") && !hasLinkRelation(relation, "manifest") {
+			if hasLinkRelation(relation, "preconnect") || hasLinkRelation(relation, "dns-prefetch") {
+				r.agent.Page().trace.Add(trace.Unsupported, "linkConnectionHint", map[string]any{"realm": r.ID, "nodeId": childID, "rel": relation, "href": src})
+			}
+			return nil, nil
+		}
+	}
 	blockerReason := strings.ToLower(tag) + ":" + src
 	blocksLoad := r.beginLoadBlocker(blockerReason)
 	r.agent.Page().trace.Add(trace.DOM, "dynamicResourceInsertion", map[string]any{"tag": tag, "src": src, "attributes": attrs, "realm": r.ID})
@@ -2874,7 +2957,7 @@ func (r *Realm) prepareConnectedResource(childID int64, loadCallback, errorCallb
 	if tag == "IMG" {
 		initiator = network.Image
 	} else if tag == "LINK" {
-		if strings.Contains(strings.ToLower(fmt.Sprint(attrs["rel"])), "stylesheet") {
+		if hasLinkRelation(node.Attributes["rel"], "stylesheet") {
 			initiator = network.Stylesheet
 		} else {
 			initiator = network.Other

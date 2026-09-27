@@ -54,6 +54,7 @@ func (p *Page) isolatedWorld(ctx context.Context, main *Realm, name string) (*Re
 	world.childFrames = main.childFrames
 	world.retainedFrames = main.retainedFrames
 	world.documentSecurity = main.documentSecurity
+	world.agentClusters = main.agentClusters
 	world.documentReferrer, world.referrerPolicy = main.documentReferrer, main.referrerPolicy
 	world.navigationURL, world.navigationType = main.navigationURL, main.navigationType
 	world.navigationLoadEnd, world.loadCompleted = main.navigationLoadEnd, main.loadCompleted

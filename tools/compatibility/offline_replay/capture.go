@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -36,6 +37,9 @@ type fixture struct {
 	// inference, not another recorded network response.
 	UnavailableBody   bool `json:"unavailableBody,omitempty"`
 	CriticalRetryCopy bool `json:"criticalRetryCopy,omitempty"`
+	// Data URL loads can emit only a local response. No wire method or
+	// request headers are inferred from that response.
+	ResponseOnlyLocal bool `json:"responseOnlyLocal,omitempty"`
 }
 
 type capture struct {
@@ -84,10 +88,16 @@ func readCapture(dir string) (*capture, error) {
 			retries[id]++
 		case "response", "failed":
 			rrs := requests[id]
+			responseOnly := false
 			if len(rrs) == 0 {
-				return nil, fmt.Errorf("network outcome %d has no request", event.Sequence)
+				local, ok := responseOnlyDataRequest(event)
+				if !ok {
+					return nil, fmt.Errorf("network outcome %d has no request", event.Sequence)
+				}
+				rrs = []recordedRequest{local}
+				responseOnly = true
 			}
-			f := &fixture{Index: -1, Request: rrs[len(rrs)-1]}
+			f := &fixture{Index: -1, Request: rrs[len(rrs)-1], ResponseOnlyLocal: responseOnly}
 			if event.Name == "failed" {
 				f.Failure = stringField(d, "error")
 			} else {
@@ -169,6 +179,15 @@ func readCapture(dir string) (*capture, error) {
 		}
 	}
 	return c, nil
+}
+
+func responseOnlyDataRequest(event trace.Event) (recordedRequest, bool) {
+	d := event.Data
+	u, err := url.Parse(stringField(d, "url"))
+	if event.Name != "response" || !boolField(d, "synthetic") || err != nil || u.Scheme != "data" || stringField(d, "id") == "" || stringField(d, "context") == "" || stringField(d, "initiator") == "" {
+		return recordedRequest{}, false
+	}
+	return recordedRequest{ID: stringField(d, "id"), URL: u.String(), Context: stringField(d, "context"), Initiator: stringField(d, "initiator"), Sequence: event.Sequence}, true
 }
 
 func stringField(m map[string]any, k string) string {

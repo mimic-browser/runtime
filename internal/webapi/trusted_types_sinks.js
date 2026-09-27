@@ -165,10 +165,10 @@ const trustedDocumentWrite = (receiver, args, name) => {
       node?.nodeType === 3 ? (node.textContent || '').length : node?.childNodes?.length || 0;
     const checkedBoundary = (state, node, offset) => {
       if (!(node instanceof Node) || (node.ownerDocument !== state.owner && node !== state.owner))
-        throw new DOMException('The node is not in this document.', 'WrongDocumentError');
+        throw platformDOMException('The node is not in this document.', 'WrongDocumentError');
       const value = Number(offset) >>> 0;
       if (value > boundaryLength(node))
-        throw new DOMException('The offset is larger than the node length.', 'IndexSizeError');
+        throw platformDOMException('The offset is larger than the node length.', 'IndexSizeError');
       return value;
     };
     const commonAncestor = (a, b) => {
@@ -345,9 +345,9 @@ const trustedDocumentWrite = (receiver, args, name) => {
       const state = rangeState(this);
       if (!arguments.length) throw new TypeError('Not enough arguments');
       if (!(node instanceof Node) || node.ownerDocument !== state.owner)
-        throw new DOMException('The node is not in this document.', 'WrongDocumentError');
+        throw platformDOMException('The node is not in this document.', 'WrongDocumentError');
       const parent = node.parentNode;
-      if (!parent) throw new DOMException('The node has no parent.', 'InvalidNodeTypeError');
+      if (!parent) throw platformDOMException('The node has no parent.', 'InvalidNodeTypeError');
       const index = Array.from(parent.childNodes).indexOf(node);
       state.nodes = [node];
       state.startContainer = parent;
@@ -360,7 +360,7 @@ const trustedDocumentWrite = (receiver, args, name) => {
       const state = rangeState(this);
       if (!arguments.length) throw new TypeError('Not enough arguments');
       if (!(node instanceof Node) || (node.ownerDocument !== state.owner && node !== state.owner))
-        throw new DOMException('The node is not in this document.', 'WrongDocumentError');
+        throw platformDOMException('The node is not in this document.', 'WrongDocumentError');
       state.nodes =
         node instanceof Document
           ? [node.documentElement].filter(Boolean)
@@ -399,7 +399,7 @@ const trustedDocumentWrite = (receiver, args, name) => {
     const setAround = (receiver, node, start, after) => {
       const state = rangeState(receiver);
       if (!node?.parentNode)
-        throw new DOMException('The node has no parent.', 'InvalidNodeTypeError');
+        throw platformDOMException('The node has no parent.', 'InvalidNodeTypeError');
       const parent = node.parentNode,
         index = Array.from(parent.childNodes).indexOf(node) + (after ? 1 : 0);
       if (start) {
@@ -475,7 +475,8 @@ const trustedDocumentWrite = (receiver, args, name) => {
         before = parent.splitText(state.startOffset);
         parent = parent.parentNode;
       } else before = parent.childNodes[state.startOffset] || null;
-      if (!parent) throw new DOMException('The boundary has no parent.', 'HierarchyRequestError');
+      if (!parent)
+        throw platformDOMException('The boundary has no parent.', 'HierarchyRequestError');
       parent.insertBefore(node, before);
       refresh(state);
     });
@@ -528,7 +529,7 @@ const trustedDocumentWrite = (receiver, args, name) => {
           'SharedWorker constructor',
           "Failed to construct 'SharedWorker': ",
         );
-        throw new DOMException('SharedWorker execution is unsupported.', 'NotSupportedError');
+        throw platformDOMException('SharedWorker execution is unsupported.', 'NotSupportedError');
       }
     };
     markNative(SharedWorker, 'SharedWorker');

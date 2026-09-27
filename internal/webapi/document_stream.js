@@ -6,7 +6,7 @@
     const reference = referenceGet(value);
     if (reference?.document) return reference;
     if (value instanceof Document)
-      throw new DOMException(
+      throw platformDOMException(
         'Document streaming requires an active HTML document.',
         'InvalidStateError',
       );
@@ -15,12 +15,12 @@
   const invoke = (receiver, operation, source = '') => {
     const owner = frameOf(receiver);
     const result = host.documentStream(owner.frame, operation, source, owner.realm);
-    if (result?.error) throw new DOMException(result.error, result.name || 'InvalidStateError');
+    if (result?.error) throw platformDOMException(result.error, result.name || 'InvalidStateError');
   };
   const methods = {
     open(...args) {
       if (args.length >= 3)
-        throw new DOMException('The window.open overload is unsupported.', 'NotSupportedError');
+        throw platformDOMException('The window.open overload is unsupported.', 'NotSupportedError');
       invoke(this, 'open');
       return this;
     },

@@ -19,7 +19,7 @@
         if (owner[name] === undefined)
           Object.defineProperty(owner, name, { value, enumerable: true });
   const syntax = () => {
-    throw new DOMException('The string is not a valid XPath expression.', 'SyntaxError');
+    throw platformDOMException('The string is not a valid XPath expression.', 'SyntaxError');
   };
   const quoted = (value) => {
     value = value.trim();
@@ -66,7 +66,7 @@
         context instanceof DocumentFragment
       )
     )
-      throw new DOMException('The node provided is not supported.', 'NotSupportedError');
+      throw platformDOMException('The node provided is not supported.', 'NotSupportedError');
     const name = match[2].toLowerCase();
     let nodes = descendants(context).filter((node) => name === '*' || node.localName === name),
       rest = match[3];
@@ -87,7 +87,10 @@
     type = Number(type) >>> 0;
     if (type === 0) type = 4;
     if (![4, 5, 6, 7, 8, 9].includes(type))
-      throw new DOMException('The result type is not supported for this expression.', 'TypeError');
+      throw platformDOMException(
+        'The result type is not supported for this expression.',
+        'TypeError',
+      );
     let cursor = 0;
     const value = Object.create(globalThis.XPathResult?.prototype || Object.prototype);
     Object.defineProperties(value, {

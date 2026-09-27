@@ -86,7 +86,7 @@
         const width = dimension('width');
         const state = host.pictureInPictureState();
         const fail = (text) =>
-          new DOMException(
+          platformDOMException(
             "Failed to execute 'requestWindow' on 'DocumentPictureInPicture': " + text,
             'NotAllowedError',
           );
@@ -104,7 +104,7 @@
           );
         const id = host.openPictureInPicture(width, height),
           w = remoteWindow(id);
-        return new Promise((resolve) =>
+        return new platformPromise((resolve) =>
           host.enqueueWebTask(
             () => {
               dispatchNative(pip, new DocumentPictureInPictureEvent('enter', { window: w }));
@@ -116,7 +116,7 @@
           ),
         );
       } catch (e) {
-        return Promise.reject(e);
+        return platformPromiseReject(e);
       }
     };
     markNative(requestWindow, 'requestWindow');

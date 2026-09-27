@@ -57,7 +57,7 @@ const canvasCompatibilityState = (() => {
     factories = new Map(),
     token = {};
   const fail = (name, message) => {
-    throw new DOMException(message, name);
+    throw platformDOMException(message, name);
   };
   const uint = (value) => {
     value = Number(value);

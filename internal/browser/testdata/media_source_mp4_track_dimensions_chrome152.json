@@ -1,0 +1,88 @@
+{
+  "captureMetadata": {
+    "schemaVersion": 1,
+    "chromeVersion": "152.0.7977.82",
+    "chromiumRevision": 1669021,
+    "chromiumCommit": "d04cdb24d67b081f6cf80200ffc5233f44b61109",
+    "v8Version": "15.2.124.21",
+    "platform": "windows-x64",
+    "browserMode": "headful",
+    "commandLineFeatureOverrides": [],
+    "environmentProfileId": "chrome-152-windows-x64-headful-controlled-v1",
+    "profileFreshness": "fresh-controlled",
+    "viewport": {
+      "width": 1272,
+      "height": 653,
+      "deviceScaleFactor": 1
+    },
+    "window": {
+      "left": 593,
+      "top": 328,
+      "width": 1280,
+      "height": 800,
+      "windowState": "normal"
+    },
+    "secureContextState": true,
+    "isolationState": false,
+    "visibilityState": "visible",
+    "hasFocus": true
+  },
+  "fixtureOrigin": "http://127.0.0.1:19408",
+  "fixture": "internal/browser/testdata/media_source_mp4_track_dimensions_oracle.js",
+  "fixtureSHA256": "88635b5f4c674bc398045be9a41861beb33eca407f3dfc3289f5f645063b889b",
+  "worker": false,
+  "result": {
+    "result": {
+      "type": "object",
+      "value": {
+        "events": [
+          {
+            "name": "updatestart",
+            "trusted": true
+          },
+          {
+            "name": "update",
+            "trusted": true
+          },
+          {
+            "name": "updateend",
+            "trusted": true
+          },
+          {
+            "name": "updatestart",
+            "trusted": true
+          },
+          {
+            "name": "update",
+            "trusted": true
+          },
+          {
+            "name": "updateend",
+            "trusted": true
+          }
+        ],
+        "partial": {
+          "updating": false,
+          "active": 0,
+          "duration": "NaN",
+          "readyState": 0,
+          "videoDuration": "NaN",
+          "width": 0,
+          "height": 0,
+          "ranges": 0
+        },
+        "complete": {
+          "updating": false,
+          "active": 1,
+          "duration": "Infinity",
+          "readyState": 1,
+          "videoDuration": "Infinity",
+          "width": 16,
+          "height": 24,
+          "ranges": 0
+        },
+        "activeIdentity": true
+      }
+    }
+  }
+}

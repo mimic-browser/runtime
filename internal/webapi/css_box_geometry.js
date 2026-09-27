@@ -48,7 +48,7 @@ const cssBoxModel = (() => {
     textContent = (element) => {
       const cache = styleReadCache.textContents || (styleReadCache.textContents = new WeakMap());
       if (cache.has(element)) return cache.get(element);
-      const value = host.textContent(elementSlot(element).nodeId);
+      const value = canonicalTextContent(elementSlot(element).nodeId);
       cache.set(element, value);
       return value;
     };

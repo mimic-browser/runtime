@@ -362,6 +362,8 @@ func (r *Realm) crossFrameResult(target *Realm, operation func(context.Context) 
 		// Local argument references already execute on this owner. Suspending
 		// its callback and starting a cooperating goroutine adds no ordering.
 		err = run(context.Background())
+	} else if calls, ok := r.runtime.(engine.RealmCallRuntime); ok {
+		err = calls.RunRealmCall(context.Background(), target.runtime, run)
 	} else if nested, ok := r.runtime.(engine.ReentrantRuntime); ok {
 		err = nested.RunNested(context.Background(), run)
 	} else {
@@ -409,56 +411,232 @@ type frameReflection struct {
 
 // Capture intrinsics before document scripts can replace Reflect or Symbol.
 // Reflection uses the remote canonical object, never exported object copies.
-const frameReflectionSource = `(()=>{
- const create=Object.create,descriptorFields=['enumerable','configurable','value','writable','get','set'];
- const arrayIteratorNext=Object.getPrototypeOf([][Symbol.iterator]()).next,freshIteratorResults=new WeakSet(),freshAdd=WeakSet.prototype.add,freshDelete=WeakSet.prototype.delete;
- const ids=new WeakMap(),weakGet=WeakMap.prototype.get,weakSet=WeakMap.prototype.set,P=Proxy,isArray=Array.isArray,integer=BigInt,keys=Reflect.ownKeys,descriptor=Reflect.getOwnPropertyDescriptor,get=Reflect.get,set=Reflect.set,define=Reflect.defineProperty,remove=Reflect.deleteProperty,contains=Reflect.has,prototype=Reflect.getPrototypeOf,construct=Reflect.construct,apply=Reflect.apply,has=Object.prototype.hasOwnProperty,S=Symbol,forKey=Symbol.for,keyFor=Symbol.keyFor,description=descriptor(Symbol.prototype,'description').get;
- const wellKnown=[],names=keys(Symbol);for(let i=0;i<names.length;i++){const name=names[i];if(typeof Symbol[name]==='symbol')wellKnown[wellKnown.length]=[name,Symbol[name]]}
- const info=key=>{if(typeof key==='string')return{kind:'string',value:key};const result={kind:'symbol',key,description:apply(description,key,[])};for(let i=0;i<wellKnown.length;i++)if(wellKnown[i][1]===key){result.wellKnown=wellKnown[i][0];return result}const global=keyFor(key);if(global!==undefined)result.global=global;return result};
- return(op,object,key,value)=>{
-  if(op==='iteratorNext')return object===arrayIteratorNext;
-  if(op==='arrayIteratorStep'){const result=apply(object,key,[]);if(object===arrayIteratorNext)apply(freshAdd,freshIteratorResults,[result]);return result}
-  if(op==='takeIteratorResult')return apply(freshDelete,freshIteratorResults,[object]);
-  if(op==='lookup')return apply(weakGet,ids,[object]);
-  if(op==='handle'){let id=apply(weakGet,ids,[object]);if(id===undefined){id=key;apply(weakSet,ids,[object,id])}return id}
-  if(op==='array')return [];
-  if(op==='object')return create(null);
-  if(op==='shape'){if(typeof object!=='function')return{array:isArray(object)};let constructable=true;try{construct(new P(object,{construct(){return {}}}),[])}catch(error){constructable=false}return{constructable}}
-  if(op==='bigint')return integer(key);
-  if(op==='prototype')return prototype(object);
-  if(op==='apply')return apply(object,key,value);
-  if(op==='applyOutcome'||op==='arrayIteratorOutcome'){
-   let result,threw=false;
-   try{result=apply(object,key,op==='arrayIteratorOutcome'?[]:value);if(op==='arrayIteratorOutcome'&&object===arrayIteratorNext)apply(freshAdd,freshIteratorResults,[result])}catch(error){result=error;threw=true}
-   return{threw,value:result,valueType:typeof result,symbol:typeof result==='symbol'?info(result):null};
+const frameReflectionSource = `(() => {
+  const create = Object.create,
+    descriptorFields = ['enumerable', 'configurable', 'value', 'writable', 'get', 'set'];
+  const arrayIteratorNext = Object.getPrototypeOf([][Symbol.iterator]()).next,
+    freshIteratorResults = new WeakSet(),
+    freshAdd = WeakSet.prototype.add,
+    freshDelete = WeakSet.prototype.delete;
+  const ids = new WeakMap(),
+    weakGet = WeakMap.prototype.get,
+    weakSet = WeakMap.prototype.set,
+    P = Proxy,
+    isArray = Array.isArray,
+    integer = BigInt,
+    keys = Reflect.ownKeys,
+    descriptor = Reflect.getOwnPropertyDescriptor,
+    get = Reflect.get,
+    set = Reflect.set,
+    define = Reflect.defineProperty,
+    remove = Reflect.deleteProperty,
+    contains = Reflect.has,
+    prototype = Reflect.getPrototypeOf,
+    extensible = Reflect.isExtensible,
+    preventExtensions = Reflect.preventExtensions,
+    construct = Reflect.construct,
+    apply = Reflect.apply,
+    has = Object.prototype.hasOwnProperty,
+    S = Symbol,
+    forKey = Symbol.for,
+    keyFor = Symbol.keyFor,
+    description = descriptor(Symbol.prototype, 'description').get;
+  const wellKnown = [],
+    names = keys(Symbol);
+  for (let i = 0; i < names.length; i++) {
+    const name = names[i];
+    if (typeof Symbol[name] === 'symbol') wellKnown[wellKnown.length] = [name, Symbol[name]];
   }
-  if(op==='construct'){let result,threw=false;try{result=construct(object,key,value)}catch(error){result=error;threw=true}return{threw,value:result,valueType:typeof result,symbol:typeof result==='symbol'?info(result):null}}
-  if(op==='key'){if(key.wellKnown!==undefined){for(let i=0;i<wellKnown.length;i++)if(wellKnown[i][0]===key.wellKnown)return wellKnown[i][1]}if(key.global!==undefined)return forKey(key.global);return S(key.description)}
-  if(op==='symbol')return info(object);
-  if(op==='keys'){const source=keys(object),out=[];for(let i=0;i<source.length;i++)out[i]=info(source[i]);return out}
-  if(op==='get'){const value=get(object,key);return{value,valueType:typeof value,symbol:typeof value==='symbol'?info(value):null}}
-  if(op==='mutateDefine'||op==='mutateDelete'){
-    let result,threw=false;
-    try{
-      if(op==='mutateDefine'){
-        // Materialize presence before passing the descriptor to the engine.
-        // goja's descriptor conversion treats a Proxy's missing get/set
-        // (undefined) as present, incorrectly mixing data and accessor fields.
-        const local=create(null);
-        for(let i=0;i<descriptorFields.length;i++){const field=descriptorFields[i];if(contains(value,field))local[field]=get(value,field)}
-        result=define(object,key,local);
-      }else result=remove(object,key);
-    }catch(error){result=error;threw=true}
-    return{threw,value:result,valueType:typeof result,symbol:typeof result==='symbol'?info(result):null}
-  }
-  if(op==='setOutcome'){let result,threw=false;try{result=set(object,key,value)}catch(error){result=error;threw=true}return{threw,value:result,valueType:typeof result,symbol:typeof result==='symbol'?info(result):null}}
-  if(op==='set')return set(object,key,value);
-  if(op==='define')return define(object,key,value);
-  if(op==='delete')return remove(object,key);
-  if(op==='has')return contains(object,key);
-  const d=descriptor(object,key);if(d===undefined)return{exists:false};const accessor=!apply(has,d,['value']);return accessor?{exists:true,accessor:true,enumerable:d.enumerable,configurable:d.configurable,get:d.get,set:d.set}:{exists:true,accessor:false,enumerable:d.enumerable,configurable:d.configurable,writable:d.writable,value:d.value,valueType:typeof d.value,symbol:typeof d.value==='symbol'?info(d.value):null}
- }
-})()`
+  const info = (key) => {
+    if (typeof key === 'string') return { kind: 'string', value: key };
+    const result = { kind: 'symbol', key, description: apply(description, key, []) };
+    for (let i = 0; i < wellKnown.length; i++)
+      if (wellKnown[i][1] === key) {
+        result.wellKnown = wellKnown[i][0];
+        return result;
+      }
+    const global = keyFor(key);
+    if (global !== undefined) result.global = global;
+    return result;
+  };
+  return (op, object, key, value) => {
+    if (op === 'iteratorNext') return object === arrayIteratorNext;
+    if (op === 'arrayIteratorStep') {
+      const result = apply(object, key, []);
+      if (object === arrayIteratorNext) apply(freshAdd, freshIteratorResults, [result]);
+      return result;
+    }
+    if (op === 'takeIteratorResult') return apply(freshDelete, freshIteratorResults, [object]);
+    if (op === 'lookup') return apply(weakGet, ids, [object]);
+    if (op === 'handle') {
+      let id = apply(weakGet, ids, [object]);
+      if (id === undefined) {
+        id = key;
+        apply(weakSet, ids, [object, id]);
+      }
+      return id;
+    }
+    if (op === 'array') return [];
+    if (op === 'object') return create(null);
+    if (op === 'shape') {
+      if (typeof object !== 'function') return { array: isArray(object) };
+      let constructable = true;
+      try {
+        construct(
+          new P(object, {
+            construct() {
+              return {};
+            },
+          }),
+          [],
+        );
+      } catch (error) {
+        constructable = false;
+      }
+      return { constructable };
+    }
+    if (op === 'bigint') return integer(key);
+    if (op === 'prototype') return prototype(object);
+    if (op === 'extensible') return extensible(object);
+    if (op === 'preventExtensionsOutcome') {
+      let value,
+        threw = false;
+      try {
+        value = preventExtensions(object);
+      } catch (error) {
+        value = error;
+        threw = true;
+      }
+      return { threw, value };
+    }
+    if (op === 'apply') return apply(object, key, value);
+    if (op === 'applyOutcome' || op === 'arrayIteratorOutcome') {
+      let result,
+        threw = false;
+      try {
+        result = apply(object, key, op === 'arrayIteratorOutcome' ? [] : value);
+        if (op === 'arrayIteratorOutcome' && object === arrayIteratorNext)
+          apply(freshAdd, freshIteratorResults, [result]);
+      } catch (error) {
+        result = error;
+        threw = true;
+      }
+      return {
+        threw,
+        value: result,
+        valueType: typeof result,
+        symbol: typeof result === 'symbol' ? info(result) : null,
+      };
+    }
+    if (op === 'construct') {
+      let result,
+        threw = false;
+      try {
+        result = construct(object, key, value);
+      } catch (error) {
+        result = error;
+        threw = true;
+      }
+      return {
+        threw,
+        value: result,
+        valueType: typeof result,
+        symbol: typeof result === 'symbol' ? info(result) : null,
+      };
+    }
+    if (op === 'key') {
+      if (key.wellKnown !== undefined) {
+        for (let i = 0; i < wellKnown.length; i++)
+          if (wellKnown[i][0] === key.wellKnown) return wellKnown[i][1];
+      }
+      if (key.global !== undefined) return forKey(key.global);
+      return S(key.description);
+    }
+    if (op === 'symbol') return info(object);
+    if (op === 'keys') {
+      const source = keys(object),
+        out = [];
+      for (let i = 0; i < source.length; i++) out[i] = info(source[i]);
+      return out;
+    }
+    if (op === 'get') {
+      const value = get(object, key);
+      return {
+        value,
+        valueType: typeof value,
+        symbol: typeof value === 'symbol' ? info(value) : null,
+      };
+    }
+    if (op === 'mutateDefine' || op === 'mutateDelete') {
+      let result,
+        threw = false;
+      try {
+        if (op === 'mutateDefine') {
+          // Materialize presence before passing the descriptor to the engine.
+          // goja's descriptor conversion treats a Proxy's missing get/set
+          // (undefined) as present, incorrectly mixing data and accessor fields.
+          const local = create(null);
+          for (let i = 0; i < descriptorFields.length; i++) {
+            const field = descriptorFields[i];
+            if (contains(value, field)) local[field] = get(value, field);
+          }
+          result = define(object, key, local);
+        } else result = remove(object, key);
+      } catch (error) {
+        result = error;
+        threw = true;
+      }
+      return {
+        threw,
+        value: result,
+        valueType: typeof result,
+        symbol: typeof result === 'symbol' ? info(result) : null,
+      };
+    }
+    if (op === 'setOutcome') {
+      let result,
+        threw = false;
+      try {
+        result = set(object, key, value);
+      } catch (error) {
+        result = error;
+        threw = true;
+      }
+      return {
+        threw,
+        value: result,
+        valueType: typeof result,
+        symbol: typeof result === 'symbol' ? info(result) : null,
+      };
+    }
+    if (op === 'set') return set(object, key, value);
+    if (op === 'define') return define(object, key, value);
+    if (op === 'delete') return remove(object, key);
+    if (op === 'has') return contains(object, key);
+    const d = descriptor(object, key);
+    if (d === undefined) return { exists: false };
+    const accessor = !apply(has, d, ['value']);
+    return accessor
+      ? {
+          exists: true,
+          accessor: true,
+          enumerable: d.enumerable,
+          configurable: d.configurable,
+          get: d.get,
+          set: d.set,
+        }
+      : {
+          exists: true,
+          accessor: false,
+          enumerable: d.enumerable,
+          configurable: d.configurable,
+          writable: d.writable,
+          value: d.value,
+          valueType: typeof d.value,
+          symbol: typeof d.value === 'symbol' ? info(d.value) : null,
+        };
+  };
+})();`
 
 // Classify references in JavaScript, where the canonical WeakMap, intrinsics
 // and wrappers live. Only the first export of an object needs a host retention
@@ -502,7 +680,7 @@ const frameValueEncoderSource = `((describe,node,reflect,retain,symbol,frame,rea
 })`
 
 func (r *Realm) installFrameValueEncoder(parentNodeGetter engine.Value) error {
-	factory, err := r.runtime.Eval(context.Background(), frameValueEncoderSource, "mimic:frame-value-encoder")
+	factory, err := evalPlatformExpression(r.runtime, frameValueEncoderSource, "mimic:frame-value-encoder")
 	if err != nil {
 		return err
 	}
@@ -521,7 +699,7 @@ func (r *Realm) installFrameValueEncoder(parentNodeGetter engine.Value) error {
 }
 
 func (r *Realm) installFrameReflection(host map[string]any) {
-	operation, err := r.runtime.Eval(context.Background(), frameReflectionSource, "mimic:frame-reflection")
+	operation, err := evalPlatformExpression(r.runtime, frameReflectionSource, "mimic:frame-reflection")
 	r.frameReflection = &frameReflection{operation: operation, err: err, symbolSources: make(map[string]int64), symbolOrigins: make(map[int64]map[string]any)}
 	host["frameMutateProperty"] = r.fn(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
 		target, err := r.referenceRealm(strarg(args, 0), strarg(args, 5))
@@ -786,6 +964,8 @@ func (r *Realm) crossFrameData(target *Realm, operation func(context.Context) (a
 	var err error
 	if target == r {
 		err = run(context.Background())
+	} else if calls, ok := r.runtime.(engine.RealmCallRuntime); ok {
+		err = calls.RunRealmCall(context.Background(), target.runtime, run)
 	} else if nested, ok := r.runtime.(engine.ReentrantRuntime); ok {
 		err = nested.RunNested(context.Background(), run)
 	} else {

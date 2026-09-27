@@ -1,0 +1,69 @@
+{
+  "captureMetadata": {
+    "schemaVersion": 1,
+    "chromeVersion": "152.0.7977.82",
+    "chromiumRevision": 1669021,
+    "chromiumCommit": "d04cdb24d67b081f6cf80200ffc5233f44b61109",
+    "v8Version": "15.2.124.21",
+    "platform": "windows-x64",
+    "browserMode": "headful",
+    "commandLineFeatureOverrides": [],
+    "environmentProfileId": "chrome-152-windows-x64-headful-local-probe-reused-v1",
+    "profileFreshness": "fresh-at-original-launch; reused process with a new local fixture document",
+    "viewport": {
+      "width": 1272,
+      "height": 653,
+      "deviceScaleFactor": 1
+    },
+    "window": {
+      "left": 593,
+      "top": 328,
+      "width": 1280,
+      "height": 800,
+      "windowState": "normal"
+    },
+    "secureContextState": true,
+    "isolationState": false,
+    "visibilityState": "visible",
+    "hasFocus": true,
+    "provenanceCorrection": "The helper default fresh-controlled label is corrected here. Original captures are retained unchanged; process was directly launched with a dedicated profile and minimal arguments, then reused for local semantic probes."
+  },
+  "fixtureOrigin": "http://127.0.0.1:41539",
+  "fixture": "internal/browser/testdata/dataset_prototype_oracle.js",
+  "fixtureSHA256": "dd2e44c3ea16799dc8839081432b861edc8fd5009791021270d770a78d06aa5d",
+  "worker": false,
+  "result": {
+    "result": {
+      "type": "object",
+      "value": {
+        "sameObject": true,
+        "hasOwnPropertyType": "function",
+        "hasOwnData": true,
+        "hasOwnMethod": false,
+        "inheritedMethod": true,
+        "inheritedToString": true,
+        "brand": "[object DOMStringMap]",
+        "prototype": true,
+        "prototypeParent": true,
+        "constructor": true,
+        "ownKeys": [
+          "longName"
+        ],
+        "dataIn": true,
+        "methodIn": true,
+        "missingIn": false,
+        "shadowMethod": "shadow",
+        "shadowOwn": true,
+        "restoredMethod": true,
+        "shadowConstructor": "own-constructor",
+        "protoAttribute": "attribute-value",
+        "prototypeUnchanged": true,
+        "canonicalRead": "value",
+        "construct": {
+          "name": "TypeError",
+          "message": "Failed to construct 'DOMStringMap': Illegal constructor"
+        }
+      }
+    }
+  }
+}

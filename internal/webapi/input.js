@@ -286,7 +286,7 @@
     const visit = (node) => {
       for (const child of cssObservationChildren(node)) {
         const slot = elementSlot(child);
-        if (slot?.type === 'text') fragments.push(host.textContent(slot.nodeId));
+        if (slot?.type === 'text') fragments.push(canonicalTextContent(slot.nodeId));
         else if (
           slot?.type === 'element' &&
           !ignored.has(slot.tagName) &&
@@ -546,6 +546,19 @@
     at = (at + (backwards ? -1 : 1) + list.length) % list.length;
     focus(list[at]);
   };
+  const keyboardClick = (target, flags) =>
+    click(target, {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      pointerId: -1,
+      pointerType: '',
+      isPrimary: false,
+      button: 0,
+      buttons: 0,
+      detail: 0,
+      ...flags,
+    });
   const keyCommand = (params) => {
     let target = active.call(document) || document.body || document.documentElement;
     const kind = params.type,
@@ -570,6 +583,12 @@
     if (kind !== 'char' && !emit(target, 'KeyboardEvent', 'keydown', init)) return;
     target = active.call(document) || target;
     if (kind !== 'char') {
+      // Chrome activates links on keydown and consumes the Enter keypress.
+      // Buttons instead activate after an uncancelled Enter keypress below.
+      if (init.key === 'Enter' && target.localName === 'a' && target.hasAttribute('href')) {
+        if (target.isConnected) keyboardClick(target, flags);
+        return;
+      }
       if (init.key === 'Tab') {
         tab(target, flags.shiftKey);
         return;
@@ -636,7 +655,14 @@
       const code = text.charCodeAt(0),
         press = { ...init, keyCode: code, charCode: code };
       if (!emit(target, 'KeyboardEvent', 'keypress', press)) return;
-      if (text === '\r' && target.localName === 'textarea') edit(target, '\n', 'insertLineBreak');
+      if (
+        text === '\r' &&
+        (target.localName === 'button' ||
+          (target.localName === 'input' && ['button', 'submit', 'reset'].includes(target.type)))
+      ) {
+        if (target.isConnected && !target.matches(':disabled')) keyboardClick(target, flags);
+      } else if (text === '\r' && target.localName === 'textarea')
+        edit(target, '\n', 'insertLineBreak');
       else if (text === '\r')
         compatibilityElementState.implicitlySubmitForm?.(
           target,

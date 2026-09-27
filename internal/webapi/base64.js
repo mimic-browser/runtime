@@ -11,7 +11,7 @@ const { atob, btoa } = {
         b = i + 1 < s.length ? s.charCodeAt(i + 1) : 0,
         c = i + 2 < s.length ? s.charCodeAt(i + 2) : 0;
       if (a > 255 || b > 255 || c > 255)
-        throw new DOMException(
+        throw platformDOMException(
           'The string to be encoded contains characters outside of the Latin1 range.',
           'InvalidCharacterError',
         );
@@ -30,7 +30,7 @@ const { atob, btoa } = {
     let s = String(input).replace(/[\t\n\f\r ]/g, '');
     if (s.length % 4 === 0) s = s.replace(/={1,2}$/, '');
     if (s.length % 4 === 1 || /[^A-Za-z0-9+/]/.test(s))
-      throw new DOMException(
+      throw platformDOMException(
         'The string to be decoded is not correctly encoded.',
         'InvalidCharacterError',
       );

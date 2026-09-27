@@ -175,8 +175,8 @@ func VersionString() (string, error) {
 	if err := loadShim(); err != nil {
 		return "", err
 	}
-	return shimStringCall(func(p, c uintptr) uintptr {
-		r, _, _ := proc("gov8_version_string").Call(p, c)
+	return shimStringCall(func(p unsafe.Pointer, c uintptr) uintptr {
+		r, _, _ := proc("gov8_version_string").Call(uintptr(p), c)
 		return r
 	})
 }
@@ -186,15 +186,18 @@ func RuntimeVersionString() (string, error) {
 	if err := loadShim(); err != nil {
 		return "", err
 	}
-	return shimStringCall(func(p, c uintptr) uintptr {
-		r, _, _ := proc("gov8_runtime_version").Call(p, c)
+	return shimStringCall(func(p unsafe.Pointer, c uintptr) uintptr {
+		r, _, _ := proc("gov8_runtime_version").Call(uintptr(p), c)
 		return r
 	})
 }
 
-func shimStringCall(fn func(p, c uintptr) uintptr) (string, error) {
+func shimStringCall(fn func(p unsafe.Pointer, c uintptr) uintptr) (string, error) {
 	var buf [128]byte
-	r := fn(uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
+	// Keep the buffer as a pointer across the Go callback. Converting it to
+	// uintptr before calling fn can leave native code with a stale stack address
+	// if the callback grows the goroutine stack.
+	r := fn(unsafe.Pointer(&buf[0]), uintptr(len(buf)))
 	if int64(r) < 0 {
 		return "", shimError("version string", r)
 	}

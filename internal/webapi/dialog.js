@@ -85,11 +85,11 @@ if (globalThis.HTMLDialogElement) {
     check(node);
     if (node.open) {
       if (modal !== modalDialogs.has(node))
-        throw new DOMException('Dialog is already open in another mode', 'InvalidStateError');
+        throw platformDOMException('Dialog is already open in another mode', 'InvalidStateError');
       return;
     }
     if (modal && !node.isConnected)
-      throw new DOMException('Dialog is not connected', 'InvalidStateError');
+      throw platformDOMException('Dialog is not connected', 'InvalidStateError');
     if (!before(node, true, source) || node.open || (modal && !node.isConnected)) return;
     node.open = true;
     if (modal) modalDialogs.add(node);

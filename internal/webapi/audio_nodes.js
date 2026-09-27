@@ -437,14 +437,15 @@ const addWorkletModule = function addModule(url) {
     address = String(url);
   return fetch(address)
     .then((response) => {
-      if (!response.ok) throw new DOMException('Unable to load worklet module', 'AbortError');
+      if (!response.ok) throw platformDOMException('Unable to load worklet module', 'AbortError');
       return response.text();
     })
     .then((source) => {
       const registrations = [
         ...source.matchAll(/registerProcessor\s*\(\s*(['"])([^'"\\]+)\1\s*,/g),
       ];
-      if (!registrations.length) throw new DOMException('No processor registered', 'AbortError');
+      if (!registrations.length)
+        throw platformDOMException('No processor registered', 'AbortError');
       let descriptors = [];
       const literal =
         /parameterDescriptors\s*\(\s*\)\s*\{\s*return\s+(\[[\s\S]*?\])\s*;?\s*\}/.exec(source)?.[1];
@@ -456,7 +457,7 @@ const addWorkletModule = function addModule(url) {
       for (const registration of registrations) {
         const name = registration[2];
         if (worklet.processors.has(name))
-          throw new DOMException('Duplicate processor name', 'NotSupportedError');
+          throw platformDOMException('Duplicate processor name', 'NotSupportedError');
         worklet.processors.set(name, descriptors);
       }
       worklet.modules.add(address);

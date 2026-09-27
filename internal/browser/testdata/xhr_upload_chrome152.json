@@ -1,0 +1,133 @@
+{
+  "captureMetadata": {
+    "schemaVersion": 1,
+    "chromeVersion": "152.0.7977.82",
+    "chromiumRevision": 1669021,
+    "chromiumCommit": "d04cdb24d67b081f6cf80200ffc5233f44b61109",
+    "v8Version": "15.2.124.21",
+    "platform": "windows-x64",
+    "browserMode": "headful",
+    "commandLineFeatureOverrides": [],
+    "environmentProfileId": "chrome-152-windows-x64-headful-local-probe-reused-v1",
+    "profileFreshness": "Fresh at original launch; local fixture document after preserved live TikTok capture",
+    "viewport": {
+      "width": 1272,
+      "height": 653,
+      "deviceScaleFactor": 1
+    },
+    "window": {
+      "left": 10,
+      "top": 10,
+      "width": 1280,
+      "height": 800,
+      "windowState": "normal"
+    },
+    "secureContextState": true,
+    "isolationState": false,
+    "visibilityState": "visible",
+    "hasFocus": true
+  },
+  "fixtureOrigin": "http://127.0.0.1:36993",
+  "fixture": "internal/browser/testdata/xhr_upload_oracle.js",
+  "fixtureSHA256": "709468058cda7a45604319de5b606f05c9aac78bd74f647ae18f060f13ada4a8",
+  "worker": false,
+  "result": {
+    "result": {
+      "type": "object",
+      "value": {
+        "same": true,
+        "distinct": true,
+        "brand": "[object XMLHttpRequestUpload]",
+        "prototype": true,
+        "parent": true,
+        "eventTarget": true,
+        "xhrEventTarget": true,
+        "descriptor": {
+          "enumerable": true,
+          "configurable": true,
+          "setter": "undefined"
+        },
+        "invalidReceiver": {
+          "name": "TypeError",
+          "message": "Illegal invocation"
+        },
+        "construct": {
+          "name": "TypeError",
+          "message": "Failed to construct 'XMLHttpRequestUpload': Illegal constructor"
+        },
+        "handlers": [
+          {
+            "name": "onloadstart",
+            "initial": null,
+            "same": true,
+            "isolated": true,
+            "cleared": null
+          },
+          {
+            "name": "onprogress",
+            "initial": null,
+            "same": true,
+            "isolated": true,
+            "cleared": null
+          },
+          {
+            "name": "onabort",
+            "initial": null,
+            "same": true,
+            "isolated": true,
+            "cleared": null
+          },
+          {
+            "name": "onerror",
+            "initial": null,
+            "same": true,
+            "isolated": true,
+            "cleared": null
+          },
+          {
+            "name": "onload",
+            "initial": null,
+            "same": true,
+            "isolated": true,
+            "cleared": null
+          },
+          {
+            "name": "ontimeout",
+            "initial": null,
+            "same": true,
+            "isolated": true,
+            "cleared": null
+          },
+          {
+            "name": "onloadend",
+            "initial": null,
+            "same": true,
+            "isolated": true,
+            "cleared": null
+          }
+        ],
+        "dispatch": true,
+        "observed": {
+          "thisUpload": true,
+          "target": true,
+          "trusted": false
+        },
+        "handlerEvents": [
+          {
+            "owner": "upload",
+            "receiver": true,
+            "target": true,
+            "trusted": false
+          },
+          {
+            "owner": "xhr",
+            "receiver": true,
+            "target": true,
+            "trusted": false
+          }
+        ],
+        "sameAfterReset": true
+      }
+    }
+  }
+}

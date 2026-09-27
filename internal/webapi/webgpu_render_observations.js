@@ -129,7 +129,7 @@ method('GPUDevice', 'createShaderModule', (d, descriptor) => {
   });
 });
 method('GPUShaderModule', 'getCompilationInfo', (s) =>
-  Promise.resolve(
+  platformPromiseResolve(
     make('GPUCompilationInfo', {
       messages: s.error
         ? [
@@ -203,11 +203,11 @@ method('GPUDevice', 'createRenderPipeline', (d, descriptor) => {
 });
 method('GPUDevice', 'createRenderPipelineAsync', (d, descriptor) => {
   try {
-    return Promise.resolve(
+    return platformPromiseResolve(
       Reflect.apply(GPUDevice.prototype.createRenderPipeline, d.object, [descriptor]),
     );
   } catch (e) {
-    return Promise.reject(e);
+    return platformPromiseReject(e);
   }
 });
 const colorComponents = (value) =>
@@ -613,7 +613,8 @@ method('GPUCanvasContext', 'unconfigure', (s) => {
   s.configuration = null;
 });
 method('GPUCanvasContext', 'getCurrentTexture', (s) => {
-  if (!s.configuration) throw new DOMException('Context is not configured', 'InvalidStateError');
+  if (!s.configuration)
+    throw platformDOMException('Context is not configured', 'InvalidStateError');
   if (
     !s.current ||
     slots.get(s.current).width !== s.dim.width ||

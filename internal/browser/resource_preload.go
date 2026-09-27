@@ -64,6 +64,11 @@ func (r *Realm) elementRequest(u *url.URL, attributes map[string]string, initiat
 		}
 	}
 	request := network.Request{Credentials: credentials, ContextID: r.agent.ContextID(), URL: u, Referrer: referrer, SourceURL: r.documentURL(), Headers: headers, Initiator: initiator, Mode: mode}
+	if initiator == network.Image {
+		request.ContentPolicyDirective = "img-src"
+		request.ContentPolicy = r.contentPolicy()
+		request.ContentPolicyURL = r.documentURL()
+	}
 	r.applyClientHints(&request)
 	return request
 }
@@ -183,6 +188,9 @@ func (r *Realm) consumePreload(request network.Request) *resourcePreload {
 
 func (r *Realm) loadResource(ctx context.Context, request network.Request) (network.Response, error) {
 	if err := ctx.Err(); err != nil {
+		return network.Response{}, err
+	}
+	if err := request.CheckContentPolicy(); err != nil {
 		return network.Response{}, err
 	}
 	if r.agent.Page().loader.ResourceReuseAllowed(request) {

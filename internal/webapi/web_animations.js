@@ -423,7 +423,7 @@ const webAnimations = (() => {
   }
   const promisePair = () => {
     let resolve, reject;
-    const promise = new Promise((yes, no) => {
+    const promise = new platformPromise((yes, no) => {
       resolve = yes;
       reject = no;
     });

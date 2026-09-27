@@ -17,7 +17,6 @@ type cloneErrorReporter struct {
 	scope     *gov8.Scope
 	reject    *gov8.Function
 	realm     *gov8.Context
-	payload   string
 	platforms []string
 }
 
@@ -31,37 +30,56 @@ func (d *cloneErrorReporter) GetWasmModuleTransferID(gov8.Value) (uint32, bool) 
 	return 0, false
 }
 func (d *cloneErrorReporter) IsHostObject(object *gov8.Object) (bool, bool) {
+	_, host, ok := d.classifyHostObject(object)
+	return host, ok
+}
+
+func (d *cloneErrorReporter) classifyHostObject(object *gov8.Object) (string, bool, bool) {
 	result, ok, err := d.reject.Call(d.scope, object.Value, object.Value)
 	if err != nil || !ok {
 		if err != nil {
 			d.message = err.Error()
 		}
-		return false, false
+		return "", false, false
 	}
 	if text, e := result.IsString(); e != nil {
 		d.message = e.Error()
-		return false, false
+		return "", false, false
 	} else if text {
-		d.payload, err = result.ToString(d.realm)
+		payload, err := result.ToString(d.realm)
 		if err != nil {
 			d.message = err.Error()
 		}
-		return err == nil, err == nil
+		return payload, err == nil, err == nil
 	}
 	reject, err := result.BooleanValue()
 	if err != nil {
-		return false, false
+		return "", false, false
 	}
 	if reject {
 		d.message = "The platform object could not be cloned."
-		return false, false
+		return "", false, false
 	}
-	return false, true
+	return "", false, true
 }
 
-func (d *cloneErrorReporter) WriteHostObject(_ *gov8.Object, w *gov8.DelegateValueSerializer) (bool, bool) {
+func (d *cloneErrorReporter) WriteHostObject(object *gov8.Object, w *gov8.DelegateValueSerializer) (bool, bool) {
+	// V8 recognizes objects with internal fields as host objects directly and
+	// can bypass IsHostObject. Classify the canonical object at this boundary
+	// instead of assuming that a previous hook populated its platform payload.
+	if d.reject == nil {
+		d.message = "The platform object could not be cloned."
+		return false, false
+	}
+	payload, host, ok := d.classifyHostObject(object)
+	if !ok || !host {
+		if d.message == "" {
+			d.message = "The platform object could not be cloned."
+		}
+		return false, false
+	}
 	index := len(d.platforms)
-	d.platforms = append(d.platforms, d.payload)
+	d.platforms = append(d.platforms, payload)
 	if err := w.WriteUint32(uint32(index)); err != nil {
 		d.message = err.Error()
 		return false, false

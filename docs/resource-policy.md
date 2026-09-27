@@ -57,6 +57,20 @@ frame decoder, so the flag adds no media work to suppress. `cacheRetain:false`
 prevents HTTP cache storage; `debugRetain:false` prevents CDP response-body
 history storage. Neither erases the image's minimal runtime state.
 
+MediaSource object URLs refer to browser-owned source state, not an HTTP body or
+an empty Blob response. Attachment evaluates the same whole-resource rule as
+local Blob media: denying both cache reading and network work blocks it, while
+reportOnly records that decision and permits attachment. The local decision
+does not acquire a connection or charge HTTP response/body/retention budgets.
+Body, decode and retention controls do not erase source state or caller-owned
+append input. If a script fetches append input, that Fetch load separately uses
+its ordinary resource policy. MediaSource currently models the container
+lifecycle, empty appends, and single-track AVC/AAC MP4 initialization metadata.
+Coded media fragments remain an explicit unsupported boundary. Initialization
+input is discarded after parsing; only observable metadata is retained.
+Open-state live seekable range operations are also
+unsupported. It does not decode or retain video frames.
+
 `reportOnly:true` executes the ordinary full path and records which network
 requests would have been blocked. It does not claim bytes saved for a resource
 whose size was never observed. `Mimic.getResourcePolicyStats` reports request

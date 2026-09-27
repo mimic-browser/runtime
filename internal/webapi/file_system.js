@@ -34,7 +34,7 @@ if (globalThis.StorageManager?.prototype) {
         } else message = 'The requested operation is not supported.';
         message = `Failed to execute '${method}' on '${type}': ${message}`;
       }
-      throw new DOMException(message, name);
+      throw platformDOMException(message, name);
     }
     return result;
   };
@@ -379,7 +379,7 @@ if (globalThis.StorageManager?.prototype) {
     tag: 'opfs-handle',
     encode(value) {
       if (access.has(value) || writables.has(value))
-        throw new DOMException('The platform object could not be cloned.', 'DataCloneError');
+        throw platformDOMException('The platform object could not be cloned.', 'DataCloneError');
       return slots.get(value);
     },
     decode(data) {
@@ -437,8 +437,10 @@ if (globalThis.StorageManager?.prototype) {
     }
     const getDirectory = {
       getDirectory() {
-        if (this !== manager) return Promise.reject(new TypeError('Illegal invocation'));
-        return Promise.resolve(handle(invoke('root', 0, {}, 'getDirectory', 'StorageManager')));
+        if (this !== manager) return platformPromiseReject(new TypeError('Illegal invocation'));
+        return platformPromiseResolve(
+          handle(invoke('root', 0, {}, 'getDirectory', 'StorageManager')),
+        );
       },
     }.getDirectory;
     markNative(getDirectory, 'getDirectory');

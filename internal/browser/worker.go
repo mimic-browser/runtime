@@ -148,6 +148,7 @@ func (w *DedicatedWorker) run(ctx context.Context, source string) {
 	var workerFonts *textmetrics.Engine
 	defer func() {
 		w.stopFetches()
+		p.ctx.network.RevokeBlobsForOwner(fmt.Sprintf("%s/worker/%d", w.parent.ID, w.id))
 		workerScheduler.Close()
 		clear(w.timers)
 		if workerFonts != nil {
@@ -174,6 +175,12 @@ func (w *DedicatedWorker) run(ctx context.Context, source string) {
 		}
 	})
 	host := map[string]any{}
+	if native, ok := runtime.(engine.ExceptionStateRuntime); ok {
+		host["initializeExceptionState"] = native.ExceptionStateFactory()
+	}
+	if native, ok := runtime.(engine.ReceiverDispatchRuntime); ok {
+		host["createReceiverDispatch"] = native.ReceiverDispatchFactory()
+	}
 	installLocaleHost(host, runtime, func() state.Locale { return p.environmentView().Locale })
 	installStructuredCloneHost(host, runtime)
 	files := installOPFSHost(host, runtime, p.ctx, func() string {
@@ -206,7 +213,7 @@ func (w *DedicatedWorker) run(ctx context.Context, source string) {
 			source = w.securityURL
 		}
 		raw := "blob:" + originOf(source.String()) + "/" + uuid.NewString()
-		p.ctx.network.PutBlob(raw, byteSlice(arg(args, 0)), strarg(args, 1))
+		p.ctx.network.PutBlob(raw, byteSlice(arg(args, 0)), strarg(args, 1), fmt.Sprintf("%s/worker/%d", w.parent.ID, w.id))
 		return runtime.Value(raw), nil
 	})
 	host["revokeObjectURL"] = runtime.Function(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
@@ -322,12 +329,6 @@ func (w *DedicatedWorker) run(ctx context.Context, source string) {
 			}
 		}
 		return nil, nil
-	})
-	host["runTimerSource"] = runtime.Function(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
-		if w.policy.TrustedTypes().EvalBlocked != "" {
-			return nil, nil
-		}
-		return runtime.Eval(ctx, strarg(args, 0), "worker-timer")
 	})
 	host["trustedTypesEventAttributes"] = runtime.Function(func(engine.Value, []engine.Value) (engine.Value, error) {
 		return runtime.Value(p.Compatibility().Surface().TrustedTypeEventAttributes), nil
@@ -451,7 +452,13 @@ func (w *DedicatedWorker) run(ctx context.Context, source string) {
 	// fast parent-side terminate() can cancel hundreds of milliseconds of host
 	// binding setup and prevent even tiny Blob worker scripts from starting.
 	p.trace.Add(trace.JS, "workerBootstrapStart", map[string]any{"url": w.url.String(), "worker": w.id})
-	if _, err := runtime.Eval(ctx, bootstrap, "mimic:worker-surface"); err != nil {
+	var bootstrapErr error
+	if installer, ok := runtime.(engine.BootstrapRuntime); ok {
+		_, bootstrapErr = installer.EvalBootstrap(ctx, bootstrap, "mimic:worker-surface")
+	} else {
+		_, bootstrapErr = runtime.Eval(ctx, bootstrap, "mimic:worker-surface")
+	}
+	if err := bootstrapErr; err != nil {
 		p.trace.Add(trace.Error, "workerBootstrap", map[string]any{"url": w.url.String(), "worker": w.id, "error": err.Error()})
 		_ = w.reportError(err)
 		return

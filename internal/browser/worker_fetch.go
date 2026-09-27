@@ -23,6 +23,12 @@ func (w *DedicatedWorker) installFetch(host map[string]any, lifetime context.Con
 			return promise.Value, nil
 		}
 		request := fetchRequest(w.parent.agent.ContextID(), target, w.url, args)
+		request.ContentPolicyDirective = "connect-src"
+		request.ContentPolicy = w.policy
+		request.ContentPolicyURL = w.url
+		if w.url.Scheme == "blob" || w.url.Scheme == "data" {
+			request.ContentPolicyURL = w.securityURL
+		}
 		request.Owner = "worker"
 		request.OmitClientHints = true
 		request.ClientIsWorker = true

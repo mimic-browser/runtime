@@ -13,7 +13,7 @@
   const accept = (s, node) => {
     if (!(s.whatToShow & (1 << (node.nodeType - 1)))) return SKIP;
     if (!s.filter) return ACCEPT;
-    if (s.active) throw new DOMException('The filter is already active.', 'InvalidStateError');
+    if (s.active) throw platformDOMException('The filter is already active.', 'InvalidStateError');
     s.active = true;
     try {
       return (

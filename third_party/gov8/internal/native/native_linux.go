@@ -26,6 +26,9 @@ func LoadDLL(path string) (*DLL, error) {
 	}
 	return &DLL{h, wide}, nil
 }
+
+func (d *DLL) Release() error { return purego.Dlclose(d.handle) }
+
 func (d *DLL) FindProc(name string) (*Proc, error) {
 	switch name {
 	case "gov8_number_new", "gov8_rv_set_double", "gov8_rv_date_new", "gov8_platform_run_idle_tasks", "gov8_pc_idle_task_run_delete":

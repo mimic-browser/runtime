@@ -38,13 +38,35 @@ synthetic DOM events do not grant it. Machine media, keyboard and device
 capabilities remain Environment projections. See the
 [capability matrix and explicit limits](navigator-capabilities.md).
 
-Each page owns a top frame, each frame owns a realm, and each realm owns a
-separate engine instance and global object. WindowProxy is represented as the
+Each page owns a top frame and one V8 execution owner. Each frame owns an
+independent realm adapter, native context, intrinsic objects and global object.
+Synchronous calls between connected frame realms stay on their Page's owner,
+preserving native author stack continuity. Context security tokens project the
+browser's origin admission into native access and stack capture; opaque origins
+retain creator identity. Independent Pages use independent owners by default.
+WindowProxy is represented as the
 stable frame-facing identity which delegates to the current realm.
 
 ## Scheduling
 
 Go concurrency may perform implementation work, but never invokes JavaScript.
+Connected V8 realms use a shared execution owner with explicit per-realm
+teardown; closing a parent adapter does not dispose a live child context. The
+last connected realm releases the original owner. Navigation retirement shuts
+down the old native context's microtask admission at an outer execution
+boundary, while preserving retained objects and the active contexts' common
+queue. Frame removal deliberately keeps retained language promise jobs.
+Bootstrap artifacts retain a bare default context and an additional platform seed context. A matching frame
+restores that seed on its Page's owner; a different exposure graph starts from
+the bare context. Preparation of a previously unseen graph is synchronous
+before its first ordinary Page executes author code, so future matching frames
+can restore without moving the Page's existing author objects to another isolate.
+The first ordinary Page still executes the cold surface in a bare context on
+that prepared owner; later cache admissions restore the seed. Child realms
+participate in capture and admission even when their owner already exists.
+Isolate-wide module callbacks dispatch by the actual native context, preserving
+per-realm loaders, module identity and import.meta state.
+
 All callbacks enter through Scheduler tasks. A microtask checkpoint is made
 after every task. Timers use a monotonic virtual clock and deterministic
 sequence numbers.
@@ -136,6 +158,13 @@ answers. The same observable model applies to ordinary application code.
   values and modules are released on the isolate thread at Close. Values currently
   remain rooted until realm teardown; long-lived realm memory is technical debt.
 - Window bootstrap snapshots are immutable, bounded artifacts owned by the Browser.
+  V8 trusted platform bindings compile with non-user Script provenance before
+  parsing. Nested implementation functions retain that provenance through code
+  caches and snapshots, so platform implementation frames never enter author
+  `Error.stack` or structured `Error.prepareStackTrace` call sites. Author
+  callbacks remain user code, and their exception identity and frames survive
+  platform calls. Resource names do not grant platform provenance. Ordinary
+  author evaluation and compilation never use the trusted entry point.
   Repeated compatible profiles admit asynchronous construction; restoration
   creates an independent isolate and rebinds native callbacks and realm state before
   user script. Page teardown releases consumer copies; Browser teardown cancels and
@@ -147,9 +176,21 @@ answers. The same observable model applies to ordinary application code.
   environment. Per-Context locale, device, graphics, audio and font observations
   come from native callbacks rebound to the consuming Page after restoration;
   distinct generated identities can therefore reuse one immutable JS artifact.
+  Native snapshot identity also includes the SHA-256 of the loaded shim artifact.
+  An unchanged upstream V8 version does not make different embedder callbacks or
+  engine patches snapshot-compatible. The loader captures the artifact identity
+  once and rejects replacement during loading; later override-path changes cannot
+  relabel an already loaded engine.
   Managed profile Pages prepare the exact exposure graph on first use under
   Browser-owned singleflight; a burst of navigations waits for compilation.
   Ordinary Pages retain lazy preparation.
+  Committed navigation documents create canonical DOM, policy and parser state
+  before materializing JavaScript bindings. Parser-blocking script transport can
+  start while the language runtime remains unobserved, in both top and child
+  documents. Script execution or lifecycle/resource event dispatch initializes
+  bindings on the owning Page turn; this does not postpone document commit or
+  move JavaScript to a network worker. Profile preparation admits its captured
+  seed directly rather than bootstrapping another temporary Page.
   The pinned native engine must keep the stock shared read-only heap sealed
   (`--no-extensible-ro-snapshot` before initialization). Custom snapshot objects
   remain in private serialized heaps. Independent custom read-only layouts can

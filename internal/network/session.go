@@ -25,6 +25,15 @@ type SessionState struct {
 type blobEntry struct {
 	body        []byte
 	contentType string
+	owner       string
+	mediaSource MediaSourceResource
+}
+
+// MediaSourceResource distinguishes attachment resources from readable Blob
+// bytes. The browser owns the source state; this store only retains its identity
+// under an object URL, just as it retains Blob bytes under a Blob object URL.
+type MediaSourceResource interface {
+	MediaSourceID() string
 }
 type cacheEntry struct {
 	response       Response
@@ -112,10 +121,22 @@ func (s *SessionState) Connections() []ConnectionRecord {
 	return out
 }
 
-func (s *SessionState) PutBlob(raw string, body []byte, contentType string) {
+func (s *SessionState) PutBlob(raw string, body []byte, contentType, owner string) {
 	s.mu.Lock()
-	s.blobs[raw] = blobEntry{body: append([]byte(nil), body...), contentType: contentType}
+	s.blobs[raw] = blobEntry{body: append([]byte(nil), body...), contentType: contentType, owner: owner}
 	s.mu.Unlock()
+}
+
+// Object URLs belong to the creating execution context, independently of
+// whether their Blob objects remain reachable in another realm.
+func (s *SessionState) RevokeBlobsForOwner(owner string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for raw, entry := range s.blobs {
+		if entry.owner == owner {
+			delete(s.blobs, raw)
+		}
+	}
 }
 
 func (s *SessionState) RevokeBlob(raw string) {
@@ -128,7 +149,19 @@ func (s *SessionState) Blob(raw string) ([]byte, string, bool) {
 	s.mu.RLock()
 	entry, ok := s.blobs[raw]
 	s.mu.RUnlock()
-	return append([]byte(nil), entry.body...), entry.contentType, ok
+	return append([]byte(nil), entry.body...), entry.contentType, ok && entry.mediaSource == nil
+}
+
+func (s *SessionState) PutMediaSourceURL(raw, owner string, source MediaSourceResource) {
+	s.mu.Lock()
+	s.blobs[raw] = blobEntry{owner: owner, mediaSource: source}
+	s.mu.Unlock()
+}
+
+func (s *SessionState) MediaSourceURL(raw string) MediaSourceResource {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.blobs[raw].mediaSource
 }
 func (s *SessionState) ClearCache() {
 	s.mu.Lock()

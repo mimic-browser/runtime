@@ -13,7 +13,7 @@
     const slot = elementSlot(element);
     if (slot?.tagName === 'TEXTAREA') {
       const state = textareas.get(element);
-      return (state?.dirty ? state.value : host.textContent(slot.nodeId) || '') !== '';
+      return (state?.dirty ? state.value : canonicalTextContent(slot.nodeId) || '') !== '';
     }
     if (slot?.tagName === 'INPUT') {
       const state = inputs.get(element);
@@ -472,7 +472,7 @@
         s = inputState(this);
       if (m === 'filename') {
         if (value !== '')
-          throw new DOMException('File input value can only be cleared', 'InvalidStateError');
+          throw platformDOMException('File input value can only be cleared', 'InvalidStateError');
         s.value = '';
         return;
       }
@@ -579,7 +579,7 @@
     define(name, 'setSelectionRange', {
       value: function (start, end, direction = 'none') {
         if (name === 'HTMLInputElement' && !selectionTypes.has(typeOf(this)))
-          throw new DOMException('Input does not support selection', 'InvalidStateError');
+          throw platformDOMException('Input does not support selection', 'InvalidStateError');
         const s = name === 'HTMLInputElement' ? inputState(this) : textareaState(this);
         s.end = Math.min(Number(end) >>> 0, this.value.length);
         s.start = Math.min(Number(start) >>> 0, s.end);
@@ -823,7 +823,7 @@
     },
     set(value) {
       value = Number(value) >>> 0;
-      if (value > 100000) throw new DOMException('Too many options', 'IndexSizeError');
+      if (value > 100000) throw platformDOMException('Too many options', 'IndexSizeError');
       const list = optionList(this);
       while (list.length > value) list.pop().remove();
       while (list.length < value) {
@@ -906,7 +906,7 @@
         set(value) {
           value = Number(value);
           if (!Number.isInteger(value) || value < 0)
-            throw new DOMException('The value must be non-negative.', 'IndexSizeError');
+            throw platformDOMException('The value must be non-negative.', 'IndexSizeError');
           this.setAttribute(property.toLowerCase(), String(value));
         },
       });
@@ -1108,7 +1108,7 @@
         if (!isSubmitButton(submitter))
           throw new TypeError('The specified element is not a submit button.');
         if (formOwner(submitter) !== form)
-          throw new DOMException(
+          throw platformDOMException(
             'The specified element is not owned by this form element.',
             'NotFoundError',
           );
@@ -1124,7 +1124,7 @@
     if (!this.isConnected) return;
     const missing = (reason) => {
       host.semanticMissingAt('form_controls.js:submit', 'HTMLFormElement.submit', reason);
-      throw new DOMException(reason, 'NotSupportedError');
+      throw platformDOMException(reason, 'NotSupportedError');
     };
     const override = (attribute, fallback) =>
       submitter?.hasAttribute(attribute) ? submitter.getAttribute(attribute) : fallback;
@@ -1194,7 +1194,7 @@
         if (!isSubmitButton(submitter))
           throw new TypeError('The specified element is not a submit button.');
         if (formOwner(submitter) !== this)
-          throw new DOMException(
+          throw platformDOMException(
             'The specified element is not owned by this form element.',
             'NotFoundError',
           );

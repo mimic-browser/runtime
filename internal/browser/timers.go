@@ -12,9 +12,9 @@ import (
 // A public timer ID identifies its registration, including every interval
 // tick. Scheduler task IDs change when a repeating registration is requeued.
 type windowTimer struct {
-	taskID   uint64
-	active   bool
-	function engine.Value
+	taskID uint64
+	active bool
+	timerInvocation
 }
 
 func (r *Realm) hostTimer(_ engine.Value, args []engine.Value) (engine.Value, error) {
@@ -26,10 +26,13 @@ func (r *Realm) hostTimer(_ engine.Value, args []engine.Value) (engine.Value, er
 	if r.timers == nil {
 		r.timers = make(map[uint64]*windowTimer)
 	}
-	registration := &windowTimer{active: true, function: retainRuntimeValue(r.runtime, args[0])}
+	invocation, err := newTimerInvocation(r.runtime, args)
+	if err != nil {
+		return nil, err
+	}
+	registration := &windowTimer{active: true, timerInvocation: invocation}
 	release := func() {
-		releaseRuntimeValues(r.runtime, registration.function)
-		registration.function = nil
+		registration.release(r.runtime)
 	}
 	var id uint64
 	var callback func(context.Context) error
@@ -46,8 +49,8 @@ func (r *Realm) hostTimer(_ engine.Value, args []engine.Value) (engine.Value, er
 		defer func() { p.userScriptDepth-- }()
 		invoke := func(ctx context.Context) error {
 			receiver := r.runtime.Get("window")
-			result, err := r.runtime.Call(ctx, registration.function, receiver)
-			releaseRuntimeValues(r.runtime, result, receiver)
+			err := registration.invoke(ctx, r.runtime, receiver, r.trustedTypesState().EvalBlocked != "")
+			releaseRuntimeValues(r.runtime, receiver)
 			if !repeat || err != nil || !registration.active {
 				release()
 			}
@@ -83,8 +86,7 @@ func (r *Realm) hostClearTimer(_ engine.Value, args []engine.Value) (engine.Valu
 		registration.active = false
 		r.scheduler.Cancel(registration.taskID)
 		delete(r.timers, id)
-		releaseRuntimeValues(r.runtime, registration.function)
-		registration.function = nil
+		registration.release(r.runtime)
 	}
 	return nil, nil
 }

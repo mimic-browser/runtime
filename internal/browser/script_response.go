@@ -17,6 +17,11 @@ func scriptResponseError(response network.Response) error {
 }
 
 func (r *Realm) dispatchResourceEvent(ctx context.Context, nodeID int64, eventType string) error {
+	if deferred, ok := r.runtime.(*deferredRuntime); ok {
+		if _, err := deferred.ready(); err != nil {
+			return err
+		}
+	}
 	if r.resourceEventDispatcher == nil {
 		return nil
 	}

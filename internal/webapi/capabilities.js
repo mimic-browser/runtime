@@ -47,8 +47,8 @@ const installNavigatorCapabilities = () => {
     slots.set(object, { type, ...data });
     return object;
   };
-  const error = (name, message) => new DOMException(message, name);
-  const deny = (name, message) => Promise.reject(error(name, message));
+  const error = (name, message) => platformDOMException(message, name);
+  const deny = (name, message) => platformPromiseReject(error(name, message));
   const method = (type, name, implementation, async = false) => {
     const proto = globalThis[type]?.prototype,
       d = proto && Object.getOwnPropertyDescriptor(proto, name);
@@ -65,12 +65,12 @@ const installNavigatorCapabilities = () => {
         };
         if (async === 'immediate') {
           try {
-            return Promise.resolve(run());
+            return platformPromiseResolve(run());
           } catch (e) {
-            return Promise.reject(e);
+            return platformPromiseReject(e);
           }
         }
-        return async ? Promise.resolve().then(run) : run();
+        return async ? platformPromiseResolve().then(run) : run();
       },
     }[name];
     Object.defineProperty(fn, 'length', { value: d.value.length, configurable: true });
@@ -245,7 +245,7 @@ const installNavigatorCapabilities = () => {
         'LanguageModelMessage',
         (v) => {
           if (v !== null && typeof v === 'object')
-            throw new DOMException(
+            throw platformDOMException(
               'Structured model prompt content is unsupported.',
               'NotSupportedError',
             );
@@ -337,8 +337,8 @@ const installNavigatorCapabilities = () => {
           try {
             const options = aiOptions(type, operation, args),
               capability = state('ai', schema.policy);
-            if (operation === 'availability') return Promise.resolve('unavailable');
-            if (options.signal?.aborted) return Promise.reject(options.signal.reason);
+            if (operation === 'availability') return platformPromiseResolve('unavailable');
+            if (options.signal?.aborted) return platformPromiseReject(options.signal.reason);
             if (!capability.policyAllowed)
               return deny(
                 'NotAllowedError',
@@ -347,7 +347,7 @@ const installNavigatorCapabilities = () => {
             return deny('NotSupportedError', `${type} backend is unavailable.`);
           } catch (error) {
             aiConversionErrors.delete(error);
-            return Promise.reject(error);
+            return platformPromiseReject(error);
           }
         },
       }[operation];
@@ -390,10 +390,10 @@ const installNavigatorCapabilities = () => {
       getBattery() {
         try {
           check(this, 'Navigator');
-          if (!batteryPromise) batteryPromise = Promise.resolve(create('BatteryManager'));
+          if (!batteryPromise) batteryPromise = platformPromiseResolve(create('BatteryManager'));
           return batteryPromise;
         } catch (e) {
-          return Promise.reject(e);
+          return platformPromiseReject(e);
         }
       },
     }.getBattery;
@@ -709,13 +709,30 @@ const installNavigatorCapabilities = () => {
               (options.allowWithoutGesture || options.allowWithoutSanitization)
             ? 'clipboard-read'
             : name;
-      const status = create('PermissionStatus', {
-        name: stateName,
-        statusName: permissionStatusNames[stateName] || stateName,
-        lastState: permission(stateName),
+      // Descriptor conversion and rejection occur before returning, but a
+      // successful service response belongs to a later event-loop task.
+      // Use the private host scheduler so author timer overrides cannot make
+      // fulfillment synchronous. Ordering against other task sources is not
+      // determined by the permission service's transport latency.
+      return new platformPromise((resolve, reject) => {
+        host.setTimer(
+          () => {
+            try {
+              const status = create('PermissionStatus', {
+                name: stateName,
+                statusName: permissionStatusNames[stateName] || stateName,
+                lastState: permission(stateName),
+              });
+              permissionStatuses.add(status);
+              resolve(status);
+            } catch (e) {
+              reject(e);
+            }
+          },
+          0,
+          false,
+        );
       });
-      permissionStatuses.add(status);
-      return status;
     },
     'immediate',
   );
@@ -727,7 +744,7 @@ const installNavigatorCapabilities = () => {
     (s) => s.onchange || null,
     (s, v) => (s.onchange = typeof v === 'function' ? v : null),
   );
-  const permissionPrompt = () => new Promise(() => {});
+  const permissionPrompt = () => new platformPromise(() => {});
   for (const [name, message] of [
     ['get', 'No credential type was specified in the request.'],
     [
@@ -1077,7 +1094,7 @@ const installNavigatorCapabilities = () => {
         throw error('NotSupportedError', 'The signal option cannot be used with ifAvailable.');
       if (options.signal?.aborted) throw options.signal.reason;
       const ticket = state('lock', 'enqueue', name, mode);
-      return new Promise((resolve, reject) => {
+      return new platformPromise((resolve, reject) => {
         let finished = false,
           timer;
         const release = () => {
@@ -1100,13 +1117,13 @@ const installNavigatorCapabilities = () => {
               return;
             }
             release();
-            Promise.resolve()
+            platformPromiseResolve()
               .then(() => callback(null))
               .then(resolve, reject);
             return;
           }
           options.signal?.removeEventListener('abort', abort);
-          Promise.resolve()
+          platformPromiseResolve()
             .then(() => callback(create('Lock', { name, mode })))
             .then(
               (v) => {
@@ -1347,7 +1364,7 @@ const installNavigatorCapabilities = () => {
         // Keep this completion outside the caller's microtask checkpoint; audio,
         // unsupported configurations and RTP capabilities have no decoder query.
         if (decode && tracks.video && supported && type !== 'webrtc')
-          return new Promise((resolve) => host.setTimer(() => resolve(result), 0, false));
+          return new platformPromise((resolve) => host.setTimer(() => resolve(result), 0, false));
         return result;
       },
       true,
@@ -1397,7 +1414,11 @@ const installNavigatorCapabilities = () => {
   attribute('Presentation', 'receiver', () => null);
 
   attribute('ServiceWorkerContainer', 'controller', () => null);
-  attribute('ServiceWorkerContainer', 'ready', (s) => s.ready || (s.ready = new Promise(() => {})));
+  attribute(
+    'ServiceWorkerContainer',
+    'ready',
+    (s) => s.ready || (s.ready = new platformPromise(() => {})),
+  );
   method('ServiceWorkerContainer', 'getRegistrations', () => [], true);
   method('ServiceWorkerContainer', 'getRegistration', () => undefined, true);
   method(

@@ -39,7 +39,7 @@
     params = new WeakMap(),
     completions = new WeakMap(),
     waves = new WeakMap();
-  const exception = (name, message) => new DOMException(message || name, name);
+  const exception = (name, message) => platformDOMException(message || name, name);
   const unsupported = (name) => {
     host.semanticMissingAt('offline_audio.js:34', 'WebAudio.' + name);
     throw exception('NotSupportedError', 'Unsupported audio operation: ' + name);
@@ -1078,7 +1078,7 @@
         context = this;
       if (typeof host.detachArrayBuffer === 'function') host.detachArrayBuffer(data);
       else if (typeof structuredClone === 'function') structuredClone(data, { transfer: [data] });
-      return new Promise((resolve, reject) =>
+      return new platformPromise((resolve, reject) =>
         setTimeout(() => {
           try {
             const buffer = decodeWave(context, bytes);
@@ -1093,7 +1093,7 @@
         }, 0),
       );
     } catch (error) {
-      return Promise.reject(error);
+      return platformPromiseReject(error);
     }
   });
   method('OfflineAudioContext', 'suspend', function suspend(when) {
@@ -1103,9 +1103,11 @@
       const frame = Math.ceil((when * c.sampleRate) / 128) * 128;
       if (c.state === 'closed' || frame >= c.length || c.suspensions.has(frame))
         throw exception('InvalidStateError');
-      return new Promise((resolve, reject) => c.suspensions.set(frame, { resolve, reject }));
+      return new platformPromise((resolve, reject) =>
+        c.suspensions.set(frame, { resolve, reject }),
+      );
     } catch (error) {
-      return Promise.reject(error);
+      return platformPromiseReject(error);
     }
   });
   method('OfflineAudioContext', 'resume', function resume() {
@@ -1118,9 +1120,9 @@
       const continuation = c.renderContinuation;
       c.renderContinuation = null;
       setTimeout(continuation, 0);
-      return Promise.resolve();
+      return platformPromiseResolve();
     } catch (error) {
-      return Promise.reject(error);
+      return platformPromiseReject(error);
     }
   });
   let prepareAudioNode = () => {},
@@ -1563,7 +1565,7 @@
       if (c.started) throw exception('InvalidStateError');
       c.started = true;
       c.state = 'running';
-      return new Promise((resolve, reject) => {
+      return new platformPromise((resolve, reject) => {
         const buffer = new AudioBuffer({
           numberOfChannels: c.numberOfChannels,
           length: c.length,
@@ -1627,7 +1629,7 @@
         setTimeout(step, 0);
       });
     } catch (e) {
-      return Promise.reject(e);
+      return platformPromiseReject(e);
     }
   });
   /* shared_audio_nodes */

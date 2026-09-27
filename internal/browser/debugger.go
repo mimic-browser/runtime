@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -215,7 +216,7 @@ func (d *Debugger) Evaluate(ctx context.Context, frameID, realmID, source string
 	var value engine.Value
 	err = state.realm.debuggerInline(ctx, !options.RespectCSP, func(ctx context.Context) error {
 		var err error
-		value, err = state.realm.Evaluate(ctx, source, "__pyppeteer_evaluation_script__")
+		value, err = state.realm.Evaluate(ctx, source, "")
 		return err
 	})
 	if err != nil {
@@ -283,7 +284,9 @@ func (d *Debugger) CallFunction(ctx context.Context, frameID, realmID, declarati
 	phaseStarted = time.Now()
 	err = state.realm.debuggerInline(ctx, true, func(ctx context.Context) error {
 		declarationStarted := time.Now()
-		function, err := state.realm.Evaluate(ctx, "(\n"+declaration+"\n)", "__pyppeteer_evaluation_script__")
+		// Chrome starts the declaration on the opening parenthesis's line.
+		// The trailing newline keeps author sourceURL/comments intact.
+		function, err := state.realm.Evaluate(ctx, "("+declaration+"\n)", "")
 		if err != nil {
 			return err
 		}
@@ -293,7 +296,40 @@ func (d *Debugger) CallFunction(ctx context.Context, frameID, realmID, declarati
 		}
 		d.profileCallFunctionPhase("declaration", declarationStarted)
 		invokeStarted := time.Now()
-		value, err = state.invoke(ctx, "call", params, function)
+		invoke := func(ctx context.Context) error {
+			// Resolve debugger handles in their owning realm, then enter the
+			// author function through the engine. A JS apply wrapper would become
+			// an observable caller frame and affect stack/caller inspection.
+			prepared, err := state.invoke(ctx, "prepareCall", params, nil)
+			if err != nil {
+				return err
+			}
+			defer releaseDebuggerValue(state.realm, prepared)
+			receiver := state.realm.runtime.GetProperty(prepared, "0")
+			defer releaseDebuggerValue(state.realm, receiver)
+			length := state.realm.runtime.GetProperty(prepared, "length")
+			count, err := strconv.Atoi(length.String())
+			releaseDebuggerValue(state.realm, length)
+			if err != nil || count < 1 {
+				return fmt.Errorf("invalid prepared debugger arguments")
+			}
+			arguments := make([]engine.Value, count-1)
+			defer func() {
+				for _, argument := range arguments {
+					releaseDebuggerValue(state.realm, argument)
+				}
+			}()
+			for i := range arguments {
+				arguments[i] = state.realm.runtime.GetProperty(prepared, strconv.Itoa(i+1))
+			}
+			value, err = state.realm.runtime.Call(ctx, function, receiver, arguments...)
+			return err
+		}
+		if owner, ok := state.realm.runtime.(engine.OwnerRuntime); ok {
+			err = owner.RunOnOwner(ctx, invoke)
+		} else {
+			err = invoke(ctx)
+		}
 		d.profileCallFunctionPhase("invoke", invokeStarted)
 		return err
 	})

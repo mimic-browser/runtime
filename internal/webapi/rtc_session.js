@@ -89,7 +89,8 @@ const rtcSessionModel = (() => {
     return s;
   };
   const ensureOpen = (s) => {
-    if (s.closed) throw new DOMException('The RTCPeerConnection is closed.', 'InvalidStateError');
+    if (s.closed)
+      throw platformDOMException('The RTCPeerConnection is closed.', 'InvalidStateError');
   };
   const direction = (value) => {
     const text = String(value);
@@ -131,7 +132,7 @@ const rtcSessionModel = (() => {
       key === 'direction'
         ? (s, v) => {
             if (s.stopped)
-              throw new DOMException('The transceiver is stopped.', 'InvalidStateError');
+              throw platformDOMException('The transceiver is stopped.', 'InvalidStateError');
             s.direction = direction(v);
           }
         : null,
@@ -249,9 +250,9 @@ const rtcSessionModel = (() => {
   };
   method('createOffer', function (options = {}) {
     try {
-      return Promise.resolve(offer(this, options ?? {}));
+      return platformPromiseResolve(offer(this, options ?? {}));
     } catch (e) {
-      return Promise.reject(e);
+      return platformPromiseReject(e);
     }
   });
   const applyLocal = (peer, description) => {

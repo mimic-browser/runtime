@@ -68,25 +68,9 @@ function wrapDocumentNode(data) {
     );
   }
   const contentType = (value) => elementSlot(value)?.contentType || 'text/html';
-  const xmlName = (name) => {
-    if (!/^[\p{L}_:][\p{L}\p{N}_.:\-\u00b7\p{M}]*$/u.test(name))
-      throw new DOMException('Invalid XML name', 'InvalidCharacterError');
-    return name;
-  };
-  const qualifiedName = (namespace, name) => {
-    xmlName(name);
-    const parts = name.split(':'),
-      prefix = parts.length > 1 ? parts[0] : null,
-      local = parts.length > 1 ? parts[1] : name;
-    if (
-      (prefix && !namespace) ||
-      (prefix === 'xml' && namespace !== 'http://www.w3.org/XML/1998/namespace') ||
-      ((name === 'xmlns' || prefix === 'xmlns') && namespace !== 'http://www.w3.org/2000/xmlns/') ||
-      (namespace === 'http://www.w3.org/2000/xmlns/' && name !== 'xmlns' && prefix !== 'xmlns')
-    )
-      throw new DOMException('Invalid namespace', 'NamespaceError');
-    return prefix ? prefix + ':' + local : local;
-  };
+  const xmlName = (name) => validateDOMName(name, false, 'createElement', 'Document');
+  const qualifiedName = (namespace, name) =>
+    validateDOMQualifiedName(namespace, name, false, 'createElementNS', 'Document');
   const ownerOf = (value) => {
     if (value instanceof Document) return null;
     const slot = elementSlot(value);
@@ -228,7 +212,7 @@ function wrapDocumentNode(data) {
     )
       throw new TypeError('The provided value is not of type HTMLElement');
     if (!slot || !['body', 'frameset'].includes(slot.qualifiedName || slot.tagName.toLowerCase()))
-      throw new DOMException(
+      throw platformDOMException(
         'The new body element must be a body or frameset element',
         'HierarchyRequestError',
       );
@@ -240,7 +224,7 @@ function wrapDocumentNode(data) {
     else {
       const root = this.documentElement;
       if (!root)
-        throw new DOMException('The document has no document element', 'HierarchyRequestError');
+        throw platformDOMException('The document has no document element', 'HierarchyRequestError');
       root.appendChild(value);
     }
   });
@@ -412,7 +396,7 @@ function wrapDocumentNode(data) {
     validDocument(this);
     if (!isDOMNode(node)) throw new TypeError('Expected a Node');
     if (node instanceof Document || node instanceof ShadowRoot)
-      throw new DOMException('Node cannot be adopted', 'NotSupportedError');
+      throw platformDOMException('Node cannot be adopted', 'NotSupportedError');
     if (node.parentNode) node.parentNode.removeChild(node);
     return adopt(node, this);
   });
@@ -435,7 +419,7 @@ function wrapDocumentNode(data) {
         const children = Array.from(this.childNodes).filter((child) => !added.includes(child));
         const index = before == null ? children.length : children.indexOf(before);
         if (before != null && before !== node && index < 0)
-          throw new DOMException('Reference node is not a child', 'NotFoundError');
+          throw platformDOMException('Reference node is not a child', 'NotFoundError');
         children.splice(Math.max(0, index), 0, ...added);
         if (
           children.some((child) => ![1, 7, 8, 10].includes(child.nodeType)) ||
@@ -445,7 +429,7 @@ function wrapDocumentNode(data) {
             children.findIndex((child) => child.nodeType === 1) &&
             children.some((child) => child.nodeType === 1))
         )
-          throw new DOMException('Invalid document children', 'HierarchyRequestError');
+          throw platformDOMException('Invalid document children', 'HierarchyRequestError');
       }
       return name === 'appendChild' ? original.call(this, node) : original.call(this, node, before);
     });
@@ -704,10 +688,10 @@ for (const name of ['hasStorageAccess', 'hasUnpartitionedCookieAccess'])
     const method = function () {
       if (!(this instanceof Document)) throw new TypeError('Illegal invocation');
       if (this !== document)
-        return Promise.reject(
-          new DOMException('Document is not fully active', 'InvalidStateError'),
+        return platformPromiseReject(
+          platformDOMException('Document is not fully active', 'InvalidStateError'),
         );
-      return Promise.resolve(host.hasStorageAccess());
+      return platformPromiseResolve(host.hasStorageAccess());
     };
     Object.defineProperty(method, 'name', { value: name, configurable: true });
     if (typeof markNative === 'function') markNative(method, name);

@@ -5,7 +5,7 @@ const svgSlots = new WeakMap(),
   svgSetAttribute = Element.prototype.setAttribute;
 const svgFail = (operation, reason) => {
   host.semanticMissingAt('svg_types.js:4', 'SVG.' + operation, JSON.stringify({ reason }));
-  throw new DOMException(reason, 'NotSupportedError');
+  throw platformDOMException(reason, 'NotSupportedError');
 };
 const svgSlot = (value, type) => {
   const s = svgSlots.get(value);
@@ -24,7 +24,8 @@ const svgDouble = (value) => {
   return n;
 };
 const svgWrite = (s) => {
-  if (s.readonly) throw new DOMException('The object is read-only.', 'NoModificationAllowedError');
+  if (s.readonly)
+    throw platformDOMException('The object is read-only.', 'NoModificationAllowedError');
 };
 const svgAttr = (n, key, value) => Reflect.apply(svgSetAttribute, n, [key, value]);
 const svgMethod = (type, name, fn) => {
@@ -96,7 +97,7 @@ const svgScale = (s, unit) => {
   if (s.type === 'SVGAngle') return [0, 1, 1, 180 / Math.PI, 0.9][unit];
   if ([2, 3, 4].includes(unit)) {
     if (!s.node || !measurable(s.node))
-      throw new DOMException('Cannot resolve relative length', 'NotSupportedError');
+      throw platformDOMException('Cannot resolve relative length', 'NotSupportedError');
     if (unit === 2) {
       if (tag(s.node).startsWith('fe')) {
         let owner = parent(s.node);
@@ -168,9 +169,9 @@ for (const type of ['SVGNumber', 'SVGLength', 'SVGAngle']) {
       svgWrite(s);
       const raw = String(value),
         m = new RegExp('^\\s*(' + numberPattern + ')([a-z%]*)\\s*$', 'i').exec(raw);
-      if (!m) throw new DOMException('Invalid value', 'SyntaxError');
+      if (!m) throw platformDOMException('Invalid value', 'SyntaxError');
       const unit = svgUnits[type].indexOf(m[2].toLowerCase(), 1);
-      if (unit < 1) throw new DOMException('Invalid unit', 'SyntaxError');
+      if (unit < 1) throw platformDOMException('Invalid unit', 'SyntaxError');
       svgSetScalar(s, svgFloat(m[1]), unit);
     },
   );
@@ -180,7 +181,7 @@ for (const type of ['SVGNumber', 'SVGLength', 'SVGAngle']) {
     unit = +unit & 65535;
     const n = svgFloat(value);
     if (unit < 1 || unit >= svgUnits[type].length)
-      throw new DOMException('Invalid unit', 'NotSupportedError');
+      throw platformDOMException('Invalid unit', 'NotSupportedError');
     svgSetScalar(s, n, unit);
   });
   svgMethod(type, 'convertToSpecifiedUnits', function (unit) {
@@ -188,7 +189,7 @@ for (const type of ['SVGNumber', 'SVGLength', 'SVGAngle']) {
     svgWrite(s);
     unit = +unit & 65535;
     if (unit < 1 || unit >= svgUnits[type].length)
-      throw new DOMException('Invalid unit', 'NotSupportedError');
+      throw platformDOMException('Invalid unit', 'NotSupportedError');
     const v = svgReadScalar(s),
       value = v.value * svgScale(s, v.unit);
     svgSetScalar(s, Math.fround(value / svgScale(s, unit)), unit);
@@ -227,7 +228,7 @@ svgMethod('SVGMatrix', 'multiply', function (other) {
 svgMethod('SVGMatrix', 'inverse', function () {
   const m = svgMatrixValues(this),
     d = m[0] * m[3] - m[1] * m[2];
-  if (!d) throw new DOMException('Matrix is not invertible', 'InvalidStateError');
+  if (!d) throw platformDOMException('Matrix is not invertible', 'InvalidStateError');
   return svgMatrix([
     m[3] / d,
     -m[1] / d,
@@ -245,7 +246,7 @@ for (const [name, build] of Object.entries({
   rotateFromVector: (x, y) => {
     x = svgDouble(x);
     y = svgDouble(y);
-    if (!x || !y) throw new DOMException('Invalid vector', 'InvalidAccessError');
+    if (!x || !y) throw platformDOMException('Invalid vector', 'InvalidAccessError');
     return svgRotation((Math.atan2(y, x) * 180) / Math.PI);
   },
   flipX: () => [-1, 0, 0, 1, 0, 0],

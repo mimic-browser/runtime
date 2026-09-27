@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"strconv"
 	"sync/atomic"
 	"testing"
@@ -97,17 +98,40 @@ func TestLazyImageDoesNotBlockWindowLoad(t *testing.T) {
 	}))
 	defer server.Close()
 	p := testPage(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
 	done := make(chan error, 1)
-	go func() { done <- p.Navigate(context.Background(), server.URL) }()
-	select {
-	case err := <-done:
-		if err != nil {
-			close(release)
-			t.Fatal(err)
-		}
-	case <-time.After(2 * time.Second):
+	go func() { done <- p.Navigate(ctx, server.URL) }()
+	deadlineFailure := func(message string) {
+		t.Helper()
+		stacks := make([]byte, 256<<10)
+		t.Logf("navigation deadline goroutines:\n%s", stacks[:runtime.Stack(stacks, true)])
 		close(release)
-		t.Fatal("lazy image delayed the Window load event")
+		t.Fatal(message)
+	}
+	finished := false
+	var navigationErr error
+	// Bootstrap runs before parser resource scheduling. Start the load-delay
+	// gate only when the deliberately blocked image reaches transport. A load
+	// event before that point is also valid; independent scheduling is checked
+	// below with its own unchanged two-second deadline.
+	select {
+	case navigationErr = <-done:
+		finished = true
+	case <-started:
+	case <-ctx.Done():
+		deadlineFailure("navigation did not reach load or image transport")
+	}
+	if !finished {
+		select {
+		case navigationErr = <-done:
+		case <-time.After(2 * time.Second):
+			deadlineFailure("lazy image delayed the Window load event")
+		}
+	}
+	if navigationErr != nil {
+		close(release)
+		t.Fatal(navigationErr)
 	}
 	close(release)
 	value, err := p.Evaluate(context.Background(), `document.readyState+':'+globalThis.loaded`)

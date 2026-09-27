@@ -1,0 +1,151 @@
+{
+  "captureMetadata": {
+    "schemaVersion": 1,
+    "chromeVersion": "152.0.7977.82",
+    "chromiumRevision": 1669021,
+    "chromiumCommit": "d04cdb24d67b081f6cf80200ffc5233f44b61109",
+    "v8Version": "15.2.124.21",
+    "platform": "windows-x64",
+    "browserMode": "headful",
+    "commandLineFeatureOverrides": [],
+    "environmentProfileId": "chrome-152-windows-x64-headful-controlled-v1",
+    "profileFreshness": "fresh-controlled",
+    "viewport": {
+      "width": 1272,
+      "height": 653,
+      "deviceScaleFactor": 1
+    },
+    "window": {
+      "left": 593,
+      "top": 328,
+      "width": 1280,
+      "height": 800,
+      "windowState": "normal"
+    },
+    "secureContextState": true,
+    "isolationState": false,
+    "visibilityState": "visible",
+    "hasFocus": true
+  },
+  "fixtureOrigin": "http://127.0.0.1:50705",
+  "fixture": "internal/browser/testdata/media_source_lifecycle_oracle.js",
+  "fixtureSHA256": "e539191847dd3c1e73511610a14c7e554410465fcf4035854656b66810343010",
+  "worker": false,
+  "result": {
+    "result": {
+      "type": "object",
+      "value": {
+        "events": [
+          {
+            "name": "sourceopen",
+            "state": "open",
+            "trusted": true,
+            "buffers": 0,
+            "active": 0
+          },
+          {
+            "name": "list.addsourcebuffer",
+            "state": "open",
+            "trusted": true,
+            "buffers": 1,
+            "active": 0
+          },
+          {
+            "name": "updatestart",
+            "trusted": true,
+            "updating": true
+          },
+          {
+            "name": "update",
+            "trusted": true,
+            "updating": false
+          },
+          {
+            "name": "updateend",
+            "trusted": true,
+            "updating": false
+          },
+          {
+            "name": "sourceended",
+            "state": "ended",
+            "trusted": true,
+            "buffers": 1,
+            "active": 0
+          },
+          {
+            "name": "list.removesourcebuffer",
+            "state": "closed",
+            "trusted": true,
+            "buffers": 0,
+            "active": 0
+          },
+          {
+            "name": "active.removesourcebuffer",
+            "state": "closed",
+            "trusted": true,
+            "buffers": 0,
+            "active": 0
+          },
+          {
+            "name": "list.removesourcebuffer",
+            "state": "closed",
+            "trusted": true,
+            "buffers": 0,
+            "active": 0
+          },
+          {
+            "name": "sourceclose",
+            "state": "closed",
+            "trusted": true,
+            "buffers": 0,
+            "active": 0
+          }
+        ],
+        "immediateAttachment": "closed",
+        "open": {
+          "duration": "NaN",
+          "videoNetworkState": 2,
+          "videoReadyState": 0,
+          "sourceBuffers": 0
+        },
+        "addSourceBuffer": {
+          "tag": "[object SourceBuffer]",
+          "mode": "segments",
+          "updating": false,
+          "timestampOffset": 0,
+          "appendWindowStart": 0,
+          "appendWindowEnd": "Infinity",
+          "sourceBuffers": 1,
+          "activeSourceBuffers": 0,
+          "indexIdentity": true,
+          "iterableIdentity": true
+        },
+        "immediateAppend": true,
+        "emptyAppend": {
+          "updating": false,
+          "buffered": 0
+        },
+        "durationAfterSet": 5,
+        "immediateEndOfStream": {
+          "state": "ended",
+          "duration": "5"
+        },
+        "ended": {
+          "state": "ended",
+          "duration": "5"
+        },
+        "removeEnded": {
+          "success": true
+        },
+        "afterRemove": 0,
+        "immediateRevocation": "ended",
+        "immediateDetachment": "closed",
+        "closed": {
+          "state": "closed",
+          "duration": "NaN",
+          "sourceBuffers": 0
+        }
+      }
+    }
+  }
+}

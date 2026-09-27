@@ -18,6 +18,45 @@ import (
 
 func policyBool(value bool) *bool { return &value }
 
+func TestResourcePolicyMediaSourceURLIsNotAResponseBody(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		policy ResourcePolicy
+		denied bool
+	}{
+		{name: "ordinary"},
+		{name: "blocked", policy: ResourcePolicy{Presets: []string{"noVisualAssets"}}, denied: true},
+		{name: "report-only", policy: ResourcePolicy{Presets: []string{"noVisualAssets"}, ReportOnly: true}},
+		{name: "headers-only", policy: ResourcePolicy{Presets: []string{"headersOnly"}}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			target, _ := url.Parse("blob:https://example.test/media-source")
+			loader := NewLoader(testEnvironment, NewCookieStore(), trace.New())
+			defer loader.CloseResponseBodies()
+			loader.session.PutMediaSourceURL(target.String(), "owner", &testMediaSourceResource{id: "source"})
+			state := &ResourcePolicyState{}
+			if _, err := state.Update(test.policy); err != nil {
+				t.Fatal(err)
+			}
+			loader.SetResourcePolicy(state)
+			response, err := loader.Load(context.Background(), Request{URL: target, Initiator: Other, Kind: "media"})
+			if err == nil || response.Status != 0 || len(response.Body) != 0 {
+				t.Fatalf("MediaSource became a transport response: status=%d body=%d err=%v", response.Status, len(response.Body), err)
+			}
+			if strings.Contains(err.Error(), "ERR_BLOCKED_BY_CLIENT") != test.denied {
+				t.Fatalf("policy rejection mismatch: %v", err)
+			}
+			stats := state.Stats()
+			if stats.NetworkAcquisitions != 0 || stats.EncodedNetworkBodyBytes != 0 || stats.RetainedBodyBytes != 0 {
+				t.Fatalf("local source incurred transport or retention work: %+v", stats)
+			}
+			if test.policy.ReportOnly && stats.WouldBlock != 1 {
+				t.Fatalf("report-only omitted the policy decision: %+v", stats)
+			}
+		})
+	}
+}
+
 type resourcePolicyFulfillInterceptor struct{ calls atomic.Int64 }
 
 func (i *resourcePolicyFulfillInterceptor) Before(context.Context, Request) (Decision, error) {

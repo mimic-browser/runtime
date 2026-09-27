@@ -1,6 +1,10 @@
 package browser
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/moreveal/mimic/internal/engine"
+	"github.com/moreveal/mimic/internal/trace"
+)
 
 // realmOwners and realmReferences are Page-local. The existing bridge caches
 // strong wrappers, so an imported reference pins its owner for the importing
@@ -116,7 +120,17 @@ func (r *Realm) deactivateContext(keepPromiseJobs bool) {
 		r.closePictureInPictureWindow(r.pictureInPicture, false)
 	}
 	r.inactive = true
+	r.deactivateMediaSources()
+	r.stopMediaLoads()
+	r.agent.Page().ctx.network.RevokeBlobsForOwner(r.ID)
 	r.checkpointClosed = !keepPromiseJobs
+	if !keepPromiseJobs {
+		if lifecycle, ok := r.runtime.(engine.PromiseJobLifecycleRuntime); ok {
+			if err := lifecycle.DeactivatePromiseJobs(); err != nil {
+				r.agent.Page().trace.Add(trace.Error, "promiseJobRetirementFailed", map[string]any{"error": err.Error(), "realm": r.ID})
+			}
+		}
+	}
 	for _, world := range r.isolatedWorlds {
 		world.deactivateContext(keepPromiseJobs)
 	}

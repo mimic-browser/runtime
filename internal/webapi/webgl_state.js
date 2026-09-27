@@ -71,7 +71,7 @@
   if (typeof bootstrapRestoreHooks !== 'undefined') bootstrapRestoreHooks.push(refreshGraphics);
   const fail = (name) => {
     host.semanticMissingAt('webgl_state.js:9', 'WebGL.' + name);
-    throw new DOMException(
+    throw platformDOMException(
       'WebGL ' + name + ' requires an unsupported graphics operation.',
       'NotSupportedError',
     );

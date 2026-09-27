@@ -48,6 +48,9 @@ func (p *Page) SubscribePreview() (*PreviewSubscription, error) {
 		p.previewObservers = make(map[*PreviewSubscription]struct{})
 	}
 	p.previewObservers[s] = struct{}{}
+	// Establish the initial observation before admitting the subscription. Its
+	// lazy realm/bootstrap work must not delay the first scheduled update.
+	p.publishPreview()
 	return s, nil
 }
 

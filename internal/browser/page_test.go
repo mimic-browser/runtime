@@ -540,20 +540,53 @@ func TestTimerStringHandlerAndArguments(t *testing.T) {
 
 func TestXMLHttpRequestHeadersAndLifecycle(t *testing.T) {
 	parallelBrowserTest(t)
-	var requestHeader, requestBody string
+	captured := make(chan [2]string, 1)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		requestHeader = req.Header.Get("X-Test")
+		if req.URL.Path == "/document" {
+			w.Header().Set("Content-Type", "text/html")
+			fmt.Fprint(w, "<!doctype html><title>XHR lifecycle</title>")
+			return
+		}
+		if req.URL.Path != "/xhr" || req.Method != http.MethodPost {
+			http.NotFound(w, req)
+			return
+		}
 		body, _ := io.ReadAll(req.Body)
-		requestBody = string(body)
+		captured <- [2]string{req.Header.Get("X-Test"), string(body)}
 		w.Header().Set("X-Reply", "yes")
 		fmt.Fprint(w, `{"ok":true}`)
 	}))
 	defer srv.Close()
 	p := testPage(t)
-	v, err := p.Evaluate(context.Background(), `new Promise(resolve=>{const states=[],xhr=new XMLHttpRequest();xhr.onreadystatechange=()=>states.push(xhr.readyState);xhr.onloadend=()=>resolve({status:xhr.status,text:xhr.responseText,header:xhr.getResponseHeader('X-Reply'),states:states.join(',')});xhr.open('POST',`+fmt.Sprintf("%q", srv.URL)+`);xhr.setRequestHeader('X-Test','one');xhr.setRequestHeader('X-Test','two');xhr.send('body')})`)
+	// Exercise the intended same-origin lifecycle, rather than relying on a
+	// cross-origin request from an opaque about:blank document bypassing CORS.
+	if err := p.Navigate(context.Background(), srv.URL+"/document"); err != nil {
+		t.Fatal(err)
+	}
+	v, err := p.Evaluate(context.Background(), `new Promise(resolve => {
+  const states = [], xhr = new XMLHttpRequest();
+  xhr.onreadystatechange = () => states.push(xhr.readyState);
+  xhr.onloadend = () => resolve({
+    status: xhr.status,
+    text: xhr.responseText,
+    header: xhr.getResponseHeader('X-Reply'),
+    states: states.join(',')
+  });
+  xhr.open('POST', `+strconv.Quote(srv.URL+"/xhr")+`);
+  xhr.setRequestHeader('X-Test', 'one');
+  xhr.setRequestHeader('X-Test', 'two');
+  xhr.send('body');
+})`)
 	if err != nil {
 		t.Fatal(err)
 	}
+	var request [2]string
+	select {
+	case request = <-captured:
+	default:
+		t.Fatal("XHR completed without the expected POST reaching transport")
+	}
+	requestHeader, requestBody := request[0], request[1]
 	m := v.(map[string]any)
 	if requestHeader != "one, two" || requestBody != "body" || m["status"] != int64(200) || m["text"] != `{"ok":true}` || m["header"] != "yes" || m["states"] != "1,2,3,4" {
 		t.Fatalf("unexpected XHR semantics: requestHeader=%q requestBody=%q result=%#v", requestHeader, requestBody, m)

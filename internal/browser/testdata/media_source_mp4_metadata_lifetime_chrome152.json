@@ -1,0 +1,69 @@
+{
+  "captureMetadata": {
+    "schemaVersion": 1,
+    "chromeVersion": "152.0.7977.82",
+    "chromiumRevision": 1669021,
+    "chromiumCommit": "d04cdb24d67b081f6cf80200ffc5233f44b61109",
+    "v8Version": "15.2.124.21",
+    "platform": "windows-x64",
+    "browserMode": "headful",
+    "commandLineFeatureOverrides": [],
+    "environmentProfileId": "chrome-152-windows-x64-headful-controlled-v1",
+    "profileFreshness": "fresh-controlled",
+    "viewport": {
+      "width": 1272,
+      "height": 653,
+      "deviceScaleFactor": 1
+    },
+    "window": {
+      "left": 593,
+      "top": 328,
+      "width": 1280,
+      "height": 800,
+      "windowState": "normal"
+    },
+    "secureContextState": true,
+    "isolationState": false,
+    "visibilityState": "visible",
+    "hasFocus": true
+  },
+  "fixtureOrigin": "http://127.0.0.1:25822",
+  "fixture": "internal/browser/testdata/media_source_mp4_metadata_lifetime_oracle.js",
+  "fixtureSHA256": "2d77c2f00284e140e8145be4dfab1532aa8b92d866bbab86657891541aeda68d",
+  "worker": false,
+  "result": {
+    "result": {
+      "type": "object",
+      "value": {
+        "beforeInitialization": {
+          "sourceDuration": "7",
+          "videoDuration": "7",
+          "width": 0,
+          "height": 0,
+          "readyState": 0
+        },
+        "afterInitialization": {
+          "sourceDuration": "7",
+          "videoDuration": "7",
+          "width": 16,
+          "height": 16,
+          "readyState": 1
+        },
+        "afterBufferRemoval": {
+          "sourceDuration": "7",
+          "videoDuration": "7",
+          "width": 16,
+          "height": 16,
+          "readyState": 4
+        },
+        "afterReset": {
+          "sourceDuration": "NaN",
+          "videoDuration": "NaN",
+          "width": 0,
+          "height": 0,
+          "readyState": 0
+        }
+      }
+    }
+  }
+}

@@ -6,6 +6,16 @@ import (
 	"strings"
 )
 
+// SetTextContentJSON shares replace-all ownership and mutation bookkeeping with
+// scalar textContent writes while retaining exact DOMString code units.
+func (d *Document) SetTextContentJSON(id int64, data string) error {
+	var scalar string
+	if err := json.Unmarshal([]byte(data), &scalar); err != nil {
+		return err
+	}
+	return d.setTextContent(id, scalar, data)
+}
+
 // SetCharacterDataJSON accepts JSON's lossless representation of JS code units.
 // Keep the exact representation in the canonical node, never in a JS mirror.
 func (d *Document) SetCharacterDataJSON(id int64, data string) error {

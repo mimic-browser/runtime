@@ -46,7 +46,7 @@ const compatibilitySelectors = (() => {
   const emptySelector = () => [
     { type: 'pseudo', name: 'not', data: [[{ type: 'universal', namespace: null }]] },
   ];
-  const syntax = (message) => new DOMException(message, 'SyntaxError');
+  const syntax = (message) => platformDOMException(message, 'SyntaxError');
   // Filtering library extensions belongs at the DOM API boundary. Parsing
   // escapes, combinators, attribute operators and an+b remains upstream code.
   function validate(groups, nested = false, forgiving = false, relative = false, strict = false) {

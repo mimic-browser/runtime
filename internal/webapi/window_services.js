@@ -28,7 +28,10 @@
     replaceableWindow('crashReport', () => report);
     const quote = JSON.stringify;
     const fail = (method, name, message) =>
-      new DOMException(`Failed to execute '${method}' on 'CrashReportContext': ${message}`, name);
+      platformDOMException(
+        `Failed to execute '${method}' on 'CrashReportContext': ${message}`,
+        name,
+      );
     const check = (receiver) => {
       if (receiver !== report) throw new TypeError('Illegal invocation');
     };
@@ -43,11 +46,11 @@
             'InvalidStateError',
             'The initialize() method has already been called.',
           );
-        return new Promise((resolve, reject) =>
+        return new platformPromise((resolve, reject) =>
           host.enqueueWebTask(
             () => {
               if (!host.initializeCrashReport()) {
-                reject(new DOMException('The requested size is too large.', 'NotAllowedError'));
+                reject(platformDOMException('The requested size is too large.', 'NotAllowedError'));
                 return;
               }
               resolve();
@@ -58,7 +61,7 @@
           ),
         );
       } catch (e) {
-        return Promise.reject(e);
+        return platformPromiseReject(e);
       }
     });
     const mutate = (method, key, value) => {
@@ -165,7 +168,7 @@
             id = signals.get(signal),
             [previous, status] = host.beginWebTaskPriorityChange(id, priorities.indexOf(p));
           if (status < 0)
-            throw new DOMException(
+            throw platformDOMException(
               'Cannot change priority during a prioritychange event.',
               'NotAllowedError',
             );
@@ -206,8 +209,8 @@
       const delay = options.delay === undefined ? 0 : Number(options.delay);
       if (!Number.isFinite(delay) || delay < 0 || delay > Number.MAX_SAFE_INTEGER)
         throw new TypeError('delay is outside the accepted range');
-      if (signal?.aborted) return Promise.reject(signal.reason);
-      return new Promise((resolve, reject) => {
+      if (signal?.aborted) return platformPromiseReject(signal.reason);
+      return new platformPromise((resolve, reject) => {
         let taskID = 0;
         const cleanup = () => {
           signal?.removeEventListener('abort', cancel);
@@ -220,7 +223,7 @@
         taskID = host.enqueueWebTask(
           () => {
             try {
-              Promise.resolve(callback()).then(
+              platformPromiseResolve(callback()).then(
                 (value) => {
                   cleanup();
                   resolve(value);
@@ -251,7 +254,7 @@
         if (typeof callback !== 'function') throw new TypeError('The callback must be a function');
         return enqueue(callback, options ?? {}, false);
       } catch (e) {
-        return Promise.reject(e);
+        return platformPromiseReject(e);
       }
     });
     nativeMethod(Scheduler.prototype, 'yield', function yield_() {
@@ -263,7 +266,7 @@
             : {};
         return enqueue(() => undefined, options, true);
       } catch (e) {
-        return Promise.reject(e);
+        return platformPromiseReject(e);
       }
     });
   }
@@ -284,13 +287,15 @@
         requireArgs(name, 'CookieStore', count, args);
         return action();
       } catch (e) {
-        return Promise.reject(e);
+        return platformPromiseReject(e);
       }
     };
     const io = (action) => {
       if (!host.hasStorageAccess())
-        return Promise.reject(new DOMException('Access to cookies is denied.', 'SecurityError'));
-      return new Promise((resolve, reject) =>
+        return platformPromiseReject(
+          platformDOMException('Access to cookies is denied.', 'SecurityError'),
+        );
+      return new platformPromise((resolve, reject) =>
         host.enqueueWebTask(
           () => {
             try {

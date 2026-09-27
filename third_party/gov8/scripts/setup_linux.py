@@ -8,6 +8,7 @@ import argparse
 import fcntl
 import gzip
 import hashlib
+import json
 import os
 from pathlib import Path
 import platform
@@ -18,6 +19,7 @@ import tarfile
 import tempfile
 import tomllib
 import urllib.request
+from verify_native_source import verify
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = "152.2.0"
@@ -57,6 +59,8 @@ def run(*args, **kwargs):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--build-dir", type=Path, default=ROOT / "build/linux-amd64")
+    parser.add_argument("--native-source", type=Path, required=True)
+    parser.add_argument("--native-archive", type=Path, required=True)
     args = parser.parse_args()
     if platform.system() != "Linux" or platform.machine() != "x86_64":
         parser.error("run on Linux x86_64 (including WSL2)")
@@ -67,19 +71,24 @@ def main():
         pin(ROOT / "rust-oracle/Cargo.lock", "v8", VERSION)
         pin(ROOT / "rust-oracle/Cargo.lock", "temporal_capi", "0.2.6")
         pin(ROOT / "internal/shim/temporal/Cargo.lock", "temporal_capi", "0.2.6")
-        archive, crate = build / "v8.a.gz", build / "v8.crate"
-        acquire(archive, f"https://github.com/denoland/rusty_v8/releases/download/v{VERSION}/{ARTIFACT}", ARTIFACT_SHA)
+        native_source = args.native_source.resolve()
+        verify(native_source)
+        native_archive = args.native_archive.resolve(strict=True)
+        crate = build / "v8.crate"
         acquire(crate, f"https://static.crates.io/crates/v8/v8-{VERSION}.crate", CRATE_SHA)
         # Fresh verified headers each run; never trust a stale extracted header tree.
         with tempfile.TemporaryDirectory(prefix="headers-", dir=build) as extracted:
             with tarfile.open(crate) as tar:
                 tar.extractall(extracted, filter="data")
             source = Path(extracted) / f"v8-{VERSION}"
+            # Shim headers must match the patched archive, not the stock crate.
+            for entry in json.loads((ROOT / "patches/v8-native-observation.json").read_text())["files"]:
+                shutil.copyfile(native_source / entry["path"], source / entry["path"])
             compiler_root = build / "compiler"
             # The updater is from the hash-verified crate and pins the Clang revision.
             run(sys.executable, source / "tools/clang/scripts/update.py", "--output-dir", compiler_root)
             compiler = compiler_root / "bin/clang++"
-            with gzip.open(archive, "rb") as src, (build / "v8.a").open("wb") as dst:
+            with native_archive.open("rb") as src, (build / "v8.a").open("wb") as dst:
                 shutil.copyfileobj(src, dst)
             env = dict(os.environ, CARGO_TARGET_DIR=str(build / "temporal"))
             run("cargo", "build", "--release", "--locked", "--manifest-path", ROOT / "internal/shim/temporal/Cargo.toml", env=env)

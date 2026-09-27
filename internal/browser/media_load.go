@@ -12,20 +12,58 @@ import (
 // video frames. Superseded requests cannot update the element that replaced
 // their source.
 type mediaLoad struct {
-	cancel     context.CancelFunc
-	currentSrc string
+	cancel         context.CancelFunc
+	currentSrc     string
+	source         *mediaSource
+	owner          *Realm
+	nodeID         int64
+	initialization *mp4Initialization
+	readyState     int
+}
+
+func (load *mediaLoad) queueEvent(name string) {
+	owner := load.owner
+	owner.scheduler.Post(scheduler.DOM, 0, func(ctx context.Context) error {
+		if owner.inactive || owner.closed || owner.mediaLoads[load.nodeID] != load {
+			return nil
+		}
+		return owner.dispatchResourceEvent(ctx, load.nodeID, name)
+	})
+}
+
+func (load *mediaLoad) stop() {
+	if load.cancel != nil {
+		load.cancel()
+	}
+	if load.source != nil && load.source.detach(load) {
+		load.source.queueEvent("activeSourceBuffers", "removesourcebuffer")
+		load.source.queueEvent("sourceBuffers", "removesourcebuffer")
+		load.source.queueEvent("source", "sourceclose")
+	}
+}
+
+func (r *Realm) stopMediaLoads() {
+	for _, load := range r.mediaLoads {
+		load.stop()
+	}
 }
 
 func (r *Realm) updateMedia(id int64, explicit bool) {
 	if r.mediaLoads == nil {
 		r.mediaLoads = map[int64]*mediaLoad{}
 	}
-	if previous := r.mediaLoads[id]; previous != nil && previous.cancel != nil {
-		previous.cancel()
+	current := &mediaLoad{owner: r, nodeID: id}
+	if previous := r.mediaLoads[id]; previous != nil {
+		// Selection clears currentSrc in its task, after queued detachment
+		// events, rather than at the synchronous load() reset boundary.
+		current.currentSrc = previous.currentSrc
+		previous.stop()
 	}
-	current := &mediaLoad{}
 	r.mediaLoads[id] = current
 	r.scheduler.Post(scheduler.Network, 0, func(ctx context.Context) error {
+		if r.mediaLoads[id] != current {
+			return nil
+		}
 		node, ok := r.document.Get(id)
 		if !ok || (node.TagName != "AUDIO" && node.TagName != "VIDEO") {
 			return nil
@@ -53,6 +91,7 @@ func (r *Realm) updateMedia(id int64, explicit bool) {
 			}
 		}
 		if src == "" {
+			current.currentSrc = ""
 			return r.dispatchResourceEvent(ctx, id, "error")
 		}
 		u, err := r.resolveDocument(src)
@@ -62,6 +101,21 @@ func (r *Realm) updateMedia(id int64, explicit bool) {
 		current.currentSrc = u.String()
 		request := r.elementRequest(u, node.Attributes, network.Other)
 		request.Kind = "media"
+		if resource := r.agent.Page().ctx.network.MediaSourceURL(u.String()); resource != nil {
+			source, ok := resource.(*mediaSource)
+			if !ok {
+				return r.dispatchResourceEvent(ctx, id, "error")
+			}
+			if err := r.agent.Page().loader.CheckLocalResourcePolicy(request); err != nil {
+				return r.dispatchResourceEvent(ctx, id, "error")
+			}
+			if !source.attach(current) {
+				return r.dispatchResourceEvent(ctx, id, "error")
+			}
+			current.source = source
+			source.queueEvent("source", "sourceopen")
+			return nil
+		}
 		loadContext, cancel := context.WithCancel(r.resourceContext)
 		current.cancel = cancel
 		r.resourceWG.Add(1)

@@ -1,0 +1,130 @@
+{
+  "captureMetadata": {
+    "schemaVersion": 1,
+    "chromeVersion": "152.0.7977.82",
+    "chromiumRevision": 1669021,
+    "chromiumCommit": "d04cdb24d67b081f6cf80200ffc5233f44b61109",
+    "v8Version": "15.2.124.21",
+    "platform": "windows-x64",
+    "browserMode": "headful",
+    "commandLineFeatureOverrides": [],
+    "environmentProfileId": "chrome-152-windows-x64-headful-local-probe-reused-v1",
+    "profileFreshness": "fresh-at-original-launch; reused process with a new local fixture document",
+    "viewport": {
+      "width": 1272,
+      "height": 653,
+      "deviceScaleFactor": 1
+    },
+    "window": {
+      "left": 593,
+      "top": 328,
+      "width": 1280,
+      "height": 800,
+      "windowState": "normal"
+    },
+    "secureContextState": true,
+    "isolationState": false,
+    "visibilityState": "visible",
+    "hasFocus": true,
+    "provenanceCorrection": "The helper default fresh-controlled label is corrected here. Original captures are retained unchanged; process was directly launched with a dedicated profile and minimal arguments, then reused for local semantic probes."
+  },
+  "fixtureOrigin": "http://127.0.0.1:44403",
+  "fixture": "internal/browser/testdata/xhr_constants_oracle.js",
+  "fixtureSHA256": "45ff6acaf3a2711f2186fd9f8ba20fe6e2dbc16551a195f824bf1b3a3de73ce2",
+  "worker": false,
+  "result": {
+    "result": {
+      "type": "object",
+      "value": {
+        "constants": [
+          {
+            "name": "UNSENT",
+            "constructor": {
+              "value": 0,
+              "writable": false,
+              "enumerable": true,
+              "configurable": false
+            },
+            "prototype": {
+              "value": 0,
+              "writable": false,
+              "enumerable": true,
+              "configurable": false
+            },
+            "instance": null,
+            "inherited": 0
+          },
+          {
+            "name": "OPENED",
+            "constructor": {
+              "value": 1,
+              "writable": false,
+              "enumerable": true,
+              "configurable": false
+            },
+            "prototype": {
+              "value": 1,
+              "writable": false,
+              "enumerable": true,
+              "configurable": false
+            },
+            "instance": null,
+            "inherited": 1
+          },
+          {
+            "name": "HEADERS_RECEIVED",
+            "constructor": {
+              "value": 2,
+              "writable": false,
+              "enumerable": true,
+              "configurable": false
+            },
+            "prototype": {
+              "value": 2,
+              "writable": false,
+              "enumerable": true,
+              "configurable": false
+            },
+            "instance": null,
+            "inherited": 2
+          },
+          {
+            "name": "LOADING",
+            "constructor": {
+              "value": 3,
+              "writable": false,
+              "enumerable": true,
+              "configurable": false
+            },
+            "prototype": {
+              "value": 3,
+              "writable": false,
+              "enumerable": true,
+              "configurable": false
+            },
+            "instance": null,
+            "inherited": 3
+          },
+          {
+            "name": "DONE",
+            "constructor": {
+              "value": 4,
+              "writable": false,
+              "enumerable": true,
+              "configurable": false
+            },
+            "prototype": {
+              "value": 4,
+              "writable": false,
+              "enumerable": true,
+              "configurable": false
+            },
+            "instance": null,
+            "inherited": 4
+          }
+        ],
+        "initialState": true
+      }
+    }
+  }
+}

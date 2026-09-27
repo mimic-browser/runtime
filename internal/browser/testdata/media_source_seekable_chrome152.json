@@ -1,0 +1,74 @@
+{
+  "captureMetadata": {
+    "schemaVersion": 1,
+    "chromeVersion": "152.0.7977.82",
+    "chromiumRevision": 1669021,
+    "chromiumCommit": "d04cdb24d67b081f6cf80200ffc5233f44b61109",
+    "v8Version": "15.2.124.21",
+    "platform": "windows-x64",
+    "browserMode": "headful",
+    "commandLineFeatureOverrides": [],
+    "environmentProfileId": "chrome-152-windows-x64-headful-controlled-v1",
+    "profileFreshness": "fresh-controlled",
+    "viewport": {
+      "width": 1272,
+      "height": 653,
+      "deviceScaleFactor": 1
+    },
+    "window": {
+      "left": 593,
+      "top": 328,
+      "width": 1280,
+      "height": 800,
+      "windowState": "normal"
+    },
+    "secureContextState": true,
+    "isolationState": false,
+    "visibilityState": "visible",
+    "hasFocus": true
+  },
+  "fixtureOrigin": "http://127.0.0.1:18604",
+  "fixture": "internal/browser/testdata/media_source_seekable_oracle.js",
+  "fixtureSHA256": "fca9cb7160acc269d44746ba345f567f37fb2bd4d32117e00459b6943bd6a9d4",
+  "worker": false,
+  "result": {
+    "result": {
+      "type": "object",
+      "value": {
+        "beforeInitialization": [
+          [
+            0,
+            7
+          ]
+        ],
+        "afterInitialization": [
+          [
+            0,
+            7
+          ]
+        ],
+        "zeroDuration": [
+          [
+            0,
+            0
+          ]
+        ],
+        "savedAfterChange": [
+          [
+            0,
+            7
+          ]
+        ],
+        "infiniteDuration": [],
+        "changedDuration": [
+          [
+            0,
+            3
+          ]
+        ],
+        "fresh": true,
+        "afterReset": []
+      }
+    }
+  }
+}

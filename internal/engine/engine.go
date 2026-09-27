@@ -95,6 +95,13 @@ type OwnerRuntime interface {
 	RunOnOwner(context.Context, func(context.Context) error) error
 }
 
+// RealmCallRuntime admits a synchronous operation on another realm, directly
+// when it shares the execution owner and through nested dispatch otherwise.
+// Admission preserves the active calling operation's cancellation context.
+type RealmCallRuntime interface {
+	RunRealmCall(context.Context, Runtime, func(context.Context) error) error
+}
+
 // StringCallRuntime executes a private serialization function with native
 // Values or primitive arguments. The result must already be a string; no
 // author coercion or checkpoint is performed. Temporary arguments/results do
@@ -110,6 +117,19 @@ type StringCallRuntime interface {
 type BootstrapRuntime interface {
 	EvalBootstrap(context.Context, string, string) (Value, error)
 }
+
+// RealmRuntimeFactory creates an independent realm on the same execution owner.
+// A Page uses this for synchronously connected frame realms; unrelated Pages
+// continue to obtain independent owners from the engine Factory.
+type RealmRuntimeFactory interface {
+	NewRealmRuntime(useBootstrap bool) (Runtime, bool, error)
+}
+
+type ConnectedRealmFactory interface{ ConnectedRealms() bool }
+
+// RealmSecurityRuntime projects the browser's origin admission into native
+// context access and stack capture. The key is private browser-owned state.
+type RealmSecurityRuntime interface{ SetSecurityOrigin(string) error }
 
 // ModuleLoader resolves one static module request. referrer is the canonical
 // resource name supplied for the importing module; resourceName becomes the
@@ -174,6 +194,29 @@ type InterceptedObjectRuntime interface {
 	NewInterceptedObject(handlers Value) (Value, error)
 }
 
+// PropertyObservationRuntime supplies a realm-owned native factory whose
+// callback completes before normal property resolution continues. It observes
+// without wrapping object identity or adding frames to the resolved operation.
+// Factory and callback data must survive bootstrap snapshots without Go roots.
+type PropertyObservationRuntime interface {
+	PropertyObservationFactory() Value
+}
+
+// ReceiverDispatchRuntime supplies a realm-owned native factory taking a
+// native receiver validator, original intrinsic, semantic implementation, name
+// and length. It preserves raw receivers and lets the original intrinsic
+// produce brand failures without running a JavaScript adapter on that path.
+// Factory and callback data must preserve ownership through bootstrap snapshots.
+// ExceptionStateRuntime supplies a native initializer for platform exception
+// state. It does not format stacks or replace author-visible error fields.
+type ExceptionStateRuntime interface {
+	ExceptionStateFactory() Value
+}
+
+type ReceiverDispatchRuntime interface {
+	ReceiverDispatchFactory() Value
+}
+
 // ArrayBufferDetacher supplies real backing-store detachment where the engine
 // does not expose ArrayBuffer.prototype.transfer. Call only on the realm actor.
 type ArrayBufferDetacher interface {
@@ -185,4 +228,11 @@ type ArrayBufferDetacher interface {
 // remains authoritative for arbitrary author functions and callable proxies.
 type NativeFunctionSourceRuntime interface {
 	InstallNativeFunctionToString(resolver Value, original Value) error
+}
+
+// PromiseJobLifecycleRuntime retires runnable work while preserving a realm's
+// retained language objects. Frame removal may deliberately keep promise jobs;
+// document replacement shuts them down.
+type PromiseJobLifecycleRuntime interface {
+	DeactivatePromiseJobs() error
 }

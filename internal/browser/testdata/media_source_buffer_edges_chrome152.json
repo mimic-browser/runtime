@@ -1,0 +1,130 @@
+{
+  "captureMetadata": {
+    "schemaVersion": 1,
+    "chromeVersion": "152.0.7977.82",
+    "chromiumRevision": 1669021,
+    "chromiumCommit": "d04cdb24d67b081f6cf80200ffc5233f44b61109",
+    "v8Version": "15.2.124.21",
+    "platform": "windows-x64",
+    "browserMode": "headful",
+    "commandLineFeatureOverrides": [],
+    "environmentProfileId": "chrome-152-windows-x64-headful-controlled-v1",
+    "profileFreshness": "fresh-controlled",
+    "viewport": {
+      "width": 1272,
+      "height": 653,
+      "deviceScaleFactor": 1
+    },
+    "window": {
+      "left": 593,
+      "top": 328,
+      "width": 1280,
+      "height": 800,
+      "windowState": "normal"
+    },
+    "secureContextState": true,
+    "isolationState": false,
+    "visibilityState": "visible",
+    "hasFocus": true
+  },
+  "fixtureOrigin": "http://127.0.0.1:30596",
+  "fixture": "internal/browser/testdata/media_source_buffer_edges_oracle.js",
+  "fixtureSHA256": "51ebecf2707218f10660c8ddaf19012964d3cae6f7e573094cbd08c0e20ce0d2",
+  "worker": false,
+  "result": {
+    "result": {
+      "type": "object",
+      "value": {
+        "durationNegative": {
+          "error": "TypeError",
+          "message": "Failed to set the 'duration' property on 'MediaSource': The duration provided (-1) is less than the minimum bound (0)."
+        },
+        "durationNaN": {
+          "error": "TypeError",
+          "message": "Failed to set the 'duration' property on 'MediaSource': The duration is not a number."
+        },
+        "endOfStreamEnum": {
+          "error": "TypeError",
+          "message": "Failed to execute 'endOfStream' on 'MediaSource': The provided value 'invalid' is not a valid enum value of type EndOfStreamError."
+        },
+        "bufferedIdentity": false,
+        "rangeStart": {
+          "error": "IndexSizeError",
+          "message": "Failed to execute 'start' on 'TimeRanges': The index provided (0) is greater than or equal to the maximum bound (0)."
+        },
+        "rangeEnd": {
+          "error": "IndexSizeError",
+          "message": "Failed to execute 'end' on 'TimeRanges': The index provided (0) is greater than or equal to the maximum bound (0)."
+        },
+        "rangeMissing": {
+          "error": "TypeError",
+          "message": "Failed to execute 'start' on 'TimeRanges': 1 argument required, but only 0 present."
+        },
+        "windowStart": 1,
+        "windowEnd": 10,
+        "windowStartNegative": {
+          "error": "TypeError",
+          "message": "Failed to set the 'appendWindowStart' property on 'SourceBuffer': The value provided (-1) is outside the range (0, 10]."
+        },
+        "windowStartPastEnd": {
+          "error": "TypeError",
+          "message": "Failed to set the 'appendWindowStart' property on 'SourceBuffer': The value provided (11) is outside the range (0, 10]."
+        },
+        "windowEndBeforeStart": {
+          "error": "TypeError",
+          "message": "Failed to set the 'appendWindowEnd' property on 'SourceBuffer': The value provided (0) is less than the minimum bound (1)."
+        },
+        "windowEndNaN": {
+          "error": "TypeError",
+          "message": "Failed to set the 'appendWindowEnd' property on 'SourceBuffer': The value provided is not a number."
+        },
+        "timestamp": -2,
+        "mode": "sequence",
+        "modeEnum": {
+          "success": true
+        },
+        "appendWrongType": {
+          "error": "TypeError",
+          "message": "Failed to execute 'appendBuffer' on 'SourceBuffer': Overload resolution failed."
+        },
+        "appendUpdating": {
+          "error": "InvalidStateError",
+          "message": "Failed to execute 'appendBuffer' on 'SourceBuffer': This SourceBuffer is still processing an 'appendBuffer' or 'remove' operation."
+        },
+        "durationUpdating": {
+          "error": "InvalidStateError",
+          "message": "Failed to set the 'duration' property on 'MediaSource': The 'updating' attribute is true on one or more of this MediaSource's SourceBuffers."
+        },
+        "endOfStreamUpdating": {
+          "error": "InvalidStateError",
+          "message": "Failed to execute 'endOfStream' on 'MediaSource': The 'updating' attribute is true on one or more of this MediaSource's SourceBuffers."
+        },
+        "bufferedRemoved": {
+          "error": "InvalidStateError",
+          "message": "Failed to read the 'buffered' property from 'SourceBuffer': This SourceBuffer has been removed from the parent media source."
+        },
+        "appendRemoved": {
+          "error": "InvalidStateError",
+          "message": "Failed to execute 'appendBuffer' on 'SourceBuffer': This SourceBuffer has been removed from the parent media source."
+        },
+        "timestampRemoved": {
+          "error": "InvalidStateError",
+          "message": "Failed to set the 'timestampOffset' property on 'SourceBuffer': This SourceBuffer has been removed from the parent media source."
+        },
+        "windowStartRemoved": {
+          "error": "InvalidStateError",
+          "message": "Failed to set the 'appendWindowStart' property on 'SourceBuffer': This SourceBuffer has been removed from the parent media source."
+        },
+        "modeRemoved": {
+          "error": "InvalidStateError",
+          "message": "Failed to set the 'mode' property on 'SourceBuffer': This SourceBuffer has been removed from the parent media source."
+        },
+        "removeAgain": {
+          "error": "NotFoundError",
+          "message": "Failed to execute 'removeSourceBuffer' on 'MediaSource': The SourceBuffer provided is not contained in this MediaSource."
+        },
+        "emptyEndedDuration": "NaN"
+      }
+    }
+  }
+}

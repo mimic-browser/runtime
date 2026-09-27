@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"runtime"
 	"testing"
 
@@ -19,6 +20,11 @@ func TestPackedArgumentsMatchGeneric(t *testing.T) {
 		values := make([]any, len(args))
 		for i, arg := range args {
 			values[i] = arg.Export()
+			// JSON has no representation for special numeric primitives. Tag
+			// them explicitly while comparing the two lossless host paths.
+			if number, ok := values[i].(float64); ok && (math.IsNaN(number) || math.IsInf(number, 0) || number == 0 && math.Signbit(number)) {
+				values[i] = map[string]string{"number": fmt.Sprint(number)}
+			}
 		}
 		data, err := json.Marshal(values)
 		return r.Value(string(data)), err

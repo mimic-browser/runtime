@@ -107,7 +107,8 @@ const svgList = (type, node, key, readonly = false) => {
   s.item = (index) => {
     s.refresh();
     index = +index >>> 0;
-    if (index >= s.entries.length) throw new DOMException('Index out of range', 'IndexSizeError');
+    if (index >= s.entries.length)
+      throw platformDOMException('Index out of range', 'IndexSizeError');
     const value = s.entries[index];
     if (itemType === 'string') return value;
     const copy = Object.create(globalThis[itemType].prototype);
@@ -153,7 +154,7 @@ const svgList = (type, node, key, readonly = false) => {
         s.refresh();
         const index = Number(key);
         if (index >= s.entries.length)
-          throw new DOMException('Index out of range', 'IndexSizeError');
+          throw platformDOMException('Index out of range', 'IndexSizeError');
         const copy = s.clone(value);
         s.entries[index] = copy;
         const v = svgSlots.get(copy);
@@ -212,7 +213,7 @@ for (const type of Object.keys(svgListTypes)) {
         index = 0;
       } else if (name === 'appendItem') index = s.entries.length;
       else if (name === 'replaceItem' && index >= s.entries.length)
-        throw new DOMException('Index out of range', 'IndexSizeError');
+        throw platformDOMException('Index out of range', 'IndexSizeError');
       index = Math.min(index, s.entries.length);
       s.entries.splice(index, name === 'replaceItem' ? 1 : 0, copy);
       const v = svgSlots.get(copy);
@@ -381,7 +382,7 @@ for (const key of ['align', 'meetOrSlice'])
       svgWrite(s);
       value = Number(value) >>> 0;
       if (value < 1 || value > (key === 'align' ? 10 : 2))
-        throw new DOMException('Invalid enumeration', 'NotSupportedError');
+        throw platformDOMException('Invalid enumeration', 'NotSupportedError');
       const a = this.align,
         m = this.meetOrSlice;
       s.write(

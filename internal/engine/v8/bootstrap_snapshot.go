@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"runtime"
 	"sync"
 	"time"
 
@@ -26,7 +27,11 @@ func (Factory) BootstrapSnapshotIdentity() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return build + "\x00" + runtimeVersion, nil
+	nativeIdentity, err := gov8.NativeLibraryIdentity()
+	if err != nil {
+		return "", err
+	}
+	return build + "; bootstrap-layout=bare-default+platform-context" + "\x00" + runtimeVersion + "\x00" + nativeIdentity, nil
 }
 
 func (Factory) LoadBootstrapSnapshot(data []byte) (engine.BootstrapSnapshot, error) {
@@ -70,8 +75,9 @@ type bootstrapSnapshot struct {
 	size int
 }
 
-// BuildBootstrapSnapshot serializes complete pure-JS initialization. Native
-// host bindings belong to each restored runtime and must be installed later.
+// BuildBootstrapSnapshot serializes realm-owned initialization, including the
+// portable property observer callbacks registered as external references.
+// Go host bindings belong to each restored runtime and are installed later.
 func (Factory) BuildBootstrapSnapshot(ctx context.Context, sources ...string) (engine.BootstrapSnapshot, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -94,8 +100,28 @@ func (Factory) BuildBootstrapSnapshot(ctx context.Context, sources ...string) (e
 	return &bootstrapSnapshot{blob: value.blob, size: len(value.blob.Bytes())}, nil
 }
 
-func buildBootstrapSnapshot(ctx context.Context, sources ...string) (*gov8.StartupData, error) {
-	creator, err := gov8.NewSnapshotCreator()
+func buildBootstrapSnapshot(ctx context.Context, sources ...string) (blob *gov8.StartupData, err error) {
+	// SnapshotCreator releases its own thread pin when consuming the creator.
+	// Keep an outer pin until the caller's thread policy has been restored: a
+	// synchronously awaited builder is as latency-sensitive as the Page owner.
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	if restore := configurePageThreadPolicy(); restore != nil {
+		defer func() {
+			if restoreErr := restore(); restoreErr != nil {
+				if blob != nil {
+					_ = blob.Release()
+					blob = nil
+				}
+				err = errors.Join(err, restoreErr)
+			}
+		}()
+	}
+	references, err := bootstrapNativeReferences()
+	if err != nil {
+		return nil, err
+	}
+	creator, err := gov8.NewSnapshotCreatorWithExternalReferences(references)
 	if err != nil {
 		return nil, err
 	}
@@ -118,6 +144,45 @@ func buildBootstrapSnapshot(ctx context.Context, sources ...string) (*gov8.Start
 		_ = realm.Close()
 		return nil, err
 	}
+	factory, err := iso.NewPropertyObservationFactory(scope, realm)
+	if err == nil {
+		var global *gov8.Object
+		global, err = realm.GlobalObject(scope)
+		if err == nil {
+			_, err = global.SetByName(scope, realm, "__mimicPropertyObservationFactory", factory)
+		}
+	}
+	if err != nil {
+		_ = scope.Close()
+		_ = realm.Close()
+		return nil, err
+	}
+	dispatchFactory, err := iso.NewReceiverDispatchFactory(scope, realm)
+	if err == nil {
+		var global *gov8.Object
+		global, err = realm.GlobalObject(scope)
+		if err == nil {
+			_, err = global.SetByName(scope, realm, "__mimicReceiverDispatchFactory", dispatchFactory)
+		}
+	}
+	if err != nil {
+		_ = scope.Close()
+		_ = realm.Close()
+		return nil, err
+	}
+	exceptionFactory, err := iso.NewExceptionStateFactory(scope, realm)
+	if err == nil {
+		var global *gov8.Object
+		global, err = realm.GlobalObject(scope)
+		if err == nil {
+			_, err = global.SetByName(scope, realm, "__mimicExceptionStateFactory", exceptionFactory)
+		}
+	}
+	if err != nil {
+		_ = scope.Close()
+		_ = realm.Close()
+		return nil, err
+	}
 	for _, source := range sources {
 		err = runSnapshotSeed(ctx, iso, realm, scope, source)
 		if err != nil {
@@ -125,7 +190,27 @@ func buildBootstrapSnapshot(ctx context.Context, sources ...string) (*gov8.Start
 		}
 	}
 	if err == nil {
-		err = creator.SetDefaultContext(realm)
+		// Seed closures may retain the factories, but transport globals must not
+		// become extra observable properties of an otherwise ordinary context.
+		err = runSnapshotSeed(ctx, iso, realm, scope, `delete globalThis.__mimicPropertyObservationFactory; delete globalThis.__mimicReceiverDispatchFactory; delete globalThis.__mimicExceptionStateFactory;`)
+	}
+	if err == nil {
+		// Fresh sibling realms must start with native intrinsics, rather than
+		// inherit another document's serialized platform state. Store the seed
+		// as the additional context and retain a bare default context.
+		var bare *gov8.Context
+		bare, err = iso.NewContext()
+		if err == nil {
+			err = creator.SetDefaultContext(bare)
+			if err == nil {
+				var index int
+				index, err = creator.AddContext(realm)
+				if err == nil && index != 0 {
+					err = errors.New("unexpected platform context snapshot index")
+				}
+			}
+			err = errors.Join(err, bare.Close())
+		}
 	}
 	err = errors.Join(err, scope.Close(), realm.Close())
 	if err != nil {
@@ -136,7 +221,7 @@ func buildBootstrapSnapshot(ctx context.Context, sources ...string) (*gov8.Start
 	}
 	// Serialization is a bounded native phase. Cancellation is checked again
 	// after it finishes; never terminate the serializer midway through cleanup.
-	blob, err := creator.CreateBlob(gov8.FunctionCodeKeep)
+	blob, err = creator.CreateBlob(gov8.FunctionCodeKeep)
 	consumed = true // CreateBlob consumes its creator, including native failures.
 	if err != nil {
 		return nil, err
@@ -177,7 +262,7 @@ func runSnapshotSeed(ctx context.Context, iso *gov8.Isolate, realm *gov8.Context
 		return err
 	}
 	defer catcher.Close()
-	script, err := realm.Compile(scope, source, catcher)
+	script, err := realm.CompilePlatformSeed(scope, source, catcher)
 	if err != nil {
 		return exceptionError(catcher, scope, realm, "bootstrap snapshot", err)
 	}

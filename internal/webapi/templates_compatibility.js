@@ -63,7 +63,7 @@
   define(DocumentFragment.prototype, 'textContent', {
     get() {
       return canonicalFragment(this)
-        ? host.textContent(elementSlot(this).nodeId)
+        ? canonicalTextContent(elementSlot(this).nodeId)
         : Array.from(this.childNodes)
             .filter((node) => node.nodeType !== 8)
             .map((node) => node.textContent || '')
@@ -91,7 +91,7 @@
         for (const candidate of candidates) {
           const slot = elementSlot(candidate);
           if (slot && host.hostIncludingContains(slot.nodeId, parentSlot.nodeId))
-            throw new DOMException(
+            throw platformDOMException(
               'Insertion would create a host-inclusive cycle',
               'HierarchyRequestError',
             );

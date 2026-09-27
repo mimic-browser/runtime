@@ -242,3 +242,21 @@ func (c *Context) GetMicrotaskQueue() (uintptr, error) {
 	r1, _, _ := proc("gov8_context_get_microtask_queue").Call(c.handle)
 	return r1, nil
 }
+
+// DisableMicrotasks permanently shuts down this context's native promise-job
+// admission without detaching its global or disposing retained objects. Call
+// only at an idle boundary; other contexts on the isolate retain their queue.
+func (c *Context) DisableMicrotasks() error {
+	if err := c.check(); err != nil {
+		return err
+	}
+	r1, _, _ := proc("gov8_context_set_microtask_queue").Call(c.handle, 0)
+	if int64(r1) < 0 {
+		return shimError("Context.DisableMicrotasks", r1)
+	}
+	if c.microtaskQueue != nil {
+		c.microtaskQueue.attachments--
+		c.microtaskQueue = nil
+	}
+	return nil
+}
