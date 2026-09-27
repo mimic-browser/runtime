@@ -426,3 +426,19 @@ constructor failure. Failed post-construction initialization also closes the
 isolate and releases its snapshot instead of abandoning native ownership.
 Both unchanged deadline tests pass three local repetitions; hosted CI remains
 the acceptance check. No assertion deadlines or reference expectations changed.
+
+The next hosted run passed the visible-focus gate but exposed a child-navigation
+clock defect: its projected response completion did not advance the Page clock
+before parsing, unlike a top-level navigation. Resource Timing could therefore
+report responseEnd after domInteractive. Both commit paths now share clock
+admission. A controlled response with a five-second visible completion phase
+reproduces the ordering defect in both engines without a real five-second wait;
+the regression also checks child and parent performance.now against completion.
+The retained Chrome redirect/lifecycle expectations remain unchanged.
+
+The lazy-image test's unchanged two-second load gate ran concurrently with
+unrelated cold Goja and V8 bootstraps. Its failure stack remained in parser
+JavaScript initialization after lazy-image transport had started. This elapsed
+deadline check now runs in the serial test lane, retaining the blocked image,
+both original deadlines and all load-state assertions. Focused Windows and Linux
+checks pass; broad acceptance remains the hosted CI run.

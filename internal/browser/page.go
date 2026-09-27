@@ -546,14 +546,7 @@ func (p *Page) commitNavigationResponse(ctx, taskContext context.Context, u *url
 	if res.URL != nil {
 		u = res.URL
 	}
-	navigationScale := p.environmentView().Time.NavigationScale
-	p.mu.Lock()
-	completion := max(res.Duration, time.Duration(res.BrowserVisibleTiming.Phases["responseComplete"]*float64(time.Millisecond)))
-	responseTime := performanceOrigin.Add(time.Duration(float64(completion) * navigationScale))
-	if responseTime.After(p.clock) {
-		p.clock = responseTime
-	}
-	p.mu.Unlock()
+	p.advanceNavigationResponseClock(performanceOrigin, res)
 	doc, err := dom.Parse("")
 	if err != nil {
 		return err

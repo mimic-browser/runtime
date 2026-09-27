@@ -25,6 +25,19 @@ func (r *Realm) withResourceTiming(request network.Request) network.Request {
 	return request
 }
 
+// A buffered navigation response is complete before document parsing begins.
+// Advance the shared Page clock for both top and child commits, so lifecycle
+// stamps and execution observe the same completed network operation.
+func (p *Page) advanceNavigationResponseClock(origin time.Time, response network.Response) {
+	completion := max(response.Duration, time.Duration(response.BrowserVisibleTiming.Phases["responseComplete"]*float64(time.Millisecond)))
+	responseTime := origin.Add(time.Duration(float64(completion) * p.environmentView().Time.NavigationScale))
+	p.mu.Lock()
+	if responseTime.After(p.clock) {
+		p.clock = responseTime
+	}
+	p.mu.Unlock()
+}
+
 // Document realms share one active Page turn. A borrowed operation must not
 // sample the idle clock of its owning frame while another frame is running.
 func (r *Realm) performanceClockNow() time.Time {

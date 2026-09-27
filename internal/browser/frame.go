@@ -376,6 +376,7 @@ func (r *Realm) commitChildFrameNavigation(ctx context.Context, navigation *chil
 	if navigation.performanceOrigin.IsZero() {
 		navigation.performanceOrigin = p.ClockNow()
 	}
+	p.advanceNavigationResponseClock(navigation.performanceOrigin, res)
 	realm, err := newRealmStateWithNavigation(p, navigation.frame, document, documentURL, true, navigation.performanceOrigin, navigation.loaderID, realmNavigationPolicies{permissionsPolicy: res.Headers.Get("Permissions-Policy"), originAgentCluster: res.Headers.Get("Origin-Agent-Cluster")})
 	if err != nil {
 		r.finishChildNavigation(navigation)

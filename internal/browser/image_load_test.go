@@ -83,7 +83,9 @@ func TestDetachedImageLoadCoalescesAndBlocksDocumentLoad(t *testing.T) {
 }
 
 func TestLazyImageDoesNotBlockWindowLoad(t *testing.T) {
-	parallelBrowserTest(t)
+	// This elapsed-time gate includes parser execution after image transport
+	// starts. Keep unrelated engine bootstraps out of its two-second budget.
+	serialBrowserTest(t)
 	started := make(chan struct{})
 	release := make(chan struct{})
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
