@@ -442,3 +442,10 @@ JavaScript initialization after lazy-image transport had started. This elapsed
 deadline check now runs in the serial test lane, retaining the blocked image,
 both original deadlines and all load-state assertions. Focused Windows and Linux
 checks pass; broad acceptance remains the hosted CI run.
+
+The suspended-navigation CDP response gate still timed out when run late in a
+long-lived Windows test process, although its unchanged document/script cases
+passed focused local repeats. Windows CI now executes all 85 CDP root tests and
+their subtests in ten-root process batches, retaining the existing one-second
+response assertion. The batch partition has a coverage test; this changes only
+process lifetime, not the browser implementation or expected responses.

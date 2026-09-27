@@ -1,6 +1,6 @@
 import unittest
 
-from windows_tests import load_timings, partition
+from windows_tests import batches, load_timings, partition
 
 
 class ShardCoverageTests(unittest.TestCase):
@@ -35,6 +35,15 @@ class ShardCoverageTests(unittest.TestCase):
                                      (['TestA', 'TestA'], 0, 2)]:
             with self.subTest(names=names, shard=shard, count=count), self.assertRaises(ValueError):
                 partition(names, shard, count)
+
+    def test_process_batches_cover_each_root_and_its_subtests(self):
+        names = ['Test' + str(index) for index in range(85)]
+        groups = list(batches(names, 10))
+        self.assertEqual([len(group) for group in groups], [10] * 8 + [5])
+        self.assertEqual(sum(groups, []), names)
+        self.assertEqual(list(batches([], 10)), [])
+        with self.assertRaises(ValueError):
+            list(batches(names, 0))
 
 
 if __name__ == '__main__':

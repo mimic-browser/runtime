@@ -8,6 +8,7 @@ import time
 
 ROOT = Path(__file__).resolve().parents[2]
 BROWSER = 'github.com/moreveal/mimic/internal/browser'
+CDP = 'github.com/moreveal/mimic/internal/cdp'
 DEFAULT_TIMINGS = ROOT / 'tools/ci/browser_test_timings.json'
 
 
@@ -41,6 +42,21 @@ def load_timings(path):
     return timings
 
 
+def root_tests(package):
+    listed = run('go', 'test', '-list', '.', package, capture=True)
+    names = [line for line in listed.splitlines() if re.fullmatch(r'(Test|Example|Fuzz)\w*', line)]
+    if not names or len(names) != len(set(names)):
+        raise RuntimeError(f'Invalid test discovery for {package}')
+    return names
+
+
+def batches(names, size):
+    if size < 1:
+        raise ValueError('Batch size must be positive')
+    for offset in range(0, len(names), size):
+        yield names[offset:offset + size]
+
+
 def run_json(args, observed):
     process = subprocess.Popen(args, cwd=ROOT, text=True, stdout=subprocess.PIPE,
                                stderr=subprocess.STDOUT, bufsize=1)
@@ -67,10 +83,7 @@ def main():
     parser.add_argument('--count', type=int, default=2)
     parser.add_argument('--timings', type=Path, default=DEFAULT_TIMINGS)
     args = parser.parse_args()
-    listed = run('go', 'test', '-list', '.', BROWSER, capture=True)
-    names = [line for line in listed.splitlines() if re.fullmatch(r'(Test|Example|Fuzz)\w*', line)]
-    if not names:
-        raise RuntimeError('Browser test discovery returned no tests')
+    names = root_tests(BROWSER)
     timings = load_timings(args.timings)
     selected = partition(names, args.shard, args.count, timings)
     if not selected:
@@ -88,15 +101,24 @@ def main():
     # covering the entire suite. Individual assertion/context deadlines are unchanged.
     started = time.monotonic()
     observed = {}
-    for offset in range(0, len(selected), 100):
-        batch = selected[offset:offset + 100]
+    for offset, batch in enumerate(batches(selected, 100)):
         expression = '^(' + '|'.join(re.escape(name) for name in batch) + ')$'
-        print(f'Browser batch {offset // 100 + 1}: {len(batch)} root tests', flush=True)
+        print(f'Browser batch {offset + 1}: {len(batch)} root tests', flush=True)
         run_json(['go', 'test', '-json', '-timeout', '10m', '-run', expression, BROWSER], observed)
     if args.shard == 0:
         packages = [line for line in run('go', 'list', './...', capture=True).splitlines()
                     if line != BROWSER]
         print(f'Windows remaining packages: {len(packages)}', flush=True)
+        # CDP's short first-response gates must run in a fresh process rather
+        # than after the accumulated native state of its other root tests.
+        # Keep every root and subtest, with all original assertion deadlines.
+        if CDP in packages:
+            packages.remove(CDP)
+            cdp_names = root_tests(CDP)
+            for offset, batch in enumerate(batches(cdp_names, 10)):
+                expression = '^(' + '|'.join(re.escape(name) for name in batch) + ')$'
+                print(f'CDP batch {offset + 1}: {len(batch)} root tests', flush=True)
+                run('go', 'test', '-timeout', '10m', '-run', expression, CDP)
         # Behavioral deadlines must not compete with unrelated package builds
         # and engine initializations on the small hosted runner.
         run('go', 'test', '-p', '1', *packages)
