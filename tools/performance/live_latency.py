@@ -478,6 +478,8 @@ async def trial(instance, site, variant, repetition, mode, preview_on, folder, a
             await instance.start(result)
         sampler = asyncio.create_task(sample_memory(instance,result))
         page = await timed(result,'context_and_page',instance.page(result))
+        if args.profile_cdp:
+            await page._client.send('Mimic.startTrace',{})
         observe(page,result)
         if preview_on:
             await timed(result,'preview_open',preview.start(instance.endpoint+'/debug/preview/?target='+page.target._targetId,folder))

@@ -33,6 +33,7 @@ func TestModuleThrowIsTracedWithoutStoppingOtherScripts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	p.Trace().Start()
 	if err := p.Navigate(context.Background(), server.URL); err != nil {
 		t.Fatal(err)
 	}

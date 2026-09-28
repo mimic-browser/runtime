@@ -28,6 +28,7 @@ func bootstrapSnapshotPage(t *testing.T) *Page {
 	if err != nil {
 		t.Fatal(err)
 	}
+	p.Trace().Start()
 	return p
 }
 

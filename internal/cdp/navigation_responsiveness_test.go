@@ -261,6 +261,7 @@ func TestSuspendedNavigationDeadlineAndTeardown(t *testing.T) {
 			defer close(release)
 			s, addr := runningServer(t)
 			s.SetNavigationTimeout(600 * time.Millisecond)
+			s.Page.Trace().Start()
 			c, _, err := websocket.DefaultDialer.Dial("ws://"+addr+"/devtools/page/"+s.Page.ID, nil)
 			if err != nil {
 				t.Fatal(err)

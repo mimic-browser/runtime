@@ -73,6 +73,15 @@ booleans remain false for partial support. A test reference identifies a focused
 regression, not exhaustive equivalence with Chrome. Missing declarations default
 to unsupported; adding a handler requires a reviewed scope declaration.
 
+Diagnostic trace capture is disabled by default. Send `Mimic.startTrace` on a
+Page session before the work to capture, then read `Mimic.getTrace`. Capture
+retains the most recent 8192 events and the first 128 IDs of large selector
+results together with their full count. `Mimic.stopTrace` stops capture while
+keeping the recorded events available for reading; `Mimic.clearTrace` clears
+them. These Mimic extensions are outside the pinned Chrome protocol schema.
+Live CDP events and resource Performance entries continue independently of
+diagnostic capture.
+
 Unknown methods return `-32601`; invalid wire parameters return `-32602`.
 Known methods without a semantic handler return an explicit unsupported error.
 A few client subscription/activation acknowledgments have no matching browser

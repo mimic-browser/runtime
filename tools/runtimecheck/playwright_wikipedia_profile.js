@@ -222,6 +222,9 @@ function commandSummary(events) {
     await installFrozenRoutes(context);
     page = await context.newPage();
     cdp = await context.newCDPSession(page);
+    if (!chromeExecutable && !minimalProfile) {
+      await cdp.send('Mimic.startTrace');
+    }
     diagnosticsBefore =
       chromeExecutable || minimalProfile
         ? null

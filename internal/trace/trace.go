@@ -43,11 +43,17 @@ type Recorder struct {
 	next       uint64
 	events     []Event
 	eventStart int
+	enabled    bool
 	// Network completions are consumed by Performance timelines independently of
 	// the bounded diagnostic history. A slow consumer must not lose an entry.
 	networkEvents []Event
-	subscribers   map[uint64]func(Event)
+	subscribers   map[uint64]subscriber
 	subID         uint64
+}
+
+type subscriber struct {
+	callback func(Event)
+	kinds    map[Kind]bool // nil receives every kind
 }
 
 const maxDiagnosticEvents = 8192
@@ -119,34 +125,88 @@ func goroutineID() uint64 {
 	return id
 }
 
-func New() *Recorder { return &Recorder{subscribers: map[uint64]func(Event){}} }
+func New() *Recorder { return &Recorder{subscribers: map[uint64]subscriber{}} }
+func (r *Recorder) Enabled() bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.enabled
+}
+
+// Start begins a new explicit diagnostic capture. Live subscribers and
+// Performance consumers receive events independently of capture.
+func (r *Recorder) Start() {
+	r.mu.Lock()
+	r.events = nil
+	r.eventStart = 0
+	r.enabled = true
+	r.mu.Unlock()
+}
+
+func (r *Recorder) Stop() {
+	r.mu.Lock()
+	r.enabled = false
+	r.mu.Unlock()
+}
+
+// Wants reports whether an event needs diagnostic capture or live delivery.
+// Callers may avoid preparing expensive diagnostic-only payloads when false.
+func (r *Recorder) Wants(kind Kind) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if r.enabled {
+		return true
+	}
+	for _, sub := range r.subscribers {
+		if sub.kinds == nil || sub.kinds[kind] {
+			return true
+		}
+	}
+	return false
+}
+
 func (r *Recorder) Add(kind Kind, name string, data map[string]any) {
 	r.mu.Lock()
+	if !r.enabled && !(kind == Network && name == "response") {
+		wanted := false
+		for _, sub := range r.subscribers {
+			if sub.kinds == nil || sub.kinds[kind] {
+				wanted = true
+				break
+			}
+		}
+		if !wanted {
+			r.mu.Unlock()
+			return
+		}
+	}
 	r.next++
 	e := Event{r.next, time.Now().UTC(), kind, name, data}
-	if kind == Network {
+	if kind == Network && name == "response" {
 		r.networkEvents = append(r.networkEvents, e)
 	}
-	// Large selector results are useful for diagnosis, but retaining every ID
-	// from every repeated query makes trace memory grow with the workload.
-	if ids, ok := data["resultNodeIds"].([]int64); ok && len(ids) > maxDiagnosticResultIDs {
-		limited := make(map[string]any, len(data)+1)
-		for key, value := range data {
-			limited[key] = value
+	if r.enabled {
+		// Retain a short prefix of large selector results for diagnosis.
+		if ids, ok := data["resultNodeIds"].([]int64); ok && len(ids) > maxDiagnosticResultIDs {
+			limited := make(map[string]any, len(data)+1)
+			for key, value := range data {
+				limited[key] = value
+			}
+			limited["resultNodeIds"] = append([]int64(nil), ids[:maxDiagnosticResultIDs]...)
+			limited["resultCount"] = len(ids)
+			e.Data = limited
 		}
-		limited["resultNodeIds"] = append([]int64(nil), ids[:maxDiagnosticResultIDs]...)
-		limited["resultCount"] = len(ids)
-		e.Data = limited
-	}
-	if len(r.events) == maxDiagnosticEvents {
-		r.events[r.eventStart] = e
-		r.eventStart = (r.eventStart + 1) % maxDiagnosticEvents
-	} else {
-		r.events = append(r.events, e)
+		if len(r.events) == maxDiagnosticEvents {
+			r.events[r.eventStart] = e
+			r.eventStart = (r.eventStart + 1) % maxDiagnosticEvents
+		} else {
+			r.events = append(r.events, e)
+		}
 	}
 	subs := make([]func(Event), 0, len(r.subscribers))
-	for _, f := range r.subscribers {
-		subs = append(subs, f)
+	for _, sub := range r.subscribers {
+		if sub.kinds == nil || sub.kinds[kind] {
+			subs = append(subs, sub.callback)
+		}
 	}
 	r.mu.Unlock()
 	for _, f := range subs {
@@ -175,14 +235,26 @@ func (r *Recorder) Clear() {
 	r.mu.Lock()
 	r.events = nil
 	r.eventStart = 0
-	r.networkEvents = nil
 	r.mu.Unlock()
 }
 func (r *Recorder) Subscribe(f func(Event)) func() {
+	return r.SubscribeKinds(nil, f)
+}
+
+// SubscribeKinds limits delivery to the kinds consumed by a subscriber.
+// An empty kinds list retains Subscribe's all-event behavior.
+func (r *Recorder) SubscribeKinds(kinds []Kind, f func(Event)) func() {
 	r.mu.Lock()
 	r.subID++
 	id := r.subID
-	r.subscribers[id] = f
+	var filter map[Kind]bool
+	if len(kinds) != 0 {
+		filter = make(map[Kind]bool, len(kinds))
+		for _, kind := range kinds {
+			filter[kind] = true
+		}
+	}
+	r.subscribers[id] = subscriber{callback: f, kinds: filter}
 	r.mu.Unlock()
 	return func() { r.mu.Lock(); delete(r.subscribers, id); r.mu.Unlock() }
 }

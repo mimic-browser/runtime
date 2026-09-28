@@ -64,6 +64,8 @@ async def main(args):
         else:
             await instance.start(result)
             page = await instance.page(result)
+        if args.profile_cdp and not args.chrome:
+            await page._client.send('Mimic.startTrace')
         sampler=asyncio.create_task(sample_resources(instance,result))
         live.observe(page, result)
         await page.setViewport({'width': 1280, 'height': 900})

@@ -29,6 +29,7 @@ func historyTestPages(t *testing.T, run func(*testing.T, *Page)) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			page.Trace().Start()
 			run(t, page)
 		})
 	}

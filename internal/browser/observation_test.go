@@ -25,6 +25,7 @@ func TestSharedObservationTracksSupportAndReceivers(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				p.Trace().Start()
 				v, err := p.Evaluate(context.Background(), `(()=>{
  const a=document.createElement('div'),b=document.createElement('div');
  void a.observationProbe;a.observationProbe=1;void a.observationProbe;void b.observationProbe;

@@ -105,6 +105,7 @@ func TestRuntimeCallFunctionOnTraceCarriesOneCorrelationID(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer c.Close()
+	s.Page.Trace().Start()
 	_ = c.WriteJSON(map[string]any{"id": 1, "method": "Runtime.callFunctionOn", "params": map[string]any{"functionDeclaration": `function(){return 42}`}})
 	if reply := readReply(t, c, 1); reply["error"] != nil {
 		t.Fatal(reply)

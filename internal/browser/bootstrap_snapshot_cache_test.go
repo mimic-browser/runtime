@@ -221,6 +221,7 @@ func TestBootstrapSnapshotBindingFailureFallsBackBeforeScripts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	sibling.Trace().Start()
 	value := bootstrapSnapshotEvaluate(t, sibling, `(()=>{const e=document.createElement('div');e.id='fallback';document.body.appendChild(e);return document.querySelector('#fallback')===e&&typeof __mimicRestoreBootstrap==='undefined'})()`)
 	if value != true || sibling.Top.Realm.bootstrapRestored {
 		t.Fatal("failed binding did not retry ordinary initialization")

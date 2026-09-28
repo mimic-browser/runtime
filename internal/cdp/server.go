@@ -215,7 +215,7 @@ func (s *session) bindPage(page *browser.Page) {
 	s.contextMu.Unlock()
 	s.interceptor = NewControlInterceptor(s.event)
 	s.removeInterceptor = page.Loader().Use(s.interceptor)
-	s.unsub = page.Trace().Subscribe(s.traceEvent)
+	s.unsub = page.Trace().SubscribeKinds([]trace.Kind{trace.Console, trace.Exception, trace.Lifecycle, trace.Network}, s.traceEvent)
 	s.server.ensurePump(page)
 }
 func (s *session) unbindPage() {
@@ -261,7 +261,7 @@ func (s *Server) ensurePump(page *browser.Page) {
 		state.loaded = time.Now()
 	}
 	s.idlePages[page] = state
-	s.targetObservers[page] = page.Trace().Subscribe(func(e trace.Event) {
+	s.targetObservers[page] = page.Trace().SubscribeKinds([]trace.Kind{trace.Lifecycle}, func(e trace.Event) {
 		s.observePageLifecycle(page, e)
 	})
 	s.workers.Add(1)
@@ -572,7 +572,7 @@ func (s *session) handleCommand(m message) (afterUnlock func()) {
 		s.reply(m.ID, value, cookieErr)
 		return
 	}
-	control := m.Method == "Fetch.disable" || m.Method == "Fetch.getResponseBody" || m.Method == "Network.setRequestInterception" || m.Method == "Fetch.continueRequest" || m.Method == "Fetch.continueResponse" || m.Method == "Fetch.failRequest" || m.Method == "Fetch.fulfillRequest" || m.Method == "Network.continueInterceptedRequest" || m.Method == "Mimic.getTrace" || m.Method == "Mimic.getStatus" || m.Method == "Mimic.getDiagnostics" || m.Method == "Mimic.cancelExecution" || m.Method == "Page.stopLoading" || m.Method == "Target.closeTarget"
+	control := m.Method == "Fetch.disable" || m.Method == "Fetch.getResponseBody" || m.Method == "Network.setRequestInterception" || m.Method == "Fetch.continueRequest" || m.Method == "Fetch.continueResponse" || m.Method == "Fetch.failRequest" || m.Method == "Fetch.fulfillRequest" || m.Method == "Network.continueInterceptedRequest" || m.Method == "Mimic.startTrace" || m.Method == "Mimic.stopTrace" || m.Method == "Mimic.getTrace" || m.Method == "Mimic.getStatus" || m.Method == "Mimic.getDiagnostics" || m.Method == "Mimic.cancelExecution" || m.Method == "Page.stopLoading" || m.Method == "Target.closeTarget"
 	if !control {
 		var waitStarted time.Time
 		if m.timing != nil {
@@ -882,6 +882,10 @@ func (s *session) handleCommand(m message) (afterUnlock func()) {
 		ctx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
 		defer cancel()
 		result, err = s.page.CaptureSnapshot(ctx)
+	case "Mimic.startTrace":
+		s.page.Trace().Start()
+	case "Mimic.stopTrace":
+		s.page.Trace().Stop()
 	case "Mimic.getTrace":
 		result = map[string]any{"events": s.page.Trace().Events(), "crashReports": s.page.CrashReports()}
 	case "Mimic.getStatus":
