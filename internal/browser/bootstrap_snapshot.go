@@ -57,6 +57,14 @@ func (s *pooledBootstrapSnapshot) NewRuntime() (engine.Runtime, error) {
 	return s.pool.NewRuntime()
 }
 
+func (s *pooledBootstrapSnapshot) NewBareRuntime() (engine.Runtime, error) {
+	pool, ok := s.pool.(engine.BareRuntimePool)
+	if !ok {
+		return nil, errors.New("runtime pool does not support bare realms")
+	}
+	return pool.NewBareRuntime()
+}
+
 func (s *pooledBootstrapSnapshot) SizeBytes() int { return s.base.SizeBytes() }
 
 func (s *pooledBootstrapSnapshot) BootstrapSnapshotBytes() []byte {
@@ -214,6 +222,20 @@ func (r *Realm) newRuntime() (engine.Runtime, error) {
 		return runtime, err
 	}
 	if snapshot != nil {
+		if coldRoot && !c.bootstrapPreparation {
+			if bareSnapshot, ok := snapshot.(engine.BareBootstrapSnapshot); ok {
+				// The ordinary first Page still installs its complete cold surface.
+				// A restored platform context would be created only to be closed.
+				runtime, err := bareSnapshot.NewBareRuntime()
+				if err == nil {
+					return runtime, nil
+				}
+				if c.lifetime.Err() != nil {
+					return nil, c.lifetime.Err()
+				}
+				p.trace.Add(trace.Error, "bootstrapSnapshotRestoreFailed", map[string]any{"error": err.Error()})
+			}
+		}
 		runtime, err := snapshot.NewRuntime()
 		if err == nil {
 			// The first ordinary Page retains cold bootstrap semantics while its

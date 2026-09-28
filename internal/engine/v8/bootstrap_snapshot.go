@@ -281,6 +281,14 @@ func (s *bootstrapSnapshot) NewRuntime() (engine.Runtime, error) {
 	return newAdapter(owner, profile)
 }
 
+func (s *bootstrapSnapshot) NewBareRuntime() (engine.Runtime, error) {
+	owner, profile, err := s.newRuntimeOwner()
+	if err != nil {
+		return nil, err
+	}
+	return newBareAdapterWithRelease(owner, profile, owner.Dispose)
+}
+
 func (s *bootstrapSnapshot) newRuntimeOwner() (*Runtime, *diagnosticState, error) {
 	s.mu.Lock()
 	if s.blob == nil {
@@ -329,6 +337,14 @@ func (s *bootstrapSnapshot) NewRuntimePool(maxRealmsPerIsolate int) engine.Runti
 }
 
 func (p *bootstrapRuntimePool) NewRuntime() (engine.Runtime, error) {
+	return p.newRuntime(false)
+}
+
+func (p *bootstrapRuntimePool) NewBareRuntime() (engine.Runtime, error) {
+	return p.newRuntime(true)
+}
+
+func (p *bootstrapRuntimePool) newRuntime(bare bool) (engine.Runtime, error) {
 	p.mu.Lock()
 	if p.closed {
 		p.mu.Unlock()
@@ -357,9 +373,13 @@ func (p *bootstrapRuntimePool) NewRuntime() (engine.Runtime, error) {
 	lane.active++
 	p.mu.Unlock()
 
-	return newAdapterWithRelease(lane.owner, profile, func() error {
+	release := func() error {
 		return p.release(lane)
-	})
+	}
+	if bare {
+		return newBareAdapterWithRelease(lane.owner, profile, release)
+	}
+	return newAdapterWithRelease(lane.owner, profile, release)
 }
 
 func (p *bootstrapRuntimePool) release(lane *bootstrapRuntimeLane) error {

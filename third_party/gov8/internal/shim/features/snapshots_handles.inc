@@ -49,6 +49,9 @@
 
 #include <atomic>
 #include <cstring>
+#include <memory>
+#include <mutex>
+#include <vector>
 
 namespace gov8_external_references_impl {
 void DropTable(v8::Isolate* isolate) noexcept;
@@ -137,8 +140,21 @@ struct CreatorWrap {
 
 struct BlobHolder {
   uint64_t magic;
-  v8::StartupData data;  // data.data is a heap copy owned by the holder
+  v8::StartupData data;  // private copy or shared immutable bytes
+  std::shared_ptr<const struct SharedBlobBytes> shared;
 };
+
+struct SharedBlobBytes {
+  std::unique_ptr<char[]> bytes;
+  size_t size;
+};
+
+// Snapshot input is immutable after serialization. V8 may read it again when
+// an isolate creates a context, so each holder keeps the shared bytes alive
+// until its isolate is disposed. The mutex covers construction only; Pages
+// continue to execute in independent isolates without a shared runtime lock.
+std::mutex shared_blob_mutex;
+std::vector<std::weak_ptr<const SharedBlobBytes>> shared_blobs;
 
 struct WeakWrap {
   uint64_t magic;
@@ -169,7 +185,7 @@ WeakWrap* AsWeak(void* p) {
 
 void FreeBlobHolder(BlobHolder* h) {
   if (h == nullptr) return;
-  if (h->data.data != nullptr) {
+  if (h->data.data != nullptr && !h->shared) {
     v8__StartupData__data__DELETE(h->data.data);
     h->data.data = nullptr;
   }
@@ -177,8 +193,8 @@ void FreeBlobHolder(BlobHolder* h) {
   delete h;
 }
 
-// Copies `len` bytes into a fresh engine-owned holder handed to isolate or
-// creator construction. The copy (not the Go buffer) backs CreateParams.
+// Copies `len` bytes into a fresh engine-owned holder for creator construction.
+// The copy (not the Go buffer) backs CreateParams.
 BlobHolder* HoldBlob(const char* p, int64_t len) {
   BlobHolder* h = new BlobHolder{};
   h->magic = kBlobMagic;
@@ -189,6 +205,41 @@ BlobHolder* HoldBlob(const char* p, int64_t len) {
     h->data.data = copy;
   }
   return h;
+}
+
+BlobHolder* HoldSharedBlob(const char* p, int64_t len) {
+  const size_t size = static_cast<size_t>(len);
+  std::shared_ptr<const SharedBlobBytes> shared;
+  {
+    std::lock_guard<std::mutex> lock(shared_blob_mutex);
+    for (auto it = shared_blobs.begin(); it != shared_blobs.end();) {
+      auto candidate = it->lock();
+      if (!candidate) {
+        it = shared_blobs.erase(it);
+        continue;
+      }
+      if (candidate->size == size &&
+          std::memcmp(candidate->bytes.get(), p, size) == 0) {
+        shared = std::move(candidate);
+        break;
+      }
+      ++it;
+    }
+    if (!shared) {
+      auto created = std::make_shared<SharedBlobBytes>();
+      created->bytes = std::make_unique<char[]>(size);
+      std::memcpy(created->bytes.get(), p, size);
+      created->size = size;
+      shared = created;
+      shared_blobs.emplace_back(shared);
+    }
+  }
+  BlobHolder* holder = new BlobHolder{};
+  holder->magic = kBlobMagic;
+  holder->data.data = shared->bytes.get();
+  holder->data.raw_size = static_cast<int>(size);
+  holder->shared = std::move(shared);
+  return holder;
 }
 
 // Builds CreateParams mirroring the pinned oracle defaults: default array
@@ -587,7 +638,7 @@ __declspec(dllexport) int64_t gov8_isolate_new_snapshot(
   }
   BlobHolder* holder = nullptr;
   try {
-    holder = gov8_snap_impl::HoldBlob(blob_data, blob_len);
+    holder = gov8_snap_impl::HoldSharedBlob(blob_data, blob_len);
     v8::Isolate::CreateParams params;
     gov8_snap_impl::FillCreateParams(&params, holder);
     v8::Isolate* iso = v8::Isolate::New(params);

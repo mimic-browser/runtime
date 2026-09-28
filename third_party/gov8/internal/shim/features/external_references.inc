@@ -207,7 +207,7 @@ __declspec(dllexport) int64_t gov8_isolate_new_snapshot_external_references(
     return kErrNoMemory;
   }
   try {
-    holder = gov8_snap_impl::HoldBlob(blob_data, blob_len);
+    holder = gov8_snap_impl::HoldSharedBlob(blob_data, blob_len);
     v8::Isolate::CreateParams params;
     gov8_snap_impl::FillCreateParams(&params, holder);
     params.external_references =

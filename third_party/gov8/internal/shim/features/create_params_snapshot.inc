@@ -44,7 +44,7 @@ __declspec(dllexport) int64_t gov8_cps_isolate_new(
       nullptr, gov8_external_references_impl::DestroyTable);
   std::unique_ptr<gov8_ia_impl::CounterState> counter_state;
   try {
-    holder = gov8_snap_impl::HoldBlob(blob_data, blob_len);
+    holder = gov8_snap_impl::HoldSharedBlob(blob_data, blob_len);
     v8::Isolate::CreateParams params;
     gov8_snap_impl::FillCreateParams(&params, holder);
     if (array_buffer_allocator_wire != nullptr &&

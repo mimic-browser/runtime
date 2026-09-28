@@ -24,12 +24,25 @@ type BootstrapSnapshot interface {
 	SizeBytes() int
 }
 
+// BareBootstrapSnapshot creates the first ordinary realm directly in a
+// snapshot-backed isolate without deserializing an unused platform context.
+// Its caller still installs the normal cold bootstrap in that bare realm.
+type BareBootstrapSnapshot interface {
+	BootstrapSnapshot
+	NewBareRuntime() (Runtime, error)
+}
+
 // RuntimePool creates independent realm runtimes while allowing an engine to
 // share immutable/native isolate infrastructure between them. Each returned
 // Runtime remains independently closeable.
 type RuntimePool interface {
 	NewRuntime() (Runtime, error)
 	Close() error
+}
+
+type BareRuntimePool interface {
+	RuntimePool
+	NewBareRuntime() (Runtime, error)
 }
 
 // RuntimePoolSnapshot is implemented by snapshots whose engine can host more

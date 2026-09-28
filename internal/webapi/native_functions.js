@@ -2,14 +2,15 @@ const nativeFunctionNames = new WeakMap();
 const nativeFunctionRecordGet = WeakMap.prototype.get.bind(nativeFunctionNames),
   nativeFunctionNameSet = WeakMap.prototype.set.bind(nativeFunctionNames),
   functionSourceApply = Reflect.apply;
-const nativeFunctionNameGet = (fn) => nativeFunctionRecordGet(fn)?.name;
+const nativeFunctionNameGet = (fn) => {
+  const record = nativeFunctionRecordGet(fn);
+  return typeof record === 'string' ? record : record?.name;
+};
 const nativeFunctionSourceGet = (fn) => {
   const record = nativeFunctionRecordGet(fn);
-  return record === undefined
-    ? undefined
-    : record.source === undefined
-      ? 'function ' + record.name + '() { [native code] }'
-      : record.source;
+  if (record === undefined) return undefined;
+  if (typeof record === 'string') return 'function ' + record + '() { [native code] }';
+  return record.source;
 };
 const markForeignFunctionSource = (fn, source) =>
   nativeFunctionNameSet(fn, { __proto__: null, source });
@@ -30,10 +31,7 @@ Function.prototype.toString = {
 const nativeFunctionSourceState = [nativeFunctionSourceGet, engineFunctionToString];
 const markNative = (fn, name, prefix = '') => {
   if (typeof fn === 'function')
-    nativeFunctionNameSet(fn, {
-      __proto__: null,
-      name: prefix ? prefix + String(name) : String(name),
-    });
+    nativeFunctionNameSet(fn, prefix ? prefix + String(name) : String(name));
 };
 markNative(Function.prototype.toString, 'toString');
 

@@ -1,5 +1,180 @@
 # Performance architecture pass
 
+## 2026-09-28: one-byte bootstrap source in independent Page isolates
+
+The browser's composed platform JavaScript was retained twice in the first
+ordinary Page's V8 heap: two 4,415,840-byte source strings. Almost all of the
+roughly 2.2-million-character source is Latin-1, but the authored validation
+messages and fallback Intl strings contain a few non-Latin-1 characters. V8
+therefore stored the entire source as two-byte strings. The composed source now
+escapes those characters in those two authored modules while leaving the
+readable source files and resulting string values intact. A focused test guards
+the one-byte property. In a matched first-Page heap capture, both source
+strings fell to 2,209,944 bytes and total heap-snapshot self-size fell from
+25.14 to 20.92 MiB. This is a bootstrap representation change, not a removed
+Web API or a change to the one-isolate-per-Page ownership rule.
+
+The unchanged full public benchmark, using a freshly built executable, is
+preserved in `.build/public-benchmark-one-byte-20260928/`. All six semantic
+gates passed for Mimic and frozen Chrome 152. Relative to the immediately
+preceding full run (`.build/public-benchmark-memory-final-20260928/`), the
+50-Page medians were:
+
+| Workload | Active RSS before → after | Change | Throughput before → after | Change |
+| --- | ---: | ---: | ---: | ---: |
+| Static | 1226.32 → 1107.72 MiB | -9.7% | 101.96 → 107.91 sessions/s | +5.8% |
+| CPU | 1879.75 → 1755.93 MiB | -6.6% | 63.03 → 65.92 sessions/s | +4.6% |
+| React | 1665.71 → 1560.55 MiB | -6.3% | 59.99 → 62.97 sessions/s | +5.0% |
+
+The ten-Page density probe independently found static/CPU/React active RSS
+351.8/452.4/433.1 → 328.8/415.8/406.2 MiB. Warm completion medians in the
+full matrix were 35.88/410.84/95.09 → 34.49/406.28/95.08 ms for
+static/DOM/React. However, CPU time per successful 50-Page session rose by
+approximately 5–11% across static/CPU/React in this unpaired run despite the
+throughput improvement; the change is not claimed to reduce CPU work. After
+250 ms recovery, RSS was 397.3/305.6/388.0 MiB versus 409.4/325.4/386.6
+MiB previously; no consistent teardown-memory improvement is claimed.
+
+The published September 21 release used eight Pages per isolate. Compared
+with that release at 50 Pages, the new static/CPU/React RSS is -18.6%/+18.0%/
+-3.9%, respectively. This historical comparison mixes ownership policies and
+must not be attributed to this source-encoding change. Concurrent teardown in
+the old shared-isolate configuration had caused a native access violation;
+short current tests with eight realms per isolate passed but did not establish
+that the race was fixed, so the default remains one isolate per Page. Mimic
+completed the 100-Page React waves, while Chrome's 100-Page React series
+stopped after a 98%-success wave; no valid Chrome comparison is claimed there.
+
+An additional generated-method-shape experiment showed no measurable memory
+gain and was reverted. Lightpanda and Blink's shared-isolate designs and
+BrowserOxide's arena-oriented DOM were reviewed as architectural references.
+They do not directly address the measured V8 source/graph cost without changing
+Mimic's independent Page concurrency or its teardown safety. Externalizing a
+source string across isolates also requires a safe persisted-snapshot resource
+lifetime; it was not attempted. Focused snapshot, native-function-source and
+validation tests and the fast performance gate passed; the full local test
+suite was not run.
+
+## 2026-09-28: shared snapshot storage and bootstrap memory
+
+Consumer isolates now hold one shared immutable native copy of equal startup
+snapshot bytes. Snapshot creators retain private copies because they can produce
+new blobs. The native cache uses weak owners and exact byte comparison, so the
+bytes survive cache eviction while any isolate still needs them and disappear
+after the last holder is released. Its mutex is used only when constructing an
+isolate; Page execution and teardown retain independent owners and event loops.
+The first ordinary cold Page now creates a bare realm directly in its
+snapshot-backed isolate instead of restoring, then discarding, a platform
+context. The private native-function source registry stores an ordinary
+function's name as a string rather than allocating a one-field record for it;
+foreign function sources retain their distinct record representation.
+
+The first native implementation hashed all 11.7 MiB on every isolate creation.
+The complete frozen benchmark remained semantically valid and reduced memory,
+but 50-Page static throughput fell from 88.14 to 54.77 sessions/s. That version
+was rejected. Exact `memcmp` against the live immutable buffer removed the
+extra full-buffer hash pass. The final Windows and Linux shims were rebuilt and
+packaged; focused snapshot lifetime, distinct-blob, bare/restored realm,
+function-source and browser tests passed on both platforms. The full local test
+suite was not run.
+
+The final fresh full public benchmark and comparison with clean `2fbdab2` are
+preserved under `.build/public-benchmark-memory-final-20260928/`. It used the
+unchanged frozen harness and a freshly built executable; all six correctness
+workloads passed. At **50 concurrent Pages**, the matched medians were:
+
+| Workload | RSS before → after | RSS change | Throughput before → after | Throughput change |
+| --- | ---: | ---: | ---: | ---: |
+| Static | 1941.73 → 1226.32 MiB | -36.8% | 88.14 → 101.96 sessions/s | +15.7% |
+| CPU | 2412.64 → 1879.75 MiB | -22.1% | 58.94 → 63.03 sessions/s | +6.9% |
+| React | 2377.37 → 1665.71 MiB | -29.9% | 57.44 → 59.99 sessions/s | +4.4% |
+
+At 25 Pages, RSS fell 33.4% static, 20.6% CPU and 27.9% React; throughput
+rose 13.5%, 7.7% and 11.6%. Single-session median completion also improved:
+cold/warm static 362.1/40.7 → 339.4/35.9 ms, CPU 398.4/83.9 → 369.9/70.7
+ms, DOM 743.7/418.4 → 701.8/410.8 ms, and React 420.9/97.4 → 411.7/95.1
+ms. An independent ten-live-Page density probe measured final RSS of 351.8,
+452.4 and 433.1 MiB for static, CPU and React, versus 497.0, 583.7 and
+570.5 MiB in the prior profile. These are process RSS values, not an additive
+sum of Go and V8 heap counters. At 250 ms after closing all ten Pages, final
+RSS was 140.1/146.4/147.0 MiB for static/CPU/React, versus
+151.7/149.4/151.5 MiB in the earlier probe; no new teardown retention was
+observed. Allocation-pressure counters were not isolated by this comparison.
+
+The 100-Page Mimic waves stopped during the excluded warmup because the
+machine crossed the frozen harness's system-memory-pressure threshold; no
+100-Page gain is claimed. Chrome and Mimic timings can still vary with
+background load, and the comparison does not isolate the contribution of each
+of the three code changes. The rejected hash run remains under
+`.build/public-benchmark-memory-batch-20260928/` for audit.
+
+## 2026-09-28: read-only investigation of public-benchmark memory growth
+
+The fresh full public matrix at clean source `2fbdab2` is preserved under
+`.build/public-benchmark-current-20260928/`. The frozen comparator accepted
+the September 21 checkpoint's harness, fixture, Chrome and machine provenance.
+At 50 live Pages, static/CPU/React RSS changed from **1360.69/1487.84/1623.27
+MiB** to **1941.73/2412.64/2377.37 MiB**. Recovery after the unchanged 250 ms
+interval improved from **1253.37/1399.56/1524.62 MiB** to
+**328.38/325.82/401.21 MiB**. Active density and post-close retention therefore
+move in opposite directions; this is not evidence of a growing teardown leak.
+
+The historical comparison crosses a major ownership change. Published source
+`a51aa22` used eight realms per isolate; `72638f2` changed the default to one
+after concurrent Page teardown could race sibling native work and crash.
+The saved September 22 full runs already used 2.2-2.8 GiB at 50 Pages, before
+the latest allocation optimizations. Their existence does not isolate the
+exact causal contribution of each commit, but rules out attributing the whole
+September 21-to-current increase to the latest optimization batch. Re-enabling
+the old pool is not a compatible memory fix.
+
+Existing ten-Page attribution distinguishes live Go heap (33-52 MiB), V8 used
+heap (209-262 MiB), V8 physical heap (242-316 MiB) and process RSS (496-584 MiB).
+These counters overlap and must not be added. Ten native contexts and zero
+detached contexts were observed. Diagnostic full V8 collection reduced RSS by
+about 5% static, 18% CPU and 9% React; it did not remove the persistent graph.
+The receipts remain in `.build/profile-density-packed-final-20260928/` and
+`.build/profile-density-gc-20260928/`.
+
+The unchanged `TestBootstrapInitializationStages` now reports insecure/secure
+snapshot sizes of **10,726,280 / 11,710,488 bytes**. `HoldBlob` still allocates
+and copies that immutable data for every isolate, and holds it until isolate
+disposal. Go byte sharing does not share these native buffers. Replacing fifty
+identical secure native copies with one would remove **547.23 MiB of allocated
+buffer payload** (100.51 MiB at ten Pages). This is a code-and-size-derived
+opportunity, not a measured RSS saving or a shipped implementation. A shared
+native owner must survive cache eviction and all consumers, including later
+connected-context creation, without sharing mutable Page state. Matching
+Windows/Linux native builds and ownership/teardown verification are required.
+
+A new static-only heap capture using the existing `TestPerformanceProfile`
+found two equal **4,415,784-byte** platform-source strings in the first ordinary
+Page. One is strongly retained through V8's Startup object cache ->
+SharedFunctionInfo -> Script; the other through a live global handle -> closure
+-> SharedFunctionInfo -> Script. The ordinary cold path first creates a restored
+adapter, creates a bare sibling, closes the restored adapter, then installs the
+platform into the bare realm. All concurrent cold entrants can select that path
+before preparation completes. In the existing ten-Page sequential diagnostic,
+the first static isolate used 32.69 MiB / 44.86 MiB physical, versus about
+19.63 MiB / 21.85 MiB physical for each subsequent isolate.
+
+As a diagnostic intervention only, the same one-Page static capture with
+`MIMIC_DISABLE_BOOTSTRAP_SNAPSHOT=1` had one large source string. Total heap
+snapshot self-size was **28.16 MiB default versus 22.39 MiB without snapshot**;
+both workload checks passed. This is not an execution benchmark, an RSS delta,
+or evidence that disabling snapshots is desirable. It identifies retained
+bootstrap duplication. Captures, phase records and Go profiles are preserved
+in `.build/memory-review-20260928/` and `.build/memory-review-plain-20260928/`.
+
+The next priorities are shared immutable native snapshot storage, removal of
+unnecessary cold-bootstrap materialization while preserving realm semantics,
+and measured compaction of the eagerly published WebAPI graph. The latter
+still creates about 30,000 closures in the static-only diagnostic; the existing
+lazy implementation domains leave public shape eager. Any further laziness
+must preserve descriptors, key order, function/prototype identity and realm
+ownership. No production code, native binary or frozen workload was changed
+in this investigation.
+
 ## 2026-09-28: ten-live-Page density after packed-call changes
 
 A fresh density run after the catalog, bootstrap-key and packed-call changes

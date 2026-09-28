@@ -3,6 +3,7 @@ package webapi
 import (
 	_ "embed"
 	"encoding/json"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -417,8 +418,8 @@ func composeSurface(generated, exposureSource string) string {
 	parts := []string{capabilitySurface, generated, "installLazyShape();", "finalizeBindings();", exposureSource,
 		"installNavigatorCapabilities();installLazySingletonBindings();", mediaSourceSurface, navigatorIdentitySurface, cssSupportsSurface, strings.Replace(domCompatibility, "/* shared_abort_encoding */", abortEncodingSurface, 1),
 		templatesCompatibilitySurface, selectorsVendorSurface, selectorsCompatibilitySurface, xpathCompatibilitySurface, cssomCompatibilitySurface, strings.Replace(strings.Replace(strings.Replace(strings.Replace(svgGeometrySurface, "/* shared_svg_boundaries */", svgBoundariesSurface, 1), "/* shared_svg_text */", svgTextSurface, 1), "/* shared_svg_css_transform */", svgCSSTransformSurface, 1), "/* shared_svg_types */", svgTypesSurface+svgCoordinatesSurface+svgReflectionsSurface+svgPathMetricsSurface+svgUseSurface+svgAttributeDefaultsSurface+svgAttributeSemanticsSurface, 1), streamPrelude,
-		streamsVendorSurface, "}", strings.Replace(fetchCompatibilitySurface, "/* cache_storage */", cacheStorageSurface, 1), strings.Replace(formControlsSurface, "/* constraint_validation */", constraintValidationSurface, 1), traversalCompatibilitySurface, strings.Replace(documentCompatibilitySurface, "/* shared_document_state */", documentStateSurface, 1), documentAllSurface, attributesCompatibilitySurface, webAnimationsSurface, imageResourcesSurface, screenFocusSurface, eventsCompatibilitySurface, windowErrorsSurface, inputSurface, windowObservationsSurface, windowServicesSurface, speechSynthesisSurface, documentPictureInPictureSurface, navigationSurface, indexedDBSurface, fileSystemSurface, documentStreamSurface, shadowSerializationSurface, canvasObservationsSource(), fontFacesSurface, rtcSessionSurface, trustedTypesSinksSurface, "trustedCaptureEvents();registerBootstrapCallback('installTrustedTypesEnforcer',trustedEnforceString);", "finalizeDocumentGetterBindings();finalizeSingletonGetterBindings();finalizePerformanceBindings();finalizeCallableBindings();finalizeNativeBindings();globalThis.__mimicNativeFunctionSources=nativeFunctionSourceState;", "finalizeFrameIntrinsicBindings();", marker}
-	base := strings.Replace(handwrittenSurface, "/* shared_fetch_primitives */", fetchPrimitivesSurface, 1)
+		streamsVendorSurface, "}", strings.Replace(fetchCompatibilitySurface, "/* cache_storage */", cacheStorageSurface, 1), strings.Replace(formControlsSurface, "/* constraint_validation */", oneByteSource(constraintValidationSurface), 1), traversalCompatibilitySurface, strings.Replace(documentCompatibilitySurface, "/* shared_document_state */", documentStateSurface, 1), documentAllSurface, attributesCompatibilitySurface, webAnimationsSurface, imageResourcesSurface, screenFocusSurface, eventsCompatibilitySurface, windowErrorsSurface, inputSurface, windowObservationsSurface, windowServicesSurface, speechSynthesisSurface, documentPictureInPictureSurface, navigationSurface, indexedDBSurface, fileSystemSurface, documentStreamSurface, shadowSerializationSurface, canvasObservationsSource(), fontFacesSurface, rtcSessionSurface, trustedTypesSinksSurface, "trustedCaptureEvents();registerBootstrapCallback('installTrustedTypesEnforcer',trustedEnforceString);", "finalizeDocumentGetterBindings();finalizeSingletonGetterBindings();finalizePerformanceBindings();finalizeCallableBindings();finalizeNativeBindings();globalThis.__mimicNativeFunctionSources=nativeFunctionSourceState;", "finalizeFrameIntrinsicBindings();", marker}
+	base := strings.Replace(oneByteSource(handwrittenSurface), "/* shared_fetch_primitives */", fetchPrimitivesSurface, 1)
 	base = strings.Replace(base, "/* shared_promise_intrinsics */", promiseIntrinsicsSurface, 1)
 	base = strings.Replace(base, "/* profile_locale */", localeSurface, 1)
 	base = strings.Replace(base, "/* native_intl */", intlSurface, 1)
@@ -437,6 +438,27 @@ func composeSurface(generated, exposureSource string) string {
 	base = strings.Replace(base, marker, strings.Join(parts, "\n"), 1)
 	base = strings.Replace(base, "/* shared_scrolling */", scrollingSurface, 1)
 	return base
+}
+
+// Keep the authored source readable while allowing V8 to retain the large
+// composed bootstrap source as a one-byte string. The non-Latin-1 characters
+// in these two modules occur only in string literals and comments.
+func oneByteSource(source string) string {
+	var out strings.Builder
+	out.Grow(len(source))
+	for _, char := range source {
+		if char <= 0xff || char > 0xffff {
+			out.WriteRune(char)
+			continue
+		}
+		out.WriteString(`\u`)
+		hex := strconv.FormatInt(int64(char), 16)
+		for pad := 4 - len(hex); pad > 0; pad-- {
+			out.WriteByte('0')
+		}
+		out.WriteString(hex)
+	}
+	return out.String()
 }
 
 func WorkerSurface(generated string, exposure *compatibility.RealmExposure) string {

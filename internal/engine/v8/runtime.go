@@ -61,6 +61,16 @@ func newAdapterWithRelease(owner *Runtime, profile *diagnosticState, release fun
 	return newAdapterForRealm(owner, realm, profile, release, started)
 }
 
+func newBareAdapterWithRelease(owner *Runtime, profile *diagnosticState, release func() error) (*adapter, error) {
+	started := time.Now()
+	realm, err := owner.newBareRealm()
+	if err != nil {
+		_ = release()
+		return nil, fmt.Errorf("create bare V8 realm: %w", err)
+	}
+	return newAdapterForRealm(owner, realm, profile, release, started)
+}
+
 func newAdapterForRealm(owner *Runtime, realm *Realm, profile *diagnosticState, release func() error, started time.Time) (*adapter, error) {
 	backend := &adapter{owner: owner, realm: realm, release: release, moduleCache: map[string]*gov8.Module{}, moduleNames: map[*gov8.Module]string{}, profile: profile}
 	backend.hostTrue = hostValue{runtime: backend, host: true}

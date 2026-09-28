@@ -142,6 +142,36 @@ func TestBootstrapSnapshotSeparateStages(t *testing.T) {
 	}
 }
 
+func TestBootstrapSnapshotBareRuntime(t *testing.T) {
+	snapshot, err := (Factory{}).BuildBootstrapSnapshot(context.Background(), `globalThis.seed={value:42}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer snapshot.Close()
+	pool := snapshot.(*bootstrapSnapshot).NewRuntimePool(1).(*bootstrapRuntimePool)
+	defer pool.Close()
+
+	bare, err := pool.NewBareRuntime()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer bare.Close()
+	value, err := bare.Eval(context.Background(), `typeof seed === 'undefined' && Array.isArray([])`, "bare")
+	if err != nil || value.Export() != true {
+		t.Fatalf("bare runtime restored the platform context: %v %v", value, err)
+	}
+
+	restored, err := pool.NewRuntime()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer restored.Close()
+	value, err = restored.Eval(context.Background(), `seed.value === 42`, "restored")
+	if err != nil || value.Export() != true {
+		t.Fatalf("restored runtime lost the platform context: %v %v", value, err)
+	}
+}
+
 func TestBootstrapRuntimePoolSharesIsolateAndIsolatesRealms(t *testing.T) {
 	snapshot, err := (Factory{}).BuildBootstrapSnapshot(context.Background(), `globalThis.seed={value:1}`)
 	if err != nil {
