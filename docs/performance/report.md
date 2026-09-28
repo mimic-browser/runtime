@@ -1,5 +1,25 @@
 # Performance architecture pass
 
+## 2026-09-28: decode only selected catalog shape fields
+
+Catalog selection previously decoded generated IDL specifications and members
+into temporary JSON maps, then encoded and decoded filtered members again.
+It now decodes only the fields needed for selection and builds the same compact
+shape catalog directly. Ten repeated selections of the frozen Chrome 152
+window catalog produced identical 379,667-byte output (SHA-256
+`9fec735c6a9bbdf919b2934783a4f8481a5d0dc3efafe7e8f4809b58ce33c53e`).
+The focused probe measured **298.26 → 193.79 MiB** cumulative Go allocations
+(-35.0%) and **332.74 → 211.22 ms** elapsed (-36.5%). This preparation is
+normally performed once per exposure, so the gain is startup allocation and
+CPU, not a per-Page runtime or ten-live-Page memory reduction.
+
+Focused catalog selection and independent-realm tests passed. The fresh-build
+ten-active-Page fast gate passed all DOM, static and React validity rows;
+warm completion medians were **437.15/40.27/119.05 ms**, versus the prior
+checkpoint's **438.48/40.14/107.95 ms**. These unpaired short runs do not
+establish a page-latency gain or React regression. The temporary probe was
+removed. Gate receipt: `.build/fast-gate-catalog-20260928/raw.json`.
+
 ## 2026-09-28: ten-live-Page memory attribution after allocation fixes
 
 The current fresh-build density probe kept ten independent Pages live for

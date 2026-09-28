@@ -23,6 +23,26 @@ type shapeCatalogSpec struct {
 	Members             []shapeCatalogMember `json:"members"`
 }
 
+// The generated catalog contains rich IDL metadata, but selection needs only
+// these raw fields. Decoding into maps would allocate one map per specification
+// and member before discarding nearly all of that metadata.
+type catalogInputSpec struct {
+	Name                json.RawMessage `json:"name"`
+	Kind                json.RawMessage `json:"kind"`
+	Exposed             json.RawMessage `json:"exposed"`
+	Parent              json.RawMessage `json:"parent"`
+	LegacyWindowAliases json.RawMessage `json:"legacyWindowAliases"`
+	Members             json.RawMessage `json:"members"`
+}
+
+type catalogInputMember struct {
+	Name     json.RawMessage `json:"name"`
+	Kind     json.RawMessage `json:"kind"`
+	Static   json.RawMessage `json:"static"`
+	Readonly json.RawMessage `json:"readonly"`
+	Value    json.RawMessage `json:"value"`
+}
+
 // selectedCatalog removes fallback bindings which applyTargetExposure would
 // immediately delete. The complete captured exposure still owns final shape;
 // native members and handwritten implementations are not filtered here.
@@ -31,14 +51,14 @@ func selectedCatalog(source string, exposure compatibility.RealmExposure) string
 	if source == "" {
 		return source
 	}
-	var specs []map[string]json.RawMessage
+	var specs []catalogInputSpec
 	if json.Unmarshal([]byte(source), &specs) != nil {
 		return source
 	}
 	decodeString := func(raw json.RawMessage) string { var s string; _ = json.Unmarshal(raw, &s); return s }
-	byName := make(map[string]map[string]json.RawMessage, len(specs))
-	for _, spec := range specs {
-		byName[decodeString(spec["name"])] = spec
+	byName := make(map[string]*catalogInputSpec, len(specs))
+	for i := range specs {
+		byName[decodeString(specs[i].Name)] = &specs[i]
 	}
 	globals := make(map[string]bool, len(exposure.Properties))
 	for _, property := range exposure.Properties {
@@ -51,7 +71,9 @@ func selectedCatalog(source string, exposure compatibility.RealmExposure) string
 			return
 		}
 		keep[name] = true
-		include(decodeString(byName[name]["parent"]))
+		if spec := byName[name]; spec != nil {
+			include(decodeString(spec.Parent))
+		}
 	}
 	for name, spec := range byName {
 		if globals[name] {
@@ -59,7 +81,7 @@ func selectedCatalog(source string, exposure compatibility.RealmExposure) string
 			continue
 		}
 		var aliases []string
-		_ = json.Unmarshal(spec["legacyWindowAliases"], &aliases)
+		_ = json.Unmarshal(spec.LegacyWindowAliases, &aliases)
 		for _, alias := range aliases {
 			if globals[alias] {
 				include(name)
@@ -67,11 +89,11 @@ func selectedCatalog(source string, exposure compatibility.RealmExposure) string
 			}
 		}
 	}
-	selected := make([]map[string]json.RawMessage, 0, len(keep))
+	compact := make([]shapeCatalogSpec, 0, len(keep))
 	neededByDescendants := map[string]map[string]bool{}
 	for name, members := range exposure.Prototypes {
 		seen := map[string]bool{}
-		for current := name; current != "" && !seen[current]; current = decodeString(byName[current]["parent"]) {
+		for current := name; current != "" && !seen[current]; {
 			seen[current] = true
 			if neededByDescendants[current] == nil {
 				neededByDescendants[current] = map[string]bool{}
@@ -79,76 +101,58 @@ func selectedCatalog(source string, exposure compatibility.RealmExposure) string
 			for _, member := range members {
 				neededByDescendants[current][member.Name] = true
 			}
+			if spec := byName[current]; spec != nil {
+				current = decodeString(spec.Parent)
+			} else {
+				current = ""
+			}
 		}
 	}
 	for _, spec := range specs {
-		name := decodeString(spec["name"])
+		name := decodeString(spec.Name)
 		if !keep[name] {
 			continue
 		}
-		if _, captured := exposure.Prototypes[name]; !captured {
-			// Missing capture data is not evidence that the prototype is empty.
-			selected = append(selected, spec)
-			continue
-		}
-		// Ancestors may temporarily exist solely to build an exposed child's
-		// prototype chain. Their members are still normalized by the exposure.
-		allowed := map[string]bool{}
-		// Keep members which influence an exposed descendant's inherited
-		// lookup during generation, even if final ownership moves downwards.
-		for member := range neededByDescendants[name] {
-			allowed[member] = true
-		}
-		seen := map[string]bool{}
-		for current := name; current != "" && !seen[current]; current = decodeString(byName[current]["parent"]) {
-			seen[current] = true
-			for _, property := range exposure.Prototypes[current] {
-				allowed[property.Name] = true
-			}
-		}
-		var members []map[string]json.RawMessage
-		if json.Unmarshal(spec["members"], &members) != nil {
-			return source
-		}
-		filtered := make([]map[string]json.RawMessage, 0, len(members))
-		for _, member := range members {
-			var static bool
-			_ = json.Unmarshal(member["static"], &static)
-			if static || decodeString(member["kind"]) == "constant" || allowed[decodeString(member["name"])] {
-				filtered = append(filtered, member)
-			}
-		}
-		encoded, err := json.Marshal(filtered)
-		if err != nil {
-			return source
-		}
-		spec["members"] = encoded
-		selected = append(selected, spec)
-	}
-	// The generated publisher needs only shape fields. Discard source paths,
-	// argument/type graphs and Blink feature metadata before the JSON crosses
-	// into a realm; capability installation has its own generated immutable
-	// tables. This keeps one authoritative catalog while avoiding a rich IDL
-	// AST allocation in every Page.
-	compact := make([]shapeCatalogSpec, 0, len(selected))
-	for _, spec := range selected {
 		item := shapeCatalogSpec{
-			Name:    decodeString(spec["name"]),
-			Kind:    decodeString(spec["kind"]),
-			Exposed: append(json.RawMessage(nil), spec["exposed"]...),
-			Parent:  decodeString(spec["parent"]),
+			Name:    name,
+			Kind:    decodeString(spec.Kind),
+			Exposed: append(json.RawMessage(nil), spec.Exposed...),
+			Parent:  decodeString(spec.Parent),
 		}
-		_ = json.Unmarshal(spec["legacyWindowAliases"], &item.LegacyWindowAliases)
-		var members []map[string]json.RawMessage
-		if json.Unmarshal(spec["members"], &members) != nil {
+		_ = json.Unmarshal(spec.LegacyWindowAliases, &item.LegacyWindowAliases)
+		var members []catalogInputMember
+		if json.Unmarshal(spec.Members, &members) != nil {
 			return source
 		}
 		item.Members = make([]shapeCatalogMember, 0, len(members))
+		allowed := map[string]bool(nil)
+		if _, captured := exposure.Prototypes[name]; captured {
+			// Ancestors can exist solely to build an exposed child's chain.
+			allowed = map[string]bool{}
+			for member := range neededByDescendants[name] {
+				allowed[member] = true
+			}
+			seen := map[string]bool{}
+			for current := name; current != "" && !seen[current]; {
+				seen[current] = true
+				for _, property := range exposure.Prototypes[current] {
+					allowed[property.Name] = true
+				}
+				if parent := byName[current]; parent != nil {
+					current = decodeString(parent.Parent)
+				} else {
+					current = ""
+				}
+			}
+		}
 		for _, member := range members {
-			entry := shapeCatalogMember{Name: decodeString(member["name"]), Kind: decodeString(member["kind"])}
-			_ = json.Unmarshal(member["static"], &entry.Static)
-			_ = json.Unmarshal(member["readonly"], &entry.Readonly)
-			entry.Value = append(json.RawMessage(nil), member["value"]...)
+			entry := shapeCatalogMember{Name: decodeString(member.Name), Kind: decodeString(member.Kind)}
+			_ = json.Unmarshal(member.Static, &entry.Static)
+			if allowed != nil && !entry.Static && entry.Kind != "constant" && !allowed[entry.Name] {
+				continue
+			}
+			_ = json.Unmarshal(member.Readonly, &entry.Readonly)
+			entry.Value = append(json.RawMessage(nil), member.Value...)
 			item.Members = append(item.Members, entry)
 		}
 		compact = append(compact, item)

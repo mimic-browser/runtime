@@ -35,4 +35,8 @@ func TestSelectedCatalogRetainsAncestorsAliasesAndStaticMembers(t *testing.T) {
 	if selectedCatalog("not JSON", exposure) != "not JSON" {
 		t.Fatal("custom catalog fallback changed")
 	}
+	malformedMembers := `[{"name":"Visible","members":{}}]`
+	if selectedCatalog(malformedMembers, exposure) != malformedMembers {
+		t.Fatal("malformed member catalog fallback changed")
+	}
 }
