@@ -1,5 +1,122 @@
 # Performance architecture pass
 
+## 2026-09-29: Lightpanda comparison and remaining architectural headroom
+
+The installed Linux Lightpanda `1.0.0-nightly.9268+909108e29` was compared with
+the final pointer-compressed Mimic Linux executable from the preceding checkpoint.
+Its executable hash matches that checkpoint; `/proc/<pid>/maps` confirmed the
+packaged compressed native library, SHA-256 `863dbf62a7919aa56ac75ad11c3674b3e2ea3a6b48e31815334571153846acf2`.
+Subsequent unrelated working-tree DOM edits were not included in the executable.
+Both engines and the controller ran in the same Ubuntu WSL environment, serially
+in alternating order. This is a comparison with the installed Lightpanda build,
+not a claim about the latest upstream release.
+
+### Method and transport limitation
+
+The existing Linux adapters import the frozen public workloads and independent
+expected results. All resource types supported by Lightpanda were enabled, along
+with its CORS option. HTTP cache was disabled; origins were unique. There was no
+forced GC. No frozen file or expectation was changed, and Chrome was not launched.
+
+The first run exposed a reproducible 10-second WebSocket close-handshake wait in
+the controller after successful Lightpanda `Target.closeTarget` acknowledgements.
+That interrupted run is preserved in `.build/lightpanda-compare-20260929/`.
+The final runs set Python websockets `close_timeout=0` **for both engines**, after
+the unchanged target-close acknowledgement. They measure engine work without
+waiting for this transport handshake, not stock-client graceful-close latency.
+This extra adapter policy means the results are not a byte-identical rerun of
+the frozen Windows public harness. The wrapper source and hash are in the receipt.
+
+Three alternating process rounds per engine measured five retained single-Page
+iterations per workload after one excluded iteration (15 retained observations).
+All 216 observations, including warmups, passed all expected result fields.
+Capacity used three alternating fresh-process pairs per workload, ten concurrent
+Pages, one excluded wave and three retained waves (nine retained observations).
+All 18 semantic gates and all 720 concurrent sessions, including warmup waves,
+passed. Each completed Page remained alive until the wave finished. The same
+250 ms recovery period was used for both engines. No 50/100-Page result is claimed.
+
+### Results
+
+Warm completion includes navigation and validated workload execution, excluding
+Page creation and teardown:
+
+| Workload | Mimic completion, ms | Lightpanda completion, ms | Mimic / Lightpanda |
+| --- | ---: | ---: | ---: |
+| Static | 32.18 | 7.18 | 4.48x |
+| CPU / crypto | 61.94 | 36.97 | 1.68x |
+| DOM mutations | 517.45 | 22.77 | 22.72x |
+| Async / networking | 103.01 | 21.93 | 4.70x |
+| React | 120.18 | 19.62 | 6.13x |
+| WebAssembly | 33.37 | 12.07 | 2.76x |
+
+Ten concurrent live Pages, process-tree RSS and throughput including creation
+and target teardown (the separate recovery wait is excluded):
+
+| Workload | Mimic / Lightpanda RSS, MiB | Mimic / Lightpanda sessions/s | Mimic / Lightpanda CPU ms/session |
+| --- | ---: | ---: | ---: |
+| Static | 258.45 / 43.71 | 83.47 / 219.36 | 59 / 3 |
+| CPU / crypto | 350.65 / 154.52 | 54.58 / 124.95 | 117 / 49 |
+| React | 346.98 / 123.08 | 38.95 / 126.69 | 228 / 33 |
+
+PSS confirms the memory gap: 258.73/43.00, 352.11/154.61 and
+348.68/123.49 MiB respectively. Linux RSS, USS and PSS are separately sampled
+counters, not Windows private bytes. Recovery RSS was 133.26/43.52,
+145.45/69.08 and 164.46/105.42 MiB. CPU observations have sampling and accounting
+limits; do not infer precise per-operation costs from these aggregate medians.
+
+### Interpretation and next targets
+
+The source at Lightpanda commit `909108e293bbe8f74f119957067b761855b88a69`
+was inspected in `/home/moreveal/lightpanda-review-20260929/`. Its server creates
+a CDP driver and Browser per WebSocket; Browser owns an Env, which creates a V8
+isolate. This adapter opens a separate WebSocket per Page. Therefore this measured
+advantage cannot be dismissed as ten Pages sharing one isolate. Pages within a
+single Lightpanda connection can still share its isolate; that is a different
+configuration. Relevant source: `src/server/Server.zig`,
+`src/server/cdp/CDP.zig`, `src/browser/Browser.zig`, `src/browser/js/Env.zig`.
+
+The most promising substantial investigations, in priority order, are:
+
+1. **Reduce the per-Page compatibility graph and bootstrap work.** Mimic's
+   compressed static diagnostic still holds 106.9 MiB of used V8 heap across
+   ten Pages. Lightpanda constructs native binding templates in its snapshot
+   (`src/browser/js/Snapshot.zig`) rather than retaining Mimic's large authored
+   JS implementation graph. Prototype a small native-template/lazy-publication
+   boundary, preserving property descriptors, key enumeration, function identity,
+   receiver checks, realms and snapshot restoration. Neither removing API exposure
+   nor sharing mutable Page heaps is an acceptable substitute. The total RSS gap
+   is not a prediction of how much such a compatible implementation will save.
+2. **Reduce DOM binding and canonical-state access costs structurally.** Measured
+   execution alone is 489.98 ms in Mimic versus 15.06 ms in Lightpanda. Lightpanda
+   invokes native DOM operations through typed V8 bindings (`js/Caller.zig`,
+   `webapi/Node.zig`). Previous Mimic profiles identify host conversions, wrappers
+   and crossings as significant; their old timings must not be treated as a
+   current CPU decomposition. Reprofile the current DOM path, then evaluate a
+   typed direct boundary or a small native canonical-DOM vertical slice. A second
+   shadow DOM, deferred observable mutations, or an incomplete replacement is not
+   an acceptable optimization. The historical incomplete JS-DOM spike already
+   demonstrates why a fast partial kernel is insufficient.
+3. **Attribute navigation and task-delivery overhead separately.** Static
+   navigation is 28.46/6.58 ms; async execution is 74.61/17.30 ms. These warrant
+   phase profiles without changing task order or microtask boundaries. In contrast,
+   Wasm execution alone is already 4.97/5.95 ms in Mimic's favor, and CPU execution
+   is 33.17/27.32 ms. Replacing V8 or tuning its flags indiscriminately does not
+   address the largest measured deficits.
+
+All six fixture checks passing does not establish equivalent overall Chrome 152
+compatibility. Different Web API implementations and V8 builds remain confounders;
+Lightpanda's CDP version strings are hard-coded in its source and are not reliable
+evidence of the embedded V8 version. No source was copied into Mimic, and no runtime
+implementation changes were made in this comparison.
+
+The [comparison receipt](data/lightpanda-20260929/summary.json) preserves every
+single-Page observation and capacity wave, validity counts, launch arguments,
+binary/native/adapter hashes, transport wrapper, source provenance and raw hashes.
+Full local runs are `.build/lightpanda-latency-fixed-20260929/` and
+`.build/lightpanda-capacity-20260929/`. These Linux observations must not be mixed
+with the previous Windows/site numbers to estimate a causal optimization gain.
+
 ## 2026-09-29: pointer compression with independent Page heaps
 
 The packaged Windows and Linux V8 libraries now use pointer compression. Both
