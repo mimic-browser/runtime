@@ -55,6 +55,26 @@ func TestHostValueSurvivesItsCreatingCallback(t *testing.T) {
 	}
 }
 
+func TestTransientCallbackPreservesReceiver(t *testing.T) {
+	r := (Factory{}).New().(*adapter)
+	defer r.Close()
+	var seen []any
+	if err := r.Set("receiver", r.TransientFunction(func(this engine.Value, _ []engine.Value) (engine.Value, error) {
+		value := r.GetProperty(this, "tag")
+		seen = append(seen, value.Export())
+		return value, nil
+	})); err != nil {
+		t.Fatal(err)
+	}
+	value, err := r.Eval(context.Background(), `receiver.prototype.tag=99; receiver.call({tag: 42}) === 42 && (new receiver()).tag === 99`, "receiver.js")
+	if err != nil || value.Export() != true {
+		t.Fatalf("receiver: %v %v", value, err)
+	}
+	if len(seen) != 2 || seen[0] != float64(42) || seen[1] != float64(99) {
+		t.Fatalf("callback receivers: %v", seen)
+	}
+}
+
 func TestBatchedCallbackRecordsPreserveCollectionValues(t *testing.T) {
 	r := (Factory{}).New().(*adapter)
 	defer r.Close()

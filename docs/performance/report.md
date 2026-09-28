@@ -1,5 +1,26 @@
 # Performance architecture pass
 
+## 2026-09-28: avoid transient receiver wrapper in V8 host calls
+
+The ordinary V8 host callback path retrieved `this` through gov8's `This`,
+which allocated an Object wrapper before Mimic immediately extracted its
+underlying Value. Gov8 now also exposes `ThisValue` with the same frame checks
+and borrowed-scope lifetime; Mimic uses it only where the Object wrapper was
+discarded. The existing `This` method retains its contract. A focused test
+checks the receiver in both `.call(...)` and constructor invocations.
+
+On the unchanged ten-execution DOM profile, Go allocation fell **520.36 →
+501.71 MiB** against the preceding borrowed-scope binary (about **3.6%**).
+Sampled allocation from `FunctionCallbackArguments.This` disappeared from the
+Mimic path. Short-run median execution was **401.05 → 392.07 ms**, but the
+ten-live-Page gate did not confirm a latency gain: its warm DOM/static/React
+completion medians were **436.91/36.64/105.37 ms**. The result is therefore
+an allocation-pressure improvement. Focused V8 and browser tests, V8 race
+checks, and all six fast-gate workloads passed. Raw receipts are
+`.build/profile-gov8-scope-20260928/`,
+`.build/profile-this-value-20260928/`, and
+`.build/fast-gate-this-value-20260928/`.
+
 ## 2026-09-28: compact borrowed V8 callback scope
 
 The local gov8 callback dispatcher deliberately allocates one unique scope

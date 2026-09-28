@@ -1701,13 +1701,13 @@ func (a *adapter) makeFunction(scope *gov8.Scope, realm *gov8.Context, function 
 				wrapped[i] = &runtimeValue{runtime: a, global: global, local: local, borrowed: true, callbackID: callbackID}
 			}
 		}
-		thisObject, e := args.This()
+		thisObject, e := args.ThisValue()
 		if e != nil {
 			return
 		}
 		var thisGlobal *gov8.Global
 		if !transient {
-			thisGlobal, e = a.newGlobal(cs.Scope(), thisObject.Value)
+			thisGlobal, e = a.newGlobal(cs.Scope(), thisObject)
 			if e != nil {
 				return
 			}
@@ -1718,7 +1718,7 @@ func (a *adapter) makeFunction(scope *gov8.Scope, realm *gov8.Context, function 
 		} else {
 			thisValue = new(runtimeValue)
 		}
-		*thisValue = runtimeValue{runtime: a, global: thisGlobal, local: thisObject.Value, borrowed: true, callbackID: callbackID}
+		*thisValue = runtimeValue{runtime: a, global: thisGlobal, local: thisObject, borrowed: true, callbackID: callbackID}
 		if !argumentStart.IsZero() {
 			a.recordCost("callback:arguments", argumentStart)
 		}

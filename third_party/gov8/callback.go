@@ -966,14 +966,24 @@ func (a FunctionCallbackArguments) Get(i int) (Value, error) {
 
 // This returns the call receiver (the created instance for construct calls).
 func (a FunctionCallbackArguments) This() (*Object, error) {
-	frame, err := a.checkedFrame()
+	value, err := a.ThisValue()
 	if err != nil {
 		return nil, err
 	}
-	if frame.thisWire == 0 {
-		return nil, fmt.Errorf("gov8: callback has no receiver")
+	return &Object{value}, nil
+}
+
+// ThisValue returns the same receiver without allocating an Object wrapper.
+// It has the same borrowed callback-scope lifetime as This.
+func (a FunctionCallbackArguments) ThisValue() (Value, error) {
+	frame, err := a.checkedFrame()
+	if err != nil {
+		return Value{}, err
 	}
-	return &Object{a.cs.wrap(frame.thisWire)}, nil
+	if frame.thisWire == 0 {
+		return Value{}, fmt.Errorf("gov8: callback has no receiver")
+	}
+	return a.cs.wrap(frame.thisWire), nil
 }
 
 // NewTarget returns new.target: the constructor function for construct
