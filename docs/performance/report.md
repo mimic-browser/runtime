@@ -1,5 +1,27 @@
 # Performance architecture pass
 
+## 2026-09-28: ten-live-Page memory attribution after allocation fixes
+
+The current fresh-build density probe kept ten independent Pages live for
+each static, CPU and React workload. At the ten-Page barrier, process RSS was
+**495.8/578.0/574.2 MiB** respectively, while Go heap was only
+**32.7/42.7/46.8 MiB**. The ten V8 isolates together reported used heap of
+**209.4/257.2/260.7 MiB**. Diagnostic full V8 collection on each live Page
+reduced RSS to **470.9/474.3/524.1 MiB** and used isolate heap to
+**199.1/200.3/240.6 MiB**; median collection time per Page was
+**6.0/8.0/9.6 ms**. Collection is an attribution intervention, not a proposed
+production policy.
+
+After all ten Pages closed, RSS at 250 ms was **150.5/152.4/158.2 MiB**;
+explicit Go scavenging reduced it to **117.3/120.3/123.9 MiB**. The active
+memory cost is thus primarily native isolate/realm state, and Page teardown
+does release most of it. The prior shared-isolate experiment regressed E2E and
+would compromise independent Page execution; forced collection does not remove
+the persistent live graph. No production code changed in this attribution
+step. Fresh-build receipts and per-isolate diagnostics are under
+`.build/profile-density-current-20260928/` and
+`.build/profile-density-gc-20260928/`.
+
 ## 2026-09-28: defer geometry-revision read until needed
 
 `invalidateRetainedGeometry` read the canonical observation revision before
