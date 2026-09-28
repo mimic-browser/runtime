@@ -740,6 +740,11 @@ func strarg(args []engine.Value, n int) string {
 	return fmt.Sprint(v)
 }
 func numarg(args []engine.Value, n int) float64 {
+	if n < len(args) && args[n] != nil {
+		if number, ok := args[n].(interface{ Number() float64 }); ok {
+			return number.Number()
+		}
+	}
 	switch v := arg(args, n).(type) {
 	case int64:
 		return float64(v)

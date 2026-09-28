@@ -28,9 +28,31 @@ type packedFrame struct {
 	units    [packedBytes / 2]uint16
 	ascii    [packedBytes / 2]byte
 	values   [4]runtimeValue
+	numbers  [4]packedNumberValue
 	args     [4]engine.Value
 	callback callbackContext
 }
+
+// Keep packed numeric arguments unboxed until a caller explicitly exports
+// one. Most DOM hosts consume node IDs and coordinates through Number().
+type packedNumberValue struct {
+	runtime *adapter
+	number  float64
+}
+
+func (v *packedNumberValue) Export() any {
+	if v.runtime == nil {
+		return nil
+	}
+	return v.number
+}
+func (v *packedNumberValue) String() string {
+	if v.runtime == nil {
+		return "undefined"
+	}
+	return fmt.Sprint(v.number)
+}
+func (v *packedNumberValue) Number() float64 { return v.number }
 
 func packedFactorySource(signature string) string {
 	var parameters, checks, writes []string
@@ -135,6 +157,7 @@ func (a *adapter) makePackedFunction(scope *gov8.Scope, realm *gov8.Context, hos
 			frame.callback = callbackContext{}
 			for i := range frame.values {
 				frame.values[i] = runtimeValue{}
+				frame.numbers[i] = packedNumberValue{}
 				frame.args[i] = nil
 			}
 			if len(a.packedFrames) < 8 {
@@ -146,26 +169,29 @@ func (a *adapter) makePackedFunction(scope *gov8.Scope, realm *gov8.Context, hos
 		offset := packedHeader
 		for i, kind := range host.packed {
 			number := math.Float64frombits(binary.LittleEndian.Uint64(data[i*8:]))
-			var value any = number
-			if kind == 's' {
-				if number < 0 || number > float64((packedBytes-offset)/2) || number != math.Trunc(number) {
-					fail(errors.New("invalid packed string length"))
-					return
-				}
-				length := int(number)
-				ascii := true
-				for j := 0; j < length; j++ {
-					frame.units[j] = binary.LittleEndian.Uint16(data[offset+j*2:])
-					frame.ascii[j] = byte(frame.units[j])
-					ascii = ascii && frame.units[j] < 128
-				}
-				if ascii {
-					value = string(frame.ascii[:length])
-				} else {
-					value = string(utf16.Decode(frame.units[:length]))
-				}
-				offset += length * 2
+			if kind == 'n' {
+				frame.numbers[i] = packedNumberValue{runtime: a, number: number}
+				frame.args[i] = &frame.numbers[i]
+				continue
 			}
+			var value string
+			if number < 0 || number > float64((packedBytes-offset)/2) || number != math.Trunc(number) {
+				fail(errors.New("invalid packed string length"))
+				return
+			}
+			length := int(number)
+			ascii := true
+			for j := 0; j < length; j++ {
+				frame.units[j] = binary.LittleEndian.Uint16(data[offset+j*2:])
+				frame.ascii[j] = byte(frame.units[j])
+				ascii = ascii && frame.units[j] < 128
+			}
+			if ascii {
+				value = string(frame.ascii[:length])
+			} else {
+				value = string(utf16.Decode(frame.units[:length]))
+			}
+			offset += length * 2
 			frame.values[i] = runtimeValue{runtime: a, host: value, hostSet: true}
 			frame.args[i] = &frame.values[i]
 		}

@@ -222,6 +222,10 @@ func hostPayload(value engine.Value) (any, bool) {
 		if v.hostSet {
 			return v.host, true
 		}
+	case *packedNumberValue:
+		if v.runtime != nil {
+			return v.number, true
+		}
 	}
 	return nil, false
 }
@@ -1515,6 +1519,13 @@ func (a *adapter) localOrUndefined(scope *gov8.Scope, value engine.Value) (gov8.
 }
 
 func (a *adapter) localCallback(value engine.Value) (gov8.Value, error) {
+	if number, ok := value.(*packedNumberValue); ok {
+		if number.runtime != a || a.onCallback() == nil {
+			return gov8.Value{}, errors.New("packed number escaped its V8 callback")
+		}
+		callback := a.onCallback()
+		return callbackValue(callback.scope, callback.ctx, callback.result, number.number)
+	}
 	if host, ok := value.(*hostValue); ok {
 		if host.runtime != a {
 			return gov8.Value{}, errors.New("callback value is not local to this V8 invocation")

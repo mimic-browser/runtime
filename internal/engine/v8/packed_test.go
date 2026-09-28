@@ -52,6 +52,29 @@ try {String.prototype.charCodeAt=()=>{throw Error('user charCodeAt called')};
 	}
 }
 
+func TestPackedNumberDirectReadPreservesNegativeZero(t *testing.T) {
+	r := (Factory{}).New().(*adapter)
+	defer r.Close()
+	var retained engine.Value
+	if err := r.Set("packedNumber", r.PackedFunction(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
+		retained = args[0]
+		number, ok := args[0].(interface{ Number() float64 })
+		if !ok || !math.Signbit(number.Number()) || number.Number() != 0 {
+			return nil, fmt.Errorf("packed number changed: %T %v", args[0], args[0].Export())
+		}
+		return args[0], nil
+	}, "n")); err != nil {
+		t.Fatal(err)
+	}
+	value, err := r.Eval(context.Background(), `Object.is(packedNumber(-0), -0)`, "packed-number.js")
+	if err != nil || value.Export() != true {
+		t.Fatalf("packed -0 return: %v %v", value, err)
+	}
+	if retained.Export() != nil || retained.String() != "undefined" {
+		t.Fatalf("packed number remained readable after callback: %v", retained)
+	}
+}
+
 func TestPackedResultsReentrancyAndErrors(t *testing.T) {
 	r := (Factory{}).New().(*adapter)
 	defer r.Close()
@@ -114,6 +137,11 @@ if(!Object.is(packed(-0,''),-0))throw Error('negative zero');
 		for _, v := range frame.values {
 			if v.runtime != nil || v.host != nil {
 				t.Fatal("packed frame retained values")
+			}
+		}
+		for _, v := range frame.numbers {
+			if v.runtime != nil {
+				t.Fatal("packed frame retained numeric arguments")
 			}
 		}
 	}

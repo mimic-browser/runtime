@@ -1,5 +1,27 @@
 # Performance architecture pass
 
+## 2026-09-28: keep packed numeric host arguments unboxed
+
+The DOM allocation profile attributed 13.0 MiB across ten executions to
+boxing packed numeric host arguments before the browser read node IDs and
+coordinates. Packed callbacks now keep those numbers in their existing
+reusable invocation frame, and the browser's numeric argument helper reads
+them directly. Explicit `Export()` still returns a float64; returned arguments,
+negative zero, nested callbacks and invalidation after callback exit retain
+their behavior. The same profile site has no numeric boxing allocation after
+the change. Whole-profile sampled Go allocation was **445.14 → 435.13 MiB**
+in one unpaired diagnostic run; other sites varied, so that total is not a
+precise estimate of the isolated saving.
+
+Focused packed-call, DOM, geometry, Canvas and cross-realm tests passed. The
+fresh-build ten-active-Page fast gate passed every validity row; warm
+DOM/static/React completion medians were **421.35/39.24/117.81 ms**, versus
+**424.64/40.53/107.61 ms** at the preceding checkpoint. This short unpaired
+gate does not establish a page-latency improvement or React regression.
+Receipts: `.build/profile-next-b-20260928/`,
+`.build/profile-packed-number-20260928/` and
+`.build/fast-gate-packed-number-20260928/raw.json`.
+
 ## 2026-09-28: avoid copying bootstrap source for cache key
 
 The current ten-Page allocation profile attributed 4.28 MiB to converting
@@ -58,6 +80,15 @@ the persistent live graph. No production code changed in this attribution
 step. Fresh-build receipts and per-isolate diagnostics are under
 `.build/profile-density-current-20260928/` and
 `.build/profile-density-gc-20260928/`.
+
+The startup blob remains a native copy per isolate: `HoldBlob` owns its own
+buffer until that isolate closes, even though Go consumers share immutable
+source bytes. Sharing the native buffer could reduce live density, but it
+requires a reference-counted shim lifetime change and matching rebuilt Windows
+and Linux artifacts. This workspace has the packaged binaries and a stock
+Windows V8 archive, not the matching patched V8 source/archive required by the
+repository's native build verification. No unverified native sharing change
+was shipped or included in the measurements above.
 
 ## 2026-09-28: defer geometry-revision read until needed
 
