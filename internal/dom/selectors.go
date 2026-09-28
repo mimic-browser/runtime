@@ -63,12 +63,16 @@ func (d *Document) Matches(id int64, selector string) bool {
 }
 
 func (d *Document) matchesSelector(n *Node, selector string) bool {
-	for _, leaf := range strings.Split(selector, ",") {
+	for {
+		leaf, rest, more := strings.Cut(selector, ",")
 		if d.matchesLeafSelector(n, strings.TrimSpace(leaf)) {
 			return true
 		}
+		if !more {
+			return false
+		}
+		selector = rest
 	}
-	return false
 }
 
 func (d *Document) matchesLeafSelector(n *Node, selector string) bool {

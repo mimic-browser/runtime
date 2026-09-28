@@ -1,5 +1,24 @@
 # Performance architecture pass
 
+## 2026-09-28: scan legacy selector lists without splitting
+
+The restricted native leaf-selector matcher split a comma-separated selector
+into a new slice for every candidate DOM node. It now scans the same leaves
+with `strings.Cut`, preserving order, trimming and empty-leaf behavior.
+A focused regression covers single, grouped, whitespace and empty selectors;
+existing selector-journal and browser tests passed.
+
+On the unchanged ten-execution DOM profile, Go allocation fell **487.67 →
+478.04 MiB** against the direct-predicate binary (about **2.0%**). Median
+execution was **386.24 → 387.16 ms**, effectively unchanged. The fresh-build
+ten-live-Page fast gate passed all six workloads and its three throughput
+waves; warm DOM/static/React completion medians were
+**432.58/36.71/99.76 ms**. This is an allocation reduction, not an
+established page-latency gain. Raw receipts are
+`.build/profile-predicate-20260928/`,
+`.build/profile-selector-scan-20260928/`, and
+`.build/fast-gate-selector-scan-20260928/`.
+
 ## 2026-09-28: direct native V8 predicates
 
 Gov8's `Value.predicate` used a variadic native procedure call for every
