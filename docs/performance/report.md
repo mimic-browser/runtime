@@ -1,5 +1,41 @@
 # Performance architecture pass
 
+## 2026-09-29: remaining memory attribution after 8a1556d
+
+A fresh ten-live-Page diagnostic at committed source `8a1556d` applied explicit
+V8 collection only after recording the natural live state. This is an
+intervention to identify reclaimable memory, not a production policy or a
+replacement for the public benchmark. Receipts and the fresh binary hash are
+in `.build/memory-next-gc-20260929/`.
+
+| Workload | RSS before / after collection | V8 used heap before / after | Median collection time per Page |
+| --- | ---: | ---: | ---: |
+| Static | 336.3 / 311.8 MiB | 158.7 / 145.8 MiB | 7.17 ms |
+| CPU | 453.9 / 305.4 MiB | 255.2 / 146.9 MiB | 8.65 ms |
+| React | 405.0 / 357.7 MiB | 209.3 / 187.3 MiB | 9.75 ms |
+
+The large CPU reduction makes temporary allocation and heap-growth policy a
+stronger next target than assuming all remaining density cost is permanent
+per-isolate state. These are overlapping counters, not additive savings.
+Post-close RSS after Go scavenging was 112.4/112.9/116.3 MiB respectively.
+All diagnostic workloads passed. Explicit collection itself remains too costly
+to adopt on every operation without matched latency/throughput validation.
+
+The next bounded investigations should compare natural allocation/collection
+cycles, evaluate idle maintenance within the existing Page scheduler, and
+prototype native lazy publication on a small set of large WebAPI prototypes.
+The existing nursery limit is already 4 MiB; simply shrinking it further is
+not an evidence-based solution. Native lazy publication must preserve exact
+reflection, identity, receiver and snapshot behavior. The earlier 8–9 MiB/Page
+omission experiment is an upper bound, not an expected compatible saving.
+Snapshot-backed platform source sharing is a smaller, separate opportunity
+with persisted-resource ownership work. Shared mutable isolates remain excluded
+until the historical concurrent-teardown crash has a demonstrated fix.
+
+The live overview site could not be reached during this investigation. The
+comparison therefore uses the September 21 public release dataset currently
+linked by the repository README, not a newly verified deployed-site revision.
+
 ## 2026-09-28: one-byte bootstrap source in independent Page isolates
 
 The browser's composed platform JavaScript was retained twice in the first
