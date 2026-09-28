@@ -1,5 +1,30 @@
 # Performance architecture pass
 
+## 2026-09-28: Page-owned immutable host primitives
+
+Go-origin `true`, `false` and `null` results now reuse three immutable V8
+host-value wrappers owned by their adapter. Other values remain individually
+allocated and may survive their creating callback. No wrapper or mutable
+state is shared between Pages. Focused V8 and race tests passed.
+
+The unchanged ten-execution DOM profile allocated **473.96 → 449.24 MiB** of
+Go memory (about **5.2% less**); the sampled `adapter.Value` allocation site
+fell from about 43 to 19 MiB. The sequential React profile measured
+**215.25 → 213.90 MiB** and essentially equal execution medians
+(**55.70 → 55.81 ms**). The original ten-live-Page gate passed, but its React
+timings were slower in a noisy period. Two alternating fresh-build React
+control/candidate pairs then measured warm medians **109.40/109.09 ms** for
+control and **106.52/111.78 ms** for candidate, with ten-live-Page wave
+completion **777.9/776.0 ms** versus **779.3/729.2 ms**. Each pair ran all six
+semantic workloads. These results support the allocation reduction and do
+not establish a general latency gain or a repeatable regression. The control
+used a Go overlay of the committed `runtime.go`; binaries were hash-checked
+before every launch. Receipts are under `.build/profile-host-primitives-20260928/`,
+`.build/profile-host-primitives-react-20260928/`,
+`.build/profile-host-primitives-react-control-20260928/`,
+`.build/fast-gate-host-primitives-20260928/`, and
+`.build/react-pair-{c1,a1,a2,c2}-20260928/`.
+
 ## 2026-09-28: allocation-free class membership scan
 
 The restricted native class matcher built a token slice for each tested node.

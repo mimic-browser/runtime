@@ -63,6 +63,9 @@ func newAdapterWithRelease(owner *Runtime, profile *diagnosticState, release fun
 
 func newAdapterForRealm(owner *Runtime, realm *Realm, profile *diagnosticState, release func() error, started time.Time) (*adapter, error) {
 	backend := &adapter{owner: owner, realm: realm, release: release, moduleCache: map[string]*gov8.Module{}, moduleNames: map[*gov8.Module]string{}, profile: profile}
+	backend.hostTrue = hostValue{runtime: backend, host: true}
+	backend.hostFalse = hostValue{runtime: backend, host: false}
+	backend.hostNull = hostValue{runtime: backend}
 	if err := backend.installPropertyObservationFactory(); err != nil {
 		_ = backend.Close()
 		return nil, err
@@ -152,6 +155,9 @@ type adapter struct {
 	packedFactories            map[string]*gov8.Global
 	packedFrames               []*packedFrame
 	callbackSeq                uint64
+	hostTrue                   hostValue
+	hostFalse                  hostValue
+	hostNull                   hostValue
 	promiseFactory             engine.Value
 	propertyObservationFactory engine.Value
 	receiverDispatchFactory    engine.Value
@@ -711,6 +717,15 @@ func (a *adapter) Get(name string) engine.Value {
 
 func (a *adapter) Value(value any) engine.Value {
 	if callback := a.onCallback(); callback != nil {
+		switch value := value.(type) {
+		case nil:
+			return &a.hostNull
+		case bool:
+			if value {
+				return &a.hostTrue
+			}
+			return &a.hostFalse
+		}
 		return &hostValue{runtime: a, host: value}
 	}
 	result, _ := a.run(func(s *state, realm *gov8.Context, scope *gov8.Scope) (engine.Value, error) {
