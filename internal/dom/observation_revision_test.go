@@ -132,6 +132,28 @@ func TestObservationMutationJournalIgnoresDetachedAndRejectsStructuralGaps(t *te
 	}
 }
 
+func TestObservationMutationJournalKeepsRecentOrderAfterWrap(t *testing.T) {
+	d, err := Parse("<main id='root'></main>")
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := d.FindAllIDs(0, "#root")[0]
+	for i := 0; i < mutationJournalLimit+7; i++ {
+		if err := d.SetAttribute(id, "data-value", string(rune(i+1))); err != nil {
+			t.Fatal(err)
+		}
+	}
+	journal := d.ObservationMutationsSince(d.ObservationRevision() - 7)
+	if journal.Overflow || len(journal.Records) != 7 {
+		t.Fatalf("recent observation window: %#v", journal)
+	}
+	for i, record := range journal.Records {
+		if record.Revision != d.ObservationRevision()-6+uint64(i) {
+			t.Fatalf("observation order at %d: %#v", i, record)
+		}
+	}
+}
+
 func TestObservationRevisionIsScopedPerDocumentRoot(t *testing.T) {
 	d, err := Parse("<main></main>")
 	if err != nil {

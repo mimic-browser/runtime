@@ -1,5 +1,68 @@
 # Performance architecture pass
 
+## 2026-09-28: explicit trace capture and diagnostic dispatch
+
+Diagnostic history is now empty by default. `Mimic.startTrace` starts a new
+bounded capture, `Mimic.getTrace` reads it, and `Mimic.stopTrace` stops it while
+keeping the captured events readable. Network completion records used by
+Window/Worker Performance remain independent of diagnostic capture. CDP's live
+subscribers receive only the event kinds they consume. DOM query bindings avoid
+building diagnostic node snapshots and result-ID copies when neither capture
+nor another all-event subscriber requests API events. The external all-event
+subscriber contract remains available.
+
+A temporary probe on ten live Pages added 5000 selector-result events per Page,
+each carrying 1024 node IDs, then sampled the live Go heap after GC. With
+capture explicitly enabled, the additional retained heap was **73,559,336
+bytes** and each Page kept 5000 bounded events. With the default capture-off
+state, the same probe retained **7,752 bytes** and zero diagnostic events.
+The probe was removed after measurement; it isolates trace retention rather
+than measuring page execution or process RSS. Network response records remain
+available for the browser-observable Performance timeline.
+
+The ten-live-Page fast gate passed all six semantic workloads and its ten-Page
+waves. Against the preceding bounded-history binary, one fresh control/candidate
+comparison measured median ten-Page static wave throughput **48.79 → 56.24
+Pages/s**, warm DOM completion **467.31 → 452.88 ms**, static **38.90 → 37.25
+ms**, and React **103.18 → 98.52 ms**. Static live RSS was **747.93 → 748.59
+MiB**, React **765.36 → 762.84 MiB**. These short, non-paired samples do not
+establish a general speed or memory improvement. Control/candidate executable
+SHA-256 values are
+`87d14a8cc8b9b819ef12ca34aa333aa9d59f6b71555d80996223381bd6ffa3d5`
+and `3daed08a7698873fa3ad12cfb18caf4301e10de6fd9ab27f2dd31b70a0312241`.
+
+The additional query diagnostic dispatch change passed three alternating
+fresh-process pairs of the unchanged Wikipedia E2E. Workload times were control
+**10917/10654/10752 ms** and candidate **10906/10665/10608 ms**; the paired
+differences are too small to claim an E2E speedup. The full receipts and binary
+hashes are in `.build/wikipedia-trace-pairs-20260928.json`. The workload's
+optional late `Mimic.getTrace` calls no longer recover earlier events unless
+capture was started before the workload; the dedicated profile script now does
+so explicitly.
+
+## 2026-09-28: constant-time bounded DOM mutation journals
+
+The canonical arena and connected-observation journals previously shifted 256
+records on every write after filling. They now overwrite the oldest slot in a
+ring and return records in the same revision order. Missing revisions still
+report overflow and require consumer recomputation. Focused tests cover
+multiple recent records after wrap for both journals, plus the selector cache
+consumer.
+
+A temporary ten-live-Page Browser benchmark repeatedly mutated connected DOM
+attributes across the Pages. Three control samples were **334.7/329.8/333.5
+ns per mutation**, versus **72.13/71.80/71.15 ns** with the ring. Both
+allocated **11 B and one object per operation**. The median change is about
+**4.6x faster in this saturated-journal workload**; it does not imply a 4.6x
+page or browser speedup. The benchmark probe was removed after measurement.
+The usual ten-Page fast gate passed; warm DOM completion was **452.88 → 441.97
+ms** against the preceding candidate, while static and React results varied
+within this small sample. The gate does not isolate the journal's contribution
+or demonstrate an E2E improvement on ordinary pages. Candidate executable
+SHA-256 is
+`03d3b95fa4c025f830b127d63f64ebf73342e9d4db472477f925482fd742a1a9`;
+its raw ten-Page receipt is under `.build/fast-gate-dom-journal-ring-20260928/`.
+
 ## 2026-09-28: bounded diagnostic query history
 
 The diagnostic recorder now retains at most 8192 recent events and at most 128

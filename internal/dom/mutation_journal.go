@@ -30,8 +30,8 @@ func (d *Document) recordMutationLocked(kind string, target int64, attribute str
 		Attribute: attribute,
 	}
 	if len(d.mutationJournal) == mutationJournalLimit {
-		copy(d.mutationJournal, d.mutationJournal[1:])
-		d.mutationJournal[len(d.mutationJournal)-1] = record
+		d.mutationJournal[d.mutationJournalStart] = record
+		d.mutationJournalStart = (d.mutationJournalStart + 1) % mutationJournalLimit
 		return
 	}
 	d.mutationJournal = append(d.mutationJournal, record)
@@ -51,7 +51,8 @@ func (d *Document) MutationsSince(revision uint64) MutationJournal {
 		return result
 	}
 	expected := revision + 1
-	for _, record := range d.mutationJournal {
+	for i := range d.mutationJournal {
+		record := d.mutationJournal[(d.mutationJournalStart+i)%len(d.mutationJournal)]
 		if record.Revision < expected {
 			continue
 		}
@@ -87,7 +88,9 @@ func (d *Document) ObservationMutationsSince(revision uint64) MutationJournal {
 		return result
 	}
 	expected := revision + 1
-	for _, record := range d.observationJournals[d.root] {
+	journal := d.observationJournals[d.root]
+	for i := range journal {
+		record := journal[(d.observationJournalStarts[d.root]+i)%len(journal)]
 		if record.Revision < expected {
 			continue
 		}

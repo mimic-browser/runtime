@@ -55,3 +55,25 @@ func TestMutationJournalIsBounded(t *testing.T) {
 		t.Fatalf("recent bounded journal unavailable: %#v", journal)
 	}
 }
+
+func TestMutationJournalKeepsRecentOrderAfterWrap(t *testing.T) {
+	d, err := Parse("<div id='probe'></div>")
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := d.FindAllIDs(0, "#probe")[0]
+	for i := 0; i < mutationJournalLimit+7; i++ {
+		if err := d.SetAttribute(id, "data-value", string(rune(i+1))); err != nil {
+			t.Fatal(err)
+		}
+	}
+	journal := d.MutationsSince(d.Revision() - 7)
+	if journal.Overflow || len(journal.Records) != 7 {
+		t.Fatalf("recent mutation window: %#v", journal)
+	}
+	for i, record := range journal.Records {
+		if record.Revision != d.Revision()-6+uint64(i) {
+			t.Fatalf("mutation order at %d: %#v", i, record)
+		}
+	}
+}

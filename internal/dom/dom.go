@@ -55,15 +55,17 @@ func (m *arenaMutex) Unlock() {
 }
 
 type nodeArena struct {
-	mu                     arenaMutex
-	next                   int64
-	nodes                  map[int64]*Node
-	hasFrameElements       bool
-	flatLayout             *layoutflat.State
-	mutationJournal        []MutationRecord
-	observationRevisions   map[int64]uint64
-	observationJournals    map[int64][]MutationRecord
-	activeObservationRoots map[int64]bool
+	mu                       arenaMutex
+	next                     int64
+	nodes                    map[int64]*Node
+	hasFrameElements         bool
+	flatLayout               *layoutflat.State
+	mutationJournal          []MutationRecord
+	mutationJournalStart     int
+	observationRevisions     map[int64]uint64
+	observationJournals      map[int64][]MutationRecord
+	observationJournalStarts map[int64]int
+	activeObservationRoots   map[int64]bool
 }
 
 type Document struct {
@@ -150,8 +152,12 @@ func (d *Document) recordConnectedMutationLocked(kind string, target int64, attr
 	}
 	journal := d.observationJournals[root]
 	if len(journal) == mutationJournalLimit {
-		copy(journal, journal[1:])
-		journal[len(journal)-1] = record
+		if d.observationJournalStarts == nil {
+			d.observationJournalStarts = make(map[int64]int)
+		}
+		start := d.observationJournalStarts[root]
+		journal[start] = record
+		d.observationJournalStarts[root] = (start + 1) % mutationJournalLimit
 	} else {
 		journal = append(journal, record)
 	}
