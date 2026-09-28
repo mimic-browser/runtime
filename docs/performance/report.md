@@ -1,5 +1,26 @@
 # Performance architecture pass
 
+## 2026-09-28: compact borrowed V8 callback scope
+
+The local gov8 callback dispatcher deliberately allocates one unique scope
+record per V8-to-Go callback so a retained scope cannot become valid again
+through reuse. Its scope carried a 24-byte slice header for the seldom-used
+JavaScript execution-guard stack on every call. The header is now allocated
+only when the first guard is opened; the callback's unique scope and close
+invalidation remain unchanged. A focused regression checks nested guard LIFO
+rules and refusal to close their owning scope early.
+
+On the unchanged ten-execution DOM profile, Go allocation fell **553.74 →
+520.36 MiB** against the compact-host-value binary (about **6.0%**). Sampled
+flat allocation at `hostCallbackDispatch` fell from about **183.5 to 122.5
+MiB**. Median execution was **400.81 → 401.05 ms**, effectively unchanged.
+The profile receipts are `.build/profile-host-value-20260928/` and
+`.build/profile-gov8-scope-20260928/`. Focused gov8 and browser tests, the
+guard race test, and a fresh-build ten-live-Page fast gate passed. Its warm
+DOM/static/React completion medians were **435.17/36.84/98.72 ms**; noisy
+static throughput waves do not establish a speed gain. The gate receipt is
+under `.build/fast-gate-gov8-scope-20260928/`.
+
 ## 2026-09-28: compact host-value wrappers
 
 The V8 DOM allocation profile still attributed about 146 MiB across ten

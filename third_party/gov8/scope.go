@@ -33,7 +33,7 @@ type Scope struct {
 	closed                      bool
 	borrowed                    bool
 	activeBorrowedContextScopes uint32
-	javascriptExecutionGuards   []uintptr
+	javascriptExecutionGuards   *[]uintptr
 }
 
 // The Isolate-owned handleScopeStack mirrors the user-visible HandleScope
@@ -153,7 +153,7 @@ func (s *Scope) Close() error {
 	if s.borrowed {
 		return fmt.Errorf("gov8: borrowed callback scope cannot be closed")
 	}
-	if len(s.javascriptExecutionGuards) != 0 {
+	if s.javascriptExecutionGuards != nil && len(*s.javascriptExecutionGuards) != 0 {
 		return fmt.Errorf("gov8: scope has active JavaScript execution guards")
 	}
 	if s.activeBorrowedContextScopes != 0 {

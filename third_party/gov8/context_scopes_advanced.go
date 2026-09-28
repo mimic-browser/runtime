@@ -236,7 +236,10 @@ func (s *Scope) NewDisallowJavascriptExecutionScope(onFailure JavascriptExecutio
 	if err != nil {
 		return nil, err
 	}
-	s.javascriptExecutionGuards = append(s.javascriptExecutionGuards, h)
+	if s.javascriptExecutionGuards == nil {
+		s.javascriptExecutionGuards = new([]uintptr)
+	}
+	*s.javascriptExecutionGuards = append(*s.javascriptExecutionGuards, h)
 	return &DisallowJavascriptExecutionScope{scope: s, handle: h}, nil
 }
 
@@ -250,7 +253,10 @@ func (d *DisallowJavascriptExecutionScope) checkCurrent() error {
 	if d.scope.closed {
 		return fmt.Errorf("gov8: owning scope used after Close")
 	}
-	stack := d.scope.javascriptExecutionGuards
+	var stack []uintptr
+	if d.scope.javascriptExecutionGuards != nil {
+		stack = *d.scope.javascriptExecutionGuards
+	}
 	if len(stack) == 0 || stack[len(stack)-1] != d.handle {
 		return fmt.Errorf("gov8: JavaScript execution scopes must close in LIFO order")
 	}
@@ -269,7 +275,7 @@ func (d *DisallowJavascriptExecutionScope) NewAllowJavascriptExecutionScope() (*
 	if err != nil {
 		return nil, err
 	}
-	d.scope.javascriptExecutionGuards = append(d.scope.javascriptExecutionGuards, h)
+	*d.scope.javascriptExecutionGuards = append(*d.scope.javascriptExecutionGuards, h)
 	return &AllowJavascriptExecutionScope{scope: d.scope, handle: h}, nil
 }
 
@@ -282,7 +288,8 @@ func (d *DisallowJavascriptExecutionScope) Close() error {
 	if int64(r1) < 0 {
 		return shimError("DisallowJavascriptExecutionScope.Close", r1)
 	}
-	d.scope.javascriptExecutionGuards = d.scope.javascriptExecutionGuards[:len(d.scope.javascriptExecutionGuards)-1]
+	stack := *d.scope.javascriptExecutionGuards
+	*d.scope.javascriptExecutionGuards = stack[:len(stack)-1]
 	d.closed = true
 	return nil
 }
@@ -305,7 +312,10 @@ func (a *AllowJavascriptExecutionScope) checkCurrent() error {
 	if a.scope.closed {
 		return fmt.Errorf("gov8: owning scope used after Close")
 	}
-	stack := a.scope.javascriptExecutionGuards
+	var stack []uintptr
+	if a.scope.javascriptExecutionGuards != nil {
+		stack = *a.scope.javascriptExecutionGuards
+	}
 	if len(stack) == 0 || stack[len(stack)-1] != a.handle {
 		return fmt.Errorf("gov8: JavaScript execution scopes must close in LIFO order")
 	}
@@ -321,7 +331,8 @@ func (a *AllowJavascriptExecutionScope) Close() error {
 	if int64(r1) < 0 {
 		return shimError("AllowJavascriptExecutionScope.Close", r1)
 	}
-	a.scope.javascriptExecutionGuards = a.scope.javascriptExecutionGuards[:len(a.scope.javascriptExecutionGuards)-1]
+	stack := *a.scope.javascriptExecutionGuards
+	*a.scope.javascriptExecutionGuards = stack[:len(stack)-1]
 	a.closed = true
 	return nil
 }
