@@ -1,5 +1,22 @@
 # Performance architecture pass
 
+## 2026-09-28: avoid copying bootstrap source for cache key
+
+The current ten-Page allocation profile attributed 4.28 MiB to converting
+immutable bootstrap source strings into byte slices solely to hash cache keys.
+The synchronous SHA-256 calculation now borrows the string's read-only bytes;
+the cache key and script text are unchanged. A focused test compares hashes
+against the previous copied form for empty, short and large sources, and
+verifies zero allocations for a large source. Source-cache isolation tests
+also pass. This removes the identified copy; it does not address V8's larger
+native isolate graph.
+
+The fresh-build ten-active-Page fast gate passed every validity row. Warm
+DOM/static/React completion medians were **424.64/40.53/107.61 ms**, versus
+**437.15/40.27/119.05 ms** at the preceding catalog checkpoint. This short,
+unpaired comparison is not evidence of a page-latency gain. Receipt:
+`.build/fast-gate-hash-borrow-20260928/raw.json`.
+
 ## 2026-09-28: decode only selected catalog shape fields
 
 Catalog selection previously decoded generated IDL specifications and members

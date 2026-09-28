@@ -5,6 +5,7 @@ package v8
 import (
 	"crypto/sha256"
 	"sync"
+	"unsafe"
 
 	gov8 "github.com/maclof/gov8"
 )
@@ -15,7 +16,11 @@ type bootstrapKey struct {
 }
 
 func bootstrapKeyFor(source, name string) bootstrapKey {
-	return bootstrapKey{sha256.Sum256([]byte(source)), name}
+	// Sum256 only reads its input before returning. A string's immutable backing
+	// bytes can be borrowed for this synchronous hash without copying a large
+	// bootstrap script on every realm creation.
+	bytes := unsafe.Slice(unsafe.StringData(source), len(source))
+	return bootstrapKey{sha256.Sum256(bytes), name}
 }
 
 // Immutable serialized code contains no host closures, realm objects, or V8

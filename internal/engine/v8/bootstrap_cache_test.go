@@ -4,12 +4,34 @@ package v8
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/moreveal/mimic/internal/engine"
 )
+
+func TestBootstrapKeyForMatchesCopiedSource(t *testing.T) {
+	for _, source := range []string{"", "a", strings.Repeat("globalThis.value=42;", 32768)} {
+		got := bootstrapKeyFor(source, "bootstrap")
+		want := bootstrapKey{source: sha256.Sum256([]byte(source)), name: "bootstrap"}
+		if got != want {
+			t.Fatal("bootstrap key changed")
+		}
+	}
+}
+
+var bootstrapKeyAllocationSink bootstrapKey
+
+func TestBootstrapKeyForDoesNotCopyLargeSource(t *testing.T) {
+	source := strings.Repeat("globalThis.value=42;", 32768)
+	if allocations := testing.AllocsPerRun(10, func() {
+		bootstrapKeyAllocationSink = bootstrapKeyFor(source, "bootstrap")
+	}); allocations != 0 {
+		t.Fatalf("bootstrap key allocations = %g, want zero", allocations)
+	}
+}
 
 func TestBootstrapCodeCacheRetainsCodeNotRealmState(t *testing.T) {
 	// Exceed the native cache reader's initial 4 KiB buffer. Include executed
