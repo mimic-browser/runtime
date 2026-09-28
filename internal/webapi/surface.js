@@ -1412,7 +1412,6 @@
   };
   resetRetainedGeometry('', -1);
   const invalidateRetainedGeometry = (target) => {
-    const revision = host.observationRevision();
     if (!target) {
       retainedStyleAttributeDependencies = new WeakMap();
       retainedGeometryCleanRevision = -1;
@@ -1429,7 +1428,7 @@
       checkpointObservations = null;
       return;
     }
-    retainedGeometryRevision = revision;
+    retainedGeometryRevision = host.observationRevision();
     retainedGeometryCleanRevision = -1;
     retainedGeometryGeneration++;
     let element = elementSlot(target)?.type === 'element' ? target : target.parentElement;

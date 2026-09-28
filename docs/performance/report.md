@@ -1,5 +1,30 @@
 # Performance architecture pass
 
+## 2026-09-28: defer geometry-revision read until needed
+
+`invalidateRetainedGeometry` read the canonical observation revision before
+checking whether a mutation was connected. Its connected and no-target paths
+discard the retained geometry without using that value. The read now occurs
+only for detached mutations, where it is still needed to advance the retained
+revision. The source of truth, dirty-ancestor walk, invalidation behavior and
+observable geometry are unchanged. Focused mutation, cache and
+IntersectionObserver tests passed, as did the ten-live-Page fast gate.
+
+The unchanged ten-execution DOM profile allocated **449.24 → 428.61 MiB** of
+Go memory and measured **410.31 → 380.77 ms** median execution in one
+unpaired comparison. The fast gate did not reproduce a clear page-latency
+improvement: warm DOM/static/React completion medians were
+**438.48/40.14/107.95 ms**. Three alternating fresh-process pairs of the
+unchanged Wikipedia E2E all passed; control/candidate wall seconds were
+**12.375/12.378**, **11.539/11.821**, and **11.925/11.798**. The paired
+differences change sign and do not establish an E2E gain. The change remains
+as a pure, measured allocation-pressure reduction, not as a Wikipedia
+optimization. Exact source and binary hashes are in
+`.build/wiki-geometry-build.json`; workload receipts are
+`.build/wikipedia-geometry-pairs-20260928.json`,
+`.build/profile-geometry-invalidation-20260928/` and
+`.build/fast-gate-geometry-invalidation-20260928/`.
+
 ## 2026-09-28: Page-owned immutable host primitives
 
 Go-origin `true`, `false` and `null` results now reuse three immutable V8
