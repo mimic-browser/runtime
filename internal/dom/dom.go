@@ -580,12 +580,24 @@ func (d *Document) FindAllIDs(parent int64, selector string) []int64 {
 }
 
 func hasClass(classes, wanted string) bool {
-	for _, class := range strings.FieldsFunc(classes, func(r rune) bool { return r == ' ' || r == '\t' || r == '\n' || r == '\r' || r == '\f' }) {
-		if class == wanted {
+	for start := 0; start < len(classes); {
+		for start < len(classes) && classWhitespaceByte(classes[start]) {
+			start++
+		}
+		end := start
+		for end < len(classes) && !classWhitespaceByte(classes[end]) {
+			end++
+		}
+		if end > start && classes[start:end] == wanted {
 			return true
 		}
+		start = end
 	}
 	return false
+}
+
+func classWhitespaceByte(b byte) bool {
+	return b == ' ' || b == '\t' || b == '\n' || b == '\r' || b == '\f'
 }
 func (d *Document) FindAllByTagName(tag string) []Node {
 	d.mu.RLock()

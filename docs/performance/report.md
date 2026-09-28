@@ -1,5 +1,26 @@
 # Performance architecture pass
 
+## 2026-09-28: allocation-free class membership scan
+
+The restricted native class matcher built a token slice for each tested node.
+It now scans the existing attribute string directly, recognizing the same five
+ASCII whitespace characters and leaving non-ASCII whitespace within a token.
+Focused tests cover leading/trailing separators, substring mismatches,
+Unicode tokens and non-breaking space. Existing browser class and token tests,
+the DOM race check and the ten-live-Page fast gate passed.
+
+The unchanged ten-execution DOM profile allocated **478.04 MiB control** and
+**473.58/473.96 MiB** in two candidate runs (about 4 MiB less). Candidate
+median execution was **400.82/392.56 ms** against one **387.16 ms** control;
+those short samples are too noisy to establish either a gain or a regression.
+The ten-live-Page gate's warm DOM/static/React completion medians were
+**430.11/37.14/100.32 ms**, near the preceding gate. The change is retained
+for its measured allocation reduction, not a claimed page-speed gain. Raw
+receipts are `.build/profile-selector-scan-20260928/`,
+`.build/profile-class-scan-20260928/`,
+`.build/profile-class-scan-repeat-20260928/`, and
+`.build/fast-gate-class-scan-20260928/`.
+
 ## 2026-09-28: scan legacy selector lists without splitting
 
 The restricted native leaf-selector matcher split a comma-separated selector
