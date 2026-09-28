@@ -1,5 +1,18 @@
 # Performance architecture pass
 
+## 2026-09-28: ten-live-Page density after packed-call changes
+
+A fresh density run after the catalog, bootstrap-key and packed-call changes
+kept ten independent Pages live in each static, CPU and React fixture. Live
+process RSS was **497.0/583.7/570.5 MiB** respectively, compared with
+**493.8/588.1/579.6 MiB** in the preceding density snapshot. The runs are
+unpaired; these small differences do not establish an active-memory reduction
+or regression. The large native V8 graph and per-isolate snapshot copies remain
+the dominant live-density limit. After closing all ten Pages and scavenging Go
+memory, RSS was **118.4/118.3/122.8 MiB**. The packed-call changes reduce
+temporary allocation pressure, not the retained state of live Pages. Receipt:
+`.build/profile-density-packed-final-20260928/density/density.json`.
+
 ## 2026-09-28: callback-scope size experiment rejected
 
 The ten-execution DOM profile attributed about 123 MiB of Go allocations to
