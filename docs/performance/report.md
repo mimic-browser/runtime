@@ -1,5 +1,27 @@
 # Performance architecture pass
 
+## 2026-09-28: compact host-value wrappers
+
+The V8 DOM allocation profile still attributed about 146 MiB across ten
+executions to `adapter.Value`: every Go-origin value allocated a full native
+handle wrapper even though it carried only a runtime pointer and host payload.
+Host values now have a compact immutable wrapper. It remains individually
+allocated because values may be retained across callbacks; a focused regression
+checks export, string conversion, type, and return from a later callback.
+Packed and ordinary host returns use the same payload conversion rules, while
+native-handle values keep their existing representation.
+
+The unchanged ten-execution DOM profile allocated **661.59 → 553.74 MiB** of
+Go memory after the preceding callback-frame change, a further **16.3%**
+reduction. The sampled `adapter.Value` site fell from about **146 to 45 MiB**.
+Median execution was **400.81 ms** in both short runs, so this is an
+allocation-pressure improvement rather than a demonstrated latency gain.
+Profile receipts are in `.build/profile-callback-frames-20260928/` and
+`.build/profile-host-value-20260928/`. Focused V8 tests, the relevant V8 race
+tests, and the fresh-build ten-live-Page fast gate passed; the latter's warm
+DOM/static/React completion medians were **438.24/37.19/100.08 ms**. Its
+receipt is under `.build/fast-gate-host-value-20260928/`.
+
 ## 2026-09-28: reuse V8 host callback contexts
 
 The DOM profile identified per-call `callbackContext` allocations in both the

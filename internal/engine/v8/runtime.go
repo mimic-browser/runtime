@@ -188,6 +188,38 @@ type runtimeValue struct {
 	callbackID uint64
 }
 
+// Host values can outlive their creating callback. Keep their own small,
+// immutable wrapper rather than allocating the full native-handle value.
+type hostValue struct {
+	runtime *adapter
+	host    any
+}
+
+func (v *hostValue) Export() any {
+	if v.runtime.profile != nil && v.runtime.profile.Detailed {
+		defer v.runtime.recordCost("conversion:export", time.Now())
+	}
+	return v.host
+}
+func (v *hostValue) String() string {
+	if v.runtime.profile != nil && v.runtime.profile.Detailed {
+		defer v.runtime.recordCost("conversion:string", time.Now())
+	}
+	return fmt.Sprint(v.host)
+}
+
+func hostPayload(value engine.Value) (any, bool) {
+	switch v := value.(type) {
+	case *hostValue:
+		return v.host, true
+	case *runtimeValue:
+		if v.hostSet {
+			return v.host, true
+		}
+	}
+	return nil, false
+}
+
 func (v *runtimeValue) Export() any {
 	if v == nil || v.runtime == nil {
 		return nil
@@ -679,7 +711,7 @@ func (a *adapter) Get(name string) engine.Value {
 
 func (a *adapter) Value(value any) engine.Value {
 	if callback := a.onCallback(); callback != nil {
-		return &runtimeValue{runtime: a, borrowed: true, host: value, hostSet: true}
+		return &hostValue{runtime: a, host: value}
 	}
 	result, _ := a.run(func(s *state, realm *gov8.Context, scope *gov8.Scope) (engine.Value, error) {
 		local, err := a.marshal(scope, realm, value)
@@ -778,8 +810,8 @@ func (a *adapter) TypeOf(value engine.Value) string {
 		return text
 	}
 	if callback := a.onCallback(); callback != nil {
-		if v, ok := value.(*runtimeValue); ok && v.hostSet {
-			return goTypeOf(v.host)
+		if host, ok := hostPayload(value); ok {
+			return goTypeOf(host)
 		}
 		local, err := a.localCallback(value)
 		if err != nil {
@@ -1468,6 +1500,16 @@ func (a *adapter) localOrUndefined(scope *gov8.Scope, value engine.Value) (gov8.
 }
 
 func (a *adapter) localCallback(value engine.Value) (gov8.Value, error) {
+	if host, ok := value.(*hostValue); ok {
+		if host.runtime != a {
+			return gov8.Value{}, errors.New("callback value is not local to this V8 invocation")
+		}
+		callback := a.onCallback()
+		if callback == nil {
+			return gov8.Value{}, errors.New("host value escaped its V8 callback")
+		}
+		return callbackValue(callback.scope, callback.ctx, callback.result, host.host)
+	}
 	v, ok := value.(*runtimeValue)
 	if !ok || v == nil || v.runtime != a {
 		return gov8.Value{}, errors.New("callback value is not local to this V8 invocation")
@@ -1708,8 +1750,8 @@ func (a *adapter) makeFunction(scope *gov8.Scope, realm *gov8.Context, function 
 			_ = rv.SetUndefined()
 			return
 		}
-		if wrapped, ok := result.(*runtimeValue); ok && wrapped.hostSet {
-			local, valueErr := callbackValue(cs, realm, rv, wrapped.host)
+		if host, ok := hostPayload(result); ok {
+			local, valueErr := callbackValue(cs, realm, rv, host)
 			if valueErr != nil {
 				exception, _ := cs.NewError(valueErr.Error())
 				_ = cs.ThrowException(exception)

@@ -185,8 +185,8 @@ func (a *adapter) makePackedFunction(scope *gov8.Scope, realm *gov8.Context, hos
 			publish(4, 0)
 			return
 		}
-		if value, ok := result.(*runtimeValue); ok && value.hostSet {
-			switch v := value.host.(type) {
+		if host, ok := hostPayload(result); ok {
+			switch v := host.(type) {
 			case nil:
 				publish(1, 0)
 				return

@@ -32,6 +32,29 @@ func TestTransientHostValuesAndRetainedCallbacks(t *testing.T) {
 	}
 }
 
+func TestHostValueSurvivesItsCreatingCallback(t *testing.T) {
+	r := (Factory{}).New().(*adapter)
+	defer r.Close()
+	var saved engine.Value
+	if err := r.Set("save", r.TransientFunction(func(engine.Value, []engine.Value) (engine.Value, error) {
+		saved = r.Value("kept")
+		return r.Value(true), nil
+	})); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Set("read", r.TransientFunction(func(engine.Value, []engine.Value) (engine.Value, error) {
+		if saved.Export() != "kept" || saved.String() != "kept" || r.TypeOf(saved) != "string" {
+			t.Fatal("saved host value changed between callbacks")
+		}
+		return saved, nil
+	})); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.Eval(context.Background(), `if(save()!==true||read()!=="kept")throw Error("escaped host value")`, "saved-host.js"); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestBatchedCallbackRecordsPreserveCollectionValues(t *testing.T) {
 	r := (Factory{}).New().(*adapter)
 	defer r.Close()
