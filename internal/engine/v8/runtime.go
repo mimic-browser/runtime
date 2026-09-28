@@ -173,8 +173,9 @@ type adapter struct {
 // checked out until the return value is marshalled, including nested JS calls.
 // Clearing it prevents closed scopes and host objects from becoming roots.
 type transientFrame struct {
-	values [9]runtimeValue
-	args   [8]engine.Value
+	values   [9]runtimeValue
+	args     [8]engine.Value
+	callback callbackContext
 }
 
 type runtimeValue struct {
@@ -1595,23 +1596,6 @@ func (a *adapter) makeFunction(scope *gov8.Scope, realm *gov8.Context, function 
 			a.processorSamples[processor]++
 		}
 		callbackID := a.callbackSeq
-		a.callback = &callbackContext{scope: cs, ctx: realm, result: rv, id: callbackID}
-		defer func() { a.callback = previous }()
-		deepHost := a.deepCallProfileEnabled(a.activeContext)
-		if deepHost {
-			hostStarted := time.Now()
-			trace.Record(a.activeContext, trace.JS, "hostCall.begin", map[string]any{
-				"api":        name,
-				"callbackID": callbackID,
-			})
-			defer func() {
-				trace.Record(a.activeContext, trace.JS, "hostCall.end", map[string]any{
-					"api":        name,
-					"callbackID": callbackID,
-					"durationNs": time.Since(hostStarted).Nanoseconds(),
-				})
-			}()
-		}
 		var scratch *transientFrame
 		var wrapped []engine.Value
 		if transient && args.Length() <= 8 {
@@ -1632,6 +1616,28 @@ func (a *adapter) makeFunction(scope *gov8.Scope, realm *gov8.Context, function 
 			}()
 		} else {
 			wrapped = make([]engine.Value, args.Length())
+		}
+		if scratch != nil {
+			scratch.callback = callbackContext{scope: cs, ctx: realm, result: rv, id: callbackID}
+			a.callback = &scratch.callback
+		} else {
+			a.callback = &callbackContext{scope: cs, ctx: realm, result: rv, id: callbackID}
+		}
+		defer func() { a.callback = previous }()
+		deepHost := a.deepCallProfileEnabled(a.activeContext)
+		if deepHost {
+			hostStarted := time.Now()
+			trace.Record(a.activeContext, trace.JS, "hostCall.begin", map[string]any{
+				"api":        name,
+				"callbackID": callbackID,
+			})
+			defer func() {
+				trace.Record(a.activeContext, trace.JS, "hostCall.end", map[string]any{
+					"api":        name,
+					"callbackID": callbackID,
+					"durationNs": time.Since(hostStarted).Nanoseconds(),
+				})
+			}()
 		}
 		for i := range wrapped {
 			local, e := args.Get(i)

@@ -1,5 +1,27 @@
 # Performance architecture pass
 
+## 2026-09-28: reuse V8 host callback contexts
+
+The DOM profile identified per-call `callbackContext` allocations in both the
+packed and ordinary transient V8-to-Go host paths. Each path already retains a
+bounded, nested-call-safe frame; the callback context now lives in that frame
+and is cleared when the call returns. Non-transient callbacks retain their
+existing ownership. Focused packed argument, result, error, reentrancy and
+frame-release tests passed, including the V8 race run.
+
+On the unchanged DOM profile, ten sequential executions allocated **761.94
+MiB control** and **661.59 MiB candidate** of Go memory, measured from runtime
+allocation counters at the same phase barriers (about **13.2% less**). Sampled
+allocation profiles independently attributed roughly 69 MiB to the former
+packed callback-context allocation. Profile directories are
+`.build/profile-next-20260928/` and
+`.build/profile-callback-frames-20260928/`. This is allocation pressure, not
+retained RSS. The candidate's fresh-build ten-live-Page fast gate passed all
+six semantic workloads and three static throughput waves; its DOM/static/React
+warm completion medians were **443.79/37.89/113.45 ms**. Short gate samples
+do not establish an end-to-end latency gain. The receipt is under
+`.build/fast-gate-callback-frames-20260928/`.
+
 ## 2026-09-28: explicit trace capture and diagnostic dispatch
 
 Diagnostic history is now empty by default. `Mimic.startTrace` starts a new

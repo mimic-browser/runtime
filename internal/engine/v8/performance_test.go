@@ -81,6 +81,9 @@ func TestTransientFramesSurviveReentrantCalls(t *testing.T) {
 		t.Fatal(v.Export())
 	}
 	for _, frame := range r.transientFrames {
+		if frame.callback.scope != nil || frame.callback.ctx != nil || frame.callback.id != 0 {
+			t.Fatal("scratch frame retained callback context")
+		}
 		for _, value := range frame.values {
 			if value.runtime != nil || value.global != nil || value.host != nil {
 				t.Fatal("scratch frame retained callback state")

@@ -108,6 +108,9 @@ if(!Object.is(packed(-0,''),-0))throw Error('negative zero');
 		t.Fatal(err)
 	}
 	for _, frame := range r.packedFrames {
+		if frame.callback.scope != nil || frame.callback.ctx != nil || frame.callback.id != 0 {
+			t.Fatal("packed frame retained callback context")
+		}
 		for _, v := range frame.values {
 			if v.runtime != nil || v.host != nil {
 				t.Fatal("packed frame retained values")

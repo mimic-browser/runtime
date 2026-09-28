@@ -25,10 +25,11 @@ const packedBytes = 2048
 const packedHeader = 64
 
 type packedFrame struct {
-	units  [packedBytes / 2]uint16
-	ascii  [packedBytes / 2]byte
-	values [4]runtimeValue
-	args   [4]engine.Value
+	units    [packedBytes / 2]uint16
+	ascii    [packedBytes / 2]byte
+	values   [4]runtimeValue
+	args     [4]engine.Value
+	callback callbackContext
 }
 
 func packedFactorySource(signature string) string {
@@ -118,9 +119,6 @@ func (a *adapter) makePackedFunction(scope *gov8.Scope, realm *gov8.Context, hos
 			processor, _, _ := diagnosticProcessor.Call()
 			a.processorSamples[processor]++
 		}
-		previous := a.callback
-		a.callback = &callbackContext{scope: cs, ctx: realm, result: rv, id: a.callbackSeq}
-		defer func() { a.callback = previous }()
 		var frame *packedFrame
 		if n := len(a.packedFrames); n > 0 {
 			frame = a.packedFrames[n-1]
@@ -129,7 +127,12 @@ func (a *adapter) makePackedFunction(scope *gov8.Scope, realm *gov8.Context, hos
 		} else {
 			frame = new(packedFrame)
 		}
+		previous := a.callback
+		frame.callback = callbackContext{scope: cs, ctx: realm, result: rv, id: a.callbackSeq}
+		a.callback = &frame.callback
+		defer func() { a.callback = previous }()
 		defer func() {
+			frame.callback = callbackContext{}
 			for i := range frame.values {
 				frame.values[i] = runtimeValue{}
 				frame.args[i] = nil
