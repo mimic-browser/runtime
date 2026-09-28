@@ -1,5 +1,19 @@
 # Performance architecture pass
 
+## 2026-09-28: callback-scope size experiment rejected
+
+The ten-execution DOM profile attributed about 123 MiB of Go allocations to
+the per-invocation `gov8` callback record. A removable experiment eliminated
+one duplicated isolate pointer from `CallbackScope`, reducing the combined
+invocation struct from 64 to 56 bytes. Both sizes occupy the same 64-byte Go
+allocation class, and the measured site remained **123.01 → 122.51 MiB** in
+unpaired sampled profiles. The ten-active-Page fast gate and focused callback,
+snapshot, DOM and cross-realm tests passed, but the change was reverted because
+it produced no material allocation benefit. The native callback record must
+reach a smaller allocation class, or avoid some invocations entirely, to make
+this approach useful. Receipts: `.build/profile-callback-scope-20260928/` and
+`.build/fast-gate-callback-scope-20260928/raw.json`.
+
 ## 2026-09-28: keep packed string host arguments unboxed
 
 The next ten-execution DOM profile attributed 10 MiB to putting decoded
