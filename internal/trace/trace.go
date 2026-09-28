@@ -39,12 +39,19 @@ type Event struct {
 	Data     map[string]any `json:"data,omitempty"`
 }
 type Recorder struct {
-	mu          sync.RWMutex
-	next        uint64
-	events      []Event
-	subscribers map[uint64]func(Event)
-	subID       uint64
+	mu         sync.RWMutex
+	next       uint64
+	events     []Event
+	eventStart int
+	// Network completions are consumed by Performance timelines independently of
+	// the bounded diagnostic history. A slow consumer must not lose an entry.
+	networkEvents []Event
+	subscribers   map[uint64]func(Event)
+	subID         uint64
 }
+
+const maxDiagnosticEvents = 8192
+const maxDiagnosticResultIDs = 128
 
 type correlation struct {
 	id       string
@@ -117,7 +124,26 @@ func (r *Recorder) Add(kind Kind, name string, data map[string]any) {
 	r.mu.Lock()
 	r.next++
 	e := Event{r.next, time.Now().UTC(), kind, name, data}
-	r.events = append(r.events, e)
+	if kind == Network {
+		r.networkEvents = append(r.networkEvents, e)
+	}
+	// Large selector results are useful for diagnosis, but retaining every ID
+	// from every repeated query makes trace memory grow with the workload.
+	if ids, ok := data["resultNodeIds"].([]int64); ok && len(ids) > maxDiagnosticResultIDs {
+		limited := make(map[string]any, len(data)+1)
+		for key, value := range data {
+			limited[key] = value
+		}
+		limited["resultNodeIds"] = append([]int64(nil), ids[:maxDiagnosticResultIDs]...)
+		limited["resultCount"] = len(ids)
+		e.Data = limited
+	}
+	if len(r.events) == maxDiagnosticEvents {
+		r.events[r.eventStart] = e
+		r.eventStart = (r.eventStart + 1) % maxDiagnosticEvents
+	} else {
+		r.events = append(r.events, e)
+	}
 	subs := make([]func(Event), 0, len(r.subscribers))
 	for _, f := range r.subscribers {
 		subs = append(subs, f)
@@ -130,20 +156,26 @@ func (r *Recorder) Add(kind Kind, name string, data map[string]any) {
 func (r *Recorder) Events() []Event {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	return append([]Event(nil), r.events...)
+	out := make([]Event, 0, len(r.events))
+	out = append(out, r.events[r.eventStart:]...)
+	out = append(out, r.events[:r.eventStart]...)
+	return out
 }
 
-// EventsSince returns newly recorded events without copying the complete trace.
-// Sequence numbers survive Clear, so consumers cannot replay cleared history.
+// EventsSince returns network completions for Performance timeline consumers.
+// They are kept apart from the bounded diagnostic history so a slow realm or
+// Worker does not silently lose resource timing entries.
 func (r *Recorder) EventsSince(sequence uint64) []Event {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	start := sort.Search(len(r.events), func(i int) bool { return r.events[i].Sequence > sequence })
-	return append([]Event(nil), r.events[start:]...)
+	start := sort.Search(len(r.networkEvents), func(i int) bool { return r.networkEvents[i].Sequence > sequence })
+	return append([]Event(nil), r.networkEvents[start:]...)
 }
 func (r *Recorder) Clear() {
 	r.mu.Lock()
 	r.events = nil
+	r.eventStart = 0
+	r.networkEvents = nil
 	r.mu.Unlock()
 }
 func (r *Recorder) Subscribe(f func(Event)) func() {

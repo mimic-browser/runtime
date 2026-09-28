@@ -1,5 +1,42 @@
 # Performance architecture pass
 
+## 2026-09-28: bounded diagnostic query history
+
+The diagnostic recorder now retains at most 8192 recent events and at most 128
+node IDs per large selector result, with the original result count preserved.
+Network completions remain in an independent stream for Window and Worker
+Performance timeline consumers, so eviction of diagnostic events cannot discard
+resource timing entries. This is a diagnostic retention change, not a DOM query
+or selector-result change. The retained network completion stream and arbitrary
+large non-selector diagnostic payloads are not yet byte-bounded.
+
+A temporary focused probe, removed after measurement, kept ten independent
+Context/Page pairs live and added 5000 query-result events per Page, each with
+1024 IDs. After explicit Go GC at both sampling barriers, the additional live
+Go heap was **431.54 MB control** and **73.54 MB candidate** (a 358.00 MB,
+83.0% reduction). The explicit GC belongs only to this attribution probe.
+Both test binaries ran the same temporary test; the control used a Go overlay
+of the committed `internal/trace/trace.go`. This probe injects trace records
+directly and is not an E2E query-speed or process-RSS result.
+
+The ordinary fast gate's ten-live-Page static memory sample was **755.60 →
+747.93 MiB RSS** and **808.22 → 799.03 MiB private memory**; React was
+**768.91 → 765.36 MiB RSS** and **820.37 → 817.61 MiB private memory**.
+These are one fresh-process sample per workload, not a controlled memory
+improvement claim. Three measured ten-Page static throughput waves were
+49.38/48.13/49.80 versus 46.93/49.81/48.79 Pages/s. Warm DOM/static/React
+completion medians were 468.82/42.28/113.58 ms control and
+467.31/38.90/103.18 ms candidate; these short runs do not establish a
+latency gain. The candidate used only ten-Page waves; the existing control
+fast gate also ran its standard 25-Page wave, which is excluded here.
+
+Control/candidate executable SHA-256 values are
+`9e66a3e327976b73fe42316c17a625462b5f4eb04078a6e51cb8c40916a4caf9`
+and `87d14a8cc8b9b819ef12ca34aa333aa9d59f6b71555d80996223381bd6ffa3d5`.
+The full build and workload receipts are under
+`.build/fast-gate-trace-control-20260928/` and
+`.build/fast-gate-trace-candidate-20260928/`.
+
 ## 2026-09-27: connected frame execution owners
 
 The compatibility fix for author stack continuity now keeps connected V8 frame
