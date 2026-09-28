@@ -159,12 +159,11 @@ __declspec(dllexport) int64_t gov8_snapshot_creator_new_external_references(
     gov8_snap_impl::FillCreateParams(&params, wrapper->blob);
     params.external_references =
         gov8_external_references_impl::TableWords(table.get());
-    v8__SnapshotCreator__CONSTRUCT(wrapper->sc_storage, params);
+    gov8_snap_impl::ConstructIndependentCreator(wrapper, params);
     constructed = true;
-    wrapper->iso = v8__SnapshotCreator__GetIsolate(wrapper->sc_storage);
-    if (wrapper->iso == nullptr) {
-      SetErr("SnapshotCreator::GetIsolate failed");
-      v8__SnapshotCreator__DESTRUCT(wrapper->sc_storage);
+    if (v8__SnapshotCreator__GetIsolate(wrapper->sc_storage) != wrapper->iso) {
+      SetErr("SnapshotCreator isolate ownership mismatch");
+      gov8_snap_impl::DestroyIndependentCreator(wrapper);
       gov8_snap_impl::FreeBlobHolder(wrapper->blob);
       delete wrapper;
       return kErrState;
@@ -175,7 +174,7 @@ __declspec(dllexport) int64_t gov8_snapshot_creator_new_external_references(
     return kOk;
   } catch (...) {
     if (wrapper != nullptr) {
-      if (constructed) v8__SnapshotCreator__DESTRUCT(wrapper->sc_storage);
+      if (constructed) gov8_snap_impl::DestroyIndependentCreator(wrapper);
       gov8_snap_impl::FreeBlobHolder(wrapper->blob);
       delete wrapper;
     }
@@ -212,7 +211,7 @@ __declspec(dllexport) int64_t gov8_isolate_new_snapshot_external_references(
     gov8_snap_impl::FillCreateParams(&params, holder);
     params.external_references =
         gov8_external_references_impl::TableWords(table.get());
-    v8::Isolate* isolate = v8::Isolate::New(params);
+    v8::Isolate* isolate = Gov8NewIndependentIsolate(params);
     if (isolate == nullptr) {
       gov8_snap_impl::FreeBlobHolder(holder);
       SetErr("Isolate::New failed");

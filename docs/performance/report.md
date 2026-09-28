@@ -1,5 +1,150 @@
 # Performance architecture pass
 
+## 2026-09-29: pointer compression with independent Page heaps
+
+The packaged Windows and Linux V8 libraries now use pointer compression. Both
+execution isolates and snapshot builders own separate `IsolateGroup` instances.
+Independent Pages retain separate isolates, concurrent execution and complete
+teardown; the old multi-Page isolate pool is not restored. Separate groups avoid
+imposing one aggregate 4 GiB compression cage on all Pages. Snapshot creators
+use V8's caller-owned-isolate overload: creator destruction exits the isolate,
+then the wrapper disposes it and releases the group. Snapshot consumers retain
+the existing shared immutable serialized bytes.
+
+The native shim's external configuration was re-derived from the actual pinned
+crate's GN output, including pointer compression, internal-field counts and
+the Linux-specific cppgc object-section define. The V8 version remains
+15.2.124.1-rusty. The 8 MiB nursery ceiling and `--no-extensible-ro-snapshot`
+policy are unchanged from the control. Both diagnostic runs report exactly
+1,480,589,312 bytes as each Page's heap limit: the saving is not obtained by
+lowering its configured budget. Pointer compression has an intrinsic 4 GiB
+address range per isolate; it does not constrain all Pages to one such range.
+
+### Final packaged-library comparison
+
+The control is the current uncompressed library with the same 8 MiB nursery,
+not the older published eight-Pages-per-isolate release. Each platform used one
+fresh executable and hash-verified native-library overrides for both variants.
+The candidate overrides are byte-identical to the respective packaged assets.
+Three alternating fresh-process pairs per workload/variant each ran one excluded
+cold wave and three measured waves of **ten concurrent Pages**. All twelve
+semantic gates and all 720 concurrent sessions passed on each platform. No
+frozen harness, workload, expected result or original baseline was modified.
+
+Medians of the nine measured waves per variant:
+
+| Platform / workload | RSS before / after | RSS change | Completion before / after | Throughput before / after |
+| --- | ---: | ---: | ---: | ---: |
+| Windows static | 343.46 / 281.35 MiB | -18.1% | 61.76 / 60.50 ms | 74.07 / 76.51 |
+| Windows CPU | 437.82 / 381.31 MiB | -12.9% | 106.46 / 101.01 ms | 52.72 / 52.50 |
+| Windows React | 444.55 / 356.92 MiB | -19.7% | 160.12 / 154.69 ms | 40.31 / 40.84 |
+| Linux static | 335.66 / 271.36 MiB | -19.2% | 73.21 / 65.08 ms | 62.40 / 63.68 |
+| Linux CPU | 423.58 / 367.33 MiB | -13.3% | 116.28 / 103.39 ms | 44.70 / 45.54 |
+| Linux React | 424.65 / 344.63 MiB | -18.8% | 193.07 / 186.91 ms | 35.30 / 36.29 |
+
+Windows private commit was 389.62/334.39, 488.50/441.70 and 494.84/411.61 MiB
+for static, CPU and React respectively. Linux PSS was 336.82/273.62,
+426.17/370.31 and 427.94/347.71 MiB; these are different accounting measures
+and must not be compared as if they were Windows private commit. Windows
+mean CPU seconds/session, including teardown, was 0.0486/0.0498,
+0.1050/0.1003 and 0.1865/0.1804. Small timing differences remain noisy;
+this establishes a memory improvement, not a universal speedup.
+
+Cold-wave RSS also fell: Windows static/CPU/React was 596.3/508.1,
+608.0/540.9 and 609.2/548.9 MiB; Linux was 679.2/582.8, 693.4/615.7 and
+689.3/626.5 MiB. After the ordinary 250 ms post-teardown interval, Windows
+RSS was 174.91/151.14, 182.74/159.35 and 192.78/160.92 MiB. No forced
+collection was used in these timed comparisons.
+
+The separate density diagnostic attributes the saving to the JS heap:
+ten-Page used V8 heap was 157.4/106.9 MiB for static, 189.3/118.9 for CPU,
+and 216.7/139.8 for React, a 32–37% reduction. These diagnostic captures are
+not substitutes for the matched process-memory comparisons above.
+
+### Validation and rejected extension
+
+Before packaging, three alternating latency pairs on all six frozen workloads
+recorded warm completion medians of 34.83/34.37 ms static, 65.98/64.20 CPU,
+416.12/415.62 DOM, 116.74/107.60 async, 98.13/95.44 React and 35.41/34.42
+Wasm. Each workload/variant has eighteen measured samples. Final packaged
+Windows validation also passed `fast_gate.py --concurrency 10` without a native
+override. The optional concurrency argument preserves the gate's default
+10/25 counts while allowing a bounded ten-Page checkpoint. Initial stock fast
+gates included their existing 25-Page static check; no new 50/100-Page or
+published-website result is claimed.
+
+Focused Windows/Linux checks passed for snapshot creation/restoration and
+distinct read-only layouts, concurrent close and cold admission, realm identity,
+property observations, exception stacks, promises/microtasks, workers, Wasm,
+cross-realm messages and native binding lifetimes. Numeric round-trip coverage
+now includes both sides of the 31-bit and 32-bit Smi boundaries and the largest
+exact integers. Binding tests that call terminal V8 shutdown ran in separate
+processes. The full local test suite was not run.
+
+Disabling short builtin calls was screened separately and rejected. It did not
+produce a uniform additional win: in the direct compressed-versus-compressed
+screen, React RSS was 342.60/352.80 MiB and completion 151.13/166.27 ms. The
+production library retains the ordinary V8 policy. Native library size grew
+slightly: Windows 45,946,368 to 46,458,880 bytes, Linux 57,309,264 to
+58,996,888 bytes.
+
+The [compact receipts](data/pointer-compression-20260929/summary.json) retain
+every wave's metrics and correctness count, executable/native hashes, latency
+summaries, configuration and raw-artifact digests. Full local evidence is in
+`.build/native-compressed-20260929/`, with final Windows density and fast gates
+in `.build/compression-production-{density,fast}-20260929/`. Native rebuild
+requirements and packaged identities are documented in
+`third_party/gov8/README.mimic.md`.
+
+## 2026-09-29: measured young-generation ceiling adjustment
+
+The V8 young-generation growth ceiling is now 8 MiB for both ordinary and
+snapshot-backed isolates, up from 4 MiB. Independent Page isolates and the
+existing task/microtask scheduling are unchanged. The change neither forces a
+collection nor allocates the full ceiling eagerly. The hypothesis was that the
+smaller nursery promoted short-lived application graphs into the old generation
+too readily. In the ten-Page CPU density captures, summed used old space fell
+from 165.2 to 122.7 MiB, while used new space grew from 11.9 to 17.5 MiB.
+These observations support the hypothesis but are not direct promotion counters.
+
+A 16 MiB ceiling was also screened and rejected: static/CPU/React RSS was
+348.5/434.9/414.1 MiB versus 327.2/409.3/408.8 MiB at 8 MiB in the density
+diagnostic. The final choice was then checked with fresh 4/8 MiB binaries in
+three alternating process pairs, using the frozen workload runner without
+modifying workloads or harness files. Each pair/workload/variant had one
+excluded cold wave and three measured waves of ten concurrent Pages. Binary
+and harness SHA-256 were verified before each launch. All six semantic gates
+passed for both binaries, and every concurrent session was valid. Medians over
+the nine measured waves per variant were:
+
+| Workload | RSS 4 / 8 MiB | RSS change | Completion 4 / 8 MiB | Throughput 4 / 8 MiB | CPU seconds/session 4 / 8 MiB |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Static | 342.97 / 341.85 MiB | -0.3% | 71.33 / 72.61 ms | 54.51 / 54.00 | 0.061 / 0.050 |
+| CPU | 482.74 / 446.02 MiB | -7.6% | 140.96 / 127.62 ms | 39.74 / 40.62 | 0.161 / 0.114 |
+| React | 444.07 / 446.86 MiB | +0.6% | 184.90 / 189.05 ms | 33.49 / 33.57 | 0.217 / 0.202 |
+
+CPU-workload RSS fell in every pair: 487.1 → 446.0, 463.0 → 445.3 and
+482.1 → 446.2 MiB. Its CPU time/session decreased 29.1%, completion decreased
+9.5%, and throughput increased 2.2%. CPU time includes teardown. Static and
+React differences were small and do not establish an improvement. There is a
+cold-memory tradeoff: median excluded-wave static/CPU/React RSS rose from
+561.7/593.1/585.3 to 590.2/602.8/609.9 MiB. Recovery RSS did not materially
+improve. No new 50- or 100-Page result, or updated website comparison, is claimed.
+
+Both fresh standard fast gates passed. An apparent 4.4% DOM completion increase
+in the first candidate/control gates prompted a separate three-pair latency
+check, with six measured warm sessions per pair/variant/workload. DOM completion
+was 427.75 → 422.97 ms and static 37.23 → 36.96 ms; per-pair directions varied,
+so a consistent latency regression was not reproduced. Focused Promise and
+microtask ordering, native Wasm, snapshot equivalence, cold admission and
+concurrent teardown tests passed. The full local test suite was not run.
+
+Evidence: `.build/nursery-paired-20260929.json`,
+`.build/nursery-latency-20260929.json`, the
+`.build/memory-nursery{4-control,8,16}-20260929/` density receipts, and
+`.build/memory-nursery{4-fast-control,8-fast}-20260929/` fast gates. These
+bounded diagnostic comparisons are not replacements for the public full matrix.
+
 ## 2026-09-29: remaining memory attribution after 8a1556d
 
 A fresh ten-live-Page diagnostic at committed source `8a1556d` applied explicit

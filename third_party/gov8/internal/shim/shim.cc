@@ -53,6 +53,15 @@
 #include "v8.h"
 #include "v8-version-string.h"
 
+// Keep every execution isolate in a separate compression cage. Sharing a cage
+// would impose one aggregate 4 GiB heap limit on otherwise independent Pages.
+// The isolate retains the group; its final disposal also releases the cage.
+static v8::Isolate* Gov8NewIndependentIsolate(
+    const v8::Isolate::CreateParams& params) {
+  return v8::Isolate::New(v8::IsolateGroup::Create(), params);
+}
+
+
 // Linux's pointer-word trampoline covers exports wider than purego's 15 words.
 // All shim arguments and results use this integer/pointer ABI, never FP registers.
 #ifndef _WIN32
@@ -546,7 +555,7 @@ __declspec(dllexport) void* gov8_isolate_new(void) {
     }
     v8::Isolate::CreateParams params;
     params.array_buffer_allocator = g_allocator.get();
-    v8::Isolate* iso = v8::Isolate::New(params);
+    v8::Isolate* iso = Gov8NewIndependentIsolate(params);
     if (iso == nullptr) {
       SetErr("Isolate::New failed");
       return nullptr;

@@ -26,7 +26,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--source', type=Path, default=ROOT)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--concurrency', type=int, nargs='+', default=[10, 25],
+                        help='Page counts for static concurrency waves (default: 10 25)')
     args = parser.parse_args()
+    if any(count < 1 for count in args.concurrency):
+        parser.error('--concurrency counts must be positive')
     args.source = args.source.resolve()
     args.output = args.output.resolve()
     args.output.mkdir(parents=True, exist_ok=False)
@@ -120,7 +124,7 @@ def main():
                     data['rows'].append(row);save();valid([row])
                     print(work,iteration,row['status'],round(row['completion_ms'],2),flush=True)
             finally:runtime.close()
-        for n in [10,25]:
+        for n in args.concurrency:
             runtime=launch('static concurrency '+str(n))
             try:
                 for index in range(-1,3):

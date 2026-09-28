@@ -6,8 +6,8 @@ import _ "embed"
 
 const (
 	ABI      = 44
-	Size     = int64(57309264)
-	SHA256   = "0845a289130d570d60889443e16b1289bd1adadb725c18ecd979561056269e7a"
+	Size     = int64(58996888)
+	SHA256   = "863dbf62a7919aa56ac75ad11c3674b3e2ea3a6b48e31815334571153846acf2"
 	fileName = "libgov8_shim.so"
 )
 

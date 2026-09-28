@@ -469,7 +469,7 @@ __declspec(dllexport) void* gov8_ch_isolate_new_heap_limits(int64_t initial,
     params.array_buffer_allocator = g_allocator.get();
     params.constraints.ConfigureDefaultsFromHeapSize(
         static_cast<size_t>(initial), static_cast<size_t>(maximum));
-    v8::Isolate* iso = v8::Isolate::New(params);
+    v8::Isolate* iso = Gov8NewIndependentIsolate(params);
     if (iso == nullptr) {
       SetErr("Isolate::New failed");
       return nullptr;

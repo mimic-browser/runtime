@@ -22,7 +22,15 @@ func TestNumberExportPreservesSpecialValues(t *testing.T) {
 	if err := runtime.Set("packedNumber", runtime.PackedFunction(identity, "n")); err != nil {
 		t.Fatal(err)
 	}
-	for _, source := range []string{"NaN", "Infinity", "-Infinity", "-0", "0", "1.25"} {
+	// Exercise both sides of the 31-bit and 32-bit Smi boundaries as well as
+	// the largest exact integers. Native heap representation must not affect
+	// either ordinary or packed host callback round trips.
+	for _, source := range []string{
+		"NaN", "Infinity", "-Infinity", "-0", "0", "1.25",
+		"1073741823", "1073741824", "-1073741824", "-1073741825",
+		"2147483647", "2147483648", "-2147483648", "-2147483649",
+		"9007199254740991", "-9007199254740991",
+	} {
 		t.Run(source, func(t *testing.T) {
 			value, err := runtime.Eval(context.Background(), source, "number-export")
 			if err != nil {

@@ -59,6 +59,12 @@ type Realm struct {
 	id      uint64
 }
 
+// Leave room for short-lived object graphs to die in the young generation.
+// The former 4 MiB cap increased retained heap and CPU cost under
+// allocation-heavy workloads. Eight MiB won the paired ten-Page gate; sixteen
+// increased footprint. This is a growth ceiling, not an eager reservation.
+const maxYoungGenerationBytes = 8 << 20
+
 var initialize = sync.OnceValues(func() (bool, error) {
 	// The pinned V8 shares read-only artifacts across isolates in its default
 	// isolate group. Extending that heap for independently built snapshots gives
@@ -66,6 +72,8 @@ var initialize = sync.OnceValues(func() (bool, error) {
 	// artifact checksum assertion and can restore invalid string pointers.
 	// Keep the shared heap at the stock layout. Custom bootstrap objects remain
 	// serialized in each snapshot's private heap; Pages still run concurrently.
+	// Independent compression groups now separate Page ownership too. Retain
+	// this serialization policy rather than change both invariants together.
 	if err := gov8.SetFlagsFromString("--no-extensible-ro-snapshot"); err != nil {
 		return false, err
 	}
@@ -115,13 +123,13 @@ func (r *Runtime) loop(ready chan<- error) {
 		return
 	}
 	if r.snapshot == nil {
-		iso, err = gov8.NewIsolateWithParams(gov8.NewCreateParams().SetExternalReferences(references).SetMaxYoungGenerationSizeInBytes(4 << 20))
+		iso, err = gov8.NewIsolateWithParams(gov8.NewCreateParams().SetExternalReferences(references).SetMaxYoungGenerationSizeInBytes(maxYoungGenerationBytes))
 	} else {
 		var params *gov8.SnapshotCreateParams
 		params, err = gov8.NewSnapshotCreateParams(r.snapshot)
 		if err == nil {
 			params.SetExternalReferences(references)
-			params.SetMaxYoungGenerationSizeInBytes(4 << 20)
+			params.SetMaxYoungGenerationSizeInBytes(maxYoungGenerationBytes)
 			iso, err = gov8.NewIsolateWithSnapshotParams(params)
 		}
 	}

@@ -17,6 +17,10 @@ Upstream examples, conformance fixtures, and unrelated tests are omitted.
   callback data belongs to the realm rather than a Go registry handle.
 - Include the loaded native artifact digest in snapshot identity. Package the
   matching patched Windows and Linux libraries with verified extraction metadata.
+- Build V8 with pointer compression and a separate isolate group for each
+  execution isolate and snapshot builder. Pages retain independent heaps and
+  concurrent execution; there is no process-wide compressed-heap size limit.
+  Compression imposes V8's 4 GiB address range on each individual JS heap.
 - Compile trusted embedder bootstrap through a separate checked native entry
   point. Classification precedes parsing and survives code caches and snapshots;
   author scripts remain ordinary scripts regardless of their resource names.
@@ -51,8 +55,12 @@ python scripts/verify_native_source.py /path/to/v8-152.2.0 --apply
 This checks every modified file before and after applying the retained patch.
 Use Rust 1.98, the crate's locked dependencies and its pinned compiler/dependency
 fetchers. Set `V8_FROM_SOURCE=1`, a dedicated `CARGO_TARGET_DIR`, and
-`GN_ARGS=symbol_level=0`, then build the crate with
-`cargo build --release --locked --manifest-path /path/to/v8-152.2.0/Cargo.toml`.
+`GN_ARGS='symbol_level=0 v8_enable_pointer_compression_shared_cage=false'`, then
+build the crate with
+`cargo build --release --locked --features v8_enable_pointer_compression --manifest-path /path/to/v8-152.2.0/Cargo.toml`.
+The shim's `internal/shim/v8-gn.h` must match the resulting GN
+`v8_header_features` and `cppgc_header_features` defines, including the crate's
+internal-field counts. Upstream V8 defaults are not the crate's configuration.
 On Windows install MSVC x64 tools and configure `GYP_MSVS_OVERRIDE_PATH` to the
 Visual Studio installation, `GYP_MSVS_VERSION=2022` and
 `DEPOT_TOOLS_WIN_TOOLCHAIN=0`. Preserve the source, exact command and resulting
@@ -73,10 +81,10 @@ Update `Size` and `SHA256` in `internal/prebuilt/prebuilt_windows_amd64.go`
 from the packaging output. Validate without a shim override using focused
 native identity, property observation, Date receiver and snapshot tests.
 
-Packaged Windows DLL: 45,943,296 bytes, SHA-256
-`81dda49d5d92f2d9b4c8649345509a6375984eae78d6e3f8d3116edb3be54ac9`.
+Packaged Windows DLL: 46,458,880 bytes, SHA-256
+`801ffa1be81c6c063a93e655c084dd23af23c301edf3a72cb61b544823f81a94`.
 Patched Windows V8 archive SHA-256:
-`81623938ffa3dd219b9eee28f87982f2f75bd2083f6e43c0d3f9647309dcc45f`.
+`07896581257a5880946602eba27dfb2677b114e093de2cc98c116c6416755b02`.
 Native engine: V8 15.2.124.1-rusty, crate 152.2.0, temporal_capi 0.2.6.
 
 Platform exception initialization removes ordinary Error's hidden original
@@ -101,6 +109,13 @@ GPU/display service is needed. Its size and digest live in
 `internal/prebuilt/prebuilt_linux_amd64.go`. Runtime extraction and integrity
 verification are shared with Windows.
 
+The pointer-compressed Linux archive SHA-256 is
+`b05abd203317307e55de5b18c006b04c760302182a2ccd1de780430c2c752615`.
+The packaged library is 58,996,888 bytes, SHA-256
+`863dbf62a7919aa56ac75ad11c3674b3e2ea3a6b48e31815334571153846acf2`.
+Under WSL, use `--build-dir` on the Linux filesystem to avoid extracting the
+pinned source tree through the Windows filesystem mount.
+
 From the Mimic root, after building the patched V8 archive as above:
 
 ```sh
@@ -116,7 +131,8 @@ Clang updater and libc++ headers, and builds Temporal with `cargo build --locked
 The generated extraction metadata records the resulting library's size and
 SHA-256. Linux source builds inherit the builder's glibc floor.
 For a minimal Linux V8 archive build, set
-`GN_ARGS='symbol_level=0 use_glib=false use_sysroot=false'`. Generating the crate's
+`GN_ARGS='symbol_level=0 use_glib=false use_sysroot=false v8_enable_pointer_compression_shared_cage=false'`
+and enable the `v8_enable_pointer_compression` Cargo feature. Generating the crate's
 Rust FFI bindings additionally requires libclang 21.1 or newer; that step is
 separate from compiling the V8 archive consumed by the Go shim.
 

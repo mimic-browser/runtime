@@ -104,7 +104,7 @@ __declspec(dllexport) int64_t gov8_cps_isolate_new(
       *cpp_heap_consumed = 1;
     }
 
-    isolate = v8::Isolate::New(params);
+    isolate = Gov8NewIndependentIsolate(params);
     gov8_ia_impl::pending_counter_state = nullptr;
     if (isolate == nullptr) {
       gov8_snap_impl::FreeBlobHolder(holder);

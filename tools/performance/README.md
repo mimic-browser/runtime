@@ -8,6 +8,10 @@ python tools/performance/fast_gate.py --output .build/fast-gate-UNIQUE
 
 `--source` selects a source checkout for a before/after comparison. Each invocation builds its own executable into a new output directory. `build.json` records the build command, source revision/status, executable SHA-256 and frozen harness/workload hashes. Every process launch verifies and records the executable hash before invoking the frozen Runtime with that exact absolute path. A mismatch aborts immediately. Existing output directories are refused to preserve evidence.
 
+Use `--concurrency 10` to limit the static concurrency waves to ten Pages, or
+provide several counts such as `--concurrency 10 15`. The semantic checks and
+ten-Page memory samples remain mandatory; the default counts are still 10 and 25.
+
 The gate imports `benchmark/run.py`; it does not edit the frozen runner or workload fixtures. All six workload result checks are mandatory. Timings cover five measured warm iterations of DOM, static and React, then three measured static waves at N=10 and N=25. Each timing series also has one excluded warm-up, following the frozen suite. Memory is sampled with ten live static pages and ten live React pages in separate fresh processes, before teardown, immediately after teardown and after the same 250 ms recovery interval. No forced garbage collection is added. Concurrency retains the frozen memory-pressure and paging limits. Raw rows, failures and warm-ups are retained.
 
 Run repository correctness regressions for each production change; this gate supplements those tests. Use the full frozen matrix only at a substantial improvement milestone. Fast gate timings cannot replace the original full-suite baseline or certify unmeasured N=50 targets.

@@ -192,7 +192,7 @@ __declspec(dllexport) void* gov8_ia_isolate_new(
       *cpp_heap_identity = identity;
       *cpp_heap_consumed = 1;
     }
-    v8::Isolate* isolate = v8::Isolate::New(params);
+    v8::Isolate* isolate = Gov8NewIndependentIsolate(params);
     pending_counter_state = nullptr;
     if (isolate == nullptr) {
       SetErr("Isolate::New failed");

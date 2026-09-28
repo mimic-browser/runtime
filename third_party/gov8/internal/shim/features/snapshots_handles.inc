@@ -31,8 +31,8 @@
 // obtained from the artifact bindings and freed by v8__Global__Reset.
 //
 // Lifecycle notes:
-//   - The engine isolate of a SnapshotCreator is owned by the C++
-//     SnapshotCreator (SnapshotCreatorImpl dtor exits and deletes it), so it
+//   - The engine isolate of a SnapshotCreator is owned by CreatorWrap.
+//     Creator destruction exits it before the wrapper disposes it, so it
 //     is NEVER disposed through gov8_isolate_dispose; the Go wrapper marks
 //     its Isolate closed and unregisters it when CreateBlob or
 //     gov8_snapshot_creator_dispose runs.
@@ -89,8 +89,6 @@ v8::Isolate* v8__WeakCallbackInfo__GetIsolate(
 void* v8__WeakCallbackInfo__GetParameter(const v8::WeakCallbackInfo<void>* self);
 void v8__WeakCallbackInfo__SetSecondPassCallback(
     const v8::WeakCallbackInfo<void>* self, WeakCallback callback);
-void v8__SnapshotCreator__CONSTRUCT(void* buf,
-                                    const v8::Isolate::CreateParams& params);
 void v8__SnapshotCreator__DESTRUCT(void* self);
 v8::Isolate* v8__SnapshotCreator__GetIsolate(const void* self);
 void v8__SnapshotCreator__SetDefaultContext(void* self,
@@ -124,9 +122,9 @@ void v8__Isolate__CancelTerminateExecution(v8::Isolate* isolate);
 // --- wrapper structs ---------------------------------------------------------
 
 // v8::SnapshotCreator is a single pointer (SnapshotCreatorImpl*) in the
-// pinned artifact; the object is treated as opaque storage and ALL dispatch
-// goes through the artifact's flat bindings above, never through methods
-// compiled from the vendored headers.
+// pinned artifact. Operations and destruction use its flat bindings above.
+// Construction uses matching pinned headers and the caller-owned-isolate
+// overload to select a private group.
 constexpr size_t kCreatorStorageSize = 128;
 
 struct CreatorWrap {
@@ -137,6 +135,21 @@ struct CreatorWrap {
   struct BlobHolder* blob;
   alignas(16) unsigned char sc_storage[kCreatorStorageSize];
 };
+
+// Snapshot builders need the same independent-group ownership as consumers.
+// This SnapshotCreator overload initializes and enters a caller-owned isolate;
+// its destructor exits that isolate but does not dispose it.
+void ConstructIndependentCreator(CreatorWrap* wrapper,
+                                 const v8::Isolate::CreateParams& params) {
+  wrapper->iso = v8::Isolate::Allocate(v8::IsolateGroup::Create());
+  static_assert(sizeof(v8::SnapshotCreator) <= kCreatorStorageSize);
+  new (wrapper->sc_storage) v8::SnapshotCreator(wrapper->iso, params);
+}
+
+void DestroyIndependentCreator(CreatorWrap* wrapper) {
+  v8__SnapshotCreator__DESTRUCT(wrapper->sc_storage);
+  wrapper->iso->Dispose();
+}
 
 struct BlobHolder {
   uint64_t magic;
@@ -394,8 +407,8 @@ __declspec(dllexport) int64_t gov8_snapshot_blob_can_be_rehashed(
 
 // Creates a creator isolate from scratch (blob_data == null) or from an
 // existing startup blob. Returns the CreatorWrap through *out_wrap and the
-// engine isolate through *out_iso. The engine isolate is owned by the C++
-// SnapshotCreator and must only be released through CreateBlob or
+// engine isolate through *out_iso. The engine isolate is owned by the
+// CreatorWrap and must only be released through CreateBlob or
 // gov8_snapshot_creator_dispose.
 __declspec(dllexport) int64_t gov8_snapshot_creator_new(
     const char* blob_data, int64_t blob_len, void** out_wrap,
@@ -419,13 +432,12 @@ __declspec(dllexport) int64_t gov8_snapshot_creator_new(
     }
     v8::Isolate::CreateParams params;
     gov8_snap_impl::FillCreateParams(&params, w->blob);
-    v8__SnapshotCreator__CONSTRUCT(w->sc_storage, params);
-    w->iso = v8__SnapshotCreator__GetIsolate(w->sc_storage);
-    if (w->iso == nullptr) {
-      v8__SnapshotCreator__DESTRUCT(w->sc_storage);
+    gov8_snap_impl::ConstructIndependentCreator(w, params);
+    if (v8__SnapshotCreator__GetIsolate(w->sc_storage) != w->iso) {
+      gov8_snap_impl::DestroyIndependentCreator(w);
       gov8_snap_impl::FreeBlobHolder(w->blob);
       delete w;
-      SetErr("SnapshotCreator::GetIsolate failed");
+      SetErr("SnapshotCreator isolate ownership mismatch");
       return kErrState;
     }
     *out_wrap = w;
@@ -437,7 +449,7 @@ __declspec(dllexport) int64_t gov8_snapshot_creator_new(
   }
 }
 
-// Destroys the C++ SnapshotCreator: exits and deletes the engine isolate and
+// Destroys the C++ SnapshotCreator, then disposes its exited isolate and
 // releases the existing-snapshot blob copy. The Go wrapper must have marked
 // its Isolate closed before calling this.
 __declspec(dllexport) int64_t gov8_snapshot_creator_dispose(void* creatorw) {
@@ -449,7 +461,7 @@ __declspec(dllexport) int64_t gov8_snapshot_creator_dispose(void* creatorw) {
   }
   try {
     v8::Isolate* isolate = w->iso;
-    v8__SnapshotCreator__DESTRUCT(w->sc_storage);
+    gov8_snap_impl::DestroyIndependentCreator(w);
     gov8_external_references_impl::DropTable(isolate);
     gov8_snap_impl::FreeBlobHolder(w->blob);
     w->magic = 0;
@@ -573,7 +585,7 @@ __declspec(dllexport) int64_t gov8_snapshot_create_blob(
     v8::Isolate* creator_isolate = w->iso;
     v8::StartupData blob;
     {
-      // Scoped tightly: the creator's destructor below EXITS AND DELETES
+      // Scoped tightly: DestroyIndependentCreator below EXITS AND DELETES
       // the engine isolate, so the scope must not outlive this block.
       Gov8IsolateScope iso_scope(iso);
       const v8::SnapshotCreator::FunctionCodeHandling policy =
@@ -582,8 +594,8 @@ __declspec(dllexport) int64_t gov8_snapshot_create_blob(
               : v8::SnapshotCreator::FunctionCodeHandling::kClear;
       blob = v8__SnapshotCreator__CreateBlob(w->sc_storage, policy);
     }
-    // Tear the creator down either way: the engine isolate is owned by it.
-    v8__SnapshotCreator__DESTRUCT(w->sc_storage);
+    // Tear down the creator and its caller-owned isolate together.
+    gov8_snap_impl::DestroyIndependentCreator(w);
     gov8_external_references_impl::DropTable(creator_isolate);
     gov8_snap_impl::FreeBlobHolder(w->blob);
     w->magic = 0;
@@ -641,7 +653,7 @@ __declspec(dllexport) int64_t gov8_isolate_new_snapshot(
     holder = gov8_snap_impl::HoldSharedBlob(blob_data, blob_len);
     v8::Isolate::CreateParams params;
     gov8_snap_impl::FillCreateParams(&params, holder);
-    v8::Isolate* iso = v8::Isolate::New(params);
+    v8::Isolate* iso = Gov8NewIndependentIsolate(params);
     if (iso == nullptr) {
       gov8_snap_impl::FreeBlobHolder(holder);
       SetErr("Isolate::New failed");
