@@ -27,7 +27,7 @@ const packedHeader = 64
 type packedFrame struct {
 	units    [packedBytes / 2]uint16
 	ascii    [packedBytes / 2]byte
-	values   [4]runtimeValue
+	strings  [4]packedStringValue
 	numbers  [4]packedNumberValue
 	args     [4]engine.Value
 	callback callbackContext
@@ -53,6 +53,25 @@ func (v *packedNumberValue) String() string {
 	return fmt.Sprint(v.number)
 }
 func (v *packedNumberValue) Number() float64 { return v.number }
+
+type packedStringValue struct {
+	runtime *adapter
+	text    string
+}
+
+func (v *packedStringValue) Export() any {
+	if v.runtime == nil {
+		return nil
+	}
+	return v.text
+}
+func (v *packedStringValue) String() string {
+	if v.runtime == nil {
+		return "undefined"
+	}
+	return v.text
+}
+func (v *packedStringValue) Text() string { return v.text }
 
 func packedFactorySource(signature string) string {
 	var parameters, checks, writes []string
@@ -155,8 +174,8 @@ func (a *adapter) makePackedFunction(scope *gov8.Scope, realm *gov8.Context, hos
 		defer func() { a.callback = previous }()
 		defer func() {
 			frame.callback = callbackContext{}
-			for i := range frame.values {
-				frame.values[i] = runtimeValue{}
+			for i := range frame.strings {
+				frame.strings[i] = packedStringValue{}
 				frame.numbers[i] = packedNumberValue{}
 				frame.args[i] = nil
 			}
@@ -192,8 +211,8 @@ func (a *adapter) makePackedFunction(scope *gov8.Scope, realm *gov8.Context, hos
 				value = string(utf16.Decode(frame.units[:length]))
 			}
 			offset += length * 2
-			frame.values[i] = runtimeValue{runtime: a, host: value, hostSet: true}
-			frame.args[i] = &frame.values[i]
+			frame.strings[i] = packedStringValue{runtime: a, text: value}
+			frame.args[i] = &frame.strings[i]
 		}
 		result, err := host.function(nil, frame.args[:len(host.packed)])
 		if err != nil {

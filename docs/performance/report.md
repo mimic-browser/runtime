@@ -1,5 +1,24 @@
 # Performance architecture pass
 
+## 2026-09-28: keep packed string host arguments unboxed
+
+The next ten-execution DOM profile attributed 10 MiB to putting decoded
+packed strings into an interface field before browser hosts read them. Packed
+callbacks now keep decoded strings in their reusable invocation frame and the
+browser's string argument helper reads them directly. Explicit `Export()`,
+Unicode/NUL round-trips, returned arguments and post-callback invalidation
+remain covered. The corresponding boxing allocation site disappeared; UTF-16
+decoding still allocates the actual string. Whole-profile sampled Go allocation
+was **435.13 → 409.91 MiB** in one unpaired diagnostic run, so its total delta
+must not be assigned entirely to this change.
+
+Focused packed-call, DOM, geometry and Canvas tests passed. The fresh-build
+ten-active-Page fast gate passed every validity row. Warm DOM/static/React
+completion medians were **427.34/44.51/105.60 ms**, versus
+**421.35/39.24/117.81 ms** in the preceding short run; no page-latency gain
+is established. Receipts: `.build/profile-packed-string-20260928/` and
+`.build/fast-gate-packed-string-20260928/raw.json`.
+
 ## 2026-09-28: keep packed numeric host arguments unboxed
 
 The DOM allocation profile attributed 13.0 MiB across ten executions to

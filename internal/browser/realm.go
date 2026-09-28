@@ -730,6 +730,11 @@ func arg(args []engine.Value, n int) any {
 	return args[n].Export()
 }
 func strarg(args []engine.Value, n int) string {
+	if n < len(args) && args[n] != nil {
+		if text, ok := args[n].(interface{ Text() string }); ok {
+			return text.Text()
+		}
+	}
 	v := arg(args, n)
 	if v == nil {
 		return ""

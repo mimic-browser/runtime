@@ -75,6 +75,29 @@ func TestPackedNumberDirectReadPreservesNegativeZero(t *testing.T) {
 	}
 }
 
+func TestPackedStringDirectReadPreservesText(t *testing.T) {
+	r := (Factory{}).New().(*adapter)
+	defer r.Close()
+	var retained engine.Value
+	if err := r.Set("packedText", r.PackedFunction(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
+		retained = args[0]
+		text, ok := args[0].(interface{ Text() string })
+		if !ok || text.Text() != "Привет 😀\x00" || args[0].Export() != text.Text() {
+			return nil, fmt.Errorf("packed string changed: %T %v", args[0], args[0].Export())
+		}
+		return args[0], nil
+	}, "s")); err != nil {
+		t.Fatal(err)
+	}
+	value, err := r.Eval(context.Background(), `packedText('Привет 😀\u0000')==='Привет 😀\u0000'`, "packed-text.js")
+	if err != nil || value.Export() != true {
+		t.Fatalf("packed string return: %v %v", value, err)
+	}
+	if retained.Export() != nil || retained.String() != "undefined" {
+		t.Fatalf("packed string remained readable after callback: %v", retained)
+	}
+}
+
 func TestPackedResultsReentrancyAndErrors(t *testing.T) {
 	r := (Factory{}).New().(*adapter)
 	defer r.Close()
@@ -134,9 +157,9 @@ if(!Object.is(packed(-0,''),-0))throw Error('negative zero');
 		if frame.callback.scope != nil || frame.callback.ctx != nil || frame.callback.id != 0 {
 			t.Fatal("packed frame retained callback context")
 		}
-		for _, v := range frame.values {
-			if v.runtime != nil || v.host != nil {
-				t.Fatal("packed frame retained values")
+		for _, v := range frame.strings {
+			if v.runtime != nil || v.text != "" {
+				t.Fatal("packed frame retained strings")
 			}
 		}
 		for _, v := range frame.numbers {

@@ -226,6 +226,10 @@ func hostPayload(value engine.Value) (any, bool) {
 		if v.runtime != nil {
 			return v.number, true
 		}
+	case *packedStringValue:
+		if v.runtime != nil {
+			return v.text, true
+		}
 	}
 	return nil, false
 }
@@ -1519,6 +1523,13 @@ func (a *adapter) localOrUndefined(scope *gov8.Scope, value engine.Value) (gov8.
 }
 
 func (a *adapter) localCallback(value engine.Value) (gov8.Value, error) {
+	if text, ok := value.(*packedStringValue); ok {
+		if text.runtime != a || a.onCallback() == nil {
+			return gov8.Value{}, errors.New("packed string escaped its V8 callback")
+		}
+		callback := a.onCallback()
+		return callbackValue(callback.scope, callback.ctx, callback.result, text.text)
+	}
 	if number, ok := value.(*packedNumberValue); ok {
 		if number.runtime != a || a.onCallback() == nil {
 			return gov8.Value{}, errors.New("packed number escaped its V8 callback")
