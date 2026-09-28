@@ -4,9 +4,9 @@ package gov8
 
 import (
 	"fmt"
+	syscall "github.com/maclof/gov8/internal/native"
 	"math"
 	"sync"
-	syscall "github.com/maclof/gov8/internal/native"
 	"unsafe"
 )
 
@@ -194,7 +194,7 @@ func (v Value) predicate(op string) (bool, error) {
 	if err := requireInitialized(); err != nil {
 		return false, err
 	}
-	r1, _, _ := proc(op).Call(v.iso.handleAssumingCheck(), v.h)
+	r1, _, _ := syscall.Syscall(proc(op).Addr(), 2, v.iso.handleAssumingCheck(), v.h, 0)
 	if int64(r1) < 0 {
 		return false, shimError(op, r1)
 	}

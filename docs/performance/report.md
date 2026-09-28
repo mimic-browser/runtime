@@ -1,5 +1,22 @@
 # Performance architecture pass
 
+## 2026-09-28: direct native V8 predicates
+
+Gov8's `Value.predicate` used a variadic native procedure call for every
+type check. It now uses the same fixed-argument syscall boundary already used
+by other hot gov8 operations, with the same native function, arguments,
+result and error handling. Focused V8, gov8 HTMLDDA and race tests passed.
+
+On the unchanged ten-execution DOM profile, Go allocation fell **501.71 →
+487.67 MiB** against the preceding receiver-value binary (about **2.8%**),
+and the sampled predicate allocation site disappeared. Short-run median
+execution was **392.07 → 386.24 ms**, but the ten-live-Page gate was mixed:
+warm DOM/static/React completion medians were **432.65/37.40/99.40 ms**.
+The result is an allocation reduction, not a proven general latency gain.
+All six fast-gate workloads passed. Receipts are
+`.build/profile-this-value-20260928/`, `.build/profile-predicate-20260928/`,
+and `.build/fast-gate-predicate-20260928/`.
+
 ## 2026-09-28: avoid transient receiver wrapper in V8 host calls
 
 The ordinary V8 host callback path retrieved `this` through gov8's `This`,
