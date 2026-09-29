@@ -80,6 +80,14 @@ func newAdapterForRealm(owner *Runtime, realm *Realm, profile *diagnosticState, 
 		_ = backend.Close()
 		return nil, err
 	}
+	if err := backend.installGeneratedLazyInstaller(); err != nil {
+		_ = backend.Close()
+		return nil, err
+	}
+	if err := backend.installGeneratedConstructorFactory(); err != nil {
+		_ = backend.Close()
+		return nil, err
+	}
 	if err := backend.installReceiverDispatchFactory(); err != nil {
 		_ = backend.Close()
 		return nil, err
@@ -143,46 +151,48 @@ type callbackContext struct {
 }
 
 type adapter struct {
-	moduleLoader               engine.ModuleLoader
-	realmOwner                 *connectedRealmOwner // protected by mu
-	profile                    *diagnosticState
-	owner                      *Runtime
-	realm                      *Realm
-	release                    func() error
-	now                        func() time.Time
-	observer                   func(string, bool)
-	closed                     bool
-	mu                         sync.Mutex
-	callback                   *callbackContext  // actor-thread only; guarded from foreign readers by actor TID
-	activeIsolate              *gov8.Isolate     // actor-thread only
-	nestedTermination          bool              // clear only after the outer actor turn unwinds
-	activeContext              context.Context   // actor-thread only; inherited by cross-realm calls
-	runDepth                   int               // actor-thread only; includes cooperatively serviced calls
-	transientFrames            []*transientFrame // owner-thread only; bounded scratch storage
-	packedStore                *gov8.BackingStore
-	packedMemory               *[packedBytes]byte
-	packedBuffer               *gov8.Global
-	packedFactories            map[string]*gov8.Global
-	packedFrames               []*packedFrame
-	callbackSeq                uint64
-	hostTrue                   hostValue
-	hostFalse                  hostValue
-	hostNull                   hostValue
-	promiseFactory             engine.Value
-	propertyObservationFactory engine.Value
-	receiverDispatchFactory    engine.Value
-	exceptionStateFactory      engine.Value
-	globals                    map[*gov8.Global]struct{} // retained engine.Values; released on the isolate thread
-	modules                    []*gov8.Module
-	moduleCache                map[string]*gov8.Module
-	moduleNames                map[*gov8.Module]string
-	importMetaResolveFactory   engine.Value
-	moduleNamespaceFactory     engine.Value
-	dynamicModuleHandler       engine.DynamicModuleHandler
-	debuggerUnsafeEval         bool               // owning actor only, scoped to synchronous inspector execution
-	evalSourceResolver         engine.Value       // realm-owned policy; rebound before this adapter enters V8
-	processorSamples           map[uintptr]uint64 // opt-in diagnostic sampling, actor-thread only
-	nativePending              bool               // actor-thread only; foreground/background V8 tasks
+	moduleLoader                engine.ModuleLoader
+	realmOwner                  *connectedRealmOwner // protected by mu
+	profile                     *diagnosticState
+	owner                       *Runtime
+	realm                       *Realm
+	release                     func() error
+	now                         func() time.Time
+	observer                    func(string, bool)
+	closed                      bool
+	mu                          sync.Mutex
+	callback                    *callbackContext  // actor-thread only; guarded from foreign readers by actor TID
+	activeIsolate               *gov8.Isolate     // actor-thread only
+	nestedTermination           bool              // clear only after the outer actor turn unwinds
+	activeContext               context.Context   // actor-thread only; inherited by cross-realm calls
+	runDepth                    int               // actor-thread only; includes cooperatively serviced calls
+	transientFrames             []*transientFrame // owner-thread only; bounded scratch storage
+	packedStore                 *gov8.BackingStore
+	packedMemory                *[packedBytes]byte
+	packedBuffer                *gov8.Global
+	packedFactories             map[string]*gov8.Global
+	packedFrames                []*packedFrame
+	callbackSeq                 uint64
+	hostTrue                    hostValue
+	hostFalse                   hostValue
+	hostNull                    hostValue
+	promiseFactory              engine.Value
+	propertyObservationFactory  engine.Value
+	generatedLazyInstaller      engine.Value
+	generatedConstructorFactory engine.Value
+	receiverDispatchFactory     engine.Value
+	exceptionStateFactory       engine.Value
+	globals                     map[*gov8.Global]struct{} // retained engine.Values; released on the isolate thread
+	modules                     []*gov8.Module
+	moduleCache                 map[string]*gov8.Module
+	moduleNames                 map[*gov8.Module]string
+	importMetaResolveFactory    engine.Value
+	moduleNamespaceFactory      engine.Value
+	dynamicModuleHandler        engine.DynamicModuleHandler
+	debuggerUnsafeEval          bool               // owning actor only, scoped to synchronous inspector execution
+	evalSourceResolver          engine.Value       // realm-owned policy; rebound before this adapter enters V8
+	processorSamples            map[uintptr]uint64 // opt-in diagnostic sampling, actor-thread only
+	nativePending               bool               // actor-thread only; foreground/background V8 tasks
 }
 
 // Transient arguments cannot escape the synchronous host call. A frame stays

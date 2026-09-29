@@ -1,0 +1,1 @@
+{"forced_gc":true,"go":{"goroutines":5,"heap_alloc":25255904,"heap_inuse":31268864,"heap_released":273063936,"heap_sys":304349184,"num_gc":57,"sys":323086584,"total_alloc":1393860144},"pages":[{"owners":[{"context_count":0,"realm_count":2}],"page":"10c05be9-f09e-4969-954a-9d6172550405","url":"about:blank"}],"time":"2026-09-29T10:40:54.0827602+04:00"}

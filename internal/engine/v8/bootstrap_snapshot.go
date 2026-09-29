@@ -183,6 +183,32 @@ func buildBootstrapSnapshot(ctx context.Context, sources ...string) (blob *gov8.
 		_ = realm.Close()
 		return nil, err
 	}
+	lazyInstaller, err := iso.NewGeneratedLazyInstaller(scope, realm)
+	if err == nil {
+		var global *gov8.Object
+		global, err = realm.GlobalObject(scope)
+		if err == nil {
+			_, err = global.SetByName(scope, realm, "__mimicGeneratedLazyInstaller", lazyInstaller)
+		}
+	}
+	if err != nil {
+		_ = scope.Close()
+		_ = realm.Close()
+		return nil, err
+	}
+	constructorFactory, err := iso.NewGeneratedConstructorFactory(scope, realm)
+	if err == nil {
+		var global *gov8.Object
+		global, err = realm.GlobalObject(scope)
+		if err == nil {
+			_, err = global.SetByName(scope, realm, "__mimicGeneratedConstructorFactory", constructorFactory)
+		}
+	}
+	if err != nil {
+		_ = scope.Close()
+		_ = realm.Close()
+		return nil, err
+	}
 	for _, source := range sources {
 		err = runSnapshotSeed(ctx, iso, realm, scope, source)
 		if err != nil {
@@ -192,7 +218,7 @@ func buildBootstrapSnapshot(ctx context.Context, sources ...string) (blob *gov8.
 	if err == nil {
 		// Seed closures may retain the factories, but transport globals must not
 		// become extra observable properties of an otherwise ordinary context.
-		err = runSnapshotSeed(ctx, iso, realm, scope, `delete globalThis.__mimicPropertyObservationFactory; delete globalThis.__mimicReceiverDispatchFactory; delete globalThis.__mimicExceptionStateFactory;`)
+		err = runSnapshotSeed(ctx, iso, realm, scope, `delete globalThis.__mimicPropertyObservationFactory; delete globalThis.__mimicReceiverDispatchFactory; delete globalThis.__mimicExceptionStateFactory; delete globalThis.__mimicGeneratedLazyInstaller; delete globalThis.__mimicGeneratedConstructorFactory;`)
 	}
 	if err == nil {
 		// Fresh sibling realms must start with native intrinsics, rather than

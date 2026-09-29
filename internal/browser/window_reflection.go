@@ -20,6 +20,12 @@ func (r *Realm) installWindowReflection(host map[string]any) {
 	if native, ok := r.runtime.(engine.PropertyObservationRuntime); ok {
 		host["createObservedObject"] = native.PropertyObservationFactory()
 	}
+	if native, ok := r.runtime.(engine.GeneratedLazyRuntime); ok {
+		host["createGeneratedLazyInstaller"] = native.GeneratedLazyInstaller()
+	}
+	if native, ok := r.runtime.(engine.GeneratedConstructorRuntime); ok {
+		host["createGeneratedConstructorFactory"] = native.GeneratedConstructorFactory()
+	}
 	if native, ok := r.runtime.(engine.InterceptedObjectRuntime); ok {
 		host["createWindowObject"] = r.fn(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
 			return native.NewInterceptedObject(args[0])

@@ -90,3 +90,26 @@ func TestRegisteredFontIsReloadableAndBackingStorageCloses(t *testing.T) {
 		t.Fatalf("backing storage retained after close: %v", err)
 	}
 }
+
+func TestTrueTypeHintingLoadsOnlyOnFirstInkObservation(t *testing.T) {
+	source, _ := runtime.FuncForPC(reflect.ValueOf(fontcontainer.ToSFNT).Pointer()).FileLine(0)
+	path := filepath.Join(filepath.Dir(source), "resources", "DejaVuSerif.ttf")
+	e := NewDirectories(nil)
+	face, err := e.load(resource{path: path})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if face.hintLoaded || face.hintFont != nil {
+		t.Fatal("DOM font loading eagerly materialized Canvas hint data")
+	}
+	glyph, ok := face.face.NominalGlyph('A')
+	if !ok || !hintGlyphBounds(face, 19.37, uint32(glyph)) {
+		t.Fatal("first Canvas ink observation could not load TrueType hint data")
+	}
+	if !face.hintLoaded || face.hintFont == nil {
+		t.Fatal("Canvas hint data was not retained for later observations")
+	}
+	if !hintGlyphBounds(face, 19.37, uint32(glyph)) {
+		t.Fatal("repeated Canvas ink observation lost its hint data")
+	}
+}

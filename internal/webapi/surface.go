@@ -435,6 +435,7 @@ func composeSurface(generated, exposureSource string) string {
 	base = strings.Replace(base, "/* shared_css_box_geometry */", cssBoxGeometrySurface+elementVisibilitySurface, 1)
 	base = strings.Replace(base, "/* shared_dom_matrix */", cssColorsSurface+domMatrixSurface, 1)
 	base = strings.Replace(base, "/* shared_intersection_observer */", intersectionObserverSurface, 1)
+	parts[len(parts)-1] = "installGeneratedLazyOperations();" + marker
 	base = strings.Replace(base, marker, strings.Join(parts, "\n"), 1)
 	base = strings.Replace(base, "/* shared_scrolling */", scrollingSurface, 1)
 	return base

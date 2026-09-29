@@ -34,6 +34,8 @@
 !/docs/performance/data/profile-context-final-20260925/
 !/docs/performance/data/dom-node-blocks-20260925/
 !/docs/performance/data/dom-node-layout-20260925/
+!/docs/performance/data/rss-architecture-20260929/
+!/docs/performance/data/font-memory-20260929/
 /docs/performance/dom-current/**
 !/docs/performance/dom-current/**/
 !/docs/performance/dom-current/**/*.md

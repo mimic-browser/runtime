@@ -202,6 +202,19 @@ type PropertyObservationRuntime interface {
 	PropertyObservationFactory() Value
 }
 
+// GeneratedLazyRuntime supplies one snapshot-portable native installer per
+// realm. Generated WebAPI member IDs are immutable catalog data; the callable
+// values and any later mutations remain local to the current V8 context.
+type GeneratedLazyRuntime interface {
+	GeneratedLazyInstaller() Value
+}
+
+// GeneratedConstructorRuntime provides snapshot-portable native interface
+// constructors while their dispatch state stays in the current realm.
+type GeneratedConstructorRuntime interface {
+	GeneratedConstructorFactory() Value
+}
+
 // ReceiverDispatchRuntime supplies a realm-owned native factory taking a
 // native receiver validator, original intrinsic, semantic implementation, name
 // and length. It preserves raw receivers and lets the original intrinsic

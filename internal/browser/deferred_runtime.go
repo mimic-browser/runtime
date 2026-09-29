@@ -38,18 +38,22 @@ func (d *deferredRuntime) ready() (engine.Runtime, error) {
 	// Installation itself calls the engine; publish it on this same Page turn
 	// before installing hosts to avoid recursive initialization.
 	d.realm.runtime = r
+	d.realm.runtimeGroup.add(d.realm)
 	r.SetTimeSource(d.now)
 	r.SetGlobalAccessObserver(d.observer)
 	if err := d.realm.install(); err != nil {
 		d.realm.runtime.Close()
+		d.realm.runtimeGroup.remove(d.realm)
 		d.err = err
 		d.realm.runtime = d
 		return nil, err
 	}
 	if d.realm.checkpointClosed {
-		if lifecycle, ok := r.(engine.PromiseJobLifecycleRuntime); ok {
+		// A failed snapshot binding may have replaced r with a bare sibling.
+		if lifecycle, ok := d.realm.runtime.(engine.PromiseJobLifecycleRuntime); ok {
 			if err := lifecycle.DeactivatePromiseJobs(); err != nil {
 				_ = d.realm.runtime.Close()
+				d.realm.runtimeGroup.remove(d.realm)
 				d.err = err
 				d.realm.runtime = d
 				return nil, err

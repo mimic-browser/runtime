@@ -1,0 +1,734 @@
+[
+  {
+    "binary": "E:\\Temp\\mimic-rss-architecture\\candidate-final.exe",
+    "sha256": "2d5a4fba06bfe995180a5dd21499ea4a5e032e1060ae0e0aaff6f507a5860541",
+    "command": [
+      "E:\\Temp\\mimic-rss-architecture\\candidate-final.exe",
+      "-listen",
+      "127.0.0.1:9438"
+    ],
+    "workload_sha256": "5b340d5c51d1ce7f291c1fb9f635df7e5a7d29cd12255ee2e09e59918325e444",
+    "exit_code": 0,
+    "pass": true,
+    "stages": [
+      {
+        "name": "cdp_ready",
+        "t": 0.2563093999924604,
+        "rss": 36556800,
+        "private": 98869248,
+        "uss": 19292160,
+        "pss": 0,
+        "cpu": 0.171875
+      },
+      {
+        "name": "CDP connection established",
+        "t": 0.570888999995077,
+        "rss": 50475008,
+        "private": 105103360,
+        "uss": 25325568,
+        "pss": 0,
+        "cpu": 0.234375
+      },
+      {
+        "name": "New page created",
+        "t": 0.5746589000045788,
+        "rss": 53575680,
+        "private": 105168896,
+        "uss": 25436160,
+        "pss": 0,
+        "cpu": 0.25
+      },
+      {
+        "name": "Navigating to Wikipedia fixture",
+        "t": 0.5747549000079744,
+        "rss": 54734848,
+        "private": 105701376,
+        "uss": 25878528,
+        "pss": 0,
+        "cpu": 0.25
+      },
+      {
+        "name": "Wikipedia main page loaded",
+        "t": 1.4234152999997605,
+        "rss": 200351744,
+        "private": 237056000,
+        "uss": 150310912,
+        "pss": 0,
+        "cpu": 1.4375
+      },
+      {
+        "name": "Article DOM inspected",
+        "t": 5.548921999987215,
+        "rss": 587923456,
+        "private": 626819072,
+        "uss": 536416256,
+        "pss": 0,
+        "cpu": 8.703125
+      },
+      {
+        "name": "Internal article link located",
+        "t": 7.16513209999539,
+        "rss": 596451328,
+        "private": 636956672,
+        "uss": 544899072,
+        "pss": 0,
+        "cpu": 10.875
+      },
+      {
+        "name": "Internal link navigation completed",
+        "t": 9.306160699983593,
+        "rss": 487849984,
+        "private": 525631488,
+        "uss": 436273152,
+        "pss": 0,
+        "cpu": 14.265625
+      },
+      {
+        "name": "Back navigation restored JavaScript article",
+        "t": 10.019521100010024,
+        "rss": 387911680,
+        "private": 421163008,
+        "uss": 336252928,
+        "pss": 0,
+        "cpu": 15.5
+      },
+      {
+        "name": "Page closed normally",
+        "t": 10.019549599994207,
+        "rss": 387911680,
+        "private": 421163008,
+        "uss": 336252928,
+        "pss": 0,
+        "cpu": 15.5
+      },
+      {
+        "name": "after_close",
+        "t": 10.31779619998997,
+        "rss": 387911680,
+        "private": 421163008,
+        "uss": 336252928,
+        "pss": 0,
+        "cpu": 15.5
+      }
+    ],
+    "peaks": {
+      "rss": 611672064,
+      "private": 655687680,
+      "uss": 556748800,
+      "pss": 0
+    },
+    "pair": 1,
+    "label": "control",
+    "gogc": null
+  },
+  {
+    "binary": "E:\\Temp\\mimic-rss-architecture\\candidate-font-combined-aggregate.exe",
+    "sha256": "51f11af8af988340090eb41dce87be812b8451a2fd142cd768601aec107589f4",
+    "command": [
+      "E:\\Temp\\mimic-rss-architecture\\candidate-font-combined-aggregate.exe",
+      "-listen",
+      "127.0.0.1:9438"
+    ],
+    "workload_sha256": "5b340d5c51d1ce7f291c1fb9f635df7e5a7d29cd12255ee2e09e59918325e444",
+    "exit_code": 0,
+    "pass": true,
+    "stages": [
+      {
+        "name": "cdp_ready",
+        "t": 0.2555426000035368,
+        "rss": 36810752,
+        "private": 99708928,
+        "uss": 19587072,
+        "pss": 0,
+        "cpu": 0.15625
+      },
+      {
+        "name": "CDP connection established",
+        "t": 0.5772392000071704,
+        "rss": 53301248,
+        "private": 106102784,
+        "uss": 26189824,
+        "pss": 0,
+        "cpu": 0.203125
+      },
+      {
+        "name": "New page created",
+        "t": 0.5807396000018343,
+        "rss": 54243328,
+        "private": 106102784,
+        "uss": 26189824,
+        "pss": 0,
+        "cpu": 0.21875
+      },
+      {
+        "name": "Navigating to Wikipedia fixture",
+        "t": 0.5808488999900874,
+        "rss": 62758912,
+        "private": 113192960,
+        "uss": 34762752,
+        "pss": 0,
+        "cpu": 0.234375
+      },
+      {
+        "name": "Wikipedia main page loaded",
+        "t": 1.4370197000098415,
+        "rss": 198471680,
+        "private": 237809664,
+        "uss": 149417984,
+        "pss": 0,
+        "cpu": 1.46875
+      },
+      {
+        "name": "Article DOM inspected",
+        "t": 5.572280299995327,
+        "rss": 430465024,
+        "private": 467550208,
+        "uss": 378961920,
+        "pss": 0,
+        "cpu": 8.21875
+      },
+      {
+        "name": "Internal article link located",
+        "t": 7.325961599999573,
+        "rss": 435519488,
+        "private": 472104960,
+        "uss": 383971328,
+        "pss": 0,
+        "cpu": 10.796875
+      },
+      {
+        "name": "Internal link navigation completed",
+        "t": 9.44718550000107,
+        "rss": 313257984,
+        "private": 350035968,
+        "uss": 261562368,
+        "pss": 0,
+        "cpu": 14.21875
+      },
+      {
+        "name": "Back navigation restored JavaScript article",
+        "t": 10.149460999993607,
+        "rss": 226177024,
+        "private": 259067904,
+        "uss": 174448640,
+        "pss": 0,
+        "cpu": 15.625
+      },
+      {
+        "name": "Page closed normally",
+        "t": 10.158705699985148,
+        "rss": 226177024,
+        "private": 259067904,
+        "uss": 174448640,
+        "pss": 0,
+        "cpu": 15.625
+      },
+      {
+        "name": "after_close",
+        "t": 10.51661459999741,
+        "rss": 226177024,
+        "private": 259067904,
+        "uss": 174448640,
+        "pss": 0,
+        "cpu": 15.625
+      }
+    ],
+    "peaks": {
+      "rss": 452468736,
+      "private": 490471424,
+      "uss": 400842752,
+      "pss": 0
+    },
+    "pair": 1,
+    "label": "candidate",
+    "gogc": null
+  },
+  {
+    "binary": "E:\\Temp\\mimic-rss-architecture\\candidate-font-combined-aggregate.exe",
+    "sha256": "51f11af8af988340090eb41dce87be812b8451a2fd142cd768601aec107589f4",
+    "command": [
+      "E:\\Temp\\mimic-rss-architecture\\candidate-font-combined-aggregate.exe",
+      "-listen",
+      "127.0.0.1:9438"
+    ],
+    "workload_sha256": "5b340d5c51d1ce7f291c1fb9f635df7e5a7d29cd12255ee2e09e59918325e444",
+    "exit_code": 0,
+    "pass": true,
+    "stages": [
+      {
+        "name": "cdp_ready",
+        "t": 0.25589749999926426,
+        "rss": 37003264,
+        "private": 99848192,
+        "uss": 19836928,
+        "pss": 0,
+        "cpu": 0.203125
+      },
+      {
+        "name": "CDP connection established",
+        "t": 0.5748242999834474,
+        "rss": 52985856,
+        "private": 106258432,
+        "uss": 26112000,
+        "pss": 0,
+        "cpu": 0.28125
+      },
+      {
+        "name": "New page created",
+        "t": 0.5783295999863185,
+        "rss": 54190080,
+        "private": 106258432,
+        "uss": 26148864,
+        "pss": 0,
+        "cpu": 0.28125
+      },
+      {
+        "name": "Navigating to Wikipedia fixture",
+        "t": 0.5784186999953818,
+        "rss": 58830848,
+        "private": 109764608,
+        "uss": 29802496,
+        "pss": 0,
+        "cpu": 0.296875
+      },
+      {
+        "name": "Wikipedia main page loaded",
+        "t": 1.4064735999854747,
+        "rss": 198569984,
+        "private": 234807296,
+        "uss": 148975616,
+        "pss": 0,
+        "cpu": 1.78125
+      },
+      {
+        "name": "Article DOM inspected",
+        "t": 5.490067699982319,
+        "rss": 429371392,
+        "private": 465608704,
+        "uss": 377901056,
+        "pss": 0,
+        "cpu": 9.515625
+      },
+      {
+        "name": "Internal article link located",
+        "t": 7.227367699990282,
+        "rss": 432857088,
+        "private": 468381696,
+        "uss": 381329408,
+        "pss": 0,
+        "cpu": 12.15625
+      },
+      {
+        "name": "Internal link navigation completed",
+        "t": 9.303588099981425,
+        "rss": 312791040,
+        "private": 347807744,
+        "uss": 261152768,
+        "pss": 0,
+        "cpu": 15.703125
+      },
+      {
+        "name": "Back navigation restored JavaScript article",
+        "t": 9.996855499979574,
+        "rss": 215699456,
+        "private": 245829632,
+        "uss": 164040704,
+        "pss": 0,
+        "cpu": 16.84375
+      },
+      {
+        "name": "Page closed normally",
+        "t": 10.015783899987582,
+        "rss": 215699456,
+        "private": 245829632,
+        "uss": 164040704,
+        "pss": 0,
+        "cpu": 16.84375
+      },
+      {
+        "name": "after_close",
+        "t": 10.292076899990207,
+        "rss": 215699456,
+        "private": 245829632,
+        "uss": 164040704,
+        "pss": 0,
+        "cpu": 16.859375
+      }
+    ],
+    "peaks": {
+      "rss": 441225216,
+      "private": 479068160,
+      "uss": 389701632,
+      "pss": 0
+    },
+    "pair": 2,
+    "label": "candidate",
+    "gogc": null
+  },
+  {
+    "binary": "E:\\Temp\\mimic-rss-architecture\\candidate-final.exe",
+    "sha256": "2d5a4fba06bfe995180a5dd21499ea4a5e032e1060ae0e0aaff6f507a5860541",
+    "command": [
+      "E:\\Temp\\mimic-rss-architecture\\candidate-final.exe",
+      "-listen",
+      "127.0.0.1:9438"
+    ],
+    "workload_sha256": "5b340d5c51d1ce7f291c1fb9f635df7e5a7d29cd12255ee2e09e59918325e444",
+    "exit_code": 0,
+    "pass": true,
+    "stages": [
+      {
+        "name": "cdp_ready",
+        "t": 0.2698382000089623,
+        "rss": 36855808,
+        "private": 99393536,
+        "uss": 19603456,
+        "pss": 0,
+        "cpu": 0.15625
+      },
+      {
+        "name": "CDP connection established",
+        "t": 0.6002293000055943,
+        "rss": 48496640,
+        "private": 105959424,
+        "uss": 26099712,
+        "pss": 0,
+        "cpu": 0.203125
+      },
+      {
+        "name": "New page created",
+        "t": 0.6041814000054728,
+        "rss": 51003392,
+        "private": 105959424,
+        "uss": 26116096,
+        "pss": 0,
+        "cpu": 0.203125
+      },
+      {
+        "name": "Navigating to Wikipedia fixture",
+        "t": 0.6042712000198662,
+        "rss": 52768768,
+        "private": 105959424,
+        "uss": 26124288,
+        "pss": 0,
+        "cpu": 0.21875
+      },
+      {
+        "name": "Wikipedia main page loaded",
+        "t": 1.4288148000196088,
+        "rss": 202874880,
+        "private": 240111616,
+        "uss": 152887296,
+        "pss": 0,
+        "cpu": 1.4375
+      },
+      {
+        "name": "Article DOM inspected",
+        "t": 5.518089899996994,
+        "rss": 579739648,
+        "private": 620834816,
+        "uss": 528265216,
+        "pss": 0,
+        "cpu": 8.421875
+      },
+      {
+        "name": "Internal article link located",
+        "t": 7.170655399997486,
+        "rss": 596672512,
+        "private": 639090688,
+        "uss": 545173504,
+        "pss": 0,
+        "cpu": 10.5
+      },
+      {
+        "name": "Internal link navigation completed",
+        "t": 9.340869000006933,
+        "rss": 492863488,
+        "private": 532369408,
+        "uss": 441278464,
+        "pss": 0,
+        "cpu": 14.0625
+      },
+      {
+        "name": "Back navigation restored JavaScript article",
+        "t": 10.00372310000239,
+        "rss": 392503296,
+        "private": 426606592,
+        "uss": 340877312,
+        "pss": 0,
+        "cpu": 15.1875
+      },
+      {
+        "name": "Page closed normally",
+        "t": 10.015495700004976,
+        "rss": 392503296,
+        "private": 426606592,
+        "uss": 340877312,
+        "pss": 0,
+        "cpu": 15.1875
+      },
+      {
+        "name": "after_close",
+        "t": 10.35608540000976,
+        "rss": 392503296,
+        "private": 426606592,
+        "uss": 340877312,
+        "pss": 0,
+        "cpu": 15.1875
+      }
+    ],
+    "peaks": {
+      "rss": 606953472,
+      "private": 649752576,
+      "uss": 555421696,
+      "pss": 0
+    },
+    "pair": 2,
+    "label": "control",
+    "gogc": null
+  },
+  {
+    "binary": "E:\\Temp\\mimic-rss-architecture\\candidate-final.exe",
+    "sha256": "2d5a4fba06bfe995180a5dd21499ea4a5e032e1060ae0e0aaff6f507a5860541",
+    "command": [
+      "E:\\Temp\\mimic-rss-architecture\\candidate-final.exe",
+      "-listen",
+      "127.0.0.1:9438"
+    ],
+    "workload_sha256": "5b340d5c51d1ce7f291c1fb9f635df7e5a7d29cd12255ee2e09e59918325e444",
+    "exit_code": 0,
+    "pass": true,
+    "stages": [
+      {
+        "name": "cdp_ready",
+        "t": 0.25706329999957234,
+        "rss": 36958208,
+        "private": 99569664,
+        "uss": 19722240,
+        "pss": 0,
+        "cpu": 0.15625
+      },
+      {
+        "name": "CDP connection established",
+        "t": 0.575942000024952,
+        "rss": 52936704,
+        "private": 104800256,
+        "uss": 25083904,
+        "pss": 0,
+        "cpu": 0.203125
+      },
+      {
+        "name": "New page created",
+        "t": 0.5794260000111535,
+        "rss": 54583296,
+        "private": 106053632,
+        "uss": 26304512,
+        "pss": 0,
+        "cpu": 0.21875
+      },
+      {
+        "name": "Navigating to Wikipedia fixture",
+        "t": 0.5795643000165001,
+        "rss": 61091840,
+        "private": 111546368,
+        "uss": 31768576,
+        "pss": 0,
+        "cpu": 0.359375
+      },
+      {
+        "name": "Wikipedia main page loaded",
+        "t": 1.4077807000139728,
+        "rss": 202924032,
+        "private": 239140864,
+        "uss": 153100288,
+        "pss": 0,
+        "cpu": 1.5625
+      },
+      {
+        "name": "Article DOM inspected",
+        "t": 5.527916300023207,
+        "rss": 575156224,
+        "private": 614944768,
+        "uss": 523669504,
+        "pss": 0,
+        "cpu": 8.703125
+      },
+      {
+        "name": "Internal article link located",
+        "t": 7.197310700023081,
+        "rss": 598745088,
+        "private": 639401984,
+        "uss": 547209216,
+        "pss": 0,
+        "cpu": 11.015625
+      },
+      {
+        "name": "Internal link navigation completed",
+        "t": 9.400227400008589,
+        "rss": 491225088,
+        "private": 529674240,
+        "uss": 439619584,
+        "pss": 0,
+        "cpu": 15.171875
+      },
+      {
+        "name": "Back navigation restored JavaScript article",
+        "t": 10.085965100006433,
+        "rss": 390250496,
+        "private": 424263680,
+        "uss": 338599936,
+        "pss": 0,
+        "cpu": 16.234375
+      },
+      {
+        "name": "Page closed normally",
+        "t": 10.097323699999833,
+        "rss": 390250496,
+        "private": 424263680,
+        "uss": 338599936,
+        "pss": 0,
+        "cpu": 16.234375
+      },
+      {
+        "name": "after_close",
+        "t": 10.41888770001242,
+        "rss": 390250496,
+        "private": 424263680,
+        "uss": 338599936,
+        "pss": 0,
+        "cpu": 16.25
+      }
+    ],
+    "peaks": {
+      "rss": 604041216,
+      "private": 645214208,
+      "uss": 553144320,
+      "pss": 0
+    },
+    "pair": 3,
+    "label": "control",
+    "gogc": null
+  },
+  {
+    "binary": "E:\\Temp\\mimic-rss-architecture\\candidate-font-combined-aggregate.exe",
+    "sha256": "51f11af8af988340090eb41dce87be812b8451a2fd142cd768601aec107589f4",
+    "command": [
+      "E:\\Temp\\mimic-rss-architecture\\candidate-font-combined-aggregate.exe",
+      "-listen",
+      "127.0.0.1:9438"
+    ],
+    "workload_sha256": "5b340d5c51d1ce7f291c1fb9f635df7e5a7d29cd12255ee2e09e59918325e444",
+    "exit_code": 0,
+    "pass": true,
+    "stages": [
+      {
+        "name": "cdp_ready",
+        "t": 0.2602397999726236,
+        "rss": 37703680,
+        "private": 99344384,
+        "uss": 20512768,
+        "pss": 0,
+        "cpu": 0.171875
+      },
+      {
+        "name": "CDP connection established",
+        "t": 0.5853258999995887,
+        "rss": 50384896,
+        "private": 105132032,
+        "uss": 26173440,
+        "pss": 0,
+        "cpu": 0.234375
+      },
+      {
+        "name": "New page created",
+        "t": 0.5890510999888647,
+        "rss": 51236864,
+        "private": 105328640,
+        "uss": 26370048,
+        "pss": 0,
+        "cpu": 0.234375
+      },
+      {
+        "name": "Navigating to Wikipedia fixture",
+        "t": 0.5891468999907374,
+        "rss": 54624256,
+        "private": 105500672,
+        "uss": 26542080,
+        "pss": 0,
+        "cpu": 0.25
+      },
+      {
+        "name": "Wikipedia main page loaded",
+        "t": 1.4127566999814007,
+        "rss": 203890688,
+        "private": 240304128,
+        "uss": 153923584,
+        "pss": 0,
+        "cpu": 1.65625
+      },
+      {
+        "name": "Article DOM inspected",
+        "t": 5.533608499972615,
+        "rss": 421117952,
+        "private": 457867264,
+        "uss": 369459200,
+        "pss": 0,
+        "cpu": 8.46875
+      },
+      {
+        "name": "Internal article link located",
+        "t": 7.164019799995003,
+        "rss": 436867072,
+        "private": 474951680,
+        "uss": 385183744,
+        "pss": 0,
+        "cpu": 10.890625
+      },
+      {
+        "name": "Internal link navigation completed",
+        "t": 9.555586999980733,
+        "rss": 330379264,
+        "private": 365121536,
+        "uss": 278589440,
+        "pss": 0,
+        "cpu": 14.890625
+      },
+      {
+        "name": "Back navigation restored JavaScript article",
+        "t": 10.240131699974881,
+        "rss": 225665024,
+        "private": 257179648,
+        "uss": 173867008,
+        "pss": 0,
+        "cpu": 16.0
+      },
+      {
+        "name": "Page closed normally",
+        "t": 10.25111419998575,
+        "rss": 225665024,
+        "private": 257179648,
+        "uss": 173867008,
+        "pss": 0,
+        "cpu": 16.0
+      },
+      {
+        "name": "after_close",
+        "t": 10.592250699992292,
+        "rss": 225665024,
+        "private": 257179648,
+        "uss": 173867008,
+        "pss": 0,
+        "cpu": 16.0
+      }
+    ],
+    "peaks": {
+      "rss": 442486784,
+      "private": 480526336,
+      "uss": 390766592,
+      "pss": 0
+    },
+    "pair": 3,
+    "label": "candidate",
+    "gogc": null
+  }
+]

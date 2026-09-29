@@ -1,0 +1,30 @@
+{
+  "command": [
+    "go",
+    "build",
+    "-o",
+    "E:\\Temp\\mimic-rss-architecture\\fast-gate-final\\mimic.exe",
+    "./cmd/mimic"
+  ],
+  "source": "C:\\Users\\moreveal\\.codex\\worktrees\\dom-architecture\\mimic",
+  "revision": "493ab794bfca6ee56054fe3cd2a13ee00e73f4ee",
+  "status": " M chrome/152/generated/artifact-hashes.json\n M chrome/152/generated/surface.js\n M internal/browser/bootstrap_snapshot.go\n M internal/browser/deferred_runtime.go\n M internal/browser/demand_driven_world_test.go\n M internal/browser/realm.go\n M internal/browser/window_reflection.go\n M internal/engine/engine.go\n M internal/engine/v8/bootstrap_snapshot.go\n M internal/engine/v8/connected_realms.go\n M internal/engine/v8/receiver_dispatch.go\n M internal/engine/v8/runtime.go\n M internal/mimicmain/run.go\n M internal/webapi/surface.go\n M internal/webapi/surface.js\n M third_party/gov8/internal/prebuilt/linux_amd64/libgov8_shim.so.gz\n M third_party/gov8/internal/prebuilt/prebuilt_linux_amd64.go\n M third_party/gov8/internal/prebuilt/prebuilt_windows_amd64.go\n M third_party/gov8/internal/prebuilt/windows_amd64/gov8_shim.dll.gz\n M third_party/gov8/internal/shim/shim.cc\n M tools/generate_compat.py\n?? internal/browser/generated_lazy_surface_test.go\n?? internal/browser/realm_runtime_group.go\n?? internal/engine/v8/generated_lazy.go\n?? third_party/gov8/generated_lazy.go\n?? third_party/gov8/generated_lazy_test.go\n?? third_party/gov8/internal/shim/features/generated_constructor.inc\n?? third_party/gov8/internal/shim/features/generated_lazy.inc\n",
+  "executable": "E:\\Temp\\mimic-rss-architecture\\fast-gate-final\\mimic.exe",
+  "sha256": "2d5a4fba06bfe995180a5dd21499ea4a5e032e1060ae0e0aaff6f507a5860541",
+  "harness_sha256": "ce1fce42fa9b9e03f105900601db4d6d7fa9b0d9cda51d5096322357277673e7",
+  "harness_files": {
+    "compare.py": "274b156ee88e67085f5e556ef79629146f5e7287ee54af844476a0c005e65a5b",
+    "report.py": "f12e393341c00e9e03748a06913fa639c1069f66dc7acb71959cffd51647f214",
+    "requirements.txt": "06e6d87d17f39a59fe7b2576545231fe65d5a1940d22e63fc2b32b6cfa12123b",
+    "run.ps1": "6c50b0a55886278de7c1e4d92b77b42bf2cfad59fa451dbaa766b0e0eae84fa6",
+    "run.py": "67718e844bce74b7757f2238716233b9d8683a17294f2b02017667b9c1e44cd3",
+    "test_harness.py": "ddb8dcf74a192d3403971833cf5e011dd8578a9acd9a060b3b265cc6d79aef2a",
+    "v8_version.go": "669a669b0545ba599edb2f7923617f154b976e7377de89d8b2e1f477bdb12f09",
+    "windows_metrics.py": "57ba1e10dfb1f1cb439a52ad5f7f5795c3ba4eef25ae22c9514ecfe115434cd5",
+    "fixtures/workload.js": "484019063e33e131756f67ab6f3076ad2c18e3959072fbae42f540455448c214",
+    "fixtures/vendor/react-dom.production.min.js": "35f4f974f4b2bcd44da73963347f8952e341f83909e4498227d4e26b98f66f0d",
+    "fixtures/vendor/REACT-LICENSE.txt": "52412d7bc7ce4157ea628bbaacb8829e0a9cb3c58f57f99176126bc8cf2bfc85",
+    "fixtures/vendor/react.production.min.js": "d949f1c3687aedadcedac85261865f29b17cd273997e7f6b2bfc53b2f9d4c4dd"
+  },
+  "built_at": "2026-09-29T10:23:05.991227+04:00"
+}

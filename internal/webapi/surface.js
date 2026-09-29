@@ -10,6 +10,85 @@
     bootstrapCallbacks.push([name, callbacks]);
     host[name](...callbacks);
   };
+  // Generated fallback operations have no implementation until they are read.
+  // Their descriptor is published at the original position; after all profile
+  // and handwritten installers run, V8 replaces the placeholder with a lazy
+  // data slot. This leaves authored methods and accessor semantics untouched.
+  const generatedLazyInstaller =
+    typeof host.createGeneratedLazyInstaller === 'function'
+      ? host.createGeneratedLazyInstaller
+      : null;
+  const generatedLazyOperations = [];
+  const generatedLazyOperationIndex = new Map();
+  const stageGeneratedLazyOperation = (target, interfaceName, memberName, domain) => {
+    if (!generatedLazyInstaller) return false;
+    const id = generatedLazyOperations.length;
+    const record = {
+      target,
+      interfaceName,
+      memberName,
+      functionName: memberName,
+      domain,
+      length: 0,
+    };
+    generatedLazyOperations.push(record);
+    generatedLazyOperationIndex.set(interfaceName + '\0' + memberName, record);
+    Object.defineProperty(target, memberName, {
+      value: undefined,
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    });
+    return true;
+  };
+  const installGeneratedLazyOperations = () => {
+    if (!generatedLazyInstaller || generatedLazyOperations.length === 0) return;
+    const materialize = (id) => {
+      const record = generatedLazyOperations[id];
+      if (!record) throw new RangeError('Unknown generated WebAPI member');
+      const { interfaceName, memberName, functionName, domain, length } = record;
+      const implementation = domain
+        ? {
+            [functionName](...args) {
+              return invokeLazyBehavior(interfaceName, memberName, this, args, undefined, 'value');
+            },
+          }[functionName]
+        : {
+            [functionName]() {
+              return host.semanticMissing(interfaceName + '.' + memberName);
+            },
+          }[functionName];
+      if (implementation.length !== length)
+        Object.defineProperty(implementation, 'length', { value: length, configurable: true });
+      const value = platformOperation(implementation, functionName, length);
+      markNative(value, functionName);
+      return value;
+    };
+    generatedLazyInstaller(materialize);
+    // A restored context has its own native registry even though its JS graph
+    // was deserialized from the bootstrap snapshot.
+    bootstrapRestoreHooks.push(() => host.createGeneratedLazyInstaller(materialize));
+    for (let id = 0; id < generatedLazyOperations.length; id++) {
+      const record = generatedLazyOperations[id];
+      const { target, memberName } = record;
+      const descriptor = Object.getOwnPropertyDescriptor(target, memberName);
+      // A later semantic installer may have replaced or removed the fallback.
+      if (
+        !descriptor ||
+        !('value' in descriptor) ||
+        descriptor.value !== undefined ||
+        !descriptor.configurable ||
+        !descriptor.writable
+      ) {
+        generatedLazyOperations[id] = null;
+        continue;
+      }
+      const attributes = descriptor.enumerable ? 0 : 2;
+      generatedLazyInstaller(target, memberName, id, attributes);
+      record.target = null;
+    }
+    generatedLazyOperationIndex.clear();
+  };
   // Shape is eager; implementation is not. These realm-local cells keep every
   // public function/accessor and its descriptor stable across materialization.
   const lazyDomainInterfaces = new Map();
@@ -9211,6 +9290,16 @@
   const applyTargetExposure = (input) => {
     const exposure = decodeExposure(input);
     pendingCallableExposure = exposure;
+    for (const [interfaceName, members] of Object.entries(exposure.prototypes || {})) {
+      if (!members) continue;
+      for (const member of members) {
+        const record = generatedLazyOperationIndex.get(interfaceName + '\0' + member.name);
+        if (!record || member.valueType !== 'function') continue;
+        record.functionName = member.functionName || member.name;
+        if (member.functionLength !== null && member.functionLength !== undefined)
+          record.length = member.functionLength;
+      }
+    }
     const properties = exposure.properties || [];
     const publicationMissing = new Set();
     // Publish the frozen profile's static globals in their observed order once,

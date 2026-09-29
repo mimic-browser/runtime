@@ -1,0 +1,158 @@
+{
+  "forced_gc": false,
+  "go": {
+    "goroutines": 9,
+    "heap_alloc": 97842936,
+    "heap_inuse": 108920832,
+    "heap_released": 10248192,
+    "heap_sys": 149487616,
+    "num_gc": 66,
+    "sys": 164653304,
+    "total_alloc": 1115207096
+  },
+  "pages": [
+    {
+      "owners": [
+        {
+          "context_count": 0,
+          "realm_count": 2
+        }
+      ],
+      "page": "d2a969aa-1f65-4252-a15b-00f7f913c46b",
+      "url": "about:blank"
+    },
+    {
+      "owners": [
+        {
+          "context_count": 2,
+          "realm_count": 2,
+          "v8": {
+            "detail": null,
+            "heap": {
+              "TotalHeapSize": 25317376,
+              "TotalHeapSizeExecutable": 524288,
+              "TotalPhysicalSize": 25317376,
+              "TotalAvailableSize": 1461044412,
+              "UsedHeapSize": 22018132,
+              "HeapSizeLimit": 1480589312,
+              "MallocedMemory": 417876,
+              "ExternalMemory": 530560,
+              "PeakMallocedMemory": 1336288,
+              "DoesZapGarbage": false,
+              "NumberOfNativeContexts": 2,
+              "NumberOfDetachedContexts": 0,
+              "TotalGlobalHandlesSize": 16384,
+              "UsedGlobalHandlesSize": 10048,
+              "TotalAllocatedBytes": 44430704
+            },
+            "host_crossings": 15882,
+            "persistent_handles": 187,
+            "processor_samples": null,
+            "spaces": [
+              {
+                "Name": "read_only_space",
+                "Size": 0,
+                "UsedSize": 0,
+                "AvailableSize": 0,
+                "PhysicalSize": 0
+              },
+              {
+                "Name": "new_space",
+                "Size": 5242880,
+                "UsedSize": 2952028,
+                "AvailableSize": 1242020,
+                "PhysicalSize": 5242880
+              },
+              {
+                "Name": "old_space",
+                "Size": 13107200,
+                "UsedSize": 12963740,
+                "AvailableSize": 142540,
+                "PhysicalSize": 13107200
+              },
+              {
+                "Name": "code_space",
+                "Size": 524288,
+                "UsedSize": 156928,
+                "AvailableSize": 367264,
+                "PhysicalSize": 524288
+              },
+              {
+                "Name": "shared_space",
+                "Size": 0,
+                "UsedSize": 0,
+                "AvailableSize": 0,
+                "PhysicalSize": 0
+              },
+              {
+                "Name": "trusted_space",
+                "Size": 786432,
+                "UsedSize": 314020,
+                "AvailableSize": 472364,
+                "PhysicalSize": 786432
+              },
+              {
+                "Name": "shared_trusted_space",
+                "Size": 0,
+                "UsedSize": 0,
+                "AvailableSize": 0,
+                "PhysicalSize": 0
+              },
+              {
+                "Name": "new_large_object_space",
+                "Size": 651264,
+                "UsedSize": 646016,
+                "AvailableSize": 3548288,
+                "PhysicalSize": 651264
+              },
+              {
+                "Name": "large_object_space",
+                "Size": 5005312,
+                "UsedSize": 4985400,
+                "AvailableSize": 0,
+                "PhysicalSize": 5005312
+              },
+              {
+                "Name": "code_large_object_space",
+                "Size": 0,
+                "UsedSize": 0,
+                "AvailableSize": 0,
+                "PhysicalSize": 0
+              },
+              {
+                "Name": "shared_large_object_space",
+                "Size": 0,
+                "UsedSize": 0,
+                "AvailableSize": 0,
+                "PhysicalSize": 0
+              },
+              {
+                "Name": "shared_trusted_large_object_space",
+                "Size": 0,
+                "UsedSize": 0,
+                "AvailableSize": 0,
+                "PhysicalSize": 0
+              },
+              {
+                "Name": "trusted_large_object_space",
+                "Size": 0,
+                "UsedSize": 0,
+                "AvailableSize": 0,
+                "PhysicalSize": 0
+              }
+            ],
+            "thread": {
+              "kernel_100ns": 312500,
+              "processor": 11,
+              "thread_id": 48764,
+              "user_100ns": 1562500
+            }
+          }
+        }
+      ],
+      "page": "1d73768b-74ec-450e-8cec-8384d3b6aa82",
+      "url": "https://en.wikipedia.org/wiki/ECMAScript"
+    }
+  ],
+  "time": "2026-09-29T11:28:34.0846556+04:00"
+}

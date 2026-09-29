@@ -1,0 +1,9 @@
+{
+  "baseline_revision": "493ab794bfca6ee56054fe3cd2a13ee00e73f4ee",
+  "baseline_clean": true,
+  "baseline_binary_sha256": "fc940f36071e4e80c870ec31a940f09849bfd0675bab04ca37bb2908b06ef183",
+  "candidate_binary_sha256": "2d5a4fba06bfe995180a5dd21499ea4a5e032e1060ae0e0aaff6f507a5860541",
+  "wikipedia_workload_sha256": "5b340d5c51d1ce7f291c1fb9f635df7e5a7d29cd12255ee2e09e59918325e444",
+  "frozen_harness_sha256": "ce1fce42fa9b9e03f105900601db4d6d7fa9b0d9cda51d5096322357277673e7",
+  "host": "Windows x64; same host and unchanged Wikipedia workload"
+}

@@ -4,7 +4,6 @@
 package textmetrics
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
 	"io/fs"
@@ -53,6 +52,7 @@ type loaded struct {
 	emAscent, emDescent      float64
 	hintFont                 *truetype.Font
 	hintGlyph                truetype.GlyphBuf
+	hintLoaded               bool
 	resourceBytes            int
 	lastUse                  uint64
 }
@@ -193,6 +193,17 @@ func hintGlyphBounds(face *loaded, size float64, glyph uint32) (ok bool) {
 			ok = false
 		}
 	}()
+	if !face.hintLoaded {
+		face.hintLoaded = true
+		// TrueType hinting is only observable through Canvas ink bounds. The
+		// regular shaping face has already loaded its own tables, so retaining
+		// the entire source file for every DOM-only font is unnecessary.
+		if face.resource.index == 0 {
+			if data, err := os.ReadFile(face.resource.path); err == nil {
+				face.hintFont, _ = truetype.Parse(data)
+			}
+		}
+	}
 	return face.hintFont != nil && face.hintGlyph.Load(face.hintFont, fixed.Int26_6(math.Round(size*64)), truetype.Index(glyph), xfont.HintingFull) == nil
 }
 
@@ -395,16 +406,15 @@ func (e *Engine) load(r resource) (*loaded, error) {
 	if err := e.makeFontRoom(int(stat.Size())); err != nil {
 		return nil, err
 	}
-	data, err := os.ReadFile(r.path)
-	if err != nil {
-		return nil, err
-	}
-	loaders, err := ot.NewLoaders(bytes.NewReader(data))
+	loaders, err := ot.NewLoaders(f)
 	if err != nil || r.index >= len(loaders) {
 		return nil, fmt.Errorf("invalid font container")
 	}
 	loader := loaders[r.index]
-	ft, err := font.NewFont(loader)
+	// Mimic observes horizontal shaping and ink extents, never glyph outlines.
+	// The metrics-only decoder still validates every glyph and retains full
+	// outlines for variable fonts, whose extents depend on contour points.
+	ft, err := font.NewFontMetricsOnly(loader)
 	if err != nil {
 		return nil, err
 	}
@@ -413,10 +423,7 @@ func (e *Engine) load(r resource) (*loaded, error) {
 	if !ok {
 		return nil, fmt.Errorf("missing horizontal font metrics")
 	}
-	value := &loaded{resource: r, face: face, shaper: harfbuzz.NewFont(face), ascent: float64(metrics.Ascender), descent: -float64(metrics.Descender), lineGap: float64(metrics.LineGap), emAscent: float64(metrics.Ascender), emDescent: -float64(metrics.Descender), resourceBytes: len(data)}
-	if r.index == 0 {
-		value.hintFont, _ = truetype.Parse(data)
-	}
+	value := &loaded{resource: r, face: face, shaper: harfbuzz.NewFont(face), ascent: float64(metrics.Ascender), descent: -float64(metrics.Descender), lineGap: float64(metrics.LineGap), emAscent: float64(metrics.Ascender), emDescent: -float64(metrics.Descender), resourceBytes: int(stat.Size())}
 	// The Windows Chrome profile uses Windows ascender/descender rather than
 	// the optional typographic line metrics (notably different in Consolas).
 	if os2, err := loader.RawTable(ot.MustNewTag("OS/2")); err == nil && len(os2) >= 78 {
@@ -427,7 +434,7 @@ func (e *Engine) load(r resource) (*loaded, error) {
 	}
 	e.faces[key] = value
 	value.lastUse = e.fontUse
-	e.bytes += len(data)
+	e.bytes += value.resourceBytes
 	return value, nil
 }
 

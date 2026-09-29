@@ -49,6 +49,7 @@ type Realm struct {
 	debuggerFactory          engine.Value
 	debuggerBindings         map[string]bool
 	mainWorld                *Realm
+	runtimeGroup             *realmRuntimeGroup
 	isolatedWorlds           map[string]*Realm
 	worldName                string
 	worldMutationReceiver    engine.Value
@@ -312,6 +313,18 @@ func newRealmStateWithNavigation(p *Page, agent ExecutionAgent, d *dom.Document,
 	}
 	resourceContext, cancelResources := context.WithCancel(p.ctx.lifetime)
 	r := &Realm{ID: uuid.NewString(), agent: agent, document: d, url: u, origin: originOf(u.String()), token: uuid.NewString(), detached: map[int64]dom.Node{}, apiSeen: map[string]bool{}, readyState: "loading", workers: map[int64]*DedicatedWorker{}, childFrames: map[int64]*Frame{}, retainedFrames: map[string]*Frame{}, crossValues: map[int64]engine.Value{}, resourceContext: resourceContext, cancelResources: cancelResources}
+	if frame, ok := agent.(*Frame); ok {
+		switch {
+		case frame.Realm != nil && frame.Realm.document == d:
+			// An isolated world observes this exact document.
+			r.runtimeGroup = frame.Realm.runtimeGroup
+		case frame.parent != nil && frame.parent.Realm != nil:
+			r.runtimeGroup = frame.parent.Realm.runtimeGroup
+		}
+	}
+	if r.runtimeGroup == nil {
+		r.runtimeGroup = &realmRuntimeGroup{}
+	}
 	r.navigationURL, r.navigationLoaderID, r.performanceOrigin = u.String(), loaderID, performanceOrigin
 	r.navigationType = "navigate"
 	if frame, ok := agent.(*Frame); ok {
@@ -349,6 +362,7 @@ func newRealmStateWithNavigation(p *Page, agent ExecutionAgent, d *dom.Document,
 			return nil, err
 		}
 		r.runtime = runtime
+		r.runtimeGroup.add(r)
 	}
 	r.scheduler = scheduler.New(p.ClockNow(), func(ctx context.Context) error {
 		return r.checkpoint(ctx)
@@ -528,6 +542,7 @@ func (r *Realm) Close() error {
 		return nil
 	}
 	r.closed = true
+	r.runtimeGroup.remove(r)
 	releaseRuntimeValues(r.runtime, r.apiTraceSet)
 	r.apiTraceSet = nil
 	r.deactivateMediaSources()

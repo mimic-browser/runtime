@@ -1,5 +1,185 @@
 # Performance architecture pass
 
+## 2026-09-29: retained font data on the Wikipedia Page
+
+The earlier forced-GC Wikipedia profile attributed 147.3 MiB of live Go
+allocations to `textmetrics.Engine.load/shapeWithFonts`. A diagnostic run loaded
+14 local faces totaling 46.9 MB of source files, including large SimSun,
+Malgun, and Nirmala resources. The old loader read every whole file into memory
+and passed it to `truetype.Parse` even for DOM-only measurements. The TrueType
+hint parser retains that byte slice; Canvas ink bounds are its only consumer.
+The OpenType loader now reads from the already-open file, and the TrueType hint
+parser runs only on the first Canvas ink observation. Existing Canvas bounds,
+font fallback, and registered-font tests still pass.
+
+The remaining large allocation was go-text's eager unpacking of every static
+TrueType glyph contour. A narrow local fork of go-text v0.3.4 provides
+`font.NewFontMetricsOnly`: it runs the original full glyph parser for the same
+validation result, then releases simple contours after the complete table is
+validated. Headers, composite metadata, advances, shaping tables, and static
+ink extents remain. Fonts with `fvar` or `gvar` retain the full parser. Mimic
+uses this API for horizontal shaping; the compact face does not expose glyph
+outlines or guarantee point-matched vertical origins. The ordinary upstream
+`NewFont` behavior remains available and unchanged in the fork. See
+[`README.mimic.md`](../../third_party/go-text-typesetting/README.mimic.md).
+
+Three alternating fresh-process pairs of the unchanged Wikipedia E2E compared
+the preceding architecture candidate (SHA-256 `2d5a4fba...`) directly with the
+combined font candidate (SHA-256 `51f11af8...`), on the same Windows host.
+All six workload runs passed; the frozen workload hash stayed `5b340d5c...`.
+
+| Median, three pairs | Before fonts | With font changes | Change |
+| --- | ---: | ---: | ---: |
+| Peak process-tree RSS | 578.84 MiB | 421.99 MiB | -27.10% |
+| Peak private commit | 619.65 MiB | 458.27 MiB | -26.04% |
+| Peak USS | 529.69 MiB | 372.66 MiB | -29.64% |
+| RSS after Page close | 372.17 MiB | 215.21 MiB | -156.96 MiB |
+| Wikipedia E2E time | 10,020 ms | 10,159 ms | +1.39% |
+
+An earlier three-pair screen of only deferred hint loading measured
+**577.48 → 527.64 MiB** peak RSS without a meaningful time change. Releasing
+contours immediately after each glyph initially saved more memory but cost
+about 9% Wikipedia time through temporary-allocation/GC pressure. Keeping
+points until the table's original validation completes, then releasing them,
+retained the memory benefit without that slowdown. The final three-pair
+ten-Page controls were all valid: static throughput **18.73 → 18.49
+sessions/s** and React **16.70 → 16.81 sessions/s**. Their active RSS varied
+by about 4–6 MiB, below the noise of this control measurement.
+
+The final source was rebuilt with the benchmark's module cache and reproduced
+the measured candidate binary hash. The fast gate rebuilt the same source with
+a different Go module-cache path (hence a different embedded-path binary hash,
+`b111480e...`) and passed its six frozen correctness workloads, single-Page
+DOM/static/React rows, and ten-Page static/memory checks. Focused font tests
+passed on Windows and Linux; Linux browser tests used the installed Windows
+font directory through `MIMIC_FONT_DIR`. Fork tests compare all static glyph
+advances/extents, horizontal HarfBuzz shaping, variable-font outlines, and
+malformed-glyph rejection. No full local test suite was run.
+
+The original clean-control median was 703.53 MiB in an earlier separate
+series. The current 421.99 MiB is a substantial improvement, but the requested
+half-RSS threshold (351.77 MiB) is **still not reached**. Those two series are
+not a direct paired comparison. A diagnostic-only wrapper sampled the unchanged
+workload at the ECMAScript URL when two V8 contexts were present. After explicit
+V8 and Go GC it reported **73.4 MiB Go HeapAlloc** and **55.1 MiB V8 used /
+57.2 MiB V8 physical heap**. The sampled Go heap profile totals 65.5 MiB;
+its largest font allocation is now **22.4 MiB** in retained OpenType table
+buffers, with no large retained `os.ReadFile` or simple-glyph point stacks.
+The previous forced-GC diagnostic at the same URL recorded 177.7 MiB Go
+HeapAlloc and 59.4 MiB V8 physical heap, but these independent runs may have
+sampled different moments in the stage. They support attribution, not an
+exact subtraction or peak-RSS decomposition. The wrapper's timing was excluded
+from the reportable result and its temporary source was removed. Raw paired
+readings, diagnostic profiles, control runs, and build provenance are retained in
+[`data/font-memory-20260929`](data/font-memory-20260929/).
+
+## 2026-09-29: Page-owned worlds, native generated WebAPI, and Go heap target
+
+The production V8 path now places materialized worlds of one active Page
+document tree in separate contexts of one isolate. The first executing world
+admits the owner; deferred worlds do not force main-world execution. Independent
+Pages and Workers retain separate execution owners. Navigation starts a new
+document-tree group, old contexts remain alive until their own teardown, and a
+failed restored context retries as a bare sibling of the same owner. Directed
+Windows and Linux tests verify world/global isolation, DOM identity, frame
+access, microtask ordering, navigation, close order, snapshot fallback, and
+distinct owners for independent Pages. An unchanged Wikipedia diagnostic saw
+exactly two materialized worlds on its Page, so owner consolidation can save
+only one isolate there.
+
+Generated fallback WebAPI prototype operations now keep their key position but
+use snapshot-portable V8 lazy data properties. The first read creates and
+caches the realm's function. Generated constructors without an authored
+implementation or strict-receiver-sensitive lazy domain use one native
+dispatcher per realm; handwritten interfaces, 87 catalogued lazy-domain
+constructors, and Goja retain their JavaScript path. This preserves the
+observed names, lengths, descriptors, function source, mutation, freeze, realm
+ownership, and snapshot restoration in directed Windows/Linux tests. Native
+gov8 object-template lazy slots are available to subsequent generated-surface
+families; the current production surface installs slots on existing prototype
+objects after exposure and finalization so authored replacements win. In an
+exact same-static-workload heap-snapshot comparison, native constructor
+publication reduced shallow live V8 heap **14,737,956 → 14,508,408 bytes**
+(-1.56%, 229,548 bytes). It does not explain the much larger Wikipedia RSS.
+
+The command-line V8 runtime also sets Go's default heap growth target to 50%
+when `GOGC` is unset; an explicit `GOGC`, including `off`, remains authoritative.
+This is a process-wide memory/CPU tradeoff, not a Page sharing mechanism. Three
+alternating, same-binary diagnostic pairs on Wikipedia measured median peak RSS
+**680.46 → 581.03 MiB** with `GOGC=50`, while median E2E time was
+**9909 → 9957 ms**. Three ten-Page pairs on the same binary found static median
+throughput **17.22 → 18.35 sessions/s** and React **17.01 → 16.89 sessions/s**;
+active RSS fell **525.57 → 494.07 MiB** and **547.23 → 522.83 MiB**.
+These diagnostic comparisons motivated the default; they are not added to the
+full candidate result below.
+
+The reportable comparison used three alternating fresh-process pairs of the
+unchanged local Playwright Wikipedia workload on one Windows host. The control
+was built from clean `493ab794` (SHA-256 `fc940f36...`); the fresh candidate
+binary had SHA-256 `2d5a4fba...`. The workload SHA-256 remained
+`5b340d5c...`. The final fast-gate rebuild had the **same candidate binary
+hash** and verified frozen benchmark harness SHA-256 `ce1fce42...`.
+
+| Median, three pairs | Control | Candidate | Change |
+| --- | ---: | ---: | ---: |
+| Wikipedia peak process-tree RSS | 703.53 MiB | 578.67 MiB | -17.75% |
+| Peak private commit | 746.68 MiB | 618.18 MiB | -17.21% |
+| Peak USS | 655.55 MiB | 529.49 MiB | -19.23% |
+| RSS at CDP readiness | 37.79 MiB | 35.29 MiB | -2.50 MiB |
+| RSS after Page close | 468.61 MiB | 368.86 MiB | -99.75 MiB |
+| Wikipedia E2E time | 10,191 ms | 9,803 ms | -3.81% |
+
+The increment above CDP readiness was **665.74 → 543.38 MiB**. PSS is not
+available from the Windows process sampler; its raw zero field is a missing
+metric, not a measured zero. The final three-pair ten-Page controls measured
+static active RSS **520.36 → 489.89 MiB** and throughput **18.16 → 18.10
+sessions/s**; React active RSS **553.95 → 521.68 MiB** and throughput
+**16.75 → 16.77 sessions/s**. All rows completed validly. The fresh fast gate
+passed all six frozen correctness workloads, single-Page DOM/static/React rows,
+the ten-Page static waves, and ten-Page static/React memory checks. Directed
+Windows and Linux world, generated WebAPI, snapshot, and gov8 tests passed;
+the full local test suite was not run.
+
+The requested **2× Wikipedia peak-RSS goal is not met**: the measured ratio is
+1.216×. A separate baseline `GODEBUG=gctrace=1` run reported Go heap
+**386 → 186 MB** across a natural GC near the end of the workload, evidence of
+substantial temporary Go allocation. The first combined world/lazy version
+without GC tuning saved only about 23 MiB in a single unpaired screen.
+
+A separate diagnostic-only binary sampled the unchanged Wikipedia workload at
+the ECMAScript URL stage. With two native contexts in one Page owner, a live
+sample recorded **191.7 MiB Go HeapAlloc** and **65.3 MiB V8 used / 74.2 MiB
+V8 physical heap**. Another run at the same URL, after explicit V8 low-memory
+notification and Go GC/FreeOSMemory, recorded **177.7 MiB Go HeapAlloc** and
+**57.1 MiB V8 used / 59.4 MiB V8 physical heap**. The runs reached different
+moments within the stage, so subtracting the samples does not precisely measure
+reclaimable memory. The forced-GC Go heap profile attributes **147.3 MiB
+cumulative** to `textmetrics.Engine.load/shapeWithFonts`; its largest sampled
+in-use allocation sites are OpenType glyph point parsing (46.5 MiB), font file
+reads (45.7 MiB), and OpenType table buffers (33.5 MiB). These are allocation
+stacks, not an exact retaining-object graph. They identify per-Page font
+loading/parsing as a more substantial remaining target than generated WebAPI
+constructors. After Page close and explicit V8/Go GC in a third diagnostic run,
+Go HeapAlloc was **24.1 MiB** and no native contexts remained; the font glyph
+allocations disappeared from the heap profile. Thus the font cache follows Page
+ownership and releases, while allocator reservations can keep process RSS high
+after close. These diagnostic heap readings are **not** peak-RSS measurements
+and the wrapper's timing is excluded from the reportable comparison.
+
+The controlled same-binary GC experiment and the small V8 constructor heap
+delta support the same direction, but the residual process RSS also includes
+other Go, V8, and native memory. The diagnostic was not synchronized to the
+exact RSS peak, so no complete peak decomposition is claimed.
+The first lazy-property access cost has not been isolated from ordinary V8
+property and callback overhead; no latency claim is made for it.
+
+The measurement scripts are
+[`measure_wikipedia_rss.py`](../../tools/performance/measure_wikipedia_rss.py),
+[`paired_wikipedia_rss.py`](../../tools/performance/paired_wikipedia_rss.py),
+and [`paired_control_pages.py`](../../tools/performance/paired_control_pages.py).
+Hashes, stage readings, full control/fast-gate receipts, and GC diagnostics are
+retained in [`data/rss-architecture-20260929`](data/rss-architecture-20260929/).
+
 ## 2026-09-29: final demand-driven observation and DOM wrapper checkpoint
 
 The restored optimization batch gates native property classification and its JS
