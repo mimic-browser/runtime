@@ -1,5 +1,88 @@
 # Performance architecture pass
 
+## 2026-09-29: demand-driven geometry and concurrent isolate construction
+
+This is an intermediate optimization checkpoint, **not** a claim of a 2–3x
+improvement across the browser benchmark. All timings below use unchanged frozen
+workloads and fresh, hash-verified binaries. The Windows comparisons are paired
+within the same host; they are not subtracted from the separate Linux Lightpanda
+run below. No Chrome 152 capture was needed for these internal performance paths.
+The frozen harness SHA-256 is
+`ce1fce42fa9b9e03f105900601db4d6d7fa9b0d9cda51d5096322357277673e7`.
+The capacity control executable SHA-256 is
+`0f64fc53d44bba1974a492907e0800acf97755c535553abf79b19d0d9b8e3304`;
+the geometry-plus-lock executable SHA-256 is
+`86205dde44ae6e4f5dbfdb7888503d0678837e8056be84a4858da09b7f96b607`.
+
+DOM construction was repeatedly walking ancestry to invalidate geometry caches
+that had never been populated. The new demand guard postpones that maintenance
+until the first actual geometry observation, while writes after observation
+still invalidate the retained result. Three alternating fresh-process pairs
+measured DOM warm completion **391.65 → 189.64 ms (2.06x)**. React changed
+**112.24 → 101.51 ms (1.11x)**; static, CPU and async were near neutral. The
+focused test covers mutations before the first observation, repeated reads,
+and a later shadow-tree attribute change. The Wikipedia E2E comparison was small
+and noisy, so no E2E speedup is claimed. These comparisons, validity results,
+launch hashes and the unchanged harness hash are retained in
+`.build/dom-architecture-binaries/latency.json` and `wikipedia-final.json`.
+
+In ten-Page waves the runtime pool held its mutex while constructing each V8
+isolate, and the lower gov8 wrapper held a global lifecycle mutex through the
+same operation. A concurrent-creation diagnostic attributed about **30 ms** of
+aggregate mutex wait and **6.7 ms** of last-Page admission to the first lock;
+after removing it, the lower lock accounted for about **28.5 ms** of wait.
+The pool now releases its lock while constructing an independent owner, and
+gov8 uses a read/write creation gate so independent creations overlap while
+process teardown waits for all of them to register or fail. Focused pool and
+platform-lifecycle checks pass. Three paired, fresh-process, ten-Page capacity
+runs (nine retained waves/workload; all semantic results valid) measured:
+
+| Workload | Throughput, sessions/s before → after | Held RSS, MiB before → after | Result |
+| --- | ---: | ---: | --- |
+| Static | 88.61 → 124.50 | 297.41 → 296.89 | 1.40x throughput |
+| CPU | 68.23 → 86.09 | 401.33 → 410.22 | 1.26x throughput, more memory |
+| React | 50.27 → 61.75 | 380.89 → 384.94 | 1.23x throughput, more memory |
+
+The pool result is `.build/dom-architecture-binaries/pool-capacity-paired.json`.
+The control binary predates both geometry and lock changes; geometry was near
+neutral for these capacity workloads, but the two effects cannot be perfectly
+isolated from this single binary pair. A new build through the official fast
+gate (`.build/fast-gate-geometry-pool-20260929/raw.json`) passed all six semantic
+workloads and the ten-Page static gate. Warm completion medians were DOM
+**187.36 ms**, static **32.54 ms**, React **85.81 ms**. Its three static capacity
+rows varied widely (143.3, 84.09, 83.10 sessions/s), so the repeated paired
+capacity result above is the useful throughput comparison.
+
+The remaining DOM execution path was profiled, not inferred from call counts.
+Across eight diagnostic executions, Go CPU samples assigned about 72% to the
+native V8 call region and 27% cumulatively to host callback dispatch; the Go
+DOM bodies were a minority. The V8 CPU profile repeatedly sampled the workload,
+property observation, API-access recording, and attribute setters. A deliberately
+invalid upper-bound run bypassing observation changed DOM completion
+189.67 → 128.60 ms; bypassing only its JS callback changed
+189.72 → 173.82 ms; returning immediately from the native interceptor changed
+187.23 → 163.52 ms. These destructive probes remove trace behavior and were
+reverted. A semantics-preserving per-isolate native ObjectTemplate cache changed
+DOM 188.16 → 163.93 ms but did not improve ten-Page throughput, worsened static
+held RSS 294.27 → 305.66 MiB and CPU throughput 88.12 → 80.93 sessions/s.
+That PoC was also reverted. Receipts are `no-observer-upperbound-paired.json`,
+`observer-callback-upperbound-paired.json`, `native-observer-upperbound-paired.json`,
+`native-template-cache-paired.json`, and `native-template-capacity-paired.json`
+under `.build/dom-architecture-binaries/`.
+
+Warm static navigation takes about 29–30 ms, of which V8 snapshot consumer
+creation is roughly 17–19 ms and realm installation 3.6–4.2 ms. A separate
+synthetic restoration diagnostic measured 0.98 ms for an empty snapshot and
+7.37 ms for a 3.10 MiB generated JS graph. Clearing retained compiled function
+code in the real snapshot was near neutral (DOM 188.74 → 185.98 ms; static
+31.84 → 31.40 ms) and was reverted. The page graph/context deserialization,
+not retained machine code alone, is the next large startup/memory target. A
+substantial reduction will need a compatible publication model for the full
+observable API graph, including descriptors, identity, function source and
+realm boundaries. The restore and code-clear receipts are
+`.build/dom-architecture-binaries/runtime-stage-diagnostic.json` and
+`snapshot-code-clear-paired.json`. This remains an open architectural task.
+
 ## 2026-09-29: Lightpanda comparison and remaining architectural headroom
 
 The installed Linux Lightpanda `1.0.0-nightly.9268+909108e29` was compared with

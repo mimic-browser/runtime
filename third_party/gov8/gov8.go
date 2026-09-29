@@ -33,11 +33,12 @@ const (
 
 var platform platformState
 
-// lifecycleMu serializes the process-global transitions (Initialize,
-// Dispose, DisposePlatform) against isolate creation and destruction. It
-// guarantees that no isolate can be created across teardown: NewIsolate
-// holds the lock while the engine allocates the isolate and registers it in
-// liveIsolates, and Dispose refuses to run while liveIsolates is non-empty.
+// isolateCreationGate lets independent isolates be constructed concurrently,
+// while Dispose waits until every in-flight construction has either registered
+// its isolate or failed. Lock ordering is gate, then lifecycleMu.
+var isolateCreationGate sync.RWMutex
+
+// lifecycleMu protects process-global transitions and the live-isolate map.
 // The lock is deliberately NOT taken on hot per-value paths; those read the
 // platform state through an atomic load only.
 var lifecycleMu sync.Mutex
@@ -112,6 +113,8 @@ func PlatformPresent() bool {
 // or observes the state transition and fails — an isolate can never be
 // created across teardown.
 func Dispose() (bool, error) {
+	isolateCreationGate.Lock()
+	defer isolateCreationGate.Unlock()
 	lifecycleMu.Lock()
 	defer lifecycleMu.Unlock()
 	if loadPlatform() != stateInitialized {
@@ -222,24 +225,29 @@ func requireInitialized() error {
 // must be paired with exactly one of finishIsolateCreate (success) or
 // abandonIsolateCreate (failure).
 func beginIsolateCreate() error {
+	isolateCreationGate.RLock()
 	lifecycleMu.Lock()
 	if loadPlatform() != stateInitialized {
 		lifecycleMu.Unlock()
+		isolateCreationGate.RUnlock()
 		return ErrNotInitialized
 	}
+	lifecycleMu.Unlock()
 	return nil
 }
 
 // finishIsolateCreate registers the newly created isolate so Dispose cannot
 // run while it is live.
 func finishIsolateCreate(i *Isolate) {
+	lifecycleMu.Lock()
 	liveIsolates[i] = struct{}{}
 	lifecycleMu.Unlock()
+	isolateCreationGate.RUnlock()
 }
 
 // abandonIsolateCreate releases the teardown lock after a failed creation.
 func abandonIsolateCreate() {
-	lifecycleMu.Unlock()
+	isolateCreationGate.RUnlock()
 }
 
 // unregisterIsolate removes a closed isolate from the live set so a later

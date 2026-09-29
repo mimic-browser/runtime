@@ -359,10 +359,19 @@ func (p *bootstrapRuntimePool) newRuntime(bare bool) (engine.Runtime, error) {
 	}
 	var profile *diagnosticState
 	if lane == nil {
+		// Creating an isolate may block for milliseconds. Pages with the default
+		// one-realm capacity own separate isolates and must not queue behind
+		// another Page's creation while holding the pool lock.
+		p.mu.Unlock()
 		owner, diagnostics, err := p.snapshot.newRuntimeOwner()
 		if err != nil {
-			p.mu.Unlock()
 			return nil, err
+		}
+		p.mu.Lock()
+		if p.closed {
+			p.mu.Unlock()
+			_ = owner.Dispose()
+			return nil, errors.New("bootstrap runtime pool is closed")
 		}
 		lane = &bootstrapRuntimeLane{owner: owner}
 		profile = diagnostics

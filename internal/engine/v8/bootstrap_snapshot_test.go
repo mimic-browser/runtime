@@ -275,6 +275,62 @@ func TestBootstrapRuntimePoolDisposesIdleIsolate(t *testing.T) {
 	}
 }
 
+func TestBootstrapRuntimePoolAdmitsIndependentPagesConcurrently(t *testing.T) {
+	snapshot, err := (Factory{}).BuildBootstrapSnapshot(context.Background(), `globalThis.seed=42`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer snapshot.Close()
+	pool := snapshot.(*bootstrapSnapshot).NewRuntimePool(1).(*bootstrapRuntimePool)
+	const pages = 10
+	start := make(chan struct{})
+	type result struct {
+		runtime engine.Runtime
+		err     error
+	}
+	results := make(chan result, pages)
+	for range pages {
+		go func() {
+			<-start
+			runtime, err := pool.NewRuntime()
+			results <- result{runtime, err}
+		}()
+	}
+	close(start)
+	runtimes := make([]engine.Runtime, 0, pages)
+	owners := make(map[*Runtime]bool, pages)
+	for range pages {
+		result := <-results
+		if result.err != nil {
+			t.Fatal(result.err)
+		}
+		owner := result.runtime.(*adapter).owner
+		if owners[owner] {
+			t.Fatal("concurrent Pages shared an isolate despite capacity one")
+		}
+		owners[owner] = true
+		runtimes = append(runtimes, result.runtime)
+	}
+	if err := pool.Close(); err != nil {
+		t.Fatal(err)
+	}
+	for _, runtime := range runtimes {
+		value, err := runtime.Eval(context.Background(), `seed`, "after-pool-close")
+		if err != nil || value.String() != "42" {
+			t.Fatalf("pool close invalidated a live Page: %v %v", value, err)
+		}
+		if err := runtime.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	pool.mu.Lock()
+	lanes := len(pool.lanes)
+	pool.mu.Unlock()
+	if lanes != 0 {
+		t.Fatalf("pool retained %d idle isolates", lanes)
+	}
+}
+
 func TestBootstrapSnapshotWasmIntrinsics(t *testing.T) {
 	s, err := (Factory{}).BuildBootstrapSnapshot(context.Background(), `globalThis.seedWasm=typeof WebAssembly; globalThis.WebAssembly={}`, `delete globalThis.WebAssembly`)
 	if err != nil {

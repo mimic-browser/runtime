@@ -1412,6 +1412,12 @@
   };
   resetRetainedGeometry('', -1);
   const invalidateRetainedGeometry = (target) => {
+    // No valid retained epoch exists until an observation has populated it.
+    // Repeated construction must not walk ancestry merely to dirty absent data.
+    if (retainedGeometryRevision === -1) {
+      checkpointObservations = null;
+      return;
+    }
     if (!target) {
       retainedStyleAttributeDependencies = new WeakMap();
       retainedGeometryCleanRevision = -1;
@@ -1436,6 +1442,11 @@
       retainedGeometryDirty.set(element, retainedGeometryGeneration);
   };
   const retainGeometryAcrossAttributeMutation = (element, name) => {
+    if (retainedGeometryRevision === -1) {
+      checkpointObservations = null;
+      styleReadCache = null;
+      return;
+    }
     // Locating a containing shadow root itself walks canonical ancestry. Keep
     // this fast path document-only; any live shadow tree uses the conservative
     // path until dependencies are indexed per canonical tree root.
@@ -1701,6 +1712,7 @@
     return children;
   };
   const containingShadowRoot = (element) => {
+    if (shadowHosts.size === 0 && !styleObservationIsolated) return null;
     const cache =
       styleReadCache &&
       (styleReadCache.shadowRoots || (styleReadCache.shadowRoots = new WeakMap()));
