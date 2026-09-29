@@ -162,6 +162,7 @@ func TestBodyStoreFailurePreservesDeliveryAndReportsUnavailableHistory(t *testin
 	session.responseBodies.close()
 	defer session.Close()
 	recorder := trace.New()
+	recorder.Start()
 	loader := NewLoaderWithSession(testEnvironment, NewCookieStore(), session, recorder)
 	defer loader.CloseResponseBodies()
 	loader.SetTransport(bodyStoreTransport{[]byte("delivered")})

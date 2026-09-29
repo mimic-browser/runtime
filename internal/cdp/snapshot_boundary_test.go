@@ -28,7 +28,7 @@ func busySnapshotPage(t *testing.T) (*Server, *websocket.Conn) {
 	}
 	readReply(t, c, 1)
 	entered := make(chan struct{}, 1)
-	unsubscribe := s.Page.Trace().Subscribe(func(event trace.Event) {
+	unsubscribe := s.Page.Trace().SubscribeKinds([]trace.Kind{trace.Console}, func(event trace.Event) {
 		// The fixture emits its only console event after the first DOM mutation.
 		// A running timer's wall time also includes scheduling and compilation.
 		if event.Kind == trace.Console {

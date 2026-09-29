@@ -97,14 +97,14 @@ def main():
     (output / f'windows-tests-{args.shard}.json').write_text(json.dumps(plan, indent=2) + '\n')
     print(f'Windows browser shard {args.shard + 1}/{args.count}: '
           f'{len(selected)} of {len(names)} discovered root tests, all their subtests included', flush=True)
-    # Bound command-line length on Windows and avoid one aggregate package timer
-    # covering the entire suite. Individual assertion/context deadlines are unchanged.
+    # Bound command-line length and native V8 pressure on the hosted Windows
+    # runner. Keep every test and its own assertion/context deadline unchanged.
     started = time.monotonic()
     observed = {}
-    for offset, batch in enumerate(batches(selected, 100)):
+    for offset, batch in enumerate(batches(selected, 25)):
         expression = '^(' + '|'.join(re.escape(name) for name in batch) + ')$'
         print(f'Browser batch {offset + 1}: {len(batch)} root tests', flush=True)
-        run_json(['go', 'test', '-json', '-timeout', '10m', '-run', expression, BROWSER], observed)
+        run_json(['go', 'test', '-json', '-parallel', '4', '-timeout', '10m', '-run', expression, BROWSER], observed)
     if args.shard == 0:
         packages = [line for line in run('go', 'list', './...', capture=True).splitlines()
                     if line != BROWSER]
@@ -115,10 +115,18 @@ def main():
         if CDP in packages:
             packages.remove(CDP)
             cdp_names = root_tests(CDP)
+            # Keep the navigation responsiveness gate independent of native
+            # state accumulated by other CDP roots.
+            navigation_gate = 'TestSuspendedNavigationDeadlineAndTeardown'
+            has_navigation_gate = navigation_gate in cdp_names
+            if has_navigation_gate:
+                cdp_names.remove(navigation_gate)
             for offset, batch in enumerate(batches(cdp_names, 10)):
                 expression = '^(' + '|'.join(re.escape(name) for name in batch) + ')$'
                 print(f'CDP batch {offset + 1}: {len(batch)} root tests', flush=True)
                 run('go', 'test', '-timeout', '10m', '-run', expression, CDP)
+            if has_navigation_gate:
+                run('go', 'test', '-timeout', '10m', '-run', '^' + navigation_gate + '$', CDP)
         # Behavioral deadlines must not compete with unrelated package builds
         # and engine initializations on the small hosted runner.
         run('go', 'test', '-p', '1', *packages)

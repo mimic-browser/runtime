@@ -16,9 +16,12 @@ import (
 type Source string
 
 const (
-	DOM             Source = "dom"
-	WebTask         Source = "web-task"
-	Timer           Source = "timer"
+	DOM     Source = "dom"
+	WebTask Source = "web-task"
+	Timer   Source = "timer"
+	// Rendering callbacks already queued by a frame run before author timers
+	// that became ready while the frame task was executing.
+	Rendering       Source = "rendering"
 	Network         Source = "network"
 	Navigation      Source = "navigation"
 	Control         Source = "control"
@@ -637,6 +640,9 @@ func sourcePriority(source Source) int {
 		return -2
 	}
 	if source == ResourceScript {
+		return -1
+	}
+	if source == Rendering {
 		return -1
 	}
 	if source == ResourceLow {

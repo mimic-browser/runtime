@@ -1381,8 +1381,22 @@ func (r *Realm) installBindingsOnOwner() error {
 		})
 		return nil, nil
 	})
-	// Both deliveries are DOM tasks, after the sampled rendering observation.
-	host["queueIntersectionObserver"] = host["queuePerformanceObserver"]
+	// A sampled frame's callbacks must run before an author timer that became
+	// ready while the frame task was executing.
+	host["queueIntersectionObserver"] = r.transientFn(func(_ engine.Value, a []engine.Value) (engine.Value, error) {
+		if len(a) == 0 {
+			return nil, nil
+		}
+		callback := retainRuntimeValue(r.runtime, a[0])
+		r.scheduler.Post(scheduler.Rendering, 0, func(ctx context.Context) error {
+			defer releaseRuntimeValues(r.runtime, callback)
+			receiver := r.runtime.Get("window")
+			result, err := r.runtime.Call(ctx, callback, receiver)
+			releaseRuntimeValues(r.runtime, result, receiver)
+			return err
+		})
+		return nil, nil
+	})
 	host["queuePostedMessage"] = r.transientFn(func(_ engine.Value, a []engine.Value) (engine.Value, error) {
 		if len(a) == 0 {
 			return nil, nil

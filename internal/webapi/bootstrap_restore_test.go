@@ -35,6 +35,7 @@ func TestBootstrapRestoreRebindsState(t *testing.T) {
  let host,hostToken=1,bridgeRealmID="old-realm",intlEnvironment={},security={},windowRelations,windowTop,windowParent,frameElementCache={},uaData={};
  const remoteWindowCache=new Map(),remoteDocumentCache=new Map(),crossRealmCache=new Map(),crossRealmSymbols=new Map(),crossRealmSymbolReferences=new Map(),localCrossRealmSymbols=new Map(),elementWrappers=new Map(),documentWrappers=new Map(),tracedAccesses=new Map();
  const caches=[remoteWindowCache,remoteDocumentCache,crossRealmCache,crossRealmSymbols,crossRealmSymbolReferences,localCrossRealmSymbols,elementWrappers,documentWrappers,tracedAccesses];
+ const setTraceActive=enabled=>{tracedAccesses.clear()};
  for(const cache of caches)cache.set('stale',{});
  let nextCrossRealmSymbolID=4,root=7;
  const bootstrapRestoreHooks=[()=>{root=host.documentRootID()}];

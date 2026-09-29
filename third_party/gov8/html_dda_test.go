@@ -9,6 +9,9 @@ import (
 )
 
 func TestHTMLDDA(t *testing.T) {
+	if isolatePlatformLifecycle(t) {
+		return
+	}
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	if err := gov8.Initialize(); err != nil {

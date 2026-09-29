@@ -12,6 +12,7 @@ import (
 
 func TestCachedResponseRetainsBytesButUsesRetrievalTimingOwner(t *testing.T) {
 	recorder := trace.New()
+	recorder.Start()
 	loader := NewLoader(testEnvironment, NewCookieStore(), recorder)
 	u, _ := url.Parse("http://example.test/cached")
 	request := Request{URL: u, Method: "GET", Initiator: Fetch, Headers: http.Header{}}

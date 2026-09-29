@@ -37,6 +37,30 @@ func TestRunReadyStepIncludesCheckpointAndYields(t *testing.T) {
 	}
 }
 
+func TestOverdueAuthorTimerDoesNotOvertakeQueuedRendering(t *testing.T) {
+	s := New(time.Unix(0, 0), nil)
+	var order []string
+	s.Post(Timer, 0, func(context.Context) error {
+		// A busy frame can make an author timer ready before it queues delivery.
+		s.AdvanceBy(80 * time.Millisecond)
+		s.Post(Rendering, 0, func(context.Context) error {
+			order = append(order, "rendering")
+			return nil
+		})
+		return nil
+	})
+	s.Post(Timer, 80*time.Millisecond, func(context.Context) error {
+		order = append(order, "timer")
+		return nil
+	})
+	if err := s.RunUntilIdle(context.Background(), 4); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(order, []string{"rendering", "timer"}) {
+		t.Fatal(order)
+	}
+}
+
 func TestCancelledRunDoesNotConsumeQueuedTask(t *testing.T) {
 	s := New(time.Unix(0, 0), nil)
 	ran := false

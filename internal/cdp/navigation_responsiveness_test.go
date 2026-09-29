@@ -253,6 +253,8 @@ func TestSuspendedNavigationDeadlineAndTeardown(t *testing.T) {
 				}
 				if r.URL.Path == "/" {
 					fmt.Fprint(w, `<p id=before>before</p><script src=/held></script><p id=tail>tail</p>`)
+				} else if r.URL.Path == "/warm" {
+					fmt.Fprint(w, `<p>ready</p>`)
 				} else {
 					http.NotFound(w, r)
 				}
@@ -261,12 +263,32 @@ func TestSuspendedNavigationDeadlineAndTeardown(t *testing.T) {
 			defer close(release)
 			s, addr := runningServer(t)
 			s.SetNavigationTimeout(600 * time.Millisecond)
-			s.Page.Trace().Start()
 			c, _, err := websocket.DefaultDialer.Dial("ws://"+addr+"/devtools/page/"+s.Page.ID, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
 			defer c.Close()
+			// Initialize the realm before measuring navigation responsiveness.
+			// A first evaluation also prepares the reusable bootstrap artifact;
+			// that independent cold-start cost is covered by browser tests.
+			c.WriteJSON(map[string]any{"id": 0, "method": "Runtime.evaluate", "params": map[string]any{"expression": "6*7"}})
+			initial := readReply(t, c, 0)
+			if initial["result"].(map[string]any)["result"].(map[string]any)["value"] != float64(42) {
+				t.Fatal(initial)
+			}
+			if kind == "script" {
+				// The held script belongs to a new document. Admit that origin's
+				// runtime before the timed navigation, just as the old document's
+				// runtime was admitted above for the document response case.
+				c.WriteJSON(map[string]any{"id": 3, "method": "Page.navigate", "params": map[string]any{"url": fixture.URL + "/warm"}})
+				readReply(t, c, 3)
+				c.WriteJSON(map[string]any{"id": 4, "method": "Runtime.evaluate", "params": map[string]any{"expression": "6*7"}})
+				warm := readReply(t, c, 4)
+				if warm["result"].(map[string]any)["result"].(map[string]any)["value"] != float64(42) {
+					t.Fatal(warm)
+				}
+			}
+			s.Page.Trace().Start()
 			c.WriteJSON(map[string]any{"id": 1, "method": "Page.navigate", "params": map[string]any{"url": fixture.URL}})
 			readReply(t, c, 1)
 			select {

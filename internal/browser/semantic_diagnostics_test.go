@@ -10,6 +10,7 @@ import (
 func TestSemanticBoundaryDiagnostics(t *testing.T) {
 	parallelBrowserTest(t)
 	r := trace.New()
+	r.Start()
 	for _, owner := range []string{"realm", "worker"} {
 		recordSemanticBoundary(r, owner, "test", "fixture.js:1", []engine.Value{diagnosticValue("CSS.fontSizeResolution"), diagnosticValue(`{"reason":"unsupported-expression","value":"2ex"}`)})
 		e := r.Events()[len(r.Events())-1]

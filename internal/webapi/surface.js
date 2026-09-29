@@ -55,7 +55,10 @@
           }[functionName]
         : {
             [functionName]() {
-              return host.semanticMissing(interfaceName + '.' + memberName);
+              return host.semanticMissingAt(
+                'surface.js/generatedLazyOperation',
+                interfaceName + '.' + memberName,
+              );
             },
           }[functionName];
       if (implementation.length !== length)
@@ -84,7 +87,10 @@
         continue;
       }
       const attributes = descriptor.enumerable ? 0 : 2;
-      generatedLazyInstaller(target, memberName, id, attributes);
+      if (!generatedLazyInstaller(target, memberName, id, attributes))
+        throw new Error(
+          'Failed to install generated lazy operation ' + record.interfaceName + '.' + memberName,
+        );
       record.target = null;
     }
     generatedLazyOperationIndex.clear();
@@ -9369,8 +9375,17 @@
                 };
       } else {
         let value;
-        if (current && 'value' in current) value = current.value;
-        else if (!publicationMissing.has(property.name) && property.name in globalThis)
+        const missingFunction =
+          property.valueType === 'function' &&
+          current &&
+          'value' in current &&
+          current.value === undefined;
+        if (current && 'value' in current && !missingFunction) value = current.value;
+        else if (
+          !missingFunction &&
+          !publicationMissing.has(property.name) &&
+          property.name in globalThis
+        )
           value = globalThis[property.name];
         else if (property.valueType === 'function') {
           const functionName = property.functionName || property.name;

@@ -115,6 +115,7 @@ func (t *criticalCHTransport) RoundTrip(req *http.Request) (*http.Response, erro
 func TestTopLevelCriticalClientHintsRestartUsesCanonicalSession(t *testing.T) {
 	session := NewSessionState()
 	recorder := trace.New()
+	recorder.Start()
 	loader := NewLoaderWithSession(testEnvironment, NewCookieStore(), session, recorder)
 	transport := &criticalCHTransport{}
 	loader.SetTransport(transport)
@@ -270,6 +271,7 @@ func TestConnectionPoolIsWarmWithinSessionAndColdAcrossSessions(t *testing.T) {
 	type observation struct{ cold, reused bool }
 	run := func(session *SessionState) []observation {
 		recorder := trace.New()
+		recorder.Start()
 		loader := NewLoaderWithSession(testEnvironment, NewCookieStore(), session, recorder)
 		for range 2 {
 			if _, err := loader.Load(context.Background(), Request{URL: u, Initiator: Fetch}); err != nil {

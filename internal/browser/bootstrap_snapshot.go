@@ -112,6 +112,12 @@ func (c *bootstrapSnapshotCache) hasSnapshotKey(key [32]byte) bool {
 	return entry != nil && entry.snapshot != nil
 }
 
+func (c *bootstrapSnapshotCache) hasDiskStore() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.disk != nil
+}
+
 func (r *Realm) bootstrapSource() *bootstrapSource {
 	if r.bootstrapPlan != nil {
 		return r.bootstrapPlan
@@ -192,16 +198,16 @@ func (r *Realm) newRuntime() (engine.Runtime, error) {
 	}
 	plan := r.bootstrapSource()
 	capability, hasConnected := c.browser.factory.(engine.ConnectedRealmFactory)
+	// A first ordinary Page must retain cold initialization even if preparing a
+	// reusable seed completes before selection. An explicitly configured disk
+	// store can supply a snapshot for that first Page instead.
+	coldRoot := connected == nil && !c.profileLocked && !c.browser.bootstrapSnapshots.hasSnapshotKey(plan.key) && !c.browser.bootstrapSnapshots.hasDiskStore()
 	if connected == nil && (c.profileLocked || hasConnected && capability.ConnectedRealms()) && !c.bootstrapPreparation {
 		if err := c.browser.prepareProfileBootstrap(plan.key, r.securityState()); err != nil {
 			p.trace.Add(trace.Error, "profileBootstrapPreparationFailed", map[string]any{"error": err.Error()})
 		}
 	}
 	snapshot, capture, issue := c.browser.bootstrapSnapshots.selectEntry(c.browser.lifetime, factory, plan.key)
-	// Snapshot preparation can finish while this Page waits for another Page.
-	// Decide from the selected artifact, including disk cache hits, rather than
-	// the cache state observed before preparation.
-	coldRoot := connected == nil && !c.profileLocked && snapshot == nil
 	r.bootstrapCapture = capture
 	if issue != nil {
 		p.trace.Add(trace.Error, "bootstrapSnapshotUnavailable", map[string]any{"error": issue.Error()})
