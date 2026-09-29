@@ -174,7 +174,11 @@ func decodeMetadata(data []byte, contentType string) (Metadata, string, error) {
 	if len(data) > 32<<20 {
 		return Metadata{}, "", fmt.Errorf("image byte limit")
 	}
-	if strings.Contains(strings.ToLower(contentType), "svg") || bytes.Contains(data[:min(len(data), 512)], []byte("<svg")) {
+	// An SVG tag in a raster file's metadata is ordinary payload text. Sniff
+	// only document-shaped bytes; PNG ancillary chunks can contain arbitrary XML.
+	trimmed := bytes.TrimSpace(bytes.TrimPrefix(data, []byte{0xef, 0xbb, 0xbf}))
+	looksLikeSVG := len(trimmed) > 0 && trimmed[0] == '<' && bytes.Contains(trimmed[:min(len(trimmed), 512)], []byte("<svg"))
+	if strings.Contains(strings.ToLower(contentType), "svg") || looksLikeSVG {
 		decoder := xml.NewDecoder(bytes.NewReader(data))
 		for {
 			token, err := decoder.Token()

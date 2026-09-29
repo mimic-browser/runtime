@@ -3,7 +3,9 @@ package imageresource
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/binary"
 	"fmt"
+	"hash/crc32"
 	"testing"
 )
 
@@ -44,6 +46,25 @@ func TestResourceDecodeBoundsAndPixels(t *testing.T) {
 	for _, data := range []string{`<svg xmlns="http://www.w3.org/2000/svg" width="1e100"/>`, `<svg xmlns="http://www.w3.org/2000/svg">`, "broken"} {
 		if _, err := Decode([]byte(data), "image/svg+xml"); err == nil {
 			t.Fatalf("accepted %q", data)
+		}
+	}
+}
+
+func TestPNGMetadataContainingSVGTextRemainsRaster(t *testing.T) {
+	data, _ := base64.StdEncoding.DecodeString("iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAADklEQVR4nGP4z8DwHwQBEPgD/U6VwW8AAAAASUVORK5CYII=")
+	text := []byte("Description\x00<svg is text, not an image root>")
+	chunk := make([]byte, 0, len(text)+12)
+	chunk = binary.BigEndian.AppendUint32(chunk, uint32(len(text)))
+	chunk = append(chunk, "tEXt"...)
+	chunk = append(chunk, text...)
+	chunk = binary.BigEndian.AppendUint32(chunk, crc32.ChecksumIEEE(chunk[4:]))
+	withMetadata := append(append(append([]byte(nil), data[:33]...), chunk...), data[33:]...)
+
+	for _, contentType := range []string{"image/png", ""} {
+		resource := New(withMetadata, contentType)
+		metadata, err := resource.RequireValidatedImage()
+		if err != nil || metadata.Width != 2 || metadata.Height != 1 || metadata.Vector {
+			t.Fatalf("content type %q: metadata=%+v err=%v", contentType, metadata, err)
 		}
 	}
 }
