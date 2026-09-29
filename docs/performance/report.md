@@ -1,5 +1,60 @@
 # Performance architecture pass
 
+## 2026-09-29: final demand-driven observation and DOM wrapper checkpoint
+
+The restored optimization batch gates native property classification and its JS
+callback on explicit trace capture or API/unsupported-event subscription.
+Capture restart resets the Go and JS once-per-property state; removing demand
+clears it again. Each Page retains its independent isolate and owner thread.
+The native gate is reset during isolate disposal. Snapshot restoration registers
+the consumer realm's own callback and current trace state.
+
+Ordinary HTML, Text, Comment, Fragment and DocumentType wrappers create their
+final native observed object directly. Specialized resource and SVG wrappers
+keep their existing initialization. Observer callbacks are shared by label
+within a realm; geometry operations share one binding instead of allocating
+four closures per element. Geometry still resolves the canonical receiver and
+its creation realm, including restored and foreign realms.
+
+Earlier twelve-iteration diagnostic replays, excluding one warmup, measured
+DOM execution at 155.24 ms for the control, 132.49 ms with the observation gate,
+124.87 ms with direct wrappers, and 122.56 ms with shared geometry operations.
+These are successive measured configurations, not percentages to add together.
+The native Windows/Linux libraries were restored from those builds and their
+hashes verified against the packaged metadata.
+
+The final fresh, hash-verified fast gate passed all six unchanged correctness
+workloads, all single-Page latency rows, four ten-Page static waves including
+warmup, and the static/React ten-Page memory checks. Warm medians compared with
+the preceding `c3643a6` gate were:
+
+| Metric | Control | Restored batch |
+| --- | ---: | ---: |
+| DOM execution, ms | 157.93 | 126.39 |
+| DOM completion, ms | 187.36 | 155.37 |
+| Static completion, ms | 32.54 | 33.44 |
+| React completion, ms | 85.81 | 80.28 |
+| Static active RSS, MiB | 518.52 | 518.82 |
+| React active RSS, MiB | 548.69 | 542.34 |
+| Static recovered RSS, MiB | 159.11 | 160.43 |
+| React recovered RSS, MiB | 157.63 | 151.23 |
+
+These gates ran in separate sessions. Static throughput medians were
+84.09 versus 81.30 sessions/s, with substantial variation in the control;
+no throughput or substantial memory improvement is claimed. The result is
+an incremental DOM improvement, not a 2–3x whole-browser speedup or a new
+comparison with the published website. [Compact receipts and compressed raw
+gates](data/property-observation-20260929/summary.json) preserve hashes, results
+and all observations without changing the frozen harness or original baseline.
+
+Focused Windows tests passed for observation start/stop/restart, Page isolation,
+support classification, DOM observations, bootstrap snapshots, geometry demand,
+restored/foreign geometry and frame identity/reflection, plus the trace package.
+Linux passed the focused observation, isolation, DOM, restored geometry and
+frame-identity checks. The full local test suite was not run. The experimental
+shared-memory DOM kernel is not part of this batch; broader architectural work
+remains separate.
+
 ## 2026-09-29: demand-driven geometry and concurrent isolate construction
 
 This is an intermediate optimization checkpoint, **not** a claim of a 2–3x

@@ -483,6 +483,8 @@ func (r *Realm) retryBootstrap(err error) error {
 	r.cookieNotifier = nil
 	r.launchNotifier = nil
 	r.speechNotifier = nil
+	releaseRuntimeValues(r.runtime, r.apiTraceSet)
+	r.apiTraceSet = nil
 	if closeErr := r.runtime.Close(); closeErr != nil {
 		return fmt.Errorf("snapshot binding: %v; close failed runtime: %w", err, closeErr)
 	}
@@ -533,6 +535,7 @@ func (r *Realm) retryBootstrap(err error) error {
 	r.crossValueSeq = 0
 	r.apiTracking = false
 	r.apiSeen = map[string]bool{}
+	r.apiTraceActive = false
 	r.runtime = r.agent.Page().ctx.browser.factory.New()
 	r.runtime.SetTimeSource(r.scheduler.Now)
 	r.runtime.SetGlobalAccessObserver(func(name string, supported bool) {

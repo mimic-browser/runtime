@@ -1306,6 +1306,15 @@ func (a *adapter) SetGlobalAccessObserver(observer func(name string, supported b
 	a.observer = observer
 }
 
+// SetPropertyObservationEnabled changes only the diagnostic interceptor path;
+// ordinary object lookup, writes, and shape remain native V8 operations.
+func (a *adapter) SetPropertyObservationEnabled(enabled bool) error {
+	_, err := a.run(func(s *state, _ *gov8.Context, _ *gov8.Scope) (engine.Value, error) {
+		return nil, s.isolate.SetPropertyObservationEnabled(enabled)
+	})
+	return err
+}
+
 func (a *adapter) Close() error {
 	a.mu.Lock()
 	if a.closed {

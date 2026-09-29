@@ -127,6 +127,8 @@ type Realm struct {
 	token                    string
 	detached                 map[int64]dom.Node
 	apiSeen                  map[string]bool
+	apiTraceSet              engine.Value
+	apiTraceActive           bool
 	readyState               string
 	apiTracking              bool
 	workers                  map[int64]*DedicatedWorker
@@ -526,6 +528,8 @@ func (r *Realm) Close() error {
 		return nil
 	}
 	r.closed = true
+	releaseRuntimeValues(r.runtime, r.apiTraceSet)
+	r.apiTraceSet = nil
 	r.deactivateMediaSources()
 	r.stopMediaLoads()
 	r.agent.Page().ctx.network.RevokeBlobsForOwner(r.ID)
@@ -849,6 +853,13 @@ func (r *Realm) nativeSecurityOrigin() string {
 }
 
 func (r *Realm) installBindings() error {
+	wanted := r.agent.Page().trace.ObservationWanted()
+	r.apiTraceActive = wanted
+	if runtime, ok := r.runtime.(interface{ SetPropertyObservationEnabled(bool) error }); ok {
+		if err := runtime.SetPropertyObservationEnabled(wanted); err != nil {
+			return err
+		}
+	}
 	// Bootstrap is one synchronous Page operation. Keep its host installation,
 	// restore hooks and intrinsic reads on the existing runtime owner instead of
 	// dispatching each Get/Call/Eval separately. This neither pumps tasks nor
@@ -891,10 +902,14 @@ func (r *Realm) installBindingsOnOwner() error {
 	r.files = installOPFSHost(host, r.runtime, r.agent.Page().ctx, func() string { return r.origin })
 	r.installDocumentStream(host)
 	host["token"] = r.transientFn(func(engine.Value, []engine.Value) (engine.Value, error) { return r.val(r.token), nil })
-	host["ready"] = r.transientFn(func(engine.Value, []engine.Value) (engine.Value, error) {
+	host["ready"] = r.transientFn(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
+		if len(args) != 0 {
+			releaseRuntimeValues(r.runtime, r.apiTraceSet)
+			r.apiTraceSet = retainRuntimeValue(r.runtime, args[0])
+		}
 		r.apiTracking = true
 		r.initializeMemoryProjection()
-		return nil, nil
+		return r.val(p.trace.ObservationWanted()), nil
 	})
 	host["selfFrameID"] = r.transientFn(func(engine.Value, []engine.Value) (engine.Value, error) { return r.val(r.agent.ContextID()), nil })
 	host["windowRelations"] = r.transientFn(func(engine.Value, []engine.Value) (engine.Value, error) {
@@ -2541,6 +2556,9 @@ func (r *Realm) scheduleLoadIfReady() {
 	})
 }
 func (r *Realm) recordAPIAccess(name string, supported bool) {
+	if !r.apiTraceActive {
+		return
+	}
 	key := fmt.Sprintf("%s:%t", name, supported)
 	if r.apiSeen[key] {
 		return

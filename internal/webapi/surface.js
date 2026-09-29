@@ -233,7 +233,9 @@
   };
   const callRealmBinding = (receiver, binding, operation, args) =>
     bindingGet(receiver) === binding
-      ? binding.operations[operation](...args)
+      ? binding.kind === 'ElementGeometry'
+        ? binding.operations[operation](receiver, ...args)
+        : binding.operations[operation](...args)
       : unwrapCrossRealm(binding.frame, binding.binding.invoke)(receiver, operation, args);
   const bindingString = (value) => {
     if (typeof value === 'symbol') throw new TypeError('Cannot convert a Symbol value to a string');
@@ -241,7 +243,13 @@
   };
   // Match the realm trace's once-per-(name,supported) contract before FFI.
   const tracedAccesses = new Map();
+  let traceActive = false;
+  const setTraceActive = (enabled) => {
+    traceActive = !!enabled;
+    tracedAccesses.clear();
+  };
   const recordAPIAccess = (name, supported) => {
+    if (!traceActive) return;
     const bit = supported ? 1 : 2,
       seen = tracedAccesses.get(name) || 0;
     if (seen & bit) return;
@@ -2834,32 +2842,44 @@
   bootstrapRestoreHooks.push(() => {
     geometryReadHints.length = 0;
   });
+  const geometryReceiver = (element) =>
+    elementWrappers.get(String(elementSlot(element).nodeId)) || element;
+  const geometryOperations = {
+    rect: (element) => {
+      const target = geometryReceiver(element);
+      const prior = geometryReadHints.indexOf(target);
+      if (prior >= 0) geometryReadHints.splice(prior, 1);
+      geometryReadHints.push(target);
+      if (geometryReadHints.length > 16) geometryReadHints.shift();
+      const value = clientRectFor(target);
+      return new DOMRect(value.x, value.y, value.width, value.height);
+    },
+    scroll: (element, params) => compatibilityScrolling.dispatch(geometryReceiver(element), params),
+    rects: (element) => makeElementClientRects(geometryReceiver(element)),
+    mediaTimeRanges: (element, kind) => {
+      const slot = elementSlot(element);
+      const tag = slot.tagName;
+      if (tag !== 'VIDEO' && tag !== 'AUDIO') throw new TypeError('Illegal invocation');
+      const source = kind === 'seekable' ? host.mediaSourceState(slot.nodeId) : null;
+      const ranges =
+        source && Number.isFinite(source.duration) && source.duration >= 0
+          ? [[0, source.duration]]
+          : [];
+      return createMediaTimeRanges(ranges);
+    },
+  };
+  const geometryBinding = {
+    kind: 'ElementGeometry',
+    operations: geometryOperations,
+    invoke(receiver, operation, args) {
+      const binding = bindingGet(receiver);
+      if (!binding || binding.kind !== 'ElementGeometry') throw new TypeError('Illegal invocation');
+      return binding.operations[operation](receiver, ...args);
+    },
+    unpreventable: false,
+  };
   const registerElementGeometry = (element) => {
-    const receiver = () => elementWrappers.get(String(elementSlot(element).nodeId)) || element;
-    registerRealmBinding(element, 'ElementGeometry', {
-      rect: () => {
-        const target = receiver();
-        const prior = geometryReadHints.indexOf(target);
-        if (prior >= 0) geometryReadHints.splice(prior, 1);
-        geometryReadHints.push(target);
-        if (geometryReadHints.length > 16) geometryReadHints.shift();
-        const value = clientRectFor(target);
-        return new DOMRect(value.x, value.y, value.width, value.height);
-      },
-      scroll: (params) => compatibilityScrolling.dispatch(receiver(), params),
-      rects: () => makeElementClientRects(receiver()),
-      mediaTimeRanges: (kind) => {
-        const slot = elementSlot(element);
-        const tag = slot.tagName;
-        if (tag !== 'VIDEO' && tag !== 'AUDIO') throw new TypeError('Illegal invocation');
-        const source = kind === 'seekable' ? host.mediaSourceState(slot.nodeId) : null;
-        const ranges =
-          source && Number.isFinite(source.duration) && source.duration >= 0
-            ? [[0, source.duration]]
-            : [];
-        return createMediaTimeRanges(ranges);
-      },
-    });
+    bindingSet(element, geometryBinding);
   };
   class Element extends Node {
     constructor(token, data) {
@@ -4767,6 +4787,43 @@
       if (slot) Object.assign(slot, d);
       return cached;
     }
+    const label =
+      d.type === 'element'
+        ? 'Element<' + String(d.tagName || '').toLowerCase() + '>'
+        : d.type === 'comment'
+          ? 'Comment'
+          : 'Text';
+    // Canonical nodes without own fields can use the final observed object
+    // directly. This avoids retaining a second element through its geometry
+    // closure and constructing then copying a temporary object.
+    if (typeof host.createObservedObject === 'function') {
+      let prototype;
+      if (d.type === 'doctype') prototype = (globalThis.DocumentType || Node).prototype;
+      else if (d.type === 'fragment') prototype = DocumentFragment.prototype;
+      else if (d.type === 'text') prototype = Text.prototype;
+      else if (d.type === 'comment') prototype = Comment.prototype;
+      else if (
+        d.type === 'element' &&
+        d.namespaceURI !== 'http://www.w3.org/2000/svg' &&
+        d.tagName !== 'SCRIPT' &&
+        d.tagName !== 'IMG' &&
+        d.tagName !== 'IFRAME' &&
+        d.tagName !== 'A'
+      ) {
+        const name = htmlElementInterfaces[d.tagName],
+          ctor = name && globalThis[name];
+        prototype =
+          typeof ctor === 'function' && ctor.prototype ? ctor.prototype : HTMLElement.prototype;
+      }
+      if (prototype) {
+        const node = createNativeObserved(label);
+        Object.setPrototypeOf(node, prototype);
+        elementData.set(node, d);
+        if (d.type === 'element') registerElementGeometry(node);
+        elementWrappers.set(key, node);
+        return node;
+      }
+    }
     let element;
     if (d.type === 'doctype') {
       element = Object.create((globalThis.DocumentType || Node).prototype);
@@ -4790,12 +4847,6 @@
       } else element = new HTMLElement(hostToken, d);
     }
     if (d.type === 'element' && !bindingGet(element)) registerElementGeometry(element);
-    const label =
-      d.type === 'element'
-        ? 'Element<' + String(d.tagName || '').toLowerCase() + '>'
-        : d.type === 'comment'
-          ? 'Comment'
-          : 'Text';
     const proxy = observe(label, element);
     elementWrappers.set(key, proxy);
     return proxy;
@@ -7041,13 +7092,11 @@
     observationHandlers.set(name, handler);
     return handler;
   };
-  const observe = (name, target) => {
-    let proxy;
-    if (typeof host.createObservedObject === 'function') {
-      // The native observer falls through before the property's own operation.
-      // Data and properties live on this one object; no Proxy receiver or
-      // independently synchronized target survives into the public API.
-      proxy = host.createObservedObject((object, property, write, supported) => {
+  const nativeObserverCallbacks = new Map();
+  const createNativeObserved = (name) => {
+    let callback = nativeObserverCallbacks.get(name);
+    if (!callback) {
+      callback = (object, property, write, supported) => {
         if (
           typeof property === 'string' &&
           !property.startsWith('_') &&
@@ -7056,7 +7105,18 @@
           const key = name + '.' + property;
           recordAPIAccess(key, supported || targetAbsentProperties.has(key));
         }
-      });
+      };
+      nativeObserverCallbacks.set(name, callback);
+    }
+    return host.createObservedObject(callback);
+  };
+  const observe = (name, target) => {
+    let proxy;
+    if (typeof host.createObservedObject === 'function') {
+      // The native observer falls through before the property's own operation.
+      // Data and properties live on this one object; no Proxy receiver or
+      // independently synchronized target survives into the public API.
+      proxy = createNativeObserved(name);
       Object.setPrototypeOf(proxy, Object.getPrototypeOf(target));
       Object.defineProperties(proxy, Object.getOwnPropertyDescriptors(target));
     } else {
@@ -10036,7 +10096,7 @@
     // are now installed alongside the published surface.
     known = new Set(Reflect.ownKeys(globalThis));
     for (const [name, callbacks] of bootstrapCallbacks) host[name](...callbacks);
-    host.ready();
+    setTraceActive(host.ready(setTraceActive));
   };
   // Resolution is synchronous and never fetches. Import maps are not yet
   // supported; unprefixed names must fail rather than become relative URLs.
@@ -10060,7 +10120,7 @@
   globalThis.__mimicEvalSourceResolver = evalSourceResolver;
   /* compose_surface_tail */
   known = new Set(Reflect.ownKeys(globalThis));
-  host.ready();
+  setTraceActive(host.ready(setTraceActive));
   globalThis.__mimicUnsupportedProbe = (n) => {
     if (!known.has(n)) host.unsupported(String(n));
   };
