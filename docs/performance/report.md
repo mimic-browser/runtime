@@ -1,5 +1,50 @@
 # Performance architecture pass
 
+## 2026-09-29: first-wave snapshot restoration
+
+Concurrent Pages could wait while `prepareProfileBootstrap` built or loaded a
+snapshot, then still take the bare WebAPI bootstrap path. The `coldRoot` decision
+was made before preparation and remained stale even when `selectEntry` returned
+a usable artifact. It is now based on the selected snapshot. This affects the
+first wave of Pages after process start; established warm waves already used the
+snapshot. A focused regression test covers the first Page with a disk artifact.
+
+Three alternating fresh-process pairs ran the unchanged local static workload
+with 50 concurrent live Pages. All 300 sessions were valid. The control binary
+was SHA-256 `51f11af8...`; the candidate was `db82f1c8...`; both used frozen
+harness SHA-256 `ce1fce42...` on the same Windows host.
+
+| Median, three pairs | Before | After | Change |
+| --- | ---: | ---: | ---: |
+| Active process-tree RSS | 2039.32 MiB | 719.21 MiB | -64.7% |
+| Sampled peak process-tree RSS | 2300.06 MiB | 719.23 MiB | -68.7% |
+| CPU through first-wave completion | 23.81 s | 3.06 s | -87.1% |
+| First-wave elapsed time | 2.40 s | 0.48 s | -80.0% |
+
+The unchanged Wikipedia E2E passed all six runs in a separate three-pair
+fresh-process check. Median peak RSS was **431.75 → 433.09 MiB** (+0.3%) and
+elapsed time **10,812.7 → 10,865.5 ms** (+0.5%), both effectively unchanged.
+Thus this fix removes a real cold concurrency spike but does not advance the
+Wikipedia half-RSS target. A fresh empty-cache diagnostic completed all 50
+static Pages at 738.09 MiB and all 100 React Pages at 1873.75 MiB; these
+single candidate runs are directional, not paired improvement claims. The
+frozen fast gate passed all six compatibility workloads and its 50-Page static
+waves. Raw paired and diagnostic readings are in
+[`data/cold-root-20260929`](data/cold-root-20260929/).
+The focused first-Page restoration test passed on Windows and Linux; no full
+local test suite was run.
+
+A final run of the public benchmark runner also passed all 12 Chrome/Mimic
+correctness gates. Its five valid Mimic static 50-Page waves had median active
+RSS **748.11 MiB**, close to the preceding full run's **767.5 MiB** warm-wave
+result. The benchmark stopped the 100-Page static stage when the host fell
+below its free-memory threshold after the Chrome stages, then skipped later
+CPU and React density stages. Those stopped stages are **not** comparable
+results; the separate first-wave pairs above remain the evidence for this
+change. The full runner's density CSV and build manifest are retained with
+the receipts; its complete raw output remains outside the repository at
+`E:\Temp\mimic-rss-architecture\public-cold-root-final\raw.json`.
+
 ## 2026-09-29: retained font data on the Wikipedia Page
 
 The earlier forced-GC Wikipedia profile attributed 147.3 MiB of live Go

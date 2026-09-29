@@ -192,13 +192,16 @@ func (r *Realm) newRuntime() (engine.Runtime, error) {
 	}
 	plan := r.bootstrapSource()
 	capability, hasConnected := c.browser.factory.(engine.ConnectedRealmFactory)
-	coldRoot := connected == nil && !c.profileLocked && !c.browser.bootstrapSnapshots.hasSnapshotKey(plan.key)
 	if connected == nil && (c.profileLocked || hasConnected && capability.ConnectedRealms()) && !c.bootstrapPreparation {
 		if err := c.browser.prepareProfileBootstrap(plan.key, r.securityState()); err != nil {
 			p.trace.Add(trace.Error, "profileBootstrapPreparationFailed", map[string]any{"error": err.Error()})
 		}
 	}
 	snapshot, capture, issue := c.browser.bootstrapSnapshots.selectEntry(c.browser.lifetime, factory, plan.key)
+	// Snapshot preparation can finish while this Page waits for another Page.
+	// Decide from the selected artifact, including disk cache hits, rather than
+	// the cache state observed before preparation.
+	coldRoot := connected == nil && !c.profileLocked && snapshot == nil
 	r.bootstrapCapture = capture
 	if issue != nil {
 		p.trace.Add(trace.Error, "bootstrapSnapshotUnavailable", map[string]any{"error": issue.Error()})

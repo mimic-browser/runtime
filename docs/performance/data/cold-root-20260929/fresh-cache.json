@@ -1,0 +1,24 @@
+[
+  {
+    "workload": "static",
+    "pages": 50,
+    "valid": 50,
+    "rss_mib": 738.08984375,
+    "peak_rss_mib": 737.921875,
+    "elapsed_s": 0.84033969999291,
+    "stop_reason": null,
+    "binary_sha256": "db82f1c85faca672e7225260e4d0cc603d6a867effb7ca60a540e9e14eceabc4",
+    "harness_sha256": "ce1fce42fa9b9e03f105900601db4d6d7fa9b0d9cda51d5096322357277673e7"
+  },
+  {
+    "workload": "react",
+    "pages": 100,
+    "valid": 100,
+    "rss_mib": 1873.74609375,
+    "peak_rss_mib": 1872.11328125,
+    "elapsed_s": 1.8021562999929301,
+    "stop_reason": null,
+    "binary_sha256": "db82f1c85faca672e7225260e4d0cc603d6a867effb7ca60a540e9e14eceabc4",
+    "harness_sha256": "ce1fce42fa9b9e03f105900601db4d6d7fa9b0d9cda51d5096322357277673e7"
+  }
+]
