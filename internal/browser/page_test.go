@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -2149,17 +2150,50 @@ func TestPerformanceObserverReceivesResourceWithoutPollingTimers(t *testing.T) {
 
 func TestPerformanceResourceEntriesAreOrderedByFetchStart(t *testing.T) {
 	parallelBrowserTest(t)
+	releaseFirst := make(chan struct{})
+	var releaseOnce sync.Once
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Cache-Control", "no-store")
 		if request.URL.Path == "/first-slow" {
-			time.Sleep(40 * time.Millisecond)
+			select {
+			case <-releaseFirst:
+			case <-request.Context().Done():
+				return
+			}
+		} else if request.URL.Path == "/release-first" {
+			releaseOnce.Do(func() { close(releaseFirst) })
 		}
 		_, _ = fmt.Fprint(w, "ok")
 	}))
 	defer server.Close()
+	defer releaseOnce.Do(func() { close(releaseFirst) })
 	p := testPage(t)
-	v, err := p.Evaluate(context.Background(), `(()=>{const first=fetch(`+fmt.Sprintf("%q", server.URL+"/first-slow")+`),second=new Promise(resolve=>setTimeout(()=>resolve(fetch(`+fmt.Sprintf("%q", server.URL+"/second-fast")+`)),5));return Promise.all([first,second]).then(()=>performance.getEntriesByType('resource').filter(e=>e.name.includes('first-slow')||e.name.includes('second-fast')).map(e=>({name:e.name,startTime:e.startTime,responseEnd:e.responseEnd})))})()`)
+	source := fmt.Sprintf(`(async () => {
+  const first = fetch(%q);
+  await new Promise(resolve => setTimeout(resolve, 5));
+  const secondURL = %q;
+  const secondEntry = new Promise(resolve => {
+    const observer = new PerformanceObserver(list => {
+      const entry = list.getEntriesByType('resource').find(item => item.name === secondURL);
+      if (entry) {
+        observer.disconnect();
+        resolve(entry);
+      }
+    });
+    observer.observe({type: 'resource', buffered: true});
+  });
+  const second = await fetch(secondURL);
+  await second.text();
+  await secondEntry;
+  await new Promise(resolve => setTimeout(resolve, 5));
+  await fetch(%q);
+  await first;
+  return performance.getEntriesByType('resource')
+    .filter(entry => entry.name.includes('first-slow') || entry.name.includes('second-fast'))
+    .map(entry => ({name: entry.name, startTime: entry.startTime, responseEnd: entry.responseEnd}));
+})()`, server.URL+"/first-slow", server.URL+"/second-fast", server.URL+"/release-first")
+	v, err := p.Evaluate(context.Background(), source)
 	if err != nil {
 		t.Fatal(err)
 	}

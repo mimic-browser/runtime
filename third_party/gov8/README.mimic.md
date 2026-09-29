@@ -81,8 +81,8 @@ Update `Size` and `SHA256` in `internal/prebuilt/prebuilt_windows_amd64.go`
 from the packaging output. Validate without a shim override using focused
 native identity, property observation, Date receiver and snapshot tests.
 
-Packaged Windows DLL: 46,458,880 bytes, SHA-256
-`a4f771213c2feacd047ec8559d9c3b3311fbdabdd16b8d1efef6ec2b268d7d8a`.
+Packaged Windows DLL: 46,464,512 bytes, SHA-256
+`55d964aa01113bf7d2f3abf3f6998d6c9afecffe0a678d368277d784b55a7610`.
 Patched Windows V8 archive SHA-256:
 `07896581257a5880946602eba27dfb2677b114e093de2cc98c116c6416755b02`.
 Native engine: V8 15.2.124.1-rusty, crate 152.2.0, temporal_capi 0.2.6.
@@ -111,8 +111,8 @@ verification are shared with Windows.
 
 The pointer-compressed Linux archive SHA-256 is
 `b05abd203317307e55de5b18c006b04c760302182a2ccd1de780430c2c752615`.
-The packaged library is 58,996,888 bytes, SHA-256
-`1d2969c26bb1787e379088d7585049185377a7538f0405bbffb1076c80e40221`.
+The packaged library is 59,005,088 bytes, SHA-256
+`c4638e6f2bf608eb3118101b31c1b7e098986d16b8d742bf5213e7124134c901`.
 Under WSL, use `--build-dir` on the Linux filesystem to avoid extracting the
 pinned source tree through the Windows filesystem mount.
 

@@ -7,9 +7,18 @@ on:
         description: Release version (for example v0.1.6)
         required: true
         type: string
+      ci_run:
+        description: Successful build workflow run whose binaries will be reused
+        required: false
+        type: string
+      binary_source_revision:
+        description: Full source SHA of the reused CI binaries
+        required: false
+        type: string
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   package:
@@ -22,6 +31,8 @@ jobs:
     env:
       CGO_ENABLED: "1"
       RELEASE_VERSION: ${{ inputs.version }}
+      BINARY_CI_RUN: ${{ inputs.ci_run }}
+      BINARY_SOURCE_REVISION: ${{ inputs.binary_source_revision }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -52,7 +63,14 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev fonts-dejavu-core fonts-liberation
       - name: Prepare and verify extracted package
-        run: python tools/release/prepare.py --version "$RELEASE_VERSION"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ -n "$BINARY_CI_RUN" ]]; then
+            python tools/release/prepare.py --version "$RELEASE_VERSION" --ci-run "$BINARY_CI_RUN" --binary-source-revision "$BINARY_SOURCE_REVISION"
+          else
+            python tools/release/prepare.py --version "$RELEASE_VERSION"
+          fi
         shell: bash
       - name: Upload verified archive and receipt
         uses: actions/upload-artifact@v4

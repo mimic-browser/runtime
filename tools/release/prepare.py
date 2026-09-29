@@ -28,6 +28,27 @@ def digest(path):
         return hashlib.file_digest(stream, 'sha256').hexdigest()
 
 
+def verified_ci_binary(run_id, revision, host, destination):
+    """Copy the successful CI job's executable without rebuilding or altering it."""
+    run_data = json.loads(run('gh', 'run', 'view', str(run_id), '--repo', 'moreveal/mimic',
+                              '--json', 'headSha,status,conclusion', capture=True))
+    if (run_data['headSha'] != revision or run_data['status'] != 'completed'
+            or run_data['conclusion'] != 'success'):
+        raise RuntimeError('CI run does not successfully validate the binary source revision')
+    with tempfile.TemporaryDirectory(prefix='mimic-ci-binary-') as temp:
+        run('gh', 'run', 'download', str(run_id), '--repo', 'moreveal/mimic',
+            '--name', f'mimic-{host.title()}-amd64', '--dir', temp)
+        source = Path(temp) / destination.name
+        if not source.is_file():
+            raise RuntimeError(f'CI binary missing from artifact: {source.name}')
+        build_info = run('go', 'version', '-m', str(source), capture=True)
+        if (f'vcs.revision={revision}' not in build_info
+                or 'vcs.modified=false' not in build_info):
+            raise RuntimeError('CI binary build information does not match the source revision')
+        shutil.copyfile(source, destination)
+    return digest(destination)
+
+
 def clean_revision(path):
     if run('git', 'status', '--porcelain', cwd=path, capture=True).strip():
         raise RuntimeError(f'Commit changes before preparing a release: {path}')
@@ -129,25 +150,36 @@ def notices(target):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--version', required=True)
+    parser.add_argument('--ci-run', type=int)
+    parser.add_argument('--binary-source-revision')
     args = parser.parse_args()
     if not re.fullmatch(r'v\d+\.\d+\.\d+(?:-beta\.\d+)?', args.version):
         parser.error('Expected vMAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCH-beta.NUMBER')
     host = platform.system().lower()
     if host not in ('windows', 'linux') or platform.machine().lower() not in ('amd64', 'x86_64'):
         parser.error('Only native Windows/Linux amd64 builds are packaged')
-    source_revision = clean_revision(ROOT)
+    if bool(args.ci_run) != bool(args.binary_source_revision):
+        parser.error('--ci-run and --binary-source-revision must be provided together')
+    packaging_revision = clean_revision(ROOT)
+    source_revision = args.binary_source_revision or packaging_revision
+    if not re.fullmatch(r'[0-9a-f]{40}', source_revision):
+        parser.error('Expected a full lowercase binary source SHA')
     output = ROOT / '.build/releases' / args.version
     stage = output / f'mimic-{args.version}-{host}-amd64'
     stage.mkdir(parents=True, exist_ok=False)
     binary = stage / ('mimic.exe' if host == 'windows' else 'mimic')
-    env = os.environ.copy()
-    env['CGO_ENABLED'] = '1'
-    # Prepare the pinned Rust producer before Go reaches its cgo link step.
-    # This command is content-addressed and skips Cargo when the archive already
-    # matches Cargo.lock and the native source inputs.
-    subprocess.run(['go', 'run', './tools/buildnative'], cwd=ROOT, env=env, check=True)
-    subprocess.run(['go', 'build', '-trimpath', '-ldflags=-s -w', '-o', str(binary), './cmd/mimic'],
-                   cwd=ROOT, env=env, check=True)
+    if args.ci_run:
+        binary_sha256 = verified_ci_binary(args.ci_run, source_revision, host, binary)
+    else:
+        env = os.environ.copy()
+        env['CGO_ENABLED'] = '1'
+        # Prepare the pinned Rust producer before Go reaches its cgo link step.
+        # This command is content-addressed and skips Cargo when the archive already
+        # matches Cargo.lock and the native source inputs.
+        subprocess.run(['go', 'run', './tools/buildnative'], cwd=ROOT, env=env, check=True)
+        subprocess.run(['go', 'build', '-trimpath', '-ldflags=-s -w', '-o', str(binary), './cmd/mimic'],
+                       cwd=ROOT, env=env, check=True)
+        binary_sha256 = digest(binary)
     for name in ('LICENSE', 'RELEASE_NOTES.md'):
         shutil.copyfile(ROOT / name, stage / name)
     for name in run('git', 'ls-files', '-z', '--', 'examples', cwd=ROOT, capture=True).split('\0'):
@@ -176,9 +208,9 @@ def main():
     guide = stage / 'docs/compatibility/crawlee-playwright.md'
     guide.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(ROOT / 'docs/compatibility/crawlee-playwright.md', guide)
-    resolve_unbundled_links(stage, source_revision)
+    resolve_unbundled_links(stage, packaging_revision)
     validate_document_links(stage)
-    stamp = int(run('git', 'show', '-s', '--format=%ct', source_revision, capture=True).strip())
+    stamp = int(run('git', 'show', '-s', '--format=%ct', packaging_revision, capture=True).strip())
     files = sorted(p for p in stage.rglob('*') if p.is_file())
     if host == 'windows':
         import time
@@ -217,14 +249,17 @@ def main():
         npm = shutil.which('npm.cmd' if host == 'windows' else 'npm')
         run(npm, 'ci', '--ignore-scripts', cwd=examples)
         run('node', 'verify.mjs', str(ready), cwd=examples)
-    if clean_revision(ROOT) != source_revision:
+    if clean_revision(ROOT) != packaging_revision:
         raise RuntimeError('Checkout changed during preparation')
     receipt = {
         'version': args.version, 'platform': f'{host}-amd64',
         'sourceRevision': source_revision,
+        'packagingRevision': packaging_revision,
+        'ciRun': f'https://github.com/moreveal/mimic/actions/runs/{args.ci_run}' if args.ci_run else None,
+        'binariesReusedUnchanged': bool(args.ci_run),
         'goVersion': run('go', 'version', capture=True).strip(),
         'archive': archive.name, 'sha256': digest(archive), 'size': archive.stat().st_size,
-        'binarySha256': digest(binary), 'dependencies': inventory,
+        'binarySha256': binary_sha256, 'dependencies': inventory,
         'checks': ['runtimecheck:v8', 'runtimecheck:quickjs', 'runtimecheck:goja',
                    'examples:puppeteer', 'examples:playwright', 'examples:concurrency'],
         'verified': True,

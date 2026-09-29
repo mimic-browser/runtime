@@ -34,6 +34,15 @@ class PublicationGateTests(unittest.TestCase):
     def test_verified_matching_archive(self):
         self.assertEqual(self.check()[0], self.archive)
 
+    def test_reused_binary_receipt_keeps_distinct_packaging_revision(self):
+        self.receipt['sourceRevision'] = 'binary-source'
+        self.receipt['packagingRevision'] = 'release-commit'
+        (self.root / 'windows-amd64.receipt.json').write_text(json.dumps(self.receipt))
+        self.assertEqual(verified_archive(self.root, 'v0.1.0-beta.1', 'windows',
+                                          'release-commit')[0], self.archive)
+        with self.assertRaisesRegex(RuntimeError, 'Stale or unverified'):
+            verified_archive(self.root, 'v0.1.0-beta.1', 'windows', 'other-commit')
+
     def test_modified_archive_rejected(self):
         self.archive.write_bytes(b'changed archive bytes')
         with self.assertRaisesRegex(RuntimeError, 'Archive changed'):

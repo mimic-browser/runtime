@@ -438,18 +438,13 @@ func (sc *SnapshotCreator) Close() error {
 // has released the thread's engine-enter state.
 func (sc *SnapshotCreator) teardown() {
 	sc.iso.mu.Lock()
-	disposedHandle := sc.iso.handle
-	hadExternalReferences := sc.iso.advancedExternalReferences
 	sc.iso.handle = 0
 	sc.iso.advancedExternalReferences = false
 	sc.iso.publishClosedLocked()
 	sc.iso.mu.Unlock()
-	if hadExternalReferences {
-		// The native creator has already destroyed its isolate. The cleanup hook
-		// only drops isolate-keyed host tables and is idempotent with the native
-		// creator teardown path.
-		_, _, _ = proc("gov8_ia_after_isolate_dispose").Call(disposedHandle)
-	}
+	// Creator disposal removes its native table before returning. A second
+	// address-keyed cleanup here could delete a newer creator's table after V8
+	// reuses the disposed isolate address.
 	unregisterIsolate(sc.iso)
 	runtime.UnlockOSThread()
 	sc.closed = true

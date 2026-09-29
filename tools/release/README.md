@@ -1,10 +1,10 @@
 # Mimic releases
 
-Release archives are built from a clean, committed `moreveal/mimic` revision.
-Windows and Linux must use the same source revision. The Package release CI
-workflow can run the same preparation and upload its verified archives and
-receipts. Download both artifacts into `.build/releases/VERSION/` before
-publishing, and verify the run's source revision is the release commit.
+Release archives are packaged from a clean, committed `moreveal/mimic` revision.
+Windows and Linux must use the same binary source revision. The Package release
+CI workflow uploads verified archives and receipts. Download both artifacts into
+`.build/releases/VERSION/` before publishing. The receipts identify both the
+binary source revision and the packaging commit.
 
 ## Prepare
 
@@ -62,6 +62,16 @@ Outputs are written to `.build/releases/VERSION/`. Reusing an existing
 version/platform output directory is rejected so stale artifacts cannot be
 mistaken for a fresh build.
 
+To reuse unchanged executables from a successful build workflow run, supply its
+run ID and full source SHA to both platform jobs of Package release. The packager
+downloads that run's executable artifact, verifies its embedded VCS revision,
+then checks the extracted archive and public examples. The release commit may
+add notes or packaging changes; it must not alter the binary. For a local run:
+
+```powershell
+python tools/release/prepare.py --version v0.1.9 --ci-run 36577485575 --binary-source-revision 6224fecf2444c6b9ba58043f97782e2ec007d350
+```
+
 ## Publish
 
 Push the exact release commit to `moreveal/mimic`, then run:
@@ -70,11 +80,13 @@ Push the exact release commit to `moreveal/mimic`, then run:
 python tools/release/publish.py --version v0.1.6
 ```
 
-Publication requires verified Windows and Linux receipts for the current commit.
+Publication requires verified Windows and Linux receipts for the current
+packaging commit and, when reusing binaries, one successful CI run for their
+shared source revision.
 It creates a draft release, uploads the archives, manifest, and checksums,
 downloads every asset to verify its hash, and only then publishes the release.
 The receipts and archive hashes are authoritative; the publisher does not wait
-for CI. Use only artifacts from a successful run for the exact release commit.
+for CI. Use only artifacts from the successful run named in both receipts.
 
 ## Publish the website
 

@@ -18,7 +18,7 @@ CHECKS = {'runtimecheck:v8', 'runtimecheck:quickjs', 'runtimecheck:goja',
 def verified_archive(output, version, host, source_revision):
     receipt = json.loads((output / f'{host}-amd64.receipt.json').read_text())
     if (receipt['version'] != version or receipt['platform'] != f'{host}-amd64'
-            or receipt['sourceRevision'] != source_revision
+            or receipt.get('packagingRevision', receipt['sourceRevision']) != source_revision
             or receipt['verified'] is not True or set(receipt['checks']) != CHECKS):
         raise RuntimeError(f'Stale or unverified {host} receipt')
     filename = receipt['archive']
@@ -49,9 +49,32 @@ def main():
         assets.append(archive)
         public_assets.append({key: receipt[key] for key in
                               ('platform', 'archive', 'sha256', 'size', 'binarySha256', 'checks')})
+    receipts = [json.loads((output / f'{host}-amd64.receipt.json').read_text())
+                for host in ('windows', 'linux')]
+    binary_revisions = {receipt['sourceRevision'] for receipt in receipts}
+    ci_runs = {receipt.get('ciRun') for receipt in receipts}
+    reused = {receipt.get('binariesReusedUnchanged', False) for receipt in receipts}
+    if len(binary_revisions) != 1 or len(ci_runs) != 1 or len(reused) != 1:
+        raise RuntimeError('Platform receipts disagree on binary provenance')
+    binary_revision = binary_revisions.pop()
+    ci_run = ci_runs.pop()
+    binaries_reused = reused.pop()
+    if binaries_reused:
+        if not ci_run:
+            raise RuntimeError('Reused binaries require a CI run')
+        run_id = ci_run.rsplit('/', 1)[-1]
+        run_data = json.loads(run('gh', 'run', 'view', run_id, '--repo', REPO,
+                                  '--json', 'headSha,status,conclusion', capture=True))
+        if (run_data['headSha'] != binary_revision or run_data['status'] != 'completed'
+                or run_data['conclusion'] != 'success'):
+            raise RuntimeError('Binary source CI run is not successful')
+    elif binary_revision != source_revision or ci_run:
+        raise RuntimeError('Fresh binaries must come from the packaging revision')
     manifest = output / 'release-manifest.json'
     manifest.write_text(json.dumps({
-        'version': args.version, 'sourceRevision': source_revision,
+        'version': args.version, 'sourceRevision': binary_revision,
+        'packagingRevision': source_revision, 'ciRun': ci_run,
+        'binariesReusedUnchanged': binaries_reused,
         'license': 'Prosperity-3.0.0', 'exampleLicense': 'MIT',
         'requirements': {'windows-amd64': 'Windows x64; validated on Windows 11',
                          'linux-amd64': 'glibc 2.39+, libgcc_s, installed fonts; Ubuntu 24.04 / WSL2'},

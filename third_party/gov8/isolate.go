@@ -143,7 +143,8 @@ func (i *Isolate) Close() error {
 		fastAPICleanupErr = afterFastAPIIsolateDispose(i, disposedHandle)
 	}
 	if i.advancedCounterHandle != 0 || i.advancedExternalReferences {
-		_, _, _ = proc("gov8_ia_after_isolate_dispose").Call(disposedHandle)
+		// Native disposal already removed the address-keyed counter and
+		// external-reference tables before another isolate can reuse this address.
 		dropIsolateCounter(i.advancedCounterHandle)
 		i.advancedCounterHandle = 0
 		i.advancedExternalReferences = false

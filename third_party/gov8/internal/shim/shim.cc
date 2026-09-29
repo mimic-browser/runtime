@@ -94,6 +94,7 @@ uintptr_t gov8_call_words(uintptr_t address, size_t count, const uintptr_t* word
 //    (0, false) to mirror the oracle's new_default_platform(0, false)).
 //  - v8::MicrotaskQueue::New in the artifact returns a raw pointer; the
 //    artifact exports the owning RustyMicrotaskQueueHandle wrapper.
+extern "C" __declspec(dllexport) int64_t gov8_ia_after_isolate_dispose(v8::Isolate* isolate);
 extern "C" {
 v8::Platform* v8__Platform__NewDefaultPlatform(int thread_pool_size,
                                                bool idle_task_support);
@@ -572,6 +573,9 @@ __declspec(dllexport) void* gov8_isolate_new(void) {
   }
 }
 
+// Cleanup must share the native disposal call. Releasing the isolate first and
+// removing address-keyed tables in a later Go call lets a new isolate reuse
+// that address and lose its live external-reference table.
 __declspec(dllexport) int64_t gov8_isolate_dispose(v8::Isolate* iso) {
   ClearErr();
   if (iso == nullptr) {
@@ -589,6 +593,7 @@ __declspec(dllexport) int64_t gov8_isolate_dispose(v8::Isolate* iso) {
     // survivor's next call re-enters it through Gov8IsolateScope.
     iso->Exit();
     iso->Dispose();
+    gov8_ia_after_isolate_dispose(iso);
     return kOk;
   } catch (...) {
     SetErr("C++ exception in isolate_dispose");
