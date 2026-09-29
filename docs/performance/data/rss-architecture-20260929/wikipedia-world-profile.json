@@ -1,0 +1,22 @@
+{
+  "startedAt": "2026-09-29T06:11:21.282Z",
+  "elapsedMs": 10169,
+  "diagnostics": {
+    "enabled": false,
+    "realms": [
+      {
+        "diagnostics": {
+          "enabled": false
+        },
+        "realm": "a43723af-2a5e-4e5b-9cb7-f2866f0387c6"
+      }
+    ],
+    "detail": {
+      "costs": {}
+    }
+  },
+  "trace": {
+    "crashReports": {},
+    "events": []
+  }
+}

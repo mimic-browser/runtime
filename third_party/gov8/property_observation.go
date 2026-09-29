@@ -42,3 +42,16 @@ func (i *Isolate) NewPropertyObservationFactory(scope *Scope, context *Context) 
 	}
 	return Value{iso: i, sc: scope, h: handle}, nil
 }
+
+// SetPropertyObservationEnabled controls diagnostic callbacks on the isolate's
+// pinned owner thread. Ordinary property resolution is unchanged when disabled.
+func (i *Isolate) SetPropertyObservationEnabled(enabled bool) error {
+	if err := i.check(); err != nil {
+		return err
+	}
+	value := uintptr(0)
+	if enabled {
+		value = 1
+	}
+	return callErr("PropertyObservation.SetEnabled", proc("gov8_observation_set_enabled"), i.handleAssumingCheck(), value)
+}

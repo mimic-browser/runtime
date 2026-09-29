@@ -16,6 +16,9 @@ replace github.com/bogdanfinn/utls => ./third_party/utls
 // Native HTMLDDA flags and complete accessor descriptors for document.all.
 replace github.com/maclof/gov8 => ./third_party/gov8
 
+// Keep horizontal font metrics while releasing unused static glyph outlines.
+replace github.com/go-text/typesetting => ./third_party/go-text-typesetting
+
 require (
 	github.com/andybalholm/brotli v1.2.0
 	github.com/bogdanfinn/fhttp v0.6.9

@@ -385,6 +385,11 @@ func (r *Runtime) Dispose() error {
 			if err := gov8.ReleaseIsolateHostState(s.isolate); err != nil && disposeErr == nil {
 				disposeErr = err
 			}
+			// The observation gate is thread-local because each isolate is pinned
+			// to this owner. Reset it before the thread can be reused.
+			if err := s.isolate.SetPropertyObservationEnabled(true); err != nil && disposeErr == nil {
+				disposeErr = err
+			}
 			if s.restoreThreadPolicy != nil {
 				if err := s.restoreThreadPolicy(); err != nil && disposeErr == nil {
 					disposeErr = err

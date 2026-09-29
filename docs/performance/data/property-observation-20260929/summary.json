@@ -1,0 +1,181 @@
+{
+  "comparison": "Separate-session fast gates; not a paired full benchmark or an updated website comparison.",
+  "variants": {
+    "control": {
+      "raw_file": "control.json.gz",
+      "uncompressed_sha256": "febc0139b62ee301a24250c5f772149c9ea047a5f46fde90fcab6a6f465c3859",
+      "executable_sha256": "86205dde44ae6e4f5dbfdb7888503d0678837e8056be84a4858da09b7f96b607",
+      "harness_sha256": "ce1fce42fa9b9e03f105900601db4d6d7fa9b0d9cda51d5096322357277673e7",
+      "latency_ms": {
+        "dom": {
+          "session_create_ms": 2.3240000009536743,
+          "execution_ms": 157.9329999804031,
+          "completion_ms": 187.35599998035468
+        },
+        "static": {
+          "session_create_ms": 2.5337999977637082,
+          "execution_ms": 3.2045000116340816,
+          "completion_ms": 32.541199994739145
+        },
+        "react": {
+          "session_create_ms": 21.877799998037517,
+          "execution_ms": 49.232899997150525,
+          "completion_ms": 85.80760000040755
+        }
+      },
+      "correctness": [
+        {
+          "workload": "static",
+          "status": "VALID"
+        },
+        {
+          "workload": "cpu",
+          "status": "VALID"
+        },
+        {
+          "workload": "dom",
+          "status": "VALID"
+        },
+        {
+          "workload": "async",
+          "status": "VALID"
+        },
+        {
+          "workload": "react",
+          "status": "VALID"
+        },
+        {
+          "workload": "wasm",
+          "status": "VALID"
+        }
+      ],
+      "concurrency": [
+        {
+          "workload": "static",
+          "pages": 10,
+          "throughput": 143.29870760055167,
+          "valid": 10,
+          "stop_reason": null
+        },
+        {
+          "workload": "static",
+          "pages": 10,
+          "throughput": 84.09424608785149,
+          "valid": 10,
+          "stop_reason": null
+        },
+        {
+          "workload": "static",
+          "pages": 10,
+          "throughput": 83.09554159815309,
+          "valid": 10,
+          "stop_reason": null
+        }
+      ],
+      "memory": [
+        {
+          "workload": "static",
+          "pages": 10,
+          "active_rss_mib": 518.51953125,
+          "recovered_rss_mib": 159.109375,
+          "valid": 10
+        },
+        {
+          "workload": "react",
+          "pages": 10,
+          "active_rss_mib": 548.6875,
+          "recovered_rss_mib": 157.62890625,
+          "valid": 10
+        }
+      ]
+    },
+    "restored": {
+      "raw_file": "restored.json.gz",
+      "uncompressed_sha256": "c687d4a36d22fa95c0622fa1052cf7cde0f60a40194892e6aded3b8870163f5f",
+      "executable_sha256": "fc940f36071e4e80c870ec31a940f09849bfd0675bab04ca37bb2908b06ef183",
+      "harness_sha256": "ce1fce42fa9b9e03f105900601db4d6d7fa9b0d9cda51d5096322357277673e7",
+      "latency_ms": {
+        "dom": {
+          "session_create_ms": 1.9717999966815114,
+          "execution_ms": 126.38890001107939,
+          "completion_ms": 155.37389999371953
+        },
+        "static": {
+          "session_create_ms": 12.089199997717515,
+          "execution_ms": 3.0629000102635473,
+          "completion_ms": 33.443299995269626
+        },
+        "react": {
+          "session_create_ms": 12.178000004496425,
+          "execution_ms": 42.85639998852275,
+          "completion_ms": 80.27880001463927
+        }
+      },
+      "correctness": [
+        {
+          "workload": "static",
+          "status": "VALID"
+        },
+        {
+          "workload": "cpu",
+          "status": "VALID"
+        },
+        {
+          "workload": "dom",
+          "status": "VALID"
+        },
+        {
+          "workload": "async",
+          "status": "VALID"
+        },
+        {
+          "workload": "react",
+          "status": "VALID"
+        },
+        {
+          "workload": "wasm",
+          "status": "VALID"
+        }
+      ],
+      "concurrency": [
+        {
+          "workload": "static",
+          "pages": 10,
+          "throughput": 82.58108843863712,
+          "valid": 10,
+          "stop_reason": null
+        },
+        {
+          "workload": "static",
+          "pages": 10,
+          "throughput": 81.30306041275395,
+          "valid": 10,
+          "stop_reason": null
+        },
+        {
+          "workload": "static",
+          "pages": 10,
+          "throughput": 79.04907130260601,
+          "valid": 10,
+          "stop_reason": null
+        }
+      ],
+      "memory": [
+        {
+          "workload": "static",
+          "pages": 10,
+          "active_rss_mib": 518.81640625,
+          "recovered_rss_mib": 160.4296875,
+          "valid": 10
+        },
+        {
+          "workload": "react",
+          "pages": 10,
+          "active_rss_mib": 542.33984375,
+          "recovered_rss_mib": 151.23046875,
+          "valid": 10
+        }
+      ]
+    }
+  }
+}

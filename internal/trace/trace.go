@@ -46,9 +46,10 @@ type Recorder struct {
 	enabled    bool
 	// Network completions are consumed by Performance timelines independently of
 	// the bounded diagnostic history. A slow consumer must not lose an entry.
-	networkEvents []Event
-	subscribers   map[uint64]subscriber
-	subID         uint64
+	networkEvents     []Event
+	subscribers       map[uint64]subscriber
+	subID             uint64
+	observationChange func(bool, bool)
 }
 
 type subscriber struct {
@@ -139,13 +140,54 @@ func (r *Recorder) Start() {
 	r.events = nil
 	r.eventStart = 0
 	r.enabled = true
+	change := r.observationChange
 	r.mu.Unlock()
+	if change != nil {
+		change(true, true)
+	}
 }
 
 func (r *Recorder) Stop() {
 	r.mu.Lock()
 	r.enabled = false
+	wanted := r.observationWantedLocked()
+	change := r.observationChange
 	r.mu.Unlock()
+	if change != nil {
+		change(wanted, false)
+	}
+}
+
+func (r *Recorder) observationWantedLocked() bool {
+	if r.enabled {
+		return true
+	}
+	for _, sub := range r.subscribers {
+		if sub.kinds == nil || sub.kinds[API] || sub.kinds[Unsupported] {
+			return true
+		}
+	}
+	return false
+}
+
+// ObservationWanted includes diagnostic capture and subscribers that consume
+// API/unsupported-property events. It is independent of network event demand.
+func (r *Recorder) ObservationWanted() bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.observationWantedLocked()
+}
+
+// SetObservationChange connects a Page-local property observer to demand. The
+// callback runs outside the recorder lock to permit realm callbacks to trace.
+func (r *Recorder) SetObservationChange(change func(bool, bool)) {
+	r.mu.Lock()
+	r.observationChange = change
+	wanted := r.observationWantedLocked()
+	r.mu.Unlock()
+	if change != nil {
+		change(wanted, false)
+	}
 }
 
 // Wants reports whether an event needs diagnostic capture or live delivery.
@@ -255,6 +297,20 @@ func (r *Recorder) SubscribeKinds(kinds []Kind, f func(Event)) func() {
 		}
 	}
 	r.subscribers[id] = subscriber{callback: f, kinds: filter}
+	wanted := r.observationWantedLocked()
+	change := r.observationChange
 	r.mu.Unlock()
-	return func() { r.mu.Lock(); delete(r.subscribers, id); r.mu.Unlock() }
+	if change != nil {
+		change(wanted, false)
+	}
+	return func() {
+		r.mu.Lock()
+		delete(r.subscribers, id)
+		wanted := r.observationWantedLocked()
+		change := r.observationChange
+		r.mu.Unlock()
+		if change != nil {
+			change(wanted, false)
+		}
+	}
 }

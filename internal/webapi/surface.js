@@ -10,6 +10,85 @@
     bootstrapCallbacks.push([name, callbacks]);
     host[name](...callbacks);
   };
+  // Generated fallback operations have no implementation until they are read.
+  // Their descriptor is published at the original position; after all profile
+  // and handwritten installers run, V8 replaces the placeholder with a lazy
+  // data slot. This leaves authored methods and accessor semantics untouched.
+  const generatedLazyInstaller =
+    typeof host.createGeneratedLazyInstaller === 'function'
+      ? host.createGeneratedLazyInstaller
+      : null;
+  const generatedLazyOperations = [];
+  const generatedLazyOperationIndex = new Map();
+  const stageGeneratedLazyOperation = (target, interfaceName, memberName, domain) => {
+    if (!generatedLazyInstaller) return false;
+    const id = generatedLazyOperations.length;
+    const record = {
+      target,
+      interfaceName,
+      memberName,
+      functionName: memberName,
+      domain,
+      length: 0,
+    };
+    generatedLazyOperations.push(record);
+    generatedLazyOperationIndex.set(interfaceName + '\0' + memberName, record);
+    Object.defineProperty(target, memberName, {
+      value: undefined,
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    });
+    return true;
+  };
+  const installGeneratedLazyOperations = () => {
+    if (!generatedLazyInstaller || generatedLazyOperations.length === 0) return;
+    const materialize = (id) => {
+      const record = generatedLazyOperations[id];
+      if (!record) throw new RangeError('Unknown generated WebAPI member');
+      const { interfaceName, memberName, functionName, domain, length } = record;
+      const implementation = domain
+        ? {
+            [functionName](...args) {
+              return invokeLazyBehavior(interfaceName, memberName, this, args, undefined, 'value');
+            },
+          }[functionName]
+        : {
+            [functionName]() {
+              return host.semanticMissing(interfaceName + '.' + memberName);
+            },
+          }[functionName];
+      if (implementation.length !== length)
+        Object.defineProperty(implementation, 'length', { value: length, configurable: true });
+      const value = platformOperation(implementation, functionName, length);
+      markNative(value, functionName);
+      return value;
+    };
+    generatedLazyInstaller(materialize);
+    // A restored context has its own native registry even though its JS graph
+    // was deserialized from the bootstrap snapshot.
+    bootstrapRestoreHooks.push(() => host.createGeneratedLazyInstaller(materialize));
+    for (let id = 0; id < generatedLazyOperations.length; id++) {
+      const record = generatedLazyOperations[id];
+      const { target, memberName } = record;
+      const descriptor = Object.getOwnPropertyDescriptor(target, memberName);
+      // A later semantic installer may have replaced or removed the fallback.
+      if (
+        !descriptor ||
+        !('value' in descriptor) ||
+        descriptor.value !== undefined ||
+        !descriptor.configurable ||
+        !descriptor.writable
+      ) {
+        generatedLazyOperations[id] = null;
+        continue;
+      }
+      const attributes = descriptor.enumerable ? 0 : 2;
+      generatedLazyInstaller(target, memberName, id, attributes);
+      record.target = null;
+    }
+    generatedLazyOperationIndex.clear();
+  };
   // Shape is eager; implementation is not. These realm-local cells keep every
   // public function/accessor and its descriptor stable across materialization.
   const lazyDomainInterfaces = new Map();
@@ -233,7 +312,9 @@
   };
   const callRealmBinding = (receiver, binding, operation, args) =>
     bindingGet(receiver) === binding
-      ? binding.operations[operation](...args)
+      ? binding.kind === 'ElementGeometry'
+        ? binding.operations[operation](receiver, ...args)
+        : binding.operations[operation](...args)
       : unwrapCrossRealm(binding.frame, binding.binding.invoke)(receiver, operation, args);
   const bindingString = (value) => {
     if (typeof value === 'symbol') throw new TypeError('Cannot convert a Symbol value to a string');
@@ -241,7 +322,13 @@
   };
   // Match the realm trace's once-per-(name,supported) contract before FFI.
   const tracedAccesses = new Map();
+  let traceActive = false;
+  const setTraceActive = (enabled) => {
+    traceActive = !!enabled;
+    tracedAccesses.clear();
+  };
   const recordAPIAccess = (name, supported) => {
+    if (!traceActive) return;
     const bit = supported ? 1 : 2,
       seen = tracedAccesses.get(name) || 0;
     if (seen & bit) return;
@@ -1412,6 +1499,12 @@
   };
   resetRetainedGeometry('', -1);
   const invalidateRetainedGeometry = (target) => {
+    // No valid retained epoch exists until an observation has populated it.
+    // Repeated construction must not walk ancestry merely to dirty absent data.
+    if (retainedGeometryRevision === -1) {
+      checkpointObservations = null;
+      return;
+    }
     if (!target) {
       retainedStyleAttributeDependencies = new WeakMap();
       retainedGeometryCleanRevision = -1;
@@ -1436,6 +1529,11 @@
       retainedGeometryDirty.set(element, retainedGeometryGeneration);
   };
   const retainGeometryAcrossAttributeMutation = (element, name) => {
+    if (retainedGeometryRevision === -1) {
+      checkpointObservations = null;
+      styleReadCache = null;
+      return;
+    }
     // Locating a containing shadow root itself walks canonical ancestry. Keep
     // this fast path document-only; any live shadow tree uses the conservative
     // path until dependencies are indexed per canonical tree root.
@@ -1701,6 +1799,7 @@
     return children;
   };
   const containingShadowRoot = (element) => {
+    if (shadowHosts.size === 0 && !styleObservationIsolated) return null;
     const cache =
       styleReadCache &&
       (styleReadCache.shadowRoots || (styleReadCache.shadowRoots = new WeakMap()));
@@ -2822,32 +2921,44 @@
   bootstrapRestoreHooks.push(() => {
     geometryReadHints.length = 0;
   });
+  const geometryReceiver = (element) =>
+    elementWrappers.get(String(elementSlot(element).nodeId)) || element;
+  const geometryOperations = {
+    rect: (element) => {
+      const target = geometryReceiver(element);
+      const prior = geometryReadHints.indexOf(target);
+      if (prior >= 0) geometryReadHints.splice(prior, 1);
+      geometryReadHints.push(target);
+      if (geometryReadHints.length > 16) geometryReadHints.shift();
+      const value = clientRectFor(target);
+      return new DOMRect(value.x, value.y, value.width, value.height);
+    },
+    scroll: (element, params) => compatibilityScrolling.dispatch(geometryReceiver(element), params),
+    rects: (element) => makeElementClientRects(geometryReceiver(element)),
+    mediaTimeRanges: (element, kind) => {
+      const slot = elementSlot(element);
+      const tag = slot.tagName;
+      if (tag !== 'VIDEO' && tag !== 'AUDIO') throw new TypeError('Illegal invocation');
+      const source = kind === 'seekable' ? host.mediaSourceState(slot.nodeId) : null;
+      const ranges =
+        source && Number.isFinite(source.duration) && source.duration >= 0
+          ? [[0, source.duration]]
+          : [];
+      return createMediaTimeRanges(ranges);
+    },
+  };
+  const geometryBinding = {
+    kind: 'ElementGeometry',
+    operations: geometryOperations,
+    invoke(receiver, operation, args) {
+      const binding = bindingGet(receiver);
+      if (!binding || binding.kind !== 'ElementGeometry') throw new TypeError('Illegal invocation');
+      return binding.operations[operation](receiver, ...args);
+    },
+    unpreventable: false,
+  };
   const registerElementGeometry = (element) => {
-    const receiver = () => elementWrappers.get(String(elementSlot(element).nodeId)) || element;
-    registerRealmBinding(element, 'ElementGeometry', {
-      rect: () => {
-        const target = receiver();
-        const prior = geometryReadHints.indexOf(target);
-        if (prior >= 0) geometryReadHints.splice(prior, 1);
-        geometryReadHints.push(target);
-        if (geometryReadHints.length > 16) geometryReadHints.shift();
-        const value = clientRectFor(target);
-        return new DOMRect(value.x, value.y, value.width, value.height);
-      },
-      scroll: (params) => compatibilityScrolling.dispatch(receiver(), params),
-      rects: () => makeElementClientRects(receiver()),
-      mediaTimeRanges: (kind) => {
-        const slot = elementSlot(element);
-        const tag = slot.tagName;
-        if (tag !== 'VIDEO' && tag !== 'AUDIO') throw new TypeError('Illegal invocation');
-        const source = kind === 'seekable' ? host.mediaSourceState(slot.nodeId) : null;
-        const ranges =
-          source && Number.isFinite(source.duration) && source.duration >= 0
-            ? [[0, source.duration]]
-            : [];
-        return createMediaTimeRanges(ranges);
-      },
-    });
+    bindingSet(element, geometryBinding);
   };
   class Element extends Node {
     constructor(token, data) {
@@ -4755,6 +4866,43 @@
       if (slot) Object.assign(slot, d);
       return cached;
     }
+    const label =
+      d.type === 'element'
+        ? 'Element<' + String(d.tagName || '').toLowerCase() + '>'
+        : d.type === 'comment'
+          ? 'Comment'
+          : 'Text';
+    // Canonical nodes without own fields can use the final observed object
+    // directly. This avoids retaining a second element through its geometry
+    // closure and constructing then copying a temporary object.
+    if (typeof host.createObservedObject === 'function') {
+      let prototype;
+      if (d.type === 'doctype') prototype = (globalThis.DocumentType || Node).prototype;
+      else if (d.type === 'fragment') prototype = DocumentFragment.prototype;
+      else if (d.type === 'text') prototype = Text.prototype;
+      else if (d.type === 'comment') prototype = Comment.prototype;
+      else if (
+        d.type === 'element' &&
+        d.namespaceURI !== 'http://www.w3.org/2000/svg' &&
+        d.tagName !== 'SCRIPT' &&
+        d.tagName !== 'IMG' &&
+        d.tagName !== 'IFRAME' &&
+        d.tagName !== 'A'
+      ) {
+        const name = htmlElementInterfaces[d.tagName],
+          ctor = name && globalThis[name];
+        prototype =
+          typeof ctor === 'function' && ctor.prototype ? ctor.prototype : HTMLElement.prototype;
+      }
+      if (prototype) {
+        const node = createNativeObserved(label);
+        Object.setPrototypeOf(node, prototype);
+        elementData.set(node, d);
+        if (d.type === 'element') registerElementGeometry(node);
+        elementWrappers.set(key, node);
+        return node;
+      }
+    }
     let element;
     if (d.type === 'doctype') {
       element = Object.create((globalThis.DocumentType || Node).prototype);
@@ -4778,12 +4926,6 @@
       } else element = new HTMLElement(hostToken, d);
     }
     if (d.type === 'element' && !bindingGet(element)) registerElementGeometry(element);
-    const label =
-      d.type === 'element'
-        ? 'Element<' + String(d.tagName || '').toLowerCase() + '>'
-        : d.type === 'comment'
-          ? 'Comment'
-          : 'Text';
     const proxy = observe(label, element);
     elementWrappers.set(key, proxy);
     return proxy;
@@ -7029,13 +7171,11 @@
     observationHandlers.set(name, handler);
     return handler;
   };
-  const observe = (name, target) => {
-    let proxy;
-    if (typeof host.createObservedObject === 'function') {
-      // The native observer falls through before the property's own operation.
-      // Data and properties live on this one object; no Proxy receiver or
-      // independently synchronized target survives into the public API.
-      proxy = host.createObservedObject((object, property, write, supported) => {
+  const nativeObserverCallbacks = new Map();
+  const createNativeObserved = (name) => {
+    let callback = nativeObserverCallbacks.get(name);
+    if (!callback) {
+      callback = (object, property, write, supported) => {
         if (
           typeof property === 'string' &&
           !property.startsWith('_') &&
@@ -7044,7 +7184,18 @@
           const key = name + '.' + property;
           recordAPIAccess(key, supported || targetAbsentProperties.has(key));
         }
-      });
+      };
+      nativeObserverCallbacks.set(name, callback);
+    }
+    return host.createObservedObject(callback);
+  };
+  const observe = (name, target) => {
+    let proxy;
+    if (typeof host.createObservedObject === 'function') {
+      // The native observer falls through before the property's own operation.
+      // Data and properties live on this one object; no Proxy receiver or
+      // independently synchronized target survives into the public API.
+      proxy = createNativeObserved(name);
       Object.setPrototypeOf(proxy, Object.getPrototypeOf(target));
       Object.defineProperties(proxy, Object.getOwnPropertyDescriptors(target));
     } else {
@@ -9139,6 +9290,16 @@
   const applyTargetExposure = (input) => {
     const exposure = decodeExposure(input);
     pendingCallableExposure = exposure;
+    for (const [interfaceName, members] of Object.entries(exposure.prototypes || {})) {
+      if (!members) continue;
+      for (const member of members) {
+        const record = generatedLazyOperationIndex.get(interfaceName + '\0' + member.name);
+        if (!record || member.valueType !== 'function') continue;
+        record.functionName = member.functionName || member.name;
+        if (member.functionLength !== null && member.functionLength !== undefined)
+          record.length = member.functionLength;
+      }
+    }
     const properties = exposure.properties || [];
     const publicationMissing = new Set();
     // Publish the frozen profile's static globals in their observed order once,
@@ -10024,7 +10185,7 @@
     // are now installed alongside the published surface.
     known = new Set(Reflect.ownKeys(globalThis));
     for (const [name, callbacks] of bootstrapCallbacks) host[name](...callbacks);
-    host.ready();
+    setTraceActive(host.ready(setTraceActive));
   };
   // Resolution is synchronous and never fetches. Import maps are not yet
   // supported; unprefixed names must fail rather than become relative URLs.
@@ -10048,7 +10209,7 @@
   globalThis.__mimicEvalSourceResolver = evalSourceResolver;
   /* compose_surface_tail */
   known = new Set(Reflect.ownKeys(globalThis));
-  host.ready();
+  setTraceActive(host.ready(setTraceActive));
   globalThis.__mimicUnsupportedProbe = (n) => {
     if (!known.has(n)) host.unsupported(String(n));
   };

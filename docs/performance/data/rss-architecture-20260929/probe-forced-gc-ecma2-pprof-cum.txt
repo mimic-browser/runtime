@@ -1,0 +1,38 @@
+File: memory-probe.exe
+Build ID: E:\Temp\mimic-rss-architecture\memory-probe.exe2026-09-29 10:32:49.1369236 +0400 +04
+Type: inuse_space
+Time: 2026-09-29 10:38:32 +04
+Showing nodes accounting for 0, 0% of 195.34MB total
+Dropped 69 nodes (cum <= 0.98MB)
+Showing top 30 nodes out of 217
+      flat  flat%   sum%        cum   cum%
+         0     0%     0%   151.98MB 77.80%  github.com/moreveal/mimic/internal/engine/v8.(*Runtime).executeCommand.func1
+         0     0%     0%   151.98MB 77.80%  github.com/moreveal/mimic/internal/engine/v8.(*Runtime).loop
+         0     0%     0%   151.48MB 77.54%  github.com/moreveal/mimic/internal/engine/v8.(*adapter).runCommand.func1
+         0     0%     0%   150.47MB 77.03%  github.com/maclof/gov8.(*Function).Call
+         0     0%     0%   150.47MB 77.03%  github.com/moreveal/mimic/internal/engine/v8.(*adapter).Call.func3
+         0     0%     0%   150.47MB 77.03%  github.com/moreveal/mimic/internal/engine/v8.(*adapter).runContext.func1
+         0     0%     0%   150.47MB 77.03%  runtime.callbackWrap
+         0     0%     0%   150.47MB 77.03%  runtime.cgocall
+         0     0%     0%   150.47MB 77.03%  runtime.cgocallback
+         0     0%     0%   150.47MB 77.03%  runtime.cgocallbackg
+         0     0%     0%   150.47MB 77.03%  runtime.cgocallbackg1
+         0     0%     0%   150.47MB 77.03%  runtime.systemstack_switch
+         0     0%     0%   150.47MB 77.03%  syscall.(*Proc).Call
+         0     0%     0%   150.47MB 77.03%  syscall.SyscallN
+         0     0%     0%   150.47MB 77.03%  syscall.syscalln
+         0     0%     0%   149.97MB 76.77%  github.com/maclof/gov8.hostCallbackDispatch
+         0     0%     0%   149.47MB 76.52%  github.com/moreveal/mimic/internal/engine/v8.(*adapter).makeFunction.func1
+         0     0%     0%   147.28MB 75.39%  github.com/moreveal/mimic/internal/textmetrics.(*Engine).load
+         0     0%     0%   147.28MB 75.39%  github.com/moreveal/mimic/internal/textmetrics.(*Engine).shapeWithFonts
+         0     0%     0%   143.55MB 73.49%  github.com/moreveal/mimic/internal/browser.(*Realm).installTextMetrics.(*Realm).textShapeHost.func3
+         0     0%     0%   142.47MB 72.93%  github.com/moreveal/mimic/internal/textmetrics.(*Engine).MeasureWithFonts
+         0     0%     0%   134.55MB 68.88%  github.com/moreveal/mimic/internal/engine/v8.(*adapter).RunOnOwner.func1
+         0     0%     0%   134.05MB 68.62%  github.com/moreveal/mimic/internal/engine/v8.(*Runtime).executeCommand
+         0     0%     0%   134.05MB 68.62%  github.com/moreveal/mimic/internal/engine/v8.(*adapter).run (inline)
+         0     0%     0%   134.05MB 68.62%  github.com/moreveal/mimic/internal/engine/v8.(*adapter).runCommand
+         0     0%     0%   133.05MB 68.11%  github.com/moreveal/mimic/internal/engine/v8.(*adapter).Call
+         0     0%     0%   133.05MB 68.11%  github.com/moreveal/mimic/internal/engine/v8.(*adapter).runContext
+         0     0%     0%   131.94MB 67.54%  github.com/moreveal/mimic/internal/browser.(*Debugger).CallFunction.func2
+         0     0%     0%   131.94MB 67.54%  github.com/moreveal/mimic/internal/browser.(*Debugger).CallFunction.func2.1
+         0     0%     0%   131.94MB 67.54%  github.com/moreveal/mimic/internal/engine/v8.(*Runtime).execute (inline)

@@ -2,6 +2,12 @@
 // a realm-owned JS function, never a Go registry handle or a native allocation.
 namespace gov8_observation_impl {
 
+// Each Mimic isolate runs on a pinned owner thread. Keep the diagnostic gate
+// there rather than in a process-wide table on every property access. The
+// unconfigured/default state preserves standalone gov8 observation behavior.
+thread_local v8::Isolate* gated_isolate = nullptr;
+thread_local bool enabled = true;
+
 // Inspect only real properties on ordinary objects. An author's prototype
 // Proxy must not receive extra has/getOwnPropertyDescriptor traps just because
 // diagnostics classify an access before its actual lookup.
@@ -19,6 +25,7 @@ bool Supported(v8::Local<v8::Object> object, v8::Local<v8::Name> key,
 
 bool Observe(v8::Local<v8::Value> data, v8::Local<v8::Object> receiver,
              v8::Local<v8::Name> key, bool write, v8::Isolate* isolate) {
+  if (gated_isolate == isolate && !enabled) return true;
   v8::Local<v8::Value> args[] = {
       receiver, key, v8::Boolean::New(isolate, write),
       v8::Boolean::New(isolate, Supported(receiver, key, isolate))};
@@ -118,6 +125,18 @@ intptr_t Address(int32_t index) {
 }  // namespace gov8_observation_impl
 
 extern "C" {
+__declspec(dllexport) int64_t gov8_observation_set_enabled(
+    v8::Isolate* isolate, int32_t value) {
+  ClearErr();
+  if (isolate == nullptr || (value != 0 && value != 1)) {
+    SetErr("invalid property observation gate");
+    return kErrBadArg;
+  }
+  gov8_observation_impl::gated_isolate = isolate;
+  gov8_observation_impl::enabled = value != 0;
+  return kOk;
+}
+
 __declspec(dllexport) int64_t gov8_observation_callback_address(
     int32_t index, intptr_t* out) {
   ClearErr();

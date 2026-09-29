@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime/debug"
 	"runtime/pprof"
 	"syscall"
 	"time"
@@ -35,6 +36,13 @@ func Run() {
 	resourcePolicyPath := flag.String("resource-policy", "", "JSON resource policy for new contexts")
 	devPreview := flag.Bool("dev-preview", false, "enable the visual debug viewer at /debug/preview/")
 	flag.Parse()
+	// The V8 frontend keeps a substantial Go-side DOM and CDP projection during
+	// Page execution. A 50% heap growth target reduced measured concurrent and
+	// Wikipedia RSS without a sustained throughput penalty. Respect an explicit
+	// Go runtime setting, including GOGC=off, for deployments that tune it.
+	if *engineName == "v8" && os.Getenv("GOGC") == "" {
+		debug.SetGCPercent(50)
+	}
 	var cpuProfile *os.File
 	if path := os.Getenv("MIMIC_GO_CPU_PROFILE"); path != "" {
 		var err error

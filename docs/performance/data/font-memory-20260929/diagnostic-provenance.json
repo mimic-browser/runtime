@@ -1,0 +1,7 @@
+{
+  "probe_binary_sha256": "c71a7f01b158af41d23d77a9762ec1cec29f2a35a73d39c8733cab3d1a779956",
+  "reportable_candidate_sha256": "51f11af8af988340090eb41dce87be812b8451a2fd142cd768601aec107589f4",
+  "workload_sha256": "5b340d5c51d1ce7f291c1fb9f635df7e5a7d29cd12255ee2e09e59918325e444",
+  "probe": "Diagnostic-only browser wrapper with auxiliary localhost memory endpoint. Sampled the ECMAScript URL after two contexts were observed, then explicitly invoked V8 LowMemoryNotification and Go GC/FreeOSMemory. Frozen workload unchanged; wrapper timing and RSS excluded from reportable benchmark.",
+  "source_cleanup": "Temporary cmd/mimic-memory-probe and internal/browser/memory_probe_temp.go were removed after capture. The clean production source rebuilt to the reportable candidate SHA-256."
+}

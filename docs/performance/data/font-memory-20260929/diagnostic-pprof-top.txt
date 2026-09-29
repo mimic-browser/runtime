@@ -1,0 +1,37 @@
+File: font-memory-probe.exe
+Build ID: E:\Temp\mimic-rss-architecture\font-memory-probe.exe2026-09-29 11:26:53.4161592 +0400 +04
+Type: inuse_space
+Time: 2026-09-29 11:28:34 +04
+Showing nodes accounting for 65.46MB, 100% of 65.46MB total
+Showing top 30 nodes out of 224
+      flat  flat%   sum%        cum   cum%
+   22.41MB 34.24% 34.24%    22.41MB 34.24%  github.com/go-text/typesetting/font/opentype.(*Loader).findTableBuffer
+    6.53MB  9.98% 44.22%     6.53MB  9.98%  github.com/maclof/gov8.(*SnapshotCreator).CreateBlob
+    4.64MB  7.09% 51.31%     4.64MB  7.09%  reflect.growslice
+    3.92MB  5.98% 57.29%     5.42MB  8.27%  github.com/go-text/typesetting/font/opentype/tables.ParseGlyf
+    2.83MB  4.32% 61.61%     2.83MB  4.32%  bytes.Clone
+    2.78MB  4.25% 65.86%     2.78MB  4.25%  github.com/maclof/gov8.Value.StringValue
+    2.52MB  3.85% 69.71%     2.52MB  3.85%  github.com/go-text/typesetting/font/opentype/tables.ParseBaseArray
+    2.52MB  3.85% 73.55%     2.52MB  3.85%  runtime.mallocgc
+    2.16MB  3.29% 76.85%     2.16MB  3.29%  internal/bytealg.MakeNoZero
+    2.10MB  3.21% 80.06%     2.10MB  3.21%  github.com/go-text/typesetting/font.newCmap4
+    1.68MB  2.57% 82.62%     1.68MB  2.57%  github.com/go-text/typesetting/font/opentype/tables.ParseCmapSubtable12
+    1.51MB  2.31% 84.93%     2.01MB  3.07%  github.com/moreveal/mimic/internal/dom.streamBackend.Create
+    1.15MB  1.76% 86.69%     1.15MB  1.76%  github.com/go-text/typesetting/font.NewFace
+       1MB  1.53% 88.21%        1MB  1.53%  github.com/go-text/typesetting/font/opentype/tables.(*CompositeGlyph).parseGlyphs
+    0.90MB  1.38% 89.59%     3.81MB  5.83%  github.com/moreveal/mimic/internal/webapi.bootstrapFor.func1
+    0.76MB  1.15% 90.75%     0.76MB  1.15%  github.com/moreveal/mimic/internal/webapi.selectedCatalog
+    0.52MB   0.8% 91.55%     0.52MB   0.8%  github.com/moreveal/mimic/internal/layoutflat.(*State).PublishJSON
+    0.52MB  0.79% 92.34%     0.52MB  0.79%  github.com/go-text/typesetting/harfbuzz.(*Buffer).append
+    0.51MB  0.78% 93.12%     0.51MB  0.78%  github.com/go-text/typesetting/font/opentype/tables.(*SinglePosData2).parseValueRecords
+    0.50MB  0.77% 93.89%     0.50MB  0.77%  github.com/go-text/typesetting/font/opentype/tables.ParsePairPosData1
+    0.50MB  0.77% 94.65%     0.50MB  0.77%  github.com/go-text/typesetting/font/opentype/tables.ParseMark2Array
+    0.50MB  0.76% 95.42%     0.50MB  0.76%  github.com/bogdanfinn/tls-client.NewHttpClient
+    0.50MB  0.76% 96.18%     0.50MB  0.76%  github.com/go-text/typesetting/font/opentype/tables.ParseCoverage2
+    0.50MB  0.76% 96.94%     0.50MB  0.76%  github.com/moreveal/mimic/internal/cdp.map.init.2
+    0.50MB  0.76% 97.71%     1.50MB  2.29%  github.com/go-text/typesetting/font/opentype/tables.(*Glyph).parseData
+    0.50MB  0.76% 98.47%        1MB  1.53%  github.com/go-text/typesetting/font/opentype/tables.ParseCoverage
+    0.50MB  0.76% 99.24%     0.50MB  0.76%  github.com/moreveal/mimic/internal/dom.(*Node).setAttribute (inline)
+    0.50MB  0.76%   100%     0.50MB  0.76%  encoding/json.(*decodeState).literalStore
+         0     0%   100%     5.14MB  7.86%  encoding/json.(*decodeState).array
+         0     0%   100%     5.14MB  7.86%  encoding/json.(*decodeState).object

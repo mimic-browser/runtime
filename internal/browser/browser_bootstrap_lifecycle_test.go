@@ -106,6 +106,46 @@ func TestBootstrapDiskSnapshotRestoresAcrossBrowserWallOrigins(t *testing.T) {
 	}
 }
 
+func TestBootstrapDiskSnapshotRestoresFirstPageWithoutPreparation(t *testing.T) {
+	serialBrowserTest(t)
+	dir := t.TempDir()
+	seed, err := New(v8engine.Factory{}, chrome152.New())
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err := seed.PrepareBootstrap(ctx, dir); err != nil {
+		seed.Close()
+		t.Fatal(err)
+	}
+	if err := seed.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	b, err := New(v8engine.Factory{}, chrome152.New())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Close()
+	if err := b.ConfigureBootstrapCache(dir); err != nil {
+		t.Fatal(err)
+	}
+	c := b.NewContext()
+	defer c.Close()
+	p, err := c.NewPage()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.ClosePage(p.ID)
+	if _, err := p.Evaluate(ctx, "true"); err != nil {
+		t.Fatal(err)
+	}
+	if !p.Top.Realm.bootstrapRestored {
+		t.Fatal("first Page did not use the available disk snapshot")
+	}
+}
+
 func TestConfigureBootstrapCacheDoesNotCreatePages(t *testing.T) {
 	serialBrowserTest(t)
 	b, err := New(v8engine.Factory{}, chrome152.New())

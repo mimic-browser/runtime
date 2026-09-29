@@ -49,6 +49,7 @@ type Realm struct {
 	debuggerFactory          engine.Value
 	debuggerBindings         map[string]bool
 	mainWorld                *Realm
+	runtimeGroup             *realmRuntimeGroup
 	isolatedWorlds           map[string]*Realm
 	worldName                string
 	worldMutationReceiver    engine.Value
@@ -127,6 +128,8 @@ type Realm struct {
 	token                    string
 	detached                 map[int64]dom.Node
 	apiSeen                  map[string]bool
+	apiTraceSet              engine.Value
+	apiTraceActive           bool
 	readyState               string
 	apiTracking              bool
 	workers                  map[int64]*DedicatedWorker
@@ -310,6 +313,18 @@ func newRealmStateWithNavigation(p *Page, agent ExecutionAgent, d *dom.Document,
 	}
 	resourceContext, cancelResources := context.WithCancel(p.ctx.lifetime)
 	r := &Realm{ID: uuid.NewString(), agent: agent, document: d, url: u, origin: originOf(u.String()), token: uuid.NewString(), detached: map[int64]dom.Node{}, apiSeen: map[string]bool{}, readyState: "loading", workers: map[int64]*DedicatedWorker{}, childFrames: map[int64]*Frame{}, retainedFrames: map[string]*Frame{}, crossValues: map[int64]engine.Value{}, resourceContext: resourceContext, cancelResources: cancelResources}
+	if frame, ok := agent.(*Frame); ok {
+		switch {
+		case frame.Realm != nil && frame.Realm.document == d:
+			// An isolated world observes this exact document.
+			r.runtimeGroup = frame.Realm.runtimeGroup
+		case frame.parent != nil && frame.parent.Realm != nil:
+			r.runtimeGroup = frame.parent.Realm.runtimeGroup
+		}
+	}
+	if r.runtimeGroup == nil {
+		r.runtimeGroup = &realmRuntimeGroup{}
+	}
 	r.navigationURL, r.navigationLoaderID, r.performanceOrigin = u.String(), loaderID, performanceOrigin
 	r.navigationType = "navigate"
 	if frame, ok := agent.(*Frame); ok {
@@ -347,6 +362,7 @@ func newRealmStateWithNavigation(p *Page, agent ExecutionAgent, d *dom.Document,
 			return nil, err
 		}
 		r.runtime = runtime
+		r.runtimeGroup.add(r)
 	}
 	r.scheduler = scheduler.New(p.ClockNow(), func(ctx context.Context) error {
 		return r.checkpoint(ctx)
@@ -526,6 +542,9 @@ func (r *Realm) Close() error {
 		return nil
 	}
 	r.closed = true
+	r.runtimeGroup.remove(r)
+	releaseRuntimeValues(r.runtime, r.apiTraceSet)
+	r.apiTraceSet = nil
 	r.deactivateMediaSources()
 	r.stopMediaLoads()
 	r.agent.Page().ctx.network.RevokeBlobsForOwner(r.ID)
@@ -849,6 +868,13 @@ func (r *Realm) nativeSecurityOrigin() string {
 }
 
 func (r *Realm) installBindings() error {
+	wanted := r.agent.Page().trace.ObservationWanted()
+	r.apiTraceActive = wanted
+	if runtime, ok := r.runtime.(interface{ SetPropertyObservationEnabled(bool) error }); ok {
+		if err := runtime.SetPropertyObservationEnabled(wanted); err != nil {
+			return err
+		}
+	}
 	// Bootstrap is one synchronous Page operation. Keep its host installation,
 	// restore hooks and intrinsic reads on the existing runtime owner instead of
 	// dispatching each Get/Call/Eval separately. This neither pumps tasks nor
@@ -891,10 +917,14 @@ func (r *Realm) installBindingsOnOwner() error {
 	r.files = installOPFSHost(host, r.runtime, r.agent.Page().ctx, func() string { return r.origin })
 	r.installDocumentStream(host)
 	host["token"] = r.transientFn(func(engine.Value, []engine.Value) (engine.Value, error) { return r.val(r.token), nil })
-	host["ready"] = r.transientFn(func(engine.Value, []engine.Value) (engine.Value, error) {
+	host["ready"] = r.transientFn(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
+		if len(args) != 0 {
+			releaseRuntimeValues(r.runtime, r.apiTraceSet)
+			r.apiTraceSet = retainRuntimeValue(r.runtime, args[0])
+		}
 		r.apiTracking = true
 		r.initializeMemoryProjection()
-		return nil, nil
+		return r.val(p.trace.ObservationWanted()), nil
 	})
 	host["selfFrameID"] = r.transientFn(func(engine.Value, []engine.Value) (engine.Value, error) { return r.val(r.agent.ContextID()), nil })
 	host["windowRelations"] = r.transientFn(func(engine.Value, []engine.Value) (engine.Value, error) {
@@ -2541,6 +2571,9 @@ func (r *Realm) scheduleLoadIfReady() {
 	})
 }
 func (r *Realm) recordAPIAccess(name string, supported bool) {
+	if !r.apiTraceActive {
+		return
+	}
 	key := fmt.Sprintf("%s:%t", name, supported)
 	if r.apiSeen[key] {
 		return

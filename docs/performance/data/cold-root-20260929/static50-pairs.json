@@ -1,0 +1,68 @@
+[
+  {
+    "pair": 0,
+    "label": "control",
+    "binary_sha256": "51f11af8af988340090eb41dce87be812b8451a2fd142cd768601aec107589f4",
+    "harness_sha256": "ce1fce42fa9b9e03f105900601db4d6d7fa9b0d9cda51d5096322357277673e7",
+    "valid": 50,
+    "rss_mib": 2020.02734375,
+    "peak_rss_mib": 2302.67578125,
+    "cpu_s": 24.109375,
+    "completion_s": 2.4342902999778744
+  },
+  {
+    "pair": 0,
+    "label": "candidate",
+    "binary_sha256": "db82f1c85faca672e7225260e4d0cc603d6a867effb7ca60a540e9e14eceabc4",
+    "harness_sha256": "ce1fce42fa9b9e03f105900601db4d6d7fa9b0d9cda51d5096322357277673e7",
+    "valid": 50,
+    "rss_mib": 719.2109375,
+    "peak_rss_mib": 719.2265625,
+    "cpu_s": 3.265625,
+    "completion_s": 0.48467649999656714
+  },
+  {
+    "pair": 1,
+    "label": "candidate",
+    "binary_sha256": "db82f1c85faca672e7225260e4d0cc603d6a867effb7ca60a540e9e14eceabc4",
+    "harness_sha256": "ce1fce42fa9b9e03f105900601db4d6d7fa9b0d9cda51d5096322357277673e7",
+    "valid": 50,
+    "rss_mib": 718.90234375,
+    "peak_rss_mib": 712.41015625,
+    "cpu_s": 3.0625,
+    "completion_s": 0.4827971000049729
+  },
+  {
+    "pair": 1,
+    "label": "control",
+    "binary_sha256": "51f11af8af988340090eb41dce87be812b8451a2fd142cd768601aec107589f4",
+    "harness_sha256": "ce1fce42fa9b9e03f105900601db4d6d7fa9b0d9cda51d5096322357277673e7",
+    "valid": 50,
+    "rss_mib": 2039.3203125,
+    "peak_rss_mib": 2259.88671875,
+    "cpu_s": 23.078125,
+    "completion_s": 2.3955850999918766
+  },
+  {
+    "pair": 2,
+    "label": "control",
+    "binary_sha256": "51f11af8af988340090eb41dce87be812b8451a2fd142cd768601aec107589f4",
+    "harness_sha256": "ce1fce42fa9b9e03f105900601db4d6d7fa9b0d9cda51d5096322357277673e7",
+    "valid": 50,
+    "rss_mib": 2099.8203125,
+    "peak_rss_mib": 2300.05859375,
+    "cpu_s": 23.8125,
+    "completion_s": 2.3840525999839883
+  },
+  {
+    "pair": 2,
+    "label": "candidate",
+    "binary_sha256": "db82f1c85faca672e7225260e4d0cc603d6a867effb7ca60a540e9e14eceabc4",
+    "harness_sha256": "ce1fce42fa9b9e03f105900601db4d6d7fa9b0d9cda51d5096322357277673e7",
+    "valid": 50,
+    "rss_mib": 720.61328125,
+    "peak_rss_mib": 720.61328125,
+    "cpu_s": 3.03125,
+    "completion_s": 0.4852357000054326
+  }
+]

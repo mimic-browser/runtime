@@ -39,5 +39,13 @@ func bootstrapNativeReferences() ([]gov8.ExternalReference, error) {
 	if err != nil {
 		return nil, err
 	}
-	return append(append(observations, dispatch...), exceptions...), nil
+	lazy, err := gov8.GeneratedLazyReferences()
+	if err != nil {
+		return nil, err
+	}
+	constructors, err := gov8.GeneratedConstructorReferences()
+	if err != nil {
+		return nil, err
+	}
+	return append(append(append(append(observations, dispatch...), exceptions...), lazy...), constructors...), nil
 }

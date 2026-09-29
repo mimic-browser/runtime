@@ -72,6 +72,13 @@ func (a *adapter) NewRealmRuntime(useBootstrap bool) (engine.Runtime, bool, erro
 	return child, restored, nil
 }
 
+// SameOwner supports internal ownership assertions without exposing native
+// isolate pointers or adding a browser-visible diagnostic surface.
+func (a *adapter) SameOwner(other engine.Runtime) bool {
+	peer, ok := other.(*adapter)
+	return ok && a.owner == peer.owner
+}
+
 // Isolate callbacks serve every connected context. Dispatch by the actual
 // native context, never the last adapter to install a callback or drain jobs.
 func (s *state) callbackAdapter(scope *gov8.Scope) (*adapter, error) {

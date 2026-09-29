@@ -167,6 +167,7 @@ func (p *Page) schedulePreviewPublish() {
 func newPage(c *Context) (*Page, error) {
 	environment := c.env.Fork()
 	p := &Page{performanceClamper: newPerformanceClamper(), ID: uuid.NewString(), ctx: c, env: environment, trace: trace.New(), historyIndex: -1, clock: environment.Time.WallOrigin, performanceOrigin: environment.Time.WallOrigin, sessionStorage: map[string]map[string]string{}, frames: map[string]*Frame{}, messagePorts: map[string]*messagePortState{}, pageFocused: true}
+	p.trace.SetObservationChange(p.setPropertyTraceEnabled)
 	p.eventLoopWake = make(chan struct{}, 1)
 	p.loader = network.NewLoaderWithSession(func() state.Environment { p.mu.RLock(); defer p.mu.RUnlock(); return p.env }, c.cookies, c.network, p.trace)
 	p.loader.SetResourcePolicy(c.resourcePolicy)

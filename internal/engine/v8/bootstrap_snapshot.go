@@ -183,6 +183,32 @@ func buildBootstrapSnapshot(ctx context.Context, sources ...string) (blob *gov8.
 		_ = realm.Close()
 		return nil, err
 	}
+	lazyInstaller, err := iso.NewGeneratedLazyInstaller(scope, realm)
+	if err == nil {
+		var global *gov8.Object
+		global, err = realm.GlobalObject(scope)
+		if err == nil {
+			_, err = global.SetByName(scope, realm, "__mimicGeneratedLazyInstaller", lazyInstaller)
+		}
+	}
+	if err != nil {
+		_ = scope.Close()
+		_ = realm.Close()
+		return nil, err
+	}
+	constructorFactory, err := iso.NewGeneratedConstructorFactory(scope, realm)
+	if err == nil {
+		var global *gov8.Object
+		global, err = realm.GlobalObject(scope)
+		if err == nil {
+			_, err = global.SetByName(scope, realm, "__mimicGeneratedConstructorFactory", constructorFactory)
+		}
+	}
+	if err != nil {
+		_ = scope.Close()
+		_ = realm.Close()
+		return nil, err
+	}
 	for _, source := range sources {
 		err = runSnapshotSeed(ctx, iso, realm, scope, source)
 		if err != nil {
@@ -192,7 +218,7 @@ func buildBootstrapSnapshot(ctx context.Context, sources ...string) (blob *gov8.
 	if err == nil {
 		// Seed closures may retain the factories, but transport globals must not
 		// become extra observable properties of an otherwise ordinary context.
-		err = runSnapshotSeed(ctx, iso, realm, scope, `delete globalThis.__mimicPropertyObservationFactory; delete globalThis.__mimicReceiverDispatchFactory; delete globalThis.__mimicExceptionStateFactory;`)
+		err = runSnapshotSeed(ctx, iso, realm, scope, `delete globalThis.__mimicPropertyObservationFactory; delete globalThis.__mimicReceiverDispatchFactory; delete globalThis.__mimicExceptionStateFactory; delete globalThis.__mimicGeneratedLazyInstaller; delete globalThis.__mimicGeneratedConstructorFactory;`)
 	}
 	if err == nil {
 		// Fresh sibling realms must start with native intrinsics, rather than
@@ -359,10 +385,19 @@ func (p *bootstrapRuntimePool) newRuntime(bare bool) (engine.Runtime, error) {
 	}
 	var profile *diagnosticState
 	if lane == nil {
+		// Creating an isolate may block for milliseconds. Pages with the default
+		// one-realm capacity own separate isolates and must not queue behind
+		// another Page's creation while holding the pool lock.
+		p.mu.Unlock()
 		owner, diagnostics, err := p.snapshot.newRuntimeOwner()
 		if err != nil {
-			p.mu.Unlock()
 			return nil, err
+		}
+		p.mu.Lock()
+		if p.closed {
+			p.mu.Unlock()
+			_ = owner.Dispose()
+			return nil, errors.New("bootstrap runtime pool is closed")
 		}
 		lane = &bootstrapRuntimeLane{owner: owner}
 		profile = diagnostics

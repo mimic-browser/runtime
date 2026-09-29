@@ -1829,4 +1829,6 @@ int64_t gov8_pc_idle_task_run_delete_words(v8::IdleTask* task, uint64_t value) {
 #endif
 
 #include "features/receiver_dispatch.inc"
+#include "features/generated_lazy.inc"
+#include "features/generated_constructor.inc"
 #include "features/exception_state.inc"

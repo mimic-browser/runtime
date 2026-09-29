@@ -1,5 +1,368 @@
 # Performance architecture pass
 
+## 2026-09-29: first-wave snapshot restoration
+
+Concurrent Pages could wait while `prepareProfileBootstrap` built or loaded a
+snapshot, then still take the bare WebAPI bootstrap path. The `coldRoot` decision
+was made before preparation and remained stale even when `selectEntry` returned
+a usable artifact. It is now based on the selected snapshot. This affects the
+first wave of Pages after process start; established warm waves already used the
+snapshot. A focused regression test covers the first Page with a disk artifact.
+
+Three alternating fresh-process pairs ran the unchanged local static workload
+with 50 concurrent live Pages. All 300 sessions were valid. The control binary
+was SHA-256 `51f11af8...`; the candidate was `db82f1c8...`; both used frozen
+harness SHA-256 `ce1fce42...` on the same Windows host.
+
+| Median, three pairs | Before | After | Change |
+| --- | ---: | ---: | ---: |
+| Active process-tree RSS | 2039.32 MiB | 719.21 MiB | -64.7% |
+| Sampled peak process-tree RSS | 2300.06 MiB | 719.23 MiB | -68.7% |
+| CPU through first-wave completion | 23.81 s | 3.06 s | -87.1% |
+| First-wave elapsed time | 2.40 s | 0.48 s | -80.0% |
+
+The unchanged Wikipedia E2E passed all six runs in a separate three-pair
+fresh-process check. Median peak RSS was **431.75 → 433.09 MiB** (+0.3%) and
+elapsed time **10,812.7 → 10,865.5 ms** (+0.5%), both effectively unchanged.
+Thus this fix removes a real cold concurrency spike but does not advance the
+Wikipedia half-RSS target. A fresh empty-cache diagnostic completed all 50
+static Pages at 738.09 MiB and all 100 React Pages at 1873.75 MiB; these
+single candidate runs are directional, not paired improvement claims. The
+frozen fast gate passed all six compatibility workloads and its 50-Page static
+waves. Raw paired and diagnostic readings are in
+[`data/cold-root-20260929`](data/cold-root-20260929/).
+The focused first-Page restoration test passed on Windows and Linux; no full
+local test suite was run.
+
+A final run of the public benchmark runner also passed all 12 Chrome/Mimic
+correctness gates. Its five valid Mimic static 50-Page waves had median active
+RSS **748.11 MiB**, close to the preceding full run's **767.5 MiB** warm-wave
+result. The benchmark stopped the 100-Page static stage when the host fell
+below its free-memory threshold after the Chrome stages, then skipped later
+CPU and React density stages. Those stopped stages are **not** comparable
+results; the separate first-wave pairs above remain the evidence for this
+change. The full runner's density CSV and build manifest are retained with
+the receipts; its complete raw output remains outside the repository at
+`E:\Temp\mimic-rss-architecture\public-cold-root-final\raw.json`.
+
+## 2026-09-29: retained font data on the Wikipedia Page
+
+The earlier forced-GC Wikipedia profile attributed 147.3 MiB of live Go
+allocations to `textmetrics.Engine.load/shapeWithFonts`. A diagnostic run loaded
+14 local faces totaling 46.9 MB of source files, including large SimSun,
+Malgun, and Nirmala resources. The old loader read every whole file into memory
+and passed it to `truetype.Parse` even for DOM-only measurements. The TrueType
+hint parser retains that byte slice; Canvas ink bounds are its only consumer.
+The OpenType loader now reads from the already-open file, and the TrueType hint
+parser runs only on the first Canvas ink observation. Existing Canvas bounds,
+font fallback, and registered-font tests still pass.
+
+The remaining large allocation was go-text's eager unpacking of every static
+TrueType glyph contour. A narrow local fork of go-text v0.3.4 provides
+`font.NewFontMetricsOnly`: it runs the original full glyph parser for the same
+validation result, then releases simple contours after the complete table is
+validated. Headers, composite metadata, advances, shaping tables, and static
+ink extents remain. Fonts with `fvar` or `gvar` retain the full parser. Mimic
+uses this API for horizontal shaping; the compact face does not expose glyph
+outlines or guarantee point-matched vertical origins. The ordinary upstream
+`NewFont` behavior remains available and unchanged in the fork. See
+[`README.mimic.md`](../../third_party/go-text-typesetting/README.mimic.md).
+
+Three alternating fresh-process pairs of the unchanged Wikipedia E2E compared
+the preceding architecture candidate (SHA-256 `2d5a4fba...`) directly with the
+combined font candidate (SHA-256 `51f11af8...`), on the same Windows host.
+All six workload runs passed; the frozen workload hash stayed `5b340d5c...`.
+
+| Median, three pairs | Before fonts | With font changes | Change |
+| --- | ---: | ---: | ---: |
+| Peak process-tree RSS | 578.84 MiB | 421.99 MiB | -27.10% |
+| Peak private commit | 619.65 MiB | 458.27 MiB | -26.04% |
+| Peak USS | 529.69 MiB | 372.66 MiB | -29.64% |
+| RSS after Page close | 372.17 MiB | 215.21 MiB | -156.96 MiB |
+| Wikipedia E2E time | 10,020 ms | 10,159 ms | +1.39% |
+
+An earlier three-pair screen of only deferred hint loading measured
+**577.48 → 527.64 MiB** peak RSS without a meaningful time change. Releasing
+contours immediately after each glyph initially saved more memory but cost
+about 9% Wikipedia time through temporary-allocation/GC pressure. Keeping
+points until the table's original validation completes, then releasing them,
+retained the memory benefit without that slowdown. The final three-pair
+ten-Page controls were all valid: static throughput **18.73 → 18.49
+sessions/s** and React **16.70 → 16.81 sessions/s**. Their active RSS varied
+by about 4–6 MiB, below the noise of this control measurement.
+
+The final source was rebuilt with the benchmark's module cache and reproduced
+the measured candidate binary hash. The fast gate rebuilt the same source with
+a different Go module-cache path (hence a different embedded-path binary hash,
+`b111480e...`) and passed its six frozen correctness workloads, single-Page
+DOM/static/React rows, and ten-Page static/memory checks. Focused font tests
+passed on Windows and Linux; Linux browser tests used the installed Windows
+font directory through `MIMIC_FONT_DIR`. Fork tests compare all static glyph
+advances/extents, horizontal HarfBuzz shaping, variable-font outlines, and
+malformed-glyph rejection. No full local test suite was run.
+
+The original clean-control median was 703.53 MiB in an earlier separate
+series. The current 421.99 MiB is a substantial improvement, but the requested
+half-RSS threshold (351.77 MiB) is **still not reached**. Those two series are
+not a direct paired comparison. A diagnostic-only wrapper sampled the unchanged
+workload at the ECMAScript URL when two V8 contexts were present. After explicit
+V8 and Go GC it reported **73.4 MiB Go HeapAlloc** and **55.1 MiB V8 used /
+57.2 MiB V8 physical heap**. The sampled Go heap profile totals 65.5 MiB;
+its largest font allocation is now **22.4 MiB** in retained OpenType table
+buffers, with no large retained `os.ReadFile` or simple-glyph point stacks.
+The previous forced-GC diagnostic at the same URL recorded 177.7 MiB Go
+HeapAlloc and 59.4 MiB V8 physical heap, but these independent runs may have
+sampled different moments in the stage. They support attribution, not an
+exact subtraction or peak-RSS decomposition. The wrapper's timing was excluded
+from the reportable result and its temporary source was removed. Raw paired
+readings, diagnostic profiles, control runs, and build provenance are retained in
+[`data/font-memory-20260929`](data/font-memory-20260929/).
+
+## 2026-09-29: Page-owned worlds, native generated WebAPI, and Go heap target
+
+The production V8 path now places materialized worlds of one active Page
+document tree in separate contexts of one isolate. The first executing world
+admits the owner; deferred worlds do not force main-world execution. Independent
+Pages and Workers retain separate execution owners. Navigation starts a new
+document-tree group, old contexts remain alive until their own teardown, and a
+failed restored context retries as a bare sibling of the same owner. Directed
+Windows and Linux tests verify world/global isolation, DOM identity, frame
+access, microtask ordering, navigation, close order, snapshot fallback, and
+distinct owners for independent Pages. An unchanged Wikipedia diagnostic saw
+exactly two materialized worlds on its Page, so owner consolidation can save
+only one isolate there.
+
+Generated fallback WebAPI prototype operations now keep their key position but
+use snapshot-portable V8 lazy data properties. The first read creates and
+caches the realm's function. Generated constructors without an authored
+implementation or strict-receiver-sensitive lazy domain use one native
+dispatcher per realm; handwritten interfaces, 87 catalogued lazy-domain
+constructors, and Goja retain their JavaScript path. This preserves the
+observed names, lengths, descriptors, function source, mutation, freeze, realm
+ownership, and snapshot restoration in directed Windows/Linux tests. Native
+gov8 object-template lazy slots are available to subsequent generated-surface
+families; the current production surface installs slots on existing prototype
+objects after exposure and finalization so authored replacements win. In an
+exact same-static-workload heap-snapshot comparison, native constructor
+publication reduced shallow live V8 heap **14,737,956 → 14,508,408 bytes**
+(-1.56%, 229,548 bytes). It does not explain the much larger Wikipedia RSS.
+
+The command-line V8 runtime also sets Go's default heap growth target to 50%
+when `GOGC` is unset; an explicit `GOGC`, including `off`, remains authoritative.
+This is a process-wide memory/CPU tradeoff, not a Page sharing mechanism. Three
+alternating, same-binary diagnostic pairs on Wikipedia measured median peak RSS
+**680.46 → 581.03 MiB** with `GOGC=50`, while median E2E time was
+**9909 → 9957 ms**. Three ten-Page pairs on the same binary found static median
+throughput **17.22 → 18.35 sessions/s** and React **17.01 → 16.89 sessions/s**;
+active RSS fell **525.57 → 494.07 MiB** and **547.23 → 522.83 MiB**.
+These diagnostic comparisons motivated the default; they are not added to the
+full candidate result below.
+
+The reportable comparison used three alternating fresh-process pairs of the
+unchanged local Playwright Wikipedia workload on one Windows host. The control
+was built from clean `493ab794` (SHA-256 `fc940f36...`); the fresh candidate
+binary had SHA-256 `2d5a4fba...`. The workload SHA-256 remained
+`5b340d5c...`. The final fast-gate rebuild had the **same candidate binary
+hash** and verified frozen benchmark harness SHA-256 `ce1fce42...`.
+
+| Median, three pairs | Control | Candidate | Change |
+| --- | ---: | ---: | ---: |
+| Wikipedia peak process-tree RSS | 703.53 MiB | 578.67 MiB | -17.75% |
+| Peak private commit | 746.68 MiB | 618.18 MiB | -17.21% |
+| Peak USS | 655.55 MiB | 529.49 MiB | -19.23% |
+| RSS at CDP readiness | 37.79 MiB | 35.29 MiB | -2.50 MiB |
+| RSS after Page close | 468.61 MiB | 368.86 MiB | -99.75 MiB |
+| Wikipedia E2E time | 10,191 ms | 9,803 ms | -3.81% |
+
+The increment above CDP readiness was **665.74 → 543.38 MiB**. PSS is not
+available from the Windows process sampler; its raw zero field is a missing
+metric, not a measured zero. The final three-pair ten-Page controls measured
+static active RSS **520.36 → 489.89 MiB** and throughput **18.16 → 18.10
+sessions/s**; React active RSS **553.95 → 521.68 MiB** and throughput
+**16.75 → 16.77 sessions/s**. All rows completed validly. The fresh fast gate
+passed all six frozen correctness workloads, single-Page DOM/static/React rows,
+the ten-Page static waves, and ten-Page static/React memory checks. Directed
+Windows and Linux world, generated WebAPI, snapshot, and gov8 tests passed;
+the full local test suite was not run.
+
+The requested **2× Wikipedia peak-RSS goal is not met**: the measured ratio is
+1.216×. A separate baseline `GODEBUG=gctrace=1` run reported Go heap
+**386 → 186 MB** across a natural GC near the end of the workload, evidence of
+substantial temporary Go allocation. The first combined world/lazy version
+without GC tuning saved only about 23 MiB in a single unpaired screen.
+
+A separate diagnostic-only binary sampled the unchanged Wikipedia workload at
+the ECMAScript URL stage. With two native contexts in one Page owner, a live
+sample recorded **191.7 MiB Go HeapAlloc** and **65.3 MiB V8 used / 74.2 MiB
+V8 physical heap**. Another run at the same URL, after explicit V8 low-memory
+notification and Go GC/FreeOSMemory, recorded **177.7 MiB Go HeapAlloc** and
+**57.1 MiB V8 used / 59.4 MiB V8 physical heap**. The runs reached different
+moments within the stage, so subtracting the samples does not precisely measure
+reclaimable memory. The forced-GC Go heap profile attributes **147.3 MiB
+cumulative** to `textmetrics.Engine.load/shapeWithFonts`; its largest sampled
+in-use allocation sites are OpenType glyph point parsing (46.5 MiB), font file
+reads (45.7 MiB), and OpenType table buffers (33.5 MiB). These are allocation
+stacks, not an exact retaining-object graph. They identify per-Page font
+loading/parsing as a more substantial remaining target than generated WebAPI
+constructors. After Page close and explicit V8/Go GC in a third diagnostic run,
+Go HeapAlloc was **24.1 MiB** and no native contexts remained; the font glyph
+allocations disappeared from the heap profile. Thus the font cache follows Page
+ownership and releases, while allocator reservations can keep process RSS high
+after close. These diagnostic heap readings are **not** peak-RSS measurements
+and the wrapper's timing is excluded from the reportable comparison.
+
+The controlled same-binary GC experiment and the small V8 constructor heap
+delta support the same direction, but the residual process RSS also includes
+other Go, V8, and native memory. The diagnostic was not synchronized to the
+exact RSS peak, so no complete peak decomposition is claimed.
+The first lazy-property access cost has not been isolated from ordinary V8
+property and callback overhead; no latency claim is made for it.
+
+The measurement scripts are
+[`measure_wikipedia_rss.py`](../../tools/performance/measure_wikipedia_rss.py),
+[`paired_wikipedia_rss.py`](../../tools/performance/paired_wikipedia_rss.py),
+and [`paired_control_pages.py`](../../tools/performance/paired_control_pages.py).
+Hashes, stage readings, full control/fast-gate receipts, and GC diagnostics are
+retained in [`data/rss-architecture-20260929`](data/rss-architecture-20260929/).
+
+## 2026-09-29: final demand-driven observation and DOM wrapper checkpoint
+
+The restored optimization batch gates native property classification and its JS
+callback on explicit trace capture or API/unsupported-event subscription.
+Capture restart resets the Go and JS once-per-property state; removing demand
+clears it again. Each Page retains its independent isolate and owner thread.
+The native gate is reset during isolate disposal. Snapshot restoration registers
+the consumer realm's own callback and current trace state.
+
+Ordinary HTML, Text, Comment, Fragment and DocumentType wrappers create their
+final native observed object directly. Specialized resource and SVG wrappers
+keep their existing initialization. Observer callbacks are shared by label
+within a realm; geometry operations share one binding instead of allocating
+four closures per element. Geometry still resolves the canonical receiver and
+its creation realm, including restored and foreign realms.
+
+Earlier twelve-iteration diagnostic replays, excluding one warmup, measured
+DOM execution at 155.24 ms for the control, 132.49 ms with the observation gate,
+124.87 ms with direct wrappers, and 122.56 ms with shared geometry operations.
+These are successive measured configurations, not percentages to add together.
+The native Windows/Linux libraries were restored from those builds and their
+hashes verified against the packaged metadata.
+
+The final fresh, hash-verified fast gate passed all six unchanged correctness
+workloads, all single-Page latency rows, four ten-Page static waves including
+warmup, and the static/React ten-Page memory checks. Warm medians compared with
+the preceding `c3643a6` gate were:
+
+| Metric | Control | Restored batch |
+| --- | ---: | ---: |
+| DOM execution, ms | 157.93 | 126.39 |
+| DOM completion, ms | 187.36 | 155.37 |
+| Static completion, ms | 32.54 | 33.44 |
+| React completion, ms | 85.81 | 80.28 |
+| Static active RSS, MiB | 518.52 | 518.82 |
+| React active RSS, MiB | 548.69 | 542.34 |
+| Static recovered RSS, MiB | 159.11 | 160.43 |
+| React recovered RSS, MiB | 157.63 | 151.23 |
+
+These gates ran in separate sessions. Static throughput medians were
+84.09 versus 81.30 sessions/s, with substantial variation in the control;
+no throughput or substantial memory improvement is claimed. The result is
+an incremental DOM improvement, not a 2–3x whole-browser speedup or a new
+comparison with the published website. [Compact receipts and compressed raw
+gates](data/property-observation-20260929/summary.json) preserve hashes, results
+and all observations without changing the frozen harness or original baseline.
+
+Focused Windows tests passed for observation start/stop/restart, Page isolation,
+support classification, DOM observations, bootstrap snapshots, geometry demand,
+restored/foreign geometry and frame identity/reflection, plus the trace package.
+Linux passed the focused observation, isolation, DOM, restored geometry and
+frame-identity checks. The full local test suite was not run. The experimental
+shared-memory DOM kernel is not part of this batch; broader architectural work
+remains separate.
+
+## 2026-09-29: demand-driven geometry and concurrent isolate construction
+
+This is an intermediate optimization checkpoint, **not** a claim of a 2–3x
+improvement across the browser benchmark. All timings below use unchanged frozen
+workloads and fresh, hash-verified binaries. The Windows comparisons are paired
+within the same host; they are not subtracted from the separate Linux Lightpanda
+run below. No Chrome 152 capture was needed for these internal performance paths.
+The frozen harness SHA-256 is
+`ce1fce42fa9b9e03f105900601db4d6d7fa9b0d9cda51d5096322357277673e7`.
+The capacity control executable SHA-256 is
+`0f64fc53d44bba1974a492907e0800acf97755c535553abf79b19d0d9b8e3304`;
+the geometry-plus-lock executable SHA-256 is
+`86205dde44ae6e4f5dbfdb7888503d0678837e8056be84a4858da09b7f96b607`.
+
+DOM construction was repeatedly walking ancestry to invalidate geometry caches
+that had never been populated. The new demand guard postpones that maintenance
+until the first actual geometry observation, while writes after observation
+still invalidate the retained result. Three alternating fresh-process pairs
+measured DOM warm completion **391.65 → 189.64 ms (2.06x)**. React changed
+**112.24 → 101.51 ms (1.11x)**; static, CPU and async were near neutral. The
+focused test covers mutations before the first observation, repeated reads,
+and a later shadow-tree attribute change. The Wikipedia E2E comparison was small
+and noisy, so no E2E speedup is claimed. These comparisons, validity results,
+launch hashes and the unchanged harness hash are retained in
+`.build/dom-architecture-binaries/latency.json` and `wikipedia-final.json`.
+
+In ten-Page waves the runtime pool held its mutex while constructing each V8
+isolate, and the lower gov8 wrapper held a global lifecycle mutex through the
+same operation. A concurrent-creation diagnostic attributed about **30 ms** of
+aggregate mutex wait and **6.7 ms** of last-Page admission to the first lock;
+after removing it, the lower lock accounted for about **28.5 ms** of wait.
+The pool now releases its lock while constructing an independent owner, and
+gov8 uses a read/write creation gate so independent creations overlap while
+process teardown waits for all of them to register or fail. Focused pool and
+platform-lifecycle checks pass. Three paired, fresh-process, ten-Page capacity
+runs (nine retained waves/workload; all semantic results valid) measured:
+
+| Workload | Throughput, sessions/s before → after | Held RSS, MiB before → after | Result |
+| --- | ---: | ---: | --- |
+| Static | 88.61 → 124.50 | 297.41 → 296.89 | 1.40x throughput |
+| CPU | 68.23 → 86.09 | 401.33 → 410.22 | 1.26x throughput, more memory |
+| React | 50.27 → 61.75 | 380.89 → 384.94 | 1.23x throughput, more memory |
+
+The pool result is `.build/dom-architecture-binaries/pool-capacity-paired.json`.
+The control binary predates both geometry and lock changes; geometry was near
+neutral for these capacity workloads, but the two effects cannot be perfectly
+isolated from this single binary pair. A new build through the official fast
+gate (`.build/fast-gate-geometry-pool-20260929/raw.json`) passed all six semantic
+workloads and the ten-Page static gate. Warm completion medians were DOM
+**187.36 ms**, static **32.54 ms**, React **85.81 ms**. Its three static capacity
+rows varied widely (143.3, 84.09, 83.10 sessions/s), so the repeated paired
+capacity result above is the useful throughput comparison.
+
+The remaining DOM execution path was profiled, not inferred from call counts.
+Across eight diagnostic executions, Go CPU samples assigned about 72% to the
+native V8 call region and 27% cumulatively to host callback dispatch; the Go
+DOM bodies were a minority. The V8 CPU profile repeatedly sampled the workload,
+property observation, API-access recording, and attribute setters. A deliberately
+invalid upper-bound run bypassing observation changed DOM completion
+189.67 → 128.60 ms; bypassing only its JS callback changed
+189.72 → 173.82 ms; returning immediately from the native interceptor changed
+187.23 → 163.52 ms. These destructive probes remove trace behavior and were
+reverted. A semantics-preserving per-isolate native ObjectTemplate cache changed
+DOM 188.16 → 163.93 ms but did not improve ten-Page throughput, worsened static
+held RSS 294.27 → 305.66 MiB and CPU throughput 88.12 → 80.93 sessions/s.
+That PoC was also reverted. Receipts are `no-observer-upperbound-paired.json`,
+`observer-callback-upperbound-paired.json`, `native-observer-upperbound-paired.json`,
+`native-template-cache-paired.json`, and `native-template-capacity-paired.json`
+under `.build/dom-architecture-binaries/`.
+
+Warm static navigation takes about 29–30 ms, of which V8 snapshot consumer
+creation is roughly 17–19 ms and realm installation 3.6–4.2 ms. A separate
+synthetic restoration diagnostic measured 0.98 ms for an empty snapshot and
+7.37 ms for a 3.10 MiB generated JS graph. Clearing retained compiled function
+code in the real snapshot was near neutral (DOM 188.74 → 185.98 ms; static
+31.84 → 31.40 ms) and was reverted. The page graph/context deserialization,
+not retained machine code alone, is the next large startup/memory target. A
+substantial reduction will need a compatible publication model for the full
+observable API graph, including descriptors, identity, function source and
+realm boundaries. The restore and code-clear receipts are
+`.build/dom-architecture-binaries/runtime-stage-diagnostic.json` and
+`snapshot-code-clear-paired.json`. This remains an open architectural task.
+
 ## 2026-09-29: Lightpanda comparison and remaining architectural headroom
 
 The installed Linux Lightpanda `1.0.0-nightly.9268+909108e29` was compared with

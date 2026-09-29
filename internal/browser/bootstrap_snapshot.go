@@ -173,22 +173,10 @@ func (r *Realm) bootstrapSource() *bootstrapSource {
 }
 
 func (r *Realm) newRuntime() (engine.Runtime, error) {
-	// Synchronous frame calls stay on their Page owner, but cache admission and
-	// capture remain per exposure graph, including a first encounter in a child.
-	var connected engine.RealmRuntimeFactory
-	var parentRealm *Realm
-	if frame, ok := r.agent.(*Frame); ok && frame.parent != nil && frame.parent.Realm != nil {
-		parentRealm = frame.parent.Realm
-		parent := parentRealm.runtime
-		if deferred, ok := parent.(*deferredRuntime); ok {
-			var err error
-			parent, err = deferred.ready()
-			if err != nil {
-				return nil, err
-			}
-		}
-		connected, _ = parent.(engine.RealmRuntimeFactory)
-	}
+	// The first executing world admits the owner. No main world or parent
+	// context is materialized just to make a child or isolated world possible.
+	// Subsequent worlds join any live context in the same document tree.
+	connected := r.runtimeGroup.connected(r)
 	p := r.agent.Page()
 	c := p.ctx
 	if err := c.lifetime.Err(); err != nil {
@@ -204,19 +192,22 @@ func (r *Realm) newRuntime() (engine.Runtime, error) {
 	}
 	plan := r.bootstrapSource()
 	capability, hasConnected := c.browser.factory.(engine.ConnectedRealmFactory)
-	coldRoot := connected == nil && !c.profileLocked && !c.browser.bootstrapSnapshots.hasSnapshotKey(plan.key)
 	if connected == nil && (c.profileLocked || hasConnected && capability.ConnectedRealms()) && !c.bootstrapPreparation {
 		if err := c.browser.prepareProfileBootstrap(plan.key, r.securityState()); err != nil {
 			p.trace.Add(trace.Error, "profileBootstrapPreparationFailed", map[string]any{"error": err.Error()})
 		}
 	}
 	snapshot, capture, issue := c.browser.bootstrapSnapshots.selectEntry(c.browser.lifetime, factory, plan.key)
+	// Snapshot preparation can finish while this Page waits for another Page.
+	// Decide from the selected artifact, including disk cache hits, rather than
+	// the cache state observed before preparation.
+	coldRoot := connected == nil && !c.profileLocked && snapshot == nil
 	r.bootstrapCapture = capture
 	if issue != nil {
 		p.trace.Add(trace.Error, "bootstrapSnapshotUnavailable", map[string]any{"error": issue.Error()})
 	}
 	if connected != nil {
-		useBootstrap := snapshot != nil && plan.key == parentRealm.bootstrapSource().key
+		useBootstrap := snapshot != nil && plan.key == r.runtimeGroup.ownerSeedKey()
 		runtime, restored, err := connected.NewRealmRuntime(useBootstrap)
 		r.bootstrapRestored = restored
 		return runtime, err
@@ -483,7 +474,24 @@ func (r *Realm) retryBootstrap(err error) error {
 	r.cookieNotifier = nil
 	r.launchNotifier = nil
 	r.speechNotifier = nil
+	releaseRuntimeValues(r.runtime, r.apiTraceSet)
+	r.apiTraceSet = nil
+	// Admit the bare replacement before releasing a failed restored context.
+	// The old context may be this tree's only member; closing it first would
+	// dispose its isolate and silently create a second one for fallback.
+	var bare engine.Runtime
+	if connected, ok := r.runtime.(engine.RealmRuntimeFactory); ok {
+		var bareErr error
+		bare, _, bareErr = connected.NewRealmRuntime(false)
+		if bareErr != nil {
+			return fmt.Errorf("snapshot binding: %v; bare context failed: %w", err, bareErr)
+		}
+	}
+	r.runtimeGroup.remove(r)
 	if closeErr := r.runtime.Close(); closeErr != nil {
+		if bare != nil {
+			_ = bare.Close()
+		}
 		return fmt.Errorf("snapshot binding: %v; close failed runtime: %w", err, closeErr)
 	}
 	r.bootstrapRestored = false
@@ -533,7 +541,13 @@ func (r *Realm) retryBootstrap(err error) error {
 	r.crossValueSeq = 0
 	r.apiTracking = false
 	r.apiSeen = map[string]bool{}
-	r.runtime = r.agent.Page().ctx.browser.factory.New()
+	r.apiTraceActive = false
+	if bare != nil {
+		r.runtime = bare
+	} else {
+		r.runtime = r.agent.Page().ctx.browser.factory.New()
+	}
+	r.runtimeGroup.add(r)
 	r.runtime.SetTimeSource(r.scheduler.Now)
 	r.runtime.SetGlobalAccessObserver(func(name string, supported bool) {
 		if r.apiTracking {
@@ -614,7 +628,7 @@ const bootstrapCaptureSource = `(function(original){
  const stringify=JSON.stringify,apply=Reflect.apply,get=Reflect.get;
  let calls=[],captureFailed=false;const engineKeys=Reflect.ownKeys(globalThis).filter(key=>typeof key==='string');
  const shape=Object.fromEntries(Object.getOwnPropertyNames(original).map(name=>[name,typeof original[name]]));
- globalThis.__mimic=new Proxy(original,{get(target,name,receiver){const value=get(target,name,receiver);if(name==='createObservedObject'||name==='createReceiverDispatch'||name==='initializeExceptionState'||calls===null||typeof value!=='function')return value;return function(...args){const result=apply(value,target,args);if(calls!==null&&!captureFailed){try{calls.push({name,args:stringify(args),result:stringify(result)})}catch{captureFailed=true}}return result}}});
+ globalThis.__mimic=new Proxy(original,{get(target,name,receiver){const value=get(target,name,receiver);if(name==='createObservedObject'||name==='createReceiverDispatch'||name==='initializeExceptionState'||name==='createGeneratedLazyInstaller'||name==='createGeneratedConstructorFactory'||calls===null||typeof value!=='function')return value;return function(...args){const result=apply(value,target,args);if(calls!==null&&!captureFailed){try{calls.push({name,args:stringify(args),result:stringify(result)})}catch{captureFailed=true}}return result}}});
  return function(){globalThis.__mimic=original;if(captureFailed){calls=null;throw new Error('bootstrap capture serialization failed')}const globalKeys=Reflect.ownKeys(globalThis).filter(key=>typeof key==='string');const result=stringify({shape,calls,engineKeys,globalKeys});calls=null;return result};
 })(__mimic)`
 
@@ -679,6 +693,8 @@ func bootstrapSeedSources(source, capture string) []string {
  const observationFactory=globalThis.__mimicPropertyObservationFactory;delete globalThis.__mimicPropertyObservationFactory;
  const dispatchFactory=globalThis.__mimicReceiverDispatchFactory;delete globalThis.__mimicReceiverDispatchFactory;
  const exceptionFactory=globalThis.__mimicExceptionStateFactory;delete globalThis.__mimicExceptionStateFactory;
+ const lazyInstaller=globalThis.__mimicGeneratedLazyInstaller;delete globalThis.__mimicGeneratedLazyInstaller;
+ const constructorFactory=globalThis.__mimicGeneratedConstructorFactory;delete globalThis.__mimicGeneratedConstructorFactory;
  let data=globalThis.__mimicSnapshotData,replies=data.calls,index=0,live=null;const shape=data.shape,engineKeys=data.engineKeys,globalKeys=data.globalKeys;data=null;
  const seedEngineKeys=new Set(Reflect.ownKeys(globalThis));
  const lateEngineKeys=new Set(engineKeys.filter(key=>!seedEngineKeys.has(key)));
@@ -690,6 +706,8 @@ func bootstrapSeedSources(source, capture string) []string {
   if(name==='createObservedObject')return observationFactory;
   if(name==='createReceiverDispatch')return dispatchFactory;
   if(name==='initializeExceptionState')return exceptionFactory;
+  if(name==='createGeneratedLazyInstaller')return lazyInstaller;
+  if(name==='createGeneratedConstructorFactory')return constructorFactory;
   if(shape[name]!=='function')return undefined;
   return function(...args){
    if(live!==null)return apply(live[name],live,args);
