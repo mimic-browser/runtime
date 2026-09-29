@@ -16,7 +16,7 @@ No external-site result or performance claim is a product guarantee.
 The [reproducible Windows benchmark](../benchmark/README.md) compares the V8 backend
 with exact Chrome 152.0.7977.82 using local correctness-gated workloads, process-tree
 CPU/memory accounting and cold, warm and concurrent sessions. See the
-[latest measured checkpoint](../benchmark/runs/09-optimized-20260914/public-summary.md)
+[latest measured checkpoint](../benchmark/runs/13-rss-20260929/public-summary.md)
 for results and limitations, or the [original baseline](../benchmark/results/report.md).
 
 ## Build and run

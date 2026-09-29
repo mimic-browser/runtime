@@ -1,7 +1,9 @@
 # Reproducible benchmark: Mimic V8 and Chrome 152
 
-Latest product checkpoint: [September 21, 2026 summary](runs/12-release-20260921/public-summary.md)
-and [full measured report](runs/12-release-20260921/report.md).
+Latest measured checkpoint: [September 29, 2026 summary](runs/13-rss-20260929/public-summary.md)
+and [full measured report](runs/13-rss-20260929/report.md). The headline uses
+the completed static 50-Page series; the report shows the status of every
+attempted level.
 The original `results/` baseline and earlier runs remain historical records.
 
 From the repository root on Windows x64:
@@ -97,11 +99,11 @@ checkpoint manifest:
 
 ```powershell
 .build/benchmark-venv/Scripts/python.exe tools/performance/benchmark_story.py `
-  benchmark/runs/12-release-20260921 `
-  docs/assets/benchmark-story-20260921.png
+  benchmark/runs/13-rss-20260929 `
+  docs/assets/benchmark-story-20260929.png
 ```
 
-The generator also writes `benchmark-story-20260921.receipt.json` with source,
+The generator also writes `benchmark-story-20260929.receipt.json` with source,
 generator, background and output hashes.
 
 ## Measurement contract

@@ -127,20 +127,21 @@ links to the tested fork and its bounded crawler example.
 
 ## Benchmarks
 
-Fresh v0.1.5 checkpoint against headless Chrome 152.0.7977.82 on Windows 11
+September 29 checkpoint against headless Chrome 152.0.7977.82 on Windows 11
 x64, Intel i7-14700KF, 31.83 GiB RAM:
 
 <p align="center">
-  <a href="benchmark/runs/12-release-20260921/public-summary.md"><img src="docs/assets/benchmark-story-20260921.png" alt="Mimic v0.1.5 benchmark: 2.5 times less ready RSS, 4.1 times static throughput, and 3 times less active RSS than Chrome at 50 Pages" width="1200"></a>
+  <a href="benchmark/runs/13-rss-20260929/public-summary.md"><img src="docs/assets/benchmark-story-20260929.png" alt="September 29 benchmark: 8.3 times less ready RSS, 6.0 times static throughput, and 5.5 times less active RSS than Chrome at 50 Pages" width="1200"></a>
 </p>
 
-**2.5× less ready RSS. 3.0× less active RSS and 4.1× throughput at 50 static
-Pages.** All 12 correctness gates, 360 measured single-Page attempts, and every
-concurrency series passed. These are fixture- and machine-specific results, not
-universal claims; the full matrix includes workloads where Chrome is faster.
+**8.3× less ready RSS. 5.5× less active RSS and 6.0× throughput at 50 static
+Pages.** All 12 correctness gates and 360 measured single-Page attempts passed.
+The headline compares the completed 50-Page static series. These are fixture-
+and machine-specific results, not universal claims; the full matrix includes
+workloads where Chrome is faster.
 
-[Results and methodology](benchmark/runs/12-release-20260921/public-summary.md) ·
-[Full report](benchmark/runs/12-release-20260921/report.md) ·
+[Results and methodology](benchmark/runs/13-rss-20260929/public-summary.md) ·
+[Full report](benchmark/runs/13-rss-20260929/report.md) ·
 [Reproduce](benchmark/README.md) ·
 [Performance history](docs/performance/report.md)
 

@@ -1,5 +1,21 @@
 # Performance architecture pass
 
+## Published benchmark checkpoint (2026-09-29)
+
+The [new public checkpoint](../../benchmark/runs/13-rss-20260929/public-summary.md)
+uses the final measured snapshot-selection binary (SHA-256 `db82f1c8...`) and
+the unchanged frozen harness. All 12 correctness gates and 360 measured
+single-Page attempts passed. The completed static 50-Page series measured
+**748.11 MiB** active process-tree RSS and **108.67 sessions/s** for Mimic,
+versus Chrome **4102.04 MiB** and **18.09 sessions/s** in the same run. Ready
+RSS was **45.79 versus 379.54 MiB**. At 100 static Pages, the benchmark's
+conservative guard stopped the schedule with 4.54 GiB still available, just
+below its 4.77 GiB threshold; this was not an out-of-memory event. Later
+CPU/React density comparisons are absent.
+These stopped rows are shown in the checkpoint, not promoted to successful
+results. The previous September 21 checkpoint remains available as a dated
+historical result.
+
 ## 2026-09-29: first-wave snapshot restoration
 
 Concurrent Pages could wait while `prepareProfileBootstrap` built or loaded a
@@ -37,9 +53,9 @@ local test suite was run.
 A final run of the public benchmark runner also passed all 12 Chrome/Mimic
 correctness gates. Its five valid Mimic static 50-Page waves had median active
 RSS **748.11 MiB**, close to the preceding full run's **767.5 MiB** warm-wave
-result. The benchmark stopped the 100-Page static stage when the host fell
-below its free-memory threshold after the Chrome stages, then skipped later
-CPU and React density stages. Those stopped stages are **not** comparable
+result. The benchmark guard stopped the 100-Page static stage with 4.54 GiB
+still available after the Chrome stages, then skipped later CPU and React
+density stages. Those stopped stages are **not** comparable
 results; the separate first-wave pairs above remain the evidence for this
 change. The full runner's density CSV and build manifest are retained with
 the receipts; its complete raw output remains outside the repository at
