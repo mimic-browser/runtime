@@ -1058,6 +1058,33 @@ const compatibilityElementState = {};
     const parent = position === 'beforebegin' || position === 'afterend' ? this.parentNode : this;
     return markupMutation(parent, null, () => adjacentHTML.call(this, position, text));
   });
+  member(Element.prototype, 'insertAdjacentElement', function (position, element) {
+    if (arguments.length < 2) throw new TypeError('2 arguments required');
+    position = bindingString(position).toLowerCase();
+    if (!isDOMNode(element) || element.nodeType !== 1) throw new TypeError('Expected an Element');
+    switch (position) {
+      case 'beforebegin': {
+        const parent = this.parentNode;
+        if (!parent) return null;
+        parent.insertBefore(element, this);
+        return element;
+      }
+      case 'afterbegin':
+        this.insertBefore(element, this.firstChild);
+        return element;
+      case 'beforeend':
+        this.appendChild(element);
+        return element;
+      case 'afterend': {
+        const parent = this.parentNode;
+        if (!parent) return null;
+        parent.insertBefore(element, this.nextSibling);
+        return element;
+      }
+      default:
+        throw platformDOMException('Invalid position', 'SyntaxError');
+    }
+  });
   const outerHTML = Object.getOwnPropertyDescriptor(Element.prototype, 'outerHTML');
   Object.defineProperty(Element.prototype, 'outerHTML', {
     ...outerHTML,
