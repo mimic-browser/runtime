@@ -9,9 +9,9 @@ use style_dom::ElementState;
 mod ffi;
 mod fonts;
 mod images;
+mod live_controls;
 mod style_batch;
 mod transforms;
-mod live_controls;
 
 // Export the legacy fallback through the same archive so the executable has
 // one Rust runtime during migration.
@@ -219,6 +219,13 @@ impl Owner {
         let old = *self.document.get_node(node).unwrap().element_state();
         let next = (old - affected) | (value & affected);
         if old != next {
+            if self.document.style_depends_on_state(affected) {
+                // A later stylesheet invalidation may inspect class/id on this
+                // snapshot. Blitz's state-only snapshot has no attributes, so
+                // Stylo's selector lookup would panic even when they did not
+                // change. Preserve the complete pre-mutation element here.
+                self.document.snapshot_node(node);
+            }
             self.document.snapshot_node_and(node, affected, |node| {
                 *node.element_state_mut() = next;
                 node.mark_ancestors_dirty();
@@ -358,5 +365,18 @@ mod tests {
         for thread in threads {
             thread.join().unwrap();
         }
+    }
+
+    #[test]
+    fn state_change_followed_by_stylesheet_invalidation_keeps_snapshot_attributes() {
+        let mut owner = fixture();
+        owner.attribute(4, "", "style", "height:32px").unwrap();
+        owner.attribute(4, "", "class", "target").unwrap();
+        owner.stylesheet(4, ".target:focus { color: red }").unwrap();
+        assert!(owner.resolve(0.0));
+        owner.state(4, 1 << 1, 1 << 1).unwrap();
+        owner.stylesheet(4, ".target { width: 400px }").unwrap();
+        assert!(owner.resolve(0.0));
+        assert_eq!(owner.rect(4).unwrap().width, 400.0);
     }
 }
