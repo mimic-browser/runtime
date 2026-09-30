@@ -1,0 +1,4065 @@
+{
+  "date": "2026-09-30",
+  "runtimeCommit": "4043626c21a07cdafca8b98220e4e9fe12466c57",
+  "node": "24.15.0",
+  "playwrightCore": "1.63.0",
+  "dependencies": {
+    "psutil": "7.2.2",
+    "loguru": "0.7.3",
+    "beautifulsoup4": "4.14.3",
+    "inscriptis": "2.7.5",
+    "lxml": "6.1.3",
+    "elementpath": "5.1.1",
+    "soupsieve": "2.10"
+  },
+  "sourceHashes": {
+    "changedetectionio__content_fetchers__base.py": "c67639609c1d2206b4ce153bc5a5d3c824e579fb958c20acc6f665d725bcc297",
+    "changedetectionio__content_fetchers__playwright.py": "b6c50de030cd5a8329d83eda55a1d1d6b65166cdf27bbb62bc9d49769db6e9d3",
+    "changedetectionio__content_fetchers__puppeteer.py": "23378a63779a5f90ff221960db4c0ffde440bb137cc74d6a86ec9dba67190dbe",
+    "changedetectionio__content_fetchers____init__.py": "bb3f897bebf016a2cb2020a741dd6a4e856d8827d9de6a59ec98a64ff9915883",
+    "changedetectionio__html_tools.py": "e9d947799d06571f9ed8e5d69460dae85256f13348a7e522e6a102c7adc5c88f",
+    "changedetectionio__pluggy_interface.py": "15d4ccb094a52ded95ccc2fa46c90a6d3852e07e98f20443c488c1229ca5be69",
+    "changedetectionio__strtobool.py": "edf20b78855e3cda645fdf9c1f3d3780da0670ebd071bd8ffde47688a85e473e",
+    "requirements.txt": "d62d9ab228851fb2626cba31e73fb3481eec4a3d4ddaa2cd5ac21f5f62d83eba",
+    "sockpuppet__README.md": "713c65dad6bac438bf7e2d84a5023f410e2bc604de313b1e749d69171d622a6c"
+  },
+  "experiments": {
+    "headful": {
+      "metadata": {
+        "upstreamRevision": "0e0566721b1c483dcf7ae548210ee10532d9b181",
+        "python": "3.14.2 (tags/v3.14.2:df79316, Dec  5 2025, 17:18:21) [MSC v.1944 64 bit (AMD64)]",
+        "platform": "win32",
+        "binaryHashes": {
+          "mimic": "b7db7fe64fe896fc3994dbffca3578260fc35d17fcb63b17c5777ee595238b05",
+          "chrome": "ea36dd818a90176f1a70616f0363d9be527229389a6c073a0b1688b9e73f67e9"
+        },
+        "screenshots": false,
+        "css": "#product .name, #product .price, #product .stock",
+        "xpath": "//*[@id='product']/*[@class='name' or @class='price' or @class='stock']",
+        "sequence": [
+          "Widget\n\n  USD 49.99\n\n  Out of stock",
+          "Widget\n\n  USD 49.99\n\n  Out of stock",
+          "Widget\n\n  USD 39.99\n\n  Out of stock",
+          "Widget\n\n  USD 39.99\n\n  In stock",
+          "Widget\n\n  USD 39.99\n\n  In stock",
+          "Widget edition B\n\n  USD 39.99\n\n  In stock"
+        ],
+        "filterDependenciesPrewarmMs": 112.71970000234433,
+        "mode": "local fixture, standalone opt-in fetch plus unchanged upstream filtering",
+        "memoryBoundary": "sampled backend process-tree RSS sum; shared pages may be counted repeatedly",
+        "cpuBoundary": "sampled backend process-tree accumulated CPU; short-lived descendants may be missed"
+      },
+      "summary": {
+        "mimic": {
+          "correctSnapshots": 18,
+          "coldMsMedian": 1162.5152000051457,
+          "warmMsMedian": 254.01929999999993,
+          "warmCheckMsMedian": 276.21739999744113,
+          "filterMsMedian": 22.976149994065054,
+          "peakTreeRssMiBMedian": 171.98828125,
+          "cpuSecondsMedian": 2.40625
+        },
+        "chrome": {
+          "correctSnapshots": 18,
+          "coldMsMedian": 910.3711000061594,
+          "warmMsMedian": 118.34159999999997,
+          "warmCheckMsMedian": 151.18129998968777,
+          "filterMsMedian": 22.67674999893643,
+          "peakTreeRssMiBMedian": 1031.25,
+          "cpuSecondsMedian": 3.453125
+        }
+      },
+      "runs": [
+        {
+          "backend": "chrome",
+          "repeat": 0,
+          "readyMs": 540.2712999930372,
+          "readyTreeRssBytes": 587812864,
+          "coldFirstFetchMs": 881.9562999997288,
+          "retainedTreeRssBytes": 1081499648,
+          "version": {
+            "Browser": "Chrome/152.0.7977.82",
+            "Protocol-Version": "1.3",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+            "V8-Version": "15.2.124.21",
+            "WebKit-Version": "537.36 (@d04cdb24d67b081f6cf80200ffc5233f44b61109)",
+            "webSocketDebuggerUrl": "ws://127.0.0.1:9336/devtools/browser/d5f99d1a-60b9-4b1b-bbf3-94b31ee50a61"
+          },
+          "metrics": {
+            "treeCpuSecondsSampled": 3.203125,
+            "peakTreeRssBytes": 1081499648,
+            "lastTreeRssBytes": 1081499648,
+            "processesSeen": 17,
+            "samples": 46,
+            "samplingErrors": 0
+          },
+          "snapshots": [
+            {
+              "type": "snapshot",
+              "index": 0,
+              "revision": 0,
+              "noise": 0,
+              "extractMs": 115.25049999999999,
+              "totalMs": 128.77339999999998,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 4,
+              "encodedBytes": 30791,
+              "errors": [],
+              "productText": "Widget\n\nUSD 49.99\n\nOut of stock\n\nUnwatched counter: 0",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 881.9562999997288,
+              "upstreamFilterMs": 13.613300005090423,
+              "filtered": {
+                "css": "Widget\n\n  USD 49.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 49.99\n\n  Out of stock"
+              },
+              "changed": false,
+              "checkMs": 142.3867000050904,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 1.921875,
+                "peakTreeRssBytes": 711405568,
+                "lastTreeRssBytes": 711405568,
+                "processesSeen": 12,
+                "samples": 27,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 1,
+              "revision": 0,
+              "noise": 1,
+              "extractMs": 104.13820000000004,
+              "totalMs": 115.52140000000003,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 3,
+              "encodedBytes": 30158,
+              "errors": [],
+              "productText": "Widget\n\nUSD 49.99\n\nOut of stock\n\nUnwatched counter: 1",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1011.7211000033421,
+              "upstreamFilterMs": 12.511099994299002,
+              "filtered": {
+                "css": "Widget\n\n  USD 49.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 49.99\n\n  Out of stock"
+              },
+              "changed": false,
+              "checkMs": 128.03249999429903,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 2.34375,
+                "peakTreeRssBytes": 777506816,
+                "lastTreeRssBytes": 777506816,
+                "processesSeen": 13,
+                "samples": 31,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 2,
+              "revision": 1,
+              "noise": 2,
+              "extractMs": 87.97829999999999,
+              "totalMs": 98.13480000000004,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 3,
+              "encodedBytes": 30158,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nOut of stock\n\nUnwatched counter: 2",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1122.6872999977786,
+              "upstreamFilterMs": 21.812600010889582,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  Out of stock"
+              },
+              "changed": true,
+              "checkMs": 119.94740001088962,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 2.5,
+                "peakTreeRssBytes": 852070400,
+                "lastTreeRssBytes": 852070400,
+                "processesSeen": 14,
+                "samples": 35,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 3,
+              "revision": 2,
+              "noise": 3,
+              "extractMs": 98.02499999999998,
+              "totalMs": 109.26199999999994,
+              "status": 200,
+              "htmlBytes": 28502,
+              "requests": 3,
+              "encodedBytes": 30154,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 3",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1254.0227999998024,
+              "upstreamFilterMs": 12.81129999551922,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": true,
+              "checkMs": 122.07329999551916,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 2.625,
+                "peakTreeRssBytes": 932184064,
+                "lastTreeRssBytes": 932184064,
+                "processesSeen": 15,
+                "samples": 38,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 4,
+              "revision": 2,
+              "noise": 4,
+              "extractMs": 95.8614,
+              "totalMs": 106.38569999999993,
+              "status": 200,
+              "htmlBytes": 28502,
+              "requests": 3,
+              "encodedBytes": 30154,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 4",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1379.081099992618,
+              "upstreamFilterMs": 11.852999989059754,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": false,
+              "checkMs": 118.23869998905968,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 2.90625,
+                "peakTreeRssBytes": 1007718400,
+                "lastTreeRssBytes": 1007718400,
+                "processesSeen": 16,
+                "samples": 42,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 5,
+              "revision": 3,
+              "noise": 5,
+              "extractMs": 97.19600000000003,
+              "totalMs": 106.99279999999999,
+              "status": 200,
+              "htmlBytes": 28512,
+              "requests": 3,
+              "encodedBytes": 30164,
+              "errors": [],
+              "productText": "Widget edition B\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 5",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1498.1795999919996,
+              "upstreamFilterMs": 21.785199991427362,
+              "filtered": {
+                "css": "Widget edition B\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget edition B\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": true,
+              "checkMs": 128.77799999142735,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 3.203125,
+                "peakTreeRssBytes": 1081499648,
+                "lastTreeRssBytes": 1081499648,
+                "processesSeen": 17,
+                "samples": 46,
+                "samplingErrors": 0
+              }
+            }
+          ]
+        },
+        {
+          "backend": "mimic",
+          "repeat": 0,
+          "readyMs": 516.0668000025908,
+          "readyTreeRssBytes": 37687296,
+          "coldFirstFetchMs": 1145.9547999984352,
+          "retainedTreeRssBytes": 128249856,
+          "version": {
+            "Browser": "Mimic/152.0.7977.82",
+            "Protocol-Version": "1.3",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+            "V8-Version": "virtual",
+            "webSocketDebuggerUrl": "ws://127.0.0.1:9233/devtools/browser/f5f29cef-10e8-4d3d-9819-d4b0b6751419"
+          },
+          "metrics": {
+            "treeCpuSecondsSampled": 2.234375,
+            "peakTreeRssBytes": 180752384,
+            "lastTreeRssBytes": 128249856,
+            "processesSeen": 1,
+            "samples": 69,
+            "samplingErrors": 0
+          },
+          "snapshots": [
+            {
+              "type": "snapshot",
+              "index": 0,
+              "revision": 0,
+              "noise": 0,
+              "extractMs": 401.39670000000007,
+              "totalMs": 408.7122,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 4,
+              "encodedBytes": 30086,
+              "errors": [],
+              "productText": "Widget\n\nUSD 49.99\n\nOut of stock\n\nUnwatched counter: 0",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1145.9547999984352,
+              "upstreamFilterMs": 63.33259999519214,
+              "filtered": {
+                "css": "Widget\n\n  USD 49.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 49.99\n\n  Out of stock"
+              },
+              "changed": false,
+              "checkMs": 472.04479999519214,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 0.859375,
+                "peakTreeRssBytes": 144781312,
+                "lastTreeRssBytes": 109531136,
+                "processesSeen": 1,
+                "samples": 33,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 1,
+              "revision": 0,
+              "noise": 1,
+              "extractMs": 242.85439999999994,
+              "totalMs": 249.99519999999995,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 4,
+              "encodedBytes": 30086,
+              "errors": [],
+              "productText": "Widget\n\nUSD 49.99\n\nOut of stock\n\nUnwatched counter: 1",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1477.953499997966,
+              "upstreamFilterMs": 41.82810000202153,
+              "filtered": {
+                "css": "Widget\n\n  USD 49.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 49.99\n\n  Out of stock"
+              },
+              "changed": false,
+              "checkMs": 291.8233000020215,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 1.109375,
+                "peakTreeRssBytes": 144781312,
+                "lastTreeRssBytes": 111390720,
+                "processesSeen": 1,
+                "samples": 40,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 2,
+              "revision": 1,
+              "noise": 2,
+              "extractMs": 236.5238999999999,
+              "totalMs": 243.23790000000008,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 4,
+              "encodedBytes": 30086,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nOut of stock\n\nUnwatched counter: 2",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1763.3452000009129,
+              "upstreamFilterMs": 21.905200002947822,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  Out of stock"
+              },
+              "changed": true,
+              "checkMs": 265.1431000029479,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 1.390625,
+                "peakTreeRssBytes": 146665472,
+                "lastTreeRssBytes": 112947200,
+                "processesSeen": 1,
+                "samples": 46,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 3,
+              "revision": 2,
+              "noise": 3,
+              "extractMs": 227.21980000000008,
+              "totalMs": 234.1087,
+              "status": 200,
+              "htmlBytes": 28502,
+              "requests": 4,
+              "encodedBytes": 30082,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 3",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 2019.6352999919327,
+              "upstreamFilterMs": 22.51159999286756,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": true,
+              "checkMs": 256.62029999286756,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 1.609375,
+                "peakTreeRssBytes": 146665472,
+                "lastTreeRssBytes": 134656000,
+                "processesSeen": 1,
+                "samples": 52,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 4,
+              "revision": 2,
+              "noise": 4,
+              "extractMs": 254.5032000000001,
+              "totalMs": 261.04269999999997,
+              "status": 200,
+              "htmlBytes": 28502,
+              "requests": 4,
+              "encodedBytes": 30082,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 4",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 2303.5473999916576,
+              "upstreamFilterMs": 103.08570000051986,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": false,
+              "checkMs": 364.12840000051983,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 1.9375,
+                "peakTreeRssBytes": 180752384,
+                "lastTreeRssBytes": 129904640,
+                "processesSeen": 1,
+                "samples": 60,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 5,
+              "revision": 3,
+              "noise": 5,
+              "extractMs": 248.36800000000017,
+              "totalMs": 255.0244,
+              "status": 200,
+              "htmlBytes": 28512,
+              "requests": 4,
+              "encodedBytes": 30092,
+              "errors": [],
+              "productText": "Widget edition B\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 5",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 2662.154499994358,
+              "upstreamFilterMs": 104.66630000155419,
+              "filtered": {
+                "css": "Widget edition B\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget edition B\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": true,
+              "checkMs": 359.6907000015542,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 2.234375,
+                "peakTreeRssBytes": 180752384,
+                "lastTreeRssBytes": 128249856,
+                "processesSeen": 1,
+                "samples": 69,
+                "samplingErrors": 0
+              }
+            }
+          ]
+        },
+        {
+          "backend": "chrome",
+          "repeat": 1,
+          "readyMs": 551.0871000005864,
+          "readyTreeRssBytes": 575008768,
+          "coldFirstFetchMs": 943.4428999957163,
+          "retainedTreeRssBytes": 1063211008,
+          "version": {
+            "Browser": "Chrome/152.0.7977.82",
+            "Protocol-Version": "1.3",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+            "V8-Version": "15.2.124.21",
+            "WebKit-Version": "537.36 (@d04cdb24d67b081f6cf80200ffc5233f44b61109)",
+            "webSocketDebuggerUrl": "ws://127.0.0.1:9336/devtools/browser/5eec193e-b05a-4cb6-b18c-56e6992a1d4c"
+          },
+          "metrics": {
+            "treeCpuSecondsSampled": 3.453125,
+            "peakTreeRssBytes": 1064816640,
+            "lastTreeRssBytes": 1063211008,
+            "processesSeen": 16,
+            "samples": 43,
+            "samplingErrors": 0
+          },
+          "snapshots": [
+            {
+              "type": "snapshot",
+              "index": 0,
+              "revision": 0,
+              "noise": 0,
+              "extractMs": 134.73680000000002,
+              "totalMs": 151.71050000000002,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 4,
+              "encodedBytes": 30791,
+              "errors": [],
+              "productText": "Widget\n\nUSD 49.99\n\nOut of stock\n\nUnwatched counter: 0",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 943.4428999957163,
+              "upstreamFilterMs": 22.008200001437217,
+              "filtered": {
+                "css": "Widget\n\n  USD 49.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 49.99\n\n  Out of stock"
+              },
+              "changed": false,
+              "checkMs": 173.71870000143724,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 2.171875,
+                "peakTreeRssBytes": 699117568,
+                "lastTreeRssBytes": 690798592,
+                "processesSeen": 11,
+                "samples": 23,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 1,
+              "revision": 0,
+              "noise": 1,
+              "extractMs": 125.76929999999999,
+              "totalMs": 137.42270000000002,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 3,
+              "encodedBytes": 30158,
+              "errors": [],
+              "productText": "Widget\n\nUSD 49.99\n\nOut of stock\n\nUnwatched counter: 1",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1108.429400002933,
+              "upstreamFilterMs": 49.271600000793114,
+              "filtered": {
+                "css": "Widget\n\n  USD 49.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 49.99\n\n  Out of stock"
+              },
+              "changed": false,
+              "checkMs": 186.69430000079313,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 2.515625,
+                "peakTreeRssBytes": 758792192,
+                "lastTreeRssBytes": 758792192,
+                "processesSeen": 12,
+                "samples": 27,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 2,
+              "revision": 1,
+              "noise": 2,
+              "extractMs": 109.65039999999999,
+              "totalMs": 121.9076,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 3,
+              "encodedBytes": 30158,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nOut of stock\n\nUnwatched counter: 2",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1280.5646999913733,
+              "upstreamFilterMs": 36.31640000094194,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  Out of stock"
+              },
+              "changed": true,
+              "checkMs": 158.22400000094194,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 2.78125,
+                "peakTreeRssBytes": 835780608,
+                "lastTreeRssBytes": 835780608,
+                "processesSeen": 13,
+                "samples": 32,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 3,
+              "revision": 2,
+              "noise": 3,
+              "extractMs": 107.84950000000003,
+              "totalMs": 118.34159999999997,
+              "status": 200,
+              "htmlBytes": 28502,
+              "requests": 3,
+              "encodedBytes": 30154,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 3",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1435.5706999922404,
+              "upstreamFilterMs": 22.032499997294508,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": true,
+              "checkMs": 140.37409999729448,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 2.9375,
+                "peakTreeRssBytes": 910209024,
+                "lastTreeRssBytes": 910209024,
+                "processesSeen": 14,
+                "samples": 35,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 4,
+              "revision": 2,
+              "noise": 4,
+              "extractMs": 115.30359999999996,
+              "totalMs": 128.37389999999994,
+              "status": 200,
+              "htmlBytes": 28502,
+              "requests": 3,
+              "encodedBytes": 30154,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 4",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1595.2452999918023,
+              "upstreamFilterMs": 22.807399989687838,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": false,
+              "checkMs": 151.18129998968777,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 3.28125,
+                "peakTreeRssBytes": 989159424,
+                "lastTreeRssBytes": 989159424,
+                "processesSeen": 15,
+                "samples": 39,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 5,
+              "revision": 3,
+              "noise": 5,
+              "extractMs": 97.67110000000002,
+              "totalMs": 108.49150000000009,
+              "status": 200,
+              "htmlBytes": 28512,
+              "requests": 3,
+              "encodedBytes": 30164,
+              "errors": [],
+              "productText": "Widget edition B\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 5",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1726.9727999955649,
+              "upstreamFilterMs": 43.356299996958114,
+              "filtered": {
+                "css": "Widget edition B\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget edition B\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": true,
+              "checkMs": 151.8477999969582,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 3.453125,
+                "peakTreeRssBytes": 1064816640,
+                "lastTreeRssBytes": 1063211008,
+                "processesSeen": 16,
+                "samples": 43,
+                "samplingErrors": 0
+              }
+            }
+          ]
+        },
+        {
+          "backend": "mimic",
+          "repeat": 1,
+          "readyMs": 549.0409000049112,
+          "readyTreeRssBytes": 38092800,
+          "coldFirstFetchMs": 1198.921600007452,
+          "retainedTreeRssBytes": 129347584,
+          "version": {
+            "Browser": "Mimic/152.0.7977.82",
+            "Protocol-Version": "1.3",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+            "V8-Version": "virtual",
+            "webSocketDebuggerUrl": "ws://127.0.0.1:9233/devtools/browser/ab72796e-b418-40e6-b579-5049bede88a0"
+          },
+          "metrics": {
+            "treeCpuSecondsSampled": 2.53125,
+            "peakTreeRssBytes": 180342784,
+            "lastTreeRssBytes": 129347584,
+            "processesSeen": 1,
+            "samples": 63,
+            "samplingErrors": 0
+          },
+          "snapshots": [
+            {
+              "type": "snapshot",
+              "index": 0,
+              "revision": 0,
+              "noise": 0,
+              "extractMs": 409.1519,
+              "totalMs": 417.4568,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 4,
+              "encodedBytes": 30086,
+              "errors": [],
+              "productText": "Widget\n\nUSD 49.99\n\nOut of stock\n\nUnwatched counter: 0",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1198.921600007452,
+              "upstreamFilterMs": 39.358699999866076,
+              "filtered": {
+                "css": "Widget\n\n  USD 49.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 49.99\n\n  Out of stock"
+              },
+              "changed": false,
+              "checkMs": 456.81549999986606,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 0.75,
+                "peakTreeRssBytes": 144740352,
+                "lastTreeRssBytes": 109228032,
+                "processesSeen": 1,
+                "samples": 26,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 1,
+              "revision": 0,
+              "noise": 1,
+              "extractMs": 226.78739999999993,
+              "totalMs": 233.67179999999996,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 4,
+              "encodedBytes": 30086,
+              "errors": [],
+              "productText": "Widget\n\nUSD 49.99\n\nOut of stock\n\nUnwatched counter: 1",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1479.0094000054523,
+              "upstreamFilterMs": 13.167700002668425,
+              "filtered": {
+                "css": "Widget\n\n  USD 49.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 49.99\n\n  Out of stock"
+              },
+              "changed": false,
+              "checkMs": 246.8395000026684,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 1.078125,
+                "peakTreeRssBytes": 144740352,
+                "lastTreeRssBytes": 110718976,
+                "processesSeen": 1,
+                "samples": 32,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 2,
+              "revision": 1,
+              "noise": 2,
+              "extractMs": 230.8424,
+              "totalMs": 237.49860000000012,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 4,
+              "encodedBytes": 30086,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nOut of stock\n\nUnwatched counter: 2",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1737.002499998198,
+              "upstreamFilterMs": 15.91539999935776,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  Out of stock"
+              },
+              "changed": true,
+              "checkMs": 253.41399999935788,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 1.34375,
+                "peakTreeRssBytes": 146636800,
+                "lastTreeRssBytes": 113561600,
+                "processesSeen": 1,
+                "samples": 39,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 3,
+              "revision": 2,
+              "noise": 3,
+              "extractMs": 244.73520000000008,
+              "totalMs": 252.01670000000013,
+              "status": 200,
+              "htmlBytes": 28502,
+              "requests": 4,
+              "encodedBytes": 30082,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 3",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 2014.1641000082018,
+              "upstreamFilterMs": 23.44069999526255,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": true,
+              "checkMs": 275.4573999952627,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 1.671875,
+                "peakTreeRssBytes": 146636800,
+                "lastTreeRssBytes": 112857088,
+                "processesSeen": 1,
+                "samples": 46,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 4,
+              "revision": 2,
+              "noise": 4,
+              "extractMs": 276.8968,
+              "totalMs": 284.5628999999999,
+              "status": 200,
+              "htmlBytes": 28502,
+              "requests": 4,
+              "encodedBytes": 30082,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 4",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 2323.938300003647,
+              "upstreamFilterMs": 22.48640000470914,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": false,
+              "checkMs": 307.04930000470904,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 2.25,
+                "peakTreeRssBytes": 180342784,
+                "lastTreeRssBytes": 129462272,
+                "processesSeen": 1,
+                "samples": 54,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 5,
+              "revision": 3,
+              "noise": 5,
+              "extractMs": 275.6310000000001,
+              "totalMs": 282.6249,
+              "status": 200,
+              "htmlBytes": 28512,
+              "requests": 4,
+              "encodedBytes": 30092,
+              "errors": [],
+              "productText": "Widget edition B\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 5",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 2635.353899997426,
+              "upstreamFilterMs": 22.14109999476932,
+              "filtered": {
+                "css": "Widget edition B\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget edition B\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": true,
+              "checkMs": 304.76599999476934,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 2.53125,
+                "peakTreeRssBytes": 180342784,
+                "lastTreeRssBytes": 129347584,
+                "processesSeen": 1,
+                "samples": 62,
+                "samplingErrors": 0
+              }
+            }
+          ]
+        },
+        {
+          "backend": "chrome",
+          "repeat": 2,
+          "readyMs": 526.8724000052316,
+          "readyTreeRssBytes": 589258752,
+          "coldFirstFetchMs": 910.3711000061594,
+          "retainedTreeRssBytes": 1081344000,
+          "version": {
+            "Browser": "Chrome/152.0.7977.82",
+            "Protocol-Version": "1.3",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+            "V8-Version": "15.2.124.21",
+            "WebKit-Version": "537.36 (@d04cdb24d67b081f6cf80200ffc5233f44b61109)",
+            "webSocketDebuggerUrl": "ws://127.0.0.1:9336/devtools/browser/e3c039f6-b5e8-4948-8741-879b4b58bacc"
+          },
+          "metrics": {
+            "treeCpuSecondsSampled": 3.484375,
+            "peakTreeRssBytes": 1081344000,
+            "lastTreeRssBytes": 1081344000,
+            "processesSeen": 17,
+            "samples": 44,
+            "samplingErrors": 0
+          },
+          "snapshots": [
+            {
+              "type": "snapshot",
+              "index": 0,
+              "revision": 0,
+              "noise": 0,
+              "extractMs": 128.2275,
+              "totalMs": 144.9231,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 4,
+              "encodedBytes": 30791,
+              "errors": [],
+              "productText": "Widget\n\nUSD 49.99\n\nOut of stock\n\nUnwatched counter: 0",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 910.3711000061594,
+              "upstreamFilterMs": 22.54610000818502,
+              "filtered": {
+                "css": "Widget\n\n  USD 49.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 49.99\n\n  Out of stock"
+              },
+              "changed": false,
+              "checkMs": 167.46920000818503,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 2.1875,
+                "peakTreeRssBytes": 707956736,
+                "lastTreeRssBytes": 707956736,
+                "processesSeen": 12,
+                "samples": 23,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 1,
+              "revision": 0,
+              "noise": 1,
+              "extractMs": 120.66549999999995,
+              "totalMs": 134.29659999999996,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 3,
+              "encodedBytes": 30158,
+              "errors": [],
+              "productText": "Widget\n\nUSD 49.99\n\nOut of stock\n\nUnwatched counter: 1",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1072.7662999997847,
+              "upstreamFilterMs": 50.32680000294931,
+              "filtered": {
+                "css": "Widget\n\n  USD 49.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 49.99\n\n  Out of stock"
+              },
+              "changed": false,
+              "checkMs": 184.62340000294927,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 2.578125,
+                "peakTreeRssBytes": 776478720,
+                "lastTreeRssBytes": 775675904,
+                "processesSeen": 13,
+                "samples": 28,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 2,
+              "revision": 1,
+              "noise": 2,
+              "extractMs": 112.9917999999999,
+              "totalMs": 129.0039999999999,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 3,
+              "encodedBytes": 30158,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nOut of stock\n\nUnwatched counter: 2",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1252.414200003841,
+              "upstreamFilterMs": 36.38130000035744,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  Out of stock"
+              },
+              "changed": true,
+              "checkMs": 165.38530000035735,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 2.84375,
+                "peakTreeRssBytes": 854265856,
+                "lastTreeRssBytes": 854265856,
+                "processesSeen": 14,
+                "samples": 32,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 3,
+              "revision": 2,
+              "noise": 3,
+              "extractMs": 111.16600000000005,
+              "totalMs": 121.64729999999997,
+              "status": 200,
+              "htmlBytes": 28502,
+              "requests": 3,
+              "encodedBytes": 30154,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 3",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1410.805400009849,
+              "upstreamFilterMs": 34.23819999443367,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": true,
+              "checkMs": 155.88549999443364,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 3.03125,
+                "peakTreeRssBytes": 928645120,
+                "lastTreeRssBytes": 928645120,
+                "processesSeen": 15,
+                "samples": 35,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 4,
+              "revision": 2,
+              "noise": 4,
+              "extractMs": 110.4233999999999,
+              "totalMs": 121.82689999999991,
+              "status": 200,
+              "htmlBytes": 28502,
+              "requests": 3,
+              "encodedBytes": 30154,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 4",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1567.1641000080854,
+              "upstreamFilterMs": 35.48940000473522,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": false,
+              "checkMs": 157.31630000473513,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 3.234375,
+                "peakTreeRssBytes": 1005780992,
+                "lastTreeRssBytes": 1005780992,
+                "processesSeen": 16,
+                "samples": 39,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 5,
+              "revision": 3,
+              "noise": 5,
+              "extractMs": 107.89930000000004,
+              "totalMs": 118.26659999999993,
+              "status": 200,
+              "htmlBytes": 28512,
+              "requests": 3,
+              "encodedBytes": 30164,
+              "errors": [],
+              "productText": "Widget edition B\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 5",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1721.2166000099387,
+              "upstreamFilterMs": 23.138100004871376,
+              "filtered": {
+                "css": "Widget edition B\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget edition B\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": true,
+              "checkMs": 141.4047000048713,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 3.46875,
+                "peakTreeRssBytes": 1080119296,
+                "lastTreeRssBytes": 1080119296,
+                "processesSeen": 17,
+                "samples": 43,
+                "samplingErrors": 0
+              }
+            }
+          ]
+        },
+        {
+          "backend": "mimic",
+          "repeat": 2,
+          "readyMs": 532.7916999958688,
+          "readyTreeRssBytes": 37548032,
+          "coldFirstFetchMs": 1162.5152000051457,
+          "retainedTreeRssBytes": 125779968,
+          "version": {
+            "Browser": "Mimic/152.0.7977.82",
+            "Protocol-Version": "1.3",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+            "V8-Version": "virtual",
+            "webSocketDebuggerUrl": "ws://127.0.0.1:9233/devtools/browser/2bdb721c-7a9c-4491-9aa7-7c56959b7310"
+          },
+          "metrics": {
+            "treeCpuSecondsSampled": 2.40625,
+            "peakTreeRssBytes": 179343360,
+            "lastTreeRssBytes": 125779968,
+            "processesSeen": 1,
+            "samples": 68,
+            "samplingErrors": 0
+          },
+          "snapshots": [
+            {
+              "type": "snapshot",
+              "index": 0,
+              "revision": 0,
+              "noise": 0,
+              "extractMs": 393.75710000000004,
+              "totalMs": 401.56450000000007,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 4,
+              "encodedBytes": 30086,
+              "errors": [],
+              "productText": "Widget\n\nUSD 49.99\n\nOut of stock\n\nUnwatched counter: 0",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1162.5152000051457,
+              "upstreamFilterMs": 35.7162000000244,
+              "filtered": {
+                "css": "Widget\n\n  USD 49.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 49.99\n\n  Out of stock"
+              },
+              "changed": false,
+              "checkMs": 437.28070000002447,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 0.625,
+                "peakTreeRssBytes": 145645568,
+                "lastTreeRssBytes": 110923776,
+                "processesSeen": 1,
+                "samples": 31,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 1,
+              "revision": 0,
+              "noise": 1,
+              "extractMs": 247.72439999999995,
+              "totalMs": 254.63659999999993,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 4,
+              "encodedBytes": 30086,
+              "errors": [],
+              "productText": "Widget\n\nUSD 49.99\n\nOut of stock\n\nUnwatched counter: 1",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1462.9402999999002,
+              "upstreamFilterMs": 21.262199996272102,
+              "filtered": {
+                "css": "Widget\n\n  USD 49.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 49.99\n\n  Out of stock"
+              },
+              "changed": false,
+              "checkMs": 275.89879999627203,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 0.9375,
+                "peakTreeRssBytes": 145645568,
+                "lastTreeRssBytes": 111484928,
+                "processesSeen": 1,
+                "samples": 38,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 2,
+              "revision": 1,
+              "noise": 2,
+              "extractMs": 248.00080000000003,
+              "totalMs": 255.08500000000004,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 4,
+              "encodedBytes": 30086,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nOut of stock\n\nUnwatched counter: 2",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1750.716900001862,
+              "upstreamFilterMs": 21.132399997441098,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  Out of stock"
+              },
+              "changed": true,
+              "checkMs": 276.21739999744113,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 1.265625,
+                "peakTreeRssBytes": 145969152,
+                "lastTreeRssBytes": 112599040,
+                "processesSeen": 1,
+                "samples": 45,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 3,
+              "revision": 2,
+              "noise": 3,
+              "extractMs": 247.4108000000001,
+              "totalMs": 254.01929999999993,
+              "status": 200,
+              "htmlBytes": 28502,
+              "requests": 4,
+              "encodedBytes": 30082,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 3",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 2026.2263000040548,
+              "upstreamFilterMs": 34.03870000329334,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": true,
+              "checkMs": 288.0580000032933,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 1.53125,
+                "peakTreeRssBytes": 146788352,
+                "lastTreeRssBytes": 112017408,
+                "processesSeen": 1,
+                "samples": 53,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 4,
+              "revision": 2,
+              "noise": 4,
+              "extractMs": 234.26409999999987,
+              "totalMs": 241.86789999999996,
+              "status": 200,
+              "htmlBytes": 28502,
+              "requests": 4,
+              "encodedBytes": 30082,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 4",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 2312.7578999992693,
+              "upstreamFilterMs": 22.182800006703474,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": false,
+              "checkMs": 264.05070000670344,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 2.109375,
+                "peakTreeRssBytes": 179343360,
+                "lastTreeRssBytes": 125067264,
+                "processesSeen": 1,
+                "samples": 60,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 5,
+              "revision": 3,
+              "noise": 5,
+              "extractMs": 247.70389999999998,
+              "totalMs": 254.49469999999997,
+              "status": 200,
+              "htmlBytes": 28512,
+              "requests": 4,
+              "encodedBytes": 30092,
+              "errors": [],
+              "productText": "Widget edition B\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 5",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 2589.7326999984216,
+              "upstreamFilterMs": 52.92849999386817,
+              "filtered": {
+                "css": "Widget edition B\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget edition B\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": true,
+              "checkMs": 307.42319999386814,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 2.40625,
+                "peakTreeRssBytes": 179343360,
+                "lastTreeRssBytes": 125779968,
+                "processesSeen": 1,
+                "samples": 68,
+                "samplingErrors": 0
+              }
+            }
+          ]
+        }
+      ],
+      "captureInventory": [
+        {
+          "file": "metadata.json",
+          "sha256": "d9f5eebea995fe8ab257113d523d2b79482f1bd560ccc07d593bd7ec19a6b932"
+        },
+        {
+          "file": "summary.json",
+          "sha256": "e8b76d7b54abe5f5678cf8354826afcad6d1722c93587fb3bf11ab236f28391a"
+        },
+        {
+          "file": "0-chrome\\backend.log",
+          "sha256": "4ad8d342e495eda96fe226c96f5a6f2de344fe35545533f1a00858711b23341b"
+        },
+        {
+          "file": "0-chrome\\client-errors.log",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "file": "0-chrome\\client-events.jsonl",
+          "sha256": "7180092f7cb14b4c76b28bfa5d98515a2f627c183eead389474a9782e7ff7361"
+        },
+        {
+          "file": "0-chrome\\launch.json",
+          "sha256": "95724d16a629967209d0472280049d5054beb0cd4118999334258f3a963f59ab"
+        },
+        {
+          "file": "0-chrome\\result.json",
+          "sha256": "dc2ddb5c94e3e098033e23cac377789aee052d67eba8806ad5e35fee114d996a"
+        },
+        {
+          "file": "0-chrome\\snapshot-0.html",
+          "sha256": "8ec5e236c57580d0d50c8d79c18cb303961c4a6dd6cf6f35e3095daad7ad0db5"
+        },
+        {
+          "file": "0-chrome\\snapshot-1.html",
+          "sha256": "c9514f92b7f4b6ccccad7e49f23f57d0c380c233269c7aff9264fd1836f236fc"
+        },
+        {
+          "file": "0-chrome\\snapshot-2.html",
+          "sha256": "335f5155976729363d39e6e11f70391b068512d30e1341c5fb1f201121fdcfc7"
+        },
+        {
+          "file": "0-chrome\\snapshot-3.html",
+          "sha256": "3d2642e010425d16f9ac68167c369199f68b1fe5200e7bf7e4b2eb3be2e5ece6"
+        },
+        {
+          "file": "0-chrome\\snapshot-4.html",
+          "sha256": "c4b12e397dba94cc17a3a2308034e15dc20c99362d52e7fef3070fa7b81d0504"
+        },
+        {
+          "file": "0-chrome\\snapshot-5.html",
+          "sha256": "64f513b55d2201d15de1314c5180296d0c5471665425539aa409e5ad59d6b829"
+        },
+        {
+          "file": "0-mimic\\backend.log",
+          "sha256": "3e20676ecf1918fde4050c9ce794d99c1a11711ea6dafd24760a938111de5404"
+        },
+        {
+          "file": "0-mimic\\client-errors.log",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "file": "0-mimic\\client-events.jsonl",
+          "sha256": "abc131775f66c5323e302075d4c8fd472e7e623056082b778cd08b58225c10d4"
+        },
+        {
+          "file": "0-mimic\\launch.json",
+          "sha256": "51fe1292d87960189ff474b60d0d1547bf4936f087dcc299b54ede7a6783ec2b"
+        },
+        {
+          "file": "0-mimic\\result.json",
+          "sha256": "e87ae2029714ec828ced302447c8f6dedd550bc95b56ac66408f80c13176735a"
+        },
+        {
+          "file": "0-mimic\\snapshot-0.html",
+          "sha256": "8ec5e236c57580d0d50c8d79c18cb303961c4a6dd6cf6f35e3095daad7ad0db5"
+        },
+        {
+          "file": "0-mimic\\snapshot-1.html",
+          "sha256": "c9514f92b7f4b6ccccad7e49f23f57d0c380c233269c7aff9264fd1836f236fc"
+        },
+        {
+          "file": "0-mimic\\snapshot-2.html",
+          "sha256": "335f5155976729363d39e6e11f70391b068512d30e1341c5fb1f201121fdcfc7"
+        },
+        {
+          "file": "0-mimic\\snapshot-3.html",
+          "sha256": "3d2642e010425d16f9ac68167c369199f68b1fe5200e7bf7e4b2eb3be2e5ece6"
+        },
+        {
+          "file": "0-mimic\\snapshot-4.html",
+          "sha256": "c4b12e397dba94cc17a3a2308034e15dc20c99362d52e7fef3070fa7b81d0504"
+        },
+        {
+          "file": "0-mimic\\snapshot-5.html",
+          "sha256": "64f513b55d2201d15de1314c5180296d0c5471665425539aa409e5ad59d6b829"
+        },
+        {
+          "file": "1-chrome\\backend.log",
+          "sha256": "aaee11cdb68025f8406c94502c9afe83764fec615a7104f82eb584a095fe336b"
+        },
+        {
+          "file": "1-chrome\\client-errors.log",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "file": "1-chrome\\client-events.jsonl",
+          "sha256": "3d0ac83f4f2be92c3655b878444a016c3e4001305d80e734215062d2e783c1f3"
+        },
+        {
+          "file": "1-chrome\\launch.json",
+          "sha256": "a0b156c7887c0137e73d7abe214b6eb305111d7ff140abeff9c26c0e8f2a4d48"
+        },
+        {
+          "file": "1-chrome\\result.json",
+          "sha256": "03a821bcd503427473ea510b12260df5d4992719b05f94f754f91214457ad3b7"
+        },
+        {
+          "file": "1-chrome\\snapshot-0.html",
+          "sha256": "8ec5e236c57580d0d50c8d79c18cb303961c4a6dd6cf6f35e3095daad7ad0db5"
+        },
+        {
+          "file": "1-chrome\\snapshot-1.html",
+          "sha256": "c9514f92b7f4b6ccccad7e49f23f57d0c380c233269c7aff9264fd1836f236fc"
+        },
+        {
+          "file": "1-chrome\\snapshot-2.html",
+          "sha256": "335f5155976729363d39e6e11f70391b068512d30e1341c5fb1f201121fdcfc7"
+        },
+        {
+          "file": "1-chrome\\snapshot-3.html",
+          "sha256": "3d2642e010425d16f9ac68167c369199f68b1fe5200e7bf7e4b2eb3be2e5ece6"
+        },
+        {
+          "file": "1-chrome\\snapshot-4.html",
+          "sha256": "c4b12e397dba94cc17a3a2308034e15dc20c99362d52e7fef3070fa7b81d0504"
+        },
+        {
+          "file": "1-chrome\\snapshot-5.html",
+          "sha256": "64f513b55d2201d15de1314c5180296d0c5471665425539aa409e5ad59d6b829"
+        },
+        {
+          "file": "1-mimic\\backend.log",
+          "sha256": "3e20676ecf1918fde4050c9ce794d99c1a11711ea6dafd24760a938111de5404"
+        },
+        {
+          "file": "1-mimic\\client-errors.log",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "file": "1-mimic\\client-events.jsonl",
+          "sha256": "51909b8aaeff15321757fb312779a063b768d3328a8d4adc5cad72b678f06ab7"
+        },
+        {
+          "file": "1-mimic\\launch.json",
+          "sha256": "51fe1292d87960189ff474b60d0d1547bf4936f087dcc299b54ede7a6783ec2b"
+        },
+        {
+          "file": "1-mimic\\result.json",
+          "sha256": "89ebd122be455ab8dde313277a75e2078c3e467ed5fd41a40067eca95ad61bca"
+        },
+        {
+          "file": "1-mimic\\snapshot-0.html",
+          "sha256": "8ec5e236c57580d0d50c8d79c18cb303961c4a6dd6cf6f35e3095daad7ad0db5"
+        },
+        {
+          "file": "1-mimic\\snapshot-1.html",
+          "sha256": "c9514f92b7f4b6ccccad7e49f23f57d0c380c233269c7aff9264fd1836f236fc"
+        },
+        {
+          "file": "1-mimic\\snapshot-2.html",
+          "sha256": "335f5155976729363d39e6e11f70391b068512d30e1341c5fb1f201121fdcfc7"
+        },
+        {
+          "file": "1-mimic\\snapshot-3.html",
+          "sha256": "3d2642e010425d16f9ac68167c369199f68b1fe5200e7bf7e4b2eb3be2e5ece6"
+        },
+        {
+          "file": "1-mimic\\snapshot-4.html",
+          "sha256": "c4b12e397dba94cc17a3a2308034e15dc20c99362d52e7fef3070fa7b81d0504"
+        },
+        {
+          "file": "1-mimic\\snapshot-5.html",
+          "sha256": "64f513b55d2201d15de1314c5180296d0c5471665425539aa409e5ad59d6b829"
+        },
+        {
+          "file": "2-chrome\\backend.log",
+          "sha256": "40c762822687c7a5591ecf6655887fc6e2d87fa97d3307c6279c41c8629f2cc4"
+        },
+        {
+          "file": "2-chrome\\client-errors.log",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "file": "2-chrome\\client-events.jsonl",
+          "sha256": "957ed70e3fe0880771a89c0d684491dc27d9a34e52c051176acedc4730dd25ca"
+        },
+        {
+          "file": "2-chrome\\launch.json",
+          "sha256": "8c0510c7d763591745952de7be2d9353e725dd769ae0edf4aa884a096ceb9149"
+        },
+        {
+          "file": "2-chrome\\result.json",
+          "sha256": "9ebd2846581eae314f594ebc185730d1e4dae70ff20f64fcaf635bf426bce7de"
+        },
+        {
+          "file": "2-chrome\\snapshot-0.html",
+          "sha256": "8ec5e236c57580d0d50c8d79c18cb303961c4a6dd6cf6f35e3095daad7ad0db5"
+        },
+        {
+          "file": "2-chrome\\snapshot-1.html",
+          "sha256": "c9514f92b7f4b6ccccad7e49f23f57d0c380c233269c7aff9264fd1836f236fc"
+        },
+        {
+          "file": "2-chrome\\snapshot-2.html",
+          "sha256": "335f5155976729363d39e6e11f70391b068512d30e1341c5fb1f201121fdcfc7"
+        },
+        {
+          "file": "2-chrome\\snapshot-3.html",
+          "sha256": "3d2642e010425d16f9ac68167c369199f68b1fe5200e7bf7e4b2eb3be2e5ece6"
+        },
+        {
+          "file": "2-chrome\\snapshot-4.html",
+          "sha256": "c4b12e397dba94cc17a3a2308034e15dc20c99362d52e7fef3070fa7b81d0504"
+        },
+        {
+          "file": "2-chrome\\snapshot-5.html",
+          "sha256": "64f513b55d2201d15de1314c5180296d0c5471665425539aa409e5ad59d6b829"
+        },
+        {
+          "file": "2-mimic\\backend.log",
+          "sha256": "3e20676ecf1918fde4050c9ce794d99c1a11711ea6dafd24760a938111de5404"
+        },
+        {
+          "file": "2-mimic\\client-errors.log",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "file": "2-mimic\\client-events.jsonl",
+          "sha256": "4d5c9f8a16e2e3e73794382a2c4d1ab21e0982e1a21f9ca16d2a94defc45d13a"
+        },
+        {
+          "file": "2-mimic\\launch.json",
+          "sha256": "51fe1292d87960189ff474b60d0d1547bf4936f087dcc299b54ede7a6783ec2b"
+        },
+        {
+          "file": "2-mimic\\result.json",
+          "sha256": "429b42efd322657e2aab615d1b2d19c71d09a26d35facc7299f8c1b44701fd03"
+        },
+        {
+          "file": "2-mimic\\snapshot-0.html",
+          "sha256": "8ec5e236c57580d0d50c8d79c18cb303961c4a6dd6cf6f35e3095daad7ad0db5"
+        },
+        {
+          "file": "2-mimic\\snapshot-1.html",
+          "sha256": "c9514f92b7f4b6ccccad7e49f23f57d0c380c233269c7aff9264fd1836f236fc"
+        },
+        {
+          "file": "2-mimic\\snapshot-2.html",
+          "sha256": "335f5155976729363d39e6e11f70391b068512d30e1341c5fb1f201121fdcfc7"
+        },
+        {
+          "file": "2-mimic\\snapshot-3.html",
+          "sha256": "3d2642e010425d16f9ac68167c369199f68b1fe5200e7bf7e4b2eb3be2e5ece6"
+        },
+        {
+          "file": "2-mimic\\snapshot-4.html",
+          "sha256": "c4b12e397dba94cc17a3a2308034e15dc20c99362d52e7fef3070fa7b81d0504"
+        },
+        {
+          "file": "2-mimic\\snapshot-5.html",
+          "sha256": "64f513b55d2201d15de1314c5180296d0c5471665425539aa409e5ad59d6b829"
+        },
+        {
+          "file": "upstream\\changedetectionio\\html_tools.py",
+          "sha256": "e9d947799d06571f9ed8e5d69460dae85256f13348a7e522e6a102c7adc5c88f"
+        },
+        {
+          "file": "upstream\\changedetectionio\\strtobool.py",
+          "sha256": "edf20b78855e3cda645fdf9c1f3d3780da0670ebd071bd8ffde47688a85e473e"
+        },
+        {
+          "file": "upstream\\changedetectionio\\__pycache__\\html_tools.cpython-314.pyc",
+          "sha256": "ac8d0b39260eb0e7d65b173be257cbf6c210f303554d5d7ecb870583f2d47884"
+        },
+        {
+          "file": "upstream\\changedetectionio\\__pycache__\\strtobool.cpython-314.pyc",
+          "sha256": "6c59787f471388c626c592ec52926825ee1476f4f203a497385364a7f82c3be5"
+        }
+      ]
+    },
+    "headless": {
+      "metadata": {
+        "upstreamRevision": "0e0566721b1c483dcf7ae548210ee10532d9b181",
+        "python": "3.14.2 (tags/v3.14.2:df79316, Dec  5 2025, 17:18:21) [MSC v.1944 64 bit (AMD64)]",
+        "platform": "win32",
+        "binaryHashes": {
+          "mimic": "b7db7fe64fe896fc3994dbffca3578260fc35d17fcb63b17c5777ee595238b05",
+          "chrome": "ea36dd818a90176f1a70616f0363d9be527229389a6c073a0b1688b9e73f67e9"
+        },
+        "screenshots": false,
+        "css": "#product .name, #product .price, #product .stock",
+        "xpath": "//*[@id='product']/*[@class='name' or @class='price' or @class='stock']",
+        "sequence": [
+          "Widget\n\n  USD 49.99\n\n  Out of stock",
+          "Widget\n\n  USD 49.99\n\n  Out of stock",
+          "Widget\n\n  USD 39.99\n\n  Out of stock",
+          "Widget\n\n  USD 39.99\n\n  In stock",
+          "Widget\n\n  USD 39.99\n\n  In stock",
+          "Widget edition B\n\n  USD 39.99\n\n  In stock"
+        ],
+        "chromeMode": "headless",
+        "filterDependenciesPrewarmMs": 115.43439999513794,
+        "mode": "local fixture, standalone opt-in fetch plus unchanged upstream filtering",
+        "memoryBoundary": "sampled backend process-tree RSS sum; shared pages may be counted repeatedly",
+        "cpuBoundary": "sampled backend process-tree accumulated CPU; short-lived descendants may be missed"
+      },
+      "summary": {
+        "mimic": {
+          "correctSnapshots": 18,
+          "coldMsMedian": 1217.0928999985335,
+          "warmMsMedian": 265.45500000000004,
+          "warmCheckMsMedian": 294.3442000138177,
+          "filterMsMedian": 37.91720000299392,
+          "peakTreeRssMiBMedian": 169.94140625,
+          "cpuSecondsMedian": 2.40625
+        },
+        "chrome": {
+          "correctSnapshots": 18,
+          "coldMsMedian": 940.0319999986095,
+          "warmMsMedian": 125.7201,
+          "warmCheckMsMedian": 153.75620000370031,
+          "filterMsMedian": 24.45649999572197,
+          "peakTreeRssMiBMedian": 1044.67578125,
+          "cpuSecondsMedian": 4.03125
+        }
+      },
+      "runs": [
+        {
+          "backend": "chrome",
+          "repeat": 0,
+          "readyMs": 558.2542999909492,
+          "readyTreeRssBytes": 593883136,
+          "coldFirstFetchMs": 916.951599996537,
+          "retainedTreeRssBytes": 1096175616,
+          "version": {
+            "Browser": "Chrome/152.0.7977.82",
+            "Protocol-Version": "1.3",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36",
+            "V8-Version": "15.2.124.21",
+            "WebKit-Version": "537.36 (@d04cdb24d67b081f6cf80200ffc5233f44b61109)",
+            "webSocketDebuggerUrl": "ws://127.0.0.1:9336/devtools/browser/b0ef70fd-7e07-4a83-9896-f1418d2cd1af"
+          },
+          "teardown": {
+            "type": "teardown",
+            "initialPageCount": 1,
+            "remainingPageCount": 1
+          },
+          "metrics": {
+            "treeCpuSecondsSampled": 4.671875,
+            "peakTreeRssBytes": 1098809344,
+            "lastTreeRssBytes": 1096175616,
+            "processesSeen": 17,
+            "samples": 52,
+            "samplingErrors": 0
+          },
+          "snapshots": [
+            {
+              "type": "snapshot",
+              "index": 0,
+              "revision": 0,
+              "noise": 0,
+              "extractMs": 120.51199999999997,
+              "totalMs": 132.4165,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 4,
+              "encodedBytes": 30791,
+              "errors": [],
+              "productText": "Widget\n\nUSD 49.99\n\nOut of stock\n\nUnwatched counter: 0",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 916.951599996537,
+              "upstreamFilterMs": 13.227399991592392,
+              "filtered": {
+                "css": "Widget\n\n  USD 49.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 49.99\n\n  Out of stock"
+              },
+              "changed": false,
+              "checkMs": 145.6438999915924,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 2.5,
+                "peakTreeRssBytes": 709832704,
+                "lastTreeRssBytes": 709832704,
+                "processesSeen": 12,
+                "samples": 26,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 1,
+              "revision": 0,
+              "noise": 1,
+              "extractMs": 117.25330000000002,
+              "totalMs": 129.5847,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 3,
+              "encodedBytes": 30158,
+              "errors": [],
+              "productText": "Widget\n\nUSD 49.99\n\nOut of stock\n\nUnwatched counter: 1",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1060.294699986116,
+              "upstreamFilterMs": 13.678300005267374,
+              "filtered": {
+                "css": "Widget\n\n  USD 49.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 49.99\n\n  Out of stock"
+              },
+              "changed": false,
+              "checkMs": 143.26300000526737,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 3.015625,
+                "peakTreeRssBytes": 790614016,
+                "lastTreeRssBytes": 790614016,
+                "processesSeen": 13,
+                "samples": 30,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 2,
+              "revision": 1,
+              "noise": 2,
+              "extractMs": 153.6429,
+              "totalMs": 164.73430000000002,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 3,
+              "encodedBytes": 30158,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nOut of stock\n\nUnwatched counter: 2",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1239.0470999962417,
+              "upstreamFilterMs": 23.246099997777492,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  Out of stock"
+              },
+              "changed": true,
+              "checkMs": 187.9803999977775,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 3.484375,
+                "peakTreeRssBytes": 866623488,
+                "lastTreeRssBytes": 866623488,
+                "processesSeen": 14,
+                "samples": 36,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 3,
+              "revision": 2,
+              "noise": 3,
+              "extractMs": 111.35760000000005,
+              "totalMs": 119.59030000000007,
+              "status": 200,
+              "htmlBytes": 28502,
+              "requests": 3,
+              "encodedBytes": 30154,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 3",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1382.1375999978045,
+              "upstreamFilterMs": 22.44990000326652,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": true,
+              "checkMs": 142.0402000032666,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 3.78125,
+                "peakTreeRssBytes": 944381952,
+                "lastTreeRssBytes": 944381952,
+                "processesSeen": 15,
+                "samples": 40,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 4,
+              "revision": 2,
+              "noise": 4,
+              "extractMs": 108.45619999999997,
+              "totalMs": 118.74869999999999,
+              "status": 200,
+              "htmlBytes": 28502,
+              "requests": 3,
+              "encodedBytes": 30154,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 4",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1523.6219999933382,
+              "upstreamFilterMs": 22.214600001461804,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": false,
+              "checkMs": 140.9633000014618,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 4.140625,
+                "peakTreeRssBytes": 1020887040,
+                "lastTreeRssBytes": 1020887040,
+                "processesSeen": 16,
+                "samples": 44,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 5,
+              "revision": 3,
+              "noise": 5,
+              "extractMs": 107.26660000000015,
+              "totalMs": 117.32050000000004,
+              "status": 200,
+              "htmlBytes": 28512,
+              "requests": 3,
+              "encodedBytes": 30164,
+              "errors": [],
+              "productText": "Widget edition B\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 5",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1663.4927999984939,
+              "upstreamFilterMs": 23.869199998443946,
+              "filtered": {
+                "css": "Widget edition B\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget edition B\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": true,
+              "checkMs": 141.18969999844398,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 4.546875,
+                "peakTreeRssBytes": 1098047488,
+                "lastTreeRssBytes": 1098047488,
+                "processesSeen": 17,
+                "samples": 48,
+                "samplingErrors": 0
+              }
+            }
+          ]
+        },
+        {
+          "backend": "mimic",
+          "repeat": 0,
+          "readyMs": 537.5625000015134,
+          "readyTreeRssBytes": 37335040,
+          "coldFirstFetchMs": 1165.5536000034772,
+          "retainedTreeRssBytes": 127688704,
+          "version": {
+            "Browser": "Mimic/152.0.7977.82",
+            "Protocol-Version": "1.3",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+            "V8-Version": "virtual",
+            "webSocketDebuggerUrl": "ws://127.0.0.1:9233/devtools/browser/280ae905-3359-4390-aec0-2d304ad771b0"
+          },
+          "teardown": {
+            "type": "teardown",
+            "initialPageCount": 1,
+            "remainingPageCount": 1
+          },
+          "metrics": {
+            "treeCpuSecondsSampled": 2.484375,
+            "peakTreeRssBytes": 178196480,
+            "lastTreeRssBytes": 127688704,
+            "processesSeen": 1,
+            "samples": 68,
+            "samplingErrors": 0
+          },
+          "snapshots": [
+            {
+              "type": "snapshot",
+              "index": 0,
+              "revision": 0,
+              "noise": 0,
+              "extractMs": 402.546,
+              "totalMs": 410.62179999999995,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 4,
+              "encodedBytes": 30086,
+              "errors": [],
+              "productText": "Widget\n\nUSD 49.99\n\nOut of stock\n\nUnwatched counter: 0",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1165.5536000034772,
+              "upstreamFilterMs": 53.797700005816296,
+              "filtered": {
+                "css": "Widget\n\n  USD 49.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 49.99\n\n  Out of stock"
+              },
+              "changed": false,
+              "checkMs": 464.41950000581625,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 0.640625,
+                "peakTreeRssBytes": 145293312,
+                "lastTreeRssBytes": 110698496,
+                "processesSeen": 1,
+                "samples": 29,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 1,
+              "revision": 0,
+              "noise": 1,
+              "extractMs": 245.37259999999992,
+              "totalMs": 252.59399999999994,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 4,
+              "encodedBytes": 30086,
+              "errors": [],
+              "productText": "Widget\n\nUSD 49.99\n\nOut of stock\n\nUnwatched counter: 1",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1472.6487000007182,
+              "upstreamFilterMs": 39.160500004072674,
+              "filtered": {
+                "css": "Widget\n\n  USD 49.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 49.99\n\n  Out of stock"
+              },
+              "changed": false,
+              "checkMs": 291.7545000040726,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 1.140625,
+                "peakTreeRssBytes": 146374656,
+                "lastTreeRssBytes": 111054848,
+                "processesSeen": 1,
+                "samples": 36,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 2,
+              "revision": 1,
+              "noise": 2,
+              "extractMs": 236.9222000000001,
+              "totalMs": 244.06340000000012,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 4,
+              "encodedBytes": 30086,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nOut of stock\n\nUnwatched counter: 2",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1756.2878000026103,
+              "upstreamFilterMs": 39.72119999525603,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  Out of stock"
+              },
+              "changed": true,
+              "checkMs": 283.78459999525614,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 1.390625,
+                "peakTreeRssBytes": 148004864,
+                "lastTreeRssBytes": 112394240,
+                "processesSeen": 1,
+                "samples": 43,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 3,
+              "revision": 2,
+              "noise": 3,
+              "extractMs": 248.68680000000018,
+              "totalMs": 255.7577000000001,
+              "status": 200,
+              "htmlBytes": 28502,
+              "requests": 4,
+              "encodedBytes": 30082,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 3",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 2052.14130000968,
+              "upstreamFilterMs": 40.51869999966584,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": true,
+              "checkMs": 296.27639999966595,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 1.640625,
+                "peakTreeRssBytes": 148004864,
+                "lastTreeRssBytes": 111583232,
+                "processesSeen": 1,
+                "samples": 50,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 4,
+              "revision": 2,
+              "noise": 4,
+              "extractMs": 260.93089999999984,
+              "totalMs": 268.35259999999994,
+              "status": 200,
+              "htmlBytes": 28502,
+              "requests": 4,
+              "encodedBytes": 30082,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 4",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 2368.464400002267,
+              "upstreamFilterMs": 23.918599996250123,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": false,
+              "checkMs": 292.27119999625006,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 2.1875,
+                "peakTreeRssBytes": 178196480,
+                "lastTreeRssBytes": 128978944,
+                "processesSeen": 1,
+                "samples": 57,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 5,
+              "revision": 3,
+              "noise": 5,
+              "extractMs": 277.4850000000001,
+              "totalMs": 285.97609999999986,
+              "status": 200,
+              "htmlBytes": 28512,
+              "requests": 4,
+              "encodedBytes": 30092,
+              "errors": [],
+              "productText": "Widget edition B\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 5",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 2678.711700005806,
+              "upstreamFilterMs": 32.463999988976866,
+              "filtered": {
+                "css": "Widget edition B\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget edition B\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": true,
+              "checkMs": 318.4400999889767,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 2.484375,
+                "peakTreeRssBytes": 178196480,
+                "lastTreeRssBytes": 127688704,
+                "processesSeen": 1,
+                "samples": 65,
+                "samplingErrors": 0
+              }
+            }
+          ]
+        },
+        {
+          "backend": "chrome",
+          "repeat": 1,
+          "readyMs": 525.6760000047507,
+          "readyTreeRssBytes": 583012352,
+          "coldFirstFetchMs": 940.0319999986095,
+          "retainedTreeRssBytes": 1093517312,
+          "version": {
+            "Browser": "Chrome/152.0.7977.82",
+            "Protocol-Version": "1.3",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36",
+            "V8-Version": "15.2.124.21",
+            "WebKit-Version": "537.36 (@d04cdb24d67b081f6cf80200ffc5233f44b61109)",
+            "webSocketDebuggerUrl": "ws://127.0.0.1:9336/devtools/browser/d917f0a4-ca94-4aa5-8980-ab026e6ee73c"
+          },
+          "teardown": {
+            "type": "teardown",
+            "initialPageCount": 1,
+            "remainingPageCount": 1
+          },
+          "metrics": {
+            "treeCpuSecondsSampled": 4.03125,
+            "peakTreeRssBytes": 1095421952,
+            "lastTreeRssBytes": 1093517312,
+            "processesSeen": 16,
+            "samples": 46,
+            "samplingErrors": 0
+          },
+          "snapshots": [
+            {
+              "type": "snapshot",
+              "index": 0,
+              "revision": 0,
+              "noise": 0,
+              "extractMs": 176.3657,
+              "totalMs": 190.349,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 4,
+              "encodedBytes": 30791,
+              "errors": [],
+              "productText": "Widget\n\nUSD 49.99\n\nOut of stock\n\nUnwatched counter: 0",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 940.0319999986095,
+              "upstreamFilterMs": 40.15410000283737,
+              "filtered": {
+                "css": "Widget\n\n  USD 49.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 49.99\n\n  Out of stock"
+              },
+              "changed": false,
+              "checkMs": 230.50310000283736,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 2.171875,
+                "peakTreeRssBytes": 704585728,
+                "lastTreeRssBytes": 704585728,
+                "processesSeen": 11,
+                "samples": 24,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 1,
+              "revision": 0,
+              "noise": 1,
+              "extractMs": 112.37590000000006,
+              "totalMs": 121.47880000000004,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 3,
+              "encodedBytes": 30158,
+              "errors": [],
+              "productText": "Widget\n\nUSD 49.99\n\nOut of stock\n\nUnwatched counter: 1",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1102.3450999928173,
+              "upstreamFilterMs": 24.354199995286763,
+              "filtered": {
+                "css": "Widget\n\n  USD 49.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 49.99\n\n  Out of stock"
+              },
+              "changed": false,
+              "checkMs": 145.8329999952868,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 2.578125,
+                "peakTreeRssBytes": 780947456,
+                "lastTreeRssBytes": 780947456,
+                "processesSeen": 12,
+                "samples": 27,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 2,
+              "revision": 1,
+              "noise": 2,
+              "extractMs": 135.16110000000003,
+              "totalMs": 147.8280000000001,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 3,
+              "encodedBytes": 30158,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nOut of stock\n\nUnwatched counter: 2",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1274.890200002119,
+              "upstreamFilterMs": 36.00590000860393,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  Out of stock"
+              },
+              "changed": true,
+              "checkMs": 183.83390000860402,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 2.953125,
+                "peakTreeRssBytes": 858042368,
+                "lastTreeRssBytes": 858042368,
+                "processesSeen": 13,
+                "samples": 32,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 3,
+              "revision": 2,
+              "noise": 3,
+              "extractMs": 103.22040000000004,
+              "totalMs": 111.48770000000002,
+              "status": 200,
+              "htmlBytes": 28502,
+              "requests": 3,
+              "encodedBytes": 30154,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 3",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1424.367200001143,
+              "upstreamFilterMs": 42.50220001267735,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": true,
+              "checkMs": 153.98990001267737,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 3.296875,
+                "peakTreeRssBytes": 940085248,
+                "lastTreeRssBytes": 940085248,
+                "processesSeen": 14,
+                "samples": 36,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 4,
+              "revision": 2,
+              "noise": 4,
+              "extractMs": 115.85849999999994,
+              "totalMs": 127.21799999999996,
+              "status": 200,
+              "htmlBytes": 28502,
+              "requests": 3,
+              "encodedBytes": 30154,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 4",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1594.3917999975383,
+              "upstreamFilterMs": 38.95260000717826,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": false,
+              "checkMs": 166.17060000717822,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 3.625,
+                "peakTreeRssBytes": 1015853056,
+                "lastTreeRssBytes": 1015853056,
+                "processesSeen": 15,
+                "samples": 40,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 5,
+              "revision": 3,
+              "noise": 5,
+              "extractMs": 115.2376999999999,
+              "totalMs": 125.7201,
+              "status": 200,
+              "htmlBytes": 28512,
+              "requests": 3,
+              "encodedBytes": 30164,
+              "errors": [],
+              "productText": "Widget edition B\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 5",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1760.5745000037132,
+              "upstreamFilterMs": 24.558799996157177,
+              "filtered": {
+                "css": "Widget edition B\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget edition B\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": true,
+              "checkMs": 150.27889999615718,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 3.828125,
+                "peakTreeRssBytes": 1095421952,
+                "lastTreeRssBytes": 1095421952,
+                "processesSeen": 16,
+                "samples": 43,
+                "samplingErrors": 0
+              }
+            }
+          ]
+        },
+        {
+          "backend": "mimic",
+          "repeat": 1,
+          "readyMs": 537.004199999501,
+          "readyTreeRssBytes": 37646336,
+          "coldFirstFetchMs": 1234.1414999973495,
+          "retainedTreeRssBytes": 128143360,
+          "version": {
+            "Browser": "Mimic/152.0.7977.82",
+            "Protocol-Version": "1.3",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+            "V8-Version": "virtual",
+            "webSocketDebuggerUrl": "ws://127.0.0.1:9233/devtools/browser/b8b1a1bf-4883-43be-9ce4-7d143671c650"
+          },
+          "teardown": {
+            "type": "teardown",
+            "initialPageCount": 1,
+            "remainingPageCount": 1
+          },
+          "metrics": {
+            "treeCpuSecondsSampled": 2.40625,
+            "peakTreeRssBytes": 177922048,
+            "lastTreeRssBytes": 128143360,
+            "processesSeen": 1,
+            "samples": 68,
+            "samplingErrors": 0
+          },
+          "snapshots": [
+            {
+              "type": "snapshot",
+              "index": 0,
+              "revision": 0,
+              "noise": 0,
+              "extractMs": 409.99109999999996,
+              "totalMs": 418.32899999999995,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 4,
+              "encodedBytes": 30086,
+              "errors": [],
+              "productText": "Widget\n\nUSD 49.99\n\nOut of stock\n\nUnwatched counter: 0",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1234.1414999973495,
+              "upstreamFilterMs": 37.96259999217,
+              "filtered": {
+                "css": "Widget\n\n  USD 49.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 49.99\n\n  Out of stock"
+              },
+              "changed": false,
+              "checkMs": 456.29159999216995,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 0.734375,
+                "peakTreeRssBytes": 142049280,
+                "lastTreeRssBytes": 108810240,
+                "processesSeen": 1,
+                "samples": 29,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 1,
+              "revision": 0,
+              "noise": 1,
+              "extractMs": 258.40190000000007,
+              "totalMs": 265.45500000000004,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 4,
+              "encodedBytes": 30086,
+              "errors": [],
+              "productText": "Widget\n\nUSD 49.99\n\nOut of stock\n\nUnwatched counter: 1",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1540.4528000071878,
+              "upstreamFilterMs": 24.87700000347104,
+              "filtered": {
+                "css": "Widget\n\n  USD 49.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 49.99\n\n  Out of stock"
+              },
+              "changed": false,
+              "checkMs": 290.3320000034711,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 0.984375,
+                "peakTreeRssBytes": 142237696,
+                "lastTreeRssBytes": 110874624,
+                "processesSeen": 1,
+                "samples": 36,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 2,
+              "revision": 1,
+              "noise": 2,
+              "extractMs": 255.0388999999999,
+              "totalMs": 262.2277,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 4,
+              "encodedBytes": 30086,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nOut of stock\n\nUnwatched counter: 2",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1827.8865000029327,
+              "upstreamFilterMs": 46.510700005455874,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  Out of stock"
+              },
+              "changed": true,
+              "checkMs": 308.7384000054559,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 1.28125,
+                "peakTreeRssBytes": 143441920,
+                "lastTreeRssBytes": 112320512,
+                "processesSeen": 1,
+                "samples": 44,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 3,
+              "revision": 2,
+              "noise": 3,
+              "extractMs": 247.24919999999997,
+              "totalMs": 254.2231999999999,
+              "status": 200,
+              "htmlBytes": 28502,
+              "requests": 4,
+              "encodedBytes": 30082,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 3",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 2128.9082000002963,
+              "upstreamFilterMs": 12.526999998954125,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": true,
+              "checkMs": 266.75019999895403,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 1.578125,
+                "peakTreeRssBytes": 148230144,
+                "lastTreeRssBytes": 148230144,
+                "processesSeen": 1,
+                "samples": 50,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 4,
+              "revision": 2,
+              "noise": 4,
+              "extractMs": 263.5149999999999,
+              "totalMs": 270.2809,
+              "status": 200,
+              "htmlBytes": 28502,
+              "requests": 4,
+              "encodedBytes": 30082,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 4",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 2411.9739000016125,
+              "upstreamFilterMs": 47.59590000321623,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": false,
+              "checkMs": 317.8768000032162,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 2.125,
+                "peakTreeRssBytes": 177922048,
+                "lastTreeRssBytes": 126836736,
+                "processesSeen": 1,
+                "samples": 58,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 5,
+              "revision": 3,
+              "noise": 5,
+              "extractMs": 268.4659999999999,
+              "totalMs": 275.1700000000001,
+              "status": 200,
+              "htmlBytes": 28512,
+              "requests": 4,
+              "encodedBytes": 30092,
+              "errors": [],
+              "productText": "Widget edition B\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 5",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 2735.0180000066757,
+              "upstreamFilterMs": 15.574300006846897,
+              "filtered": {
+                "css": "Widget edition B\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget edition B\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": true,
+              "checkMs": 290.74430000684697,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 2.40625,
+                "peakTreeRssBytes": 177922048,
+                "lastTreeRssBytes": 148512768,
+                "processesSeen": 1,
+                "samples": 65,
+                "samplingErrors": 0
+              }
+            }
+          ]
+        },
+        {
+          "backend": "chrome",
+          "repeat": 2,
+          "readyMs": 531.2339000083739,
+          "readyTreeRssBytes": 436178944,
+          "coldFirstFetchMs": 1161.1878000112483,
+          "retainedTreeRssBytes": 1080582144,
+          "version": {
+            "Browser": "Chrome/152.0.7977.82",
+            "Protocol-Version": "1.3",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36",
+            "V8-Version": "15.2.124.21",
+            "WebKit-Version": "537.36 (@d04cdb24d67b081f6cf80200ffc5233f44b61109)",
+            "webSocketDebuggerUrl": "ws://127.0.0.1:9336/devtools/browser/5083a5e2-ee5a-42b3-9025-3f093f1775c2"
+          },
+          "teardown": {
+            "type": "teardown",
+            "initialPageCount": 1,
+            "remainingPageCount": 1
+          },
+          "metrics": {
+            "treeCpuSecondsSampled": 3.921875,
+            "peakTreeRssBytes": 1082372096,
+            "lastTreeRssBytes": 1080582144,
+            "processesSeen": 16,
+            "samples": 52,
+            "samplingErrors": 0
+          },
+          "snapshots": [
+            {
+              "type": "snapshot",
+              "index": 0,
+              "revision": 0,
+              "noise": 0,
+              "extractMs": 359.7886,
+              "totalMs": 375.6911,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 4,
+              "encodedBytes": 30791,
+              "errors": [],
+              "productText": "Widget\n\nUSD 49.99\n\nOut of stock\n\nUnwatched counter: 0",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1161.1878000112483,
+              "upstreamFilterMs": 35.93179999734275,
+              "filtered": {
+                "css": "Widget\n\n  USD 49.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 49.99\n\n  Out of stock"
+              },
+              "changed": false,
+              "checkMs": 411.62289999734276,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 1.984375,
+                "peakTreeRssBytes": 699846656,
+                "lastTreeRssBytes": 696602624,
+                "processesSeen": 11,
+                "samples": 30,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 1,
+              "revision": 0,
+              "noise": 1,
+              "extractMs": 121.02700000000004,
+              "totalMs": 133.39740000000006,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 3,
+              "encodedBytes": 30158,
+              "errors": [],
+              "productText": "Widget\n\nUSD 49.99\n\nOut of stock\n\nUnwatched counter: 1",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1331.1315000028117,
+              "upstreamFilterMs": 38.2203000044683,
+              "filtered": {
+                "css": "Widget\n\n  USD 49.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 49.99\n\n  Out of stock"
+              },
+              "changed": false,
+              "checkMs": 171.61770000446836,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 2.421875,
+                "peakTreeRssBytes": 776945664,
+                "lastTreeRssBytes": 776945664,
+                "processesSeen": 12,
+                "samples": 34,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 2,
+              "revision": 1,
+              "noise": 2,
+              "extractMs": 104.37289999999996,
+              "totalMs": 117.65020000000004,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 3,
+              "encodedBytes": 30158,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nOut of stock\n\nUnwatched counter: 2",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1487.611000004108,
+              "upstreamFilterMs": 39.492299998528324,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  Out of stock"
+              },
+              "changed": true,
+              "checkMs": 157.14249999852836,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 2.84375,
+                "peakTreeRssBytes": 848547840,
+                "lastTreeRssBytes": 848547840,
+                "processesSeen": 13,
+                "samples": 38,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 3,
+              "revision": 2,
+              "noise": 3,
+              "extractMs": 117.08569999999997,
+              "totalMs": 128.56820000000005,
+              "status": 200,
+              "htmlBytes": 28502,
+              "requests": 3,
+              "encodedBytes": 30154,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 3",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1655.956700007664,
+              "upstreamFilterMs": 23.360300008789636,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": true,
+              "checkMs": 151.92850000878968,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 3.109375,
+                "peakTreeRssBytes": 926466048,
+                "lastTreeRssBytes": 926466048,
+                "processesSeen": 14,
+                "samples": 41,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 4,
+              "revision": 2,
+              "noise": 4,
+              "extractMs": 118.59950000000003,
+              "totalMs": 130.50549999999998,
+              "status": 200,
+              "htmlBytes": 28502,
+              "requests": 3,
+              "encodedBytes": 30154,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 4",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1814.5725000067614,
+              "upstreamFilterMs": 23.25070000370033,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": false,
+              "checkMs": 153.75620000370031,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 3.453125,
+                "peakTreeRssBytes": 1006145536,
+                "lastTreeRssBytes": 1006145536,
+                "processesSeen": 15,
+                "samples": 45,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 5,
+              "revision": 3,
+              "noise": 5,
+              "extractMs": 111.58030000000008,
+              "totalMs": 120.74839999999995,
+              "status": 200,
+              "htmlBytes": 28512,
+              "requests": 3,
+              "encodedBytes": 30164,
+              "errors": [],
+              "productText": "Widget edition B\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 5",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1958.878100005677,
+              "upstreamFilterMs": 38.03010001138318,
+              "filtered": {
+                "css": "Widget edition B\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget edition B\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": true,
+              "checkMs": 158.77850001138313,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 3.828125,
+                "peakTreeRssBytes": 1082372096,
+                "lastTreeRssBytes": 1082372096,
+                "processesSeen": 16,
+                "samples": 49,
+                "samplingErrors": 0
+              }
+            }
+          ]
+        },
+        {
+          "backend": "mimic",
+          "repeat": 2,
+          "readyMs": 539.1489999892656,
+          "readyTreeRssBytes": 37318656,
+          "coldFirstFetchMs": 1217.0928999985335,
+          "retainedTreeRssBytes": 130007040,
+          "version": {
+            "Browser": "Mimic/152.0.7977.82",
+            "Protocol-Version": "1.3",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+            "V8-Version": "virtual",
+            "webSocketDebuggerUrl": "ws://127.0.0.1:9233/devtools/browser/171b464d-f58b-4b08-8b3e-53bd54bab11c"
+          },
+          "teardown": {
+            "type": "teardown",
+            "initialPageCount": 1,
+            "remainingPageCount": 1
+          },
+          "metrics": {
+            "treeCpuSecondsSampled": 2.21875,
+            "peakTreeRssBytes": 180371456,
+            "lastTreeRssBytes": 130007040,
+            "processesSeen": 1,
+            "samples": 70,
+            "samplingErrors": 0
+          },
+          "snapshots": [
+            {
+              "type": "snapshot",
+              "index": 0,
+              "revision": 0,
+              "noise": 0,
+              "extractMs": 416.08579999999995,
+              "totalMs": 424.3297,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 4,
+              "encodedBytes": 30086,
+              "errors": [],
+              "productText": "Widget\n\nUSD 49.99\n\nOut of stock\n\nUnwatched counter: 0",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1217.0928999985335,
+              "upstreamFilterMs": 26.09259999007918,
+              "filtered": {
+                "css": "Widget\n\n  USD 49.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 49.99\n\n  Out of stock"
+              },
+              "changed": false,
+              "checkMs": 450.4222999900792,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 0.640625,
+                "peakTreeRssBytes": 145723392,
+                "lastTreeRssBytes": 111349760,
+                "processesSeen": 1,
+                "samples": 30,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 1,
+              "revision": 0,
+              "noise": 1,
+              "extractMs": 288.16690000000006,
+              "totalMs": 295.47339999999997,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 4,
+              "encodedBytes": 30086,
+              "errors": [],
+              "productText": "Widget\n\nUSD 49.99\n\nOut of stock\n\nUnwatched counter: 1",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1539.3139999941923,
+              "upstreamFilterMs": 41.78319999482483,
+              "filtered": {
+                "css": "Widget\n\n  USD 49.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 49.99\n\n  Out of stock"
+              },
+              "changed": false,
+              "checkMs": 337.2565999948248,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 0.921875,
+                "peakTreeRssBytes": 146587648,
+                "lastTreeRssBytes": 111685632,
+                "processesSeen": 1,
+                "samples": 38,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 2,
+              "revision": 1,
+              "noise": 2,
+              "extractMs": 236.3930999999999,
+              "totalMs": 244.26699999999994,
+              "status": 200,
+              "htmlBytes": 28506,
+              "requests": 4,
+              "encodedBytes": 30086,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nOut of stock\n\nUnwatched counter: 2",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 1825.7631999877049,
+              "upstreamFilterMs": 21.66550001129508,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  Out of stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  Out of stock"
+              },
+              "changed": true,
+              "checkMs": 265.932500011295,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 1.28125,
+                "peakTreeRssBytes": 146587648,
+                "lastTreeRssBytes": 114413568,
+                "processesSeen": 1,
+                "samples": 44,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 3,
+              "revision": 2,
+              "noise": 3,
+              "extractMs": 268.3856999999998,
+              "totalMs": 275.6158999999998,
+              "status": 200,
+              "htmlBytes": 28502,
+              "requests": 4,
+              "encodedBytes": 30082,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 3",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 2123.351799993543,
+              "upstreamFilterMs": 35.323699994478375,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": true,
+              "checkMs": 310.93959999447816,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 1.53125,
+                "peakTreeRssBytes": 147791872,
+                "lastTreeRssBytes": 112836608,
+                "processesSeen": 1,
+                "samples": 52,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 4,
+              "revision": 2,
+              "noise": 4,
+              "extractMs": 248.8536999999999,
+              "totalMs": 256.4723999999999,
+              "status": 200,
+              "htmlBytes": 28502,
+              "requests": 4,
+              "encodedBytes": 30082,
+              "errors": [],
+              "productText": "Widget\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 4",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 2415.709399996558,
+              "upstreamFilterMs": 37.87180001381785,
+              "filtered": {
+                "css": "Widget\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": false,
+              "checkMs": 294.3442000138177,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 1.984375,
+                "peakTreeRssBytes": 180371456,
+                "lastTreeRssBytes": 135831552,
+                "processesSeen": 1,
+                "samples": 59,
+                "samplingErrors": 0
+              }
+            },
+            {
+              "type": "snapshot",
+              "index": 5,
+              "revision": 3,
+              "noise": 5,
+              "extractMs": 278.70860000000016,
+              "totalMs": 285.98990000000026,
+              "status": 200,
+              "htmlBytes": 28512,
+              "requests": 4,
+              "encodedBytes": 30092,
+              "errors": [],
+              "productText": "Widget edition B\n\nUSD 39.99\n\nIn stock\n\nUnwatched counter: 5",
+              "identity": {
+                "webdriver": false,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+                "viewport": [
+                  1280,
+                  720
+                ],
+                "outer": [
+                  1280,
+                  800
+                ]
+              },
+              "elapsedSinceLaunchMs": 2739.8925999877974,
+              "upstreamFilterMs": 75.46890000230633,
+              "filtered": {
+                "css": "Widget edition B\n\n  USD 39.99\n\n  In stock",
+                "xpath": "Widget edition B\n\n  USD 39.99\n\n  In stock"
+              },
+              "changed": true,
+              "checkMs": 361.4588000023066,
+              "backendMetrics": {
+                "treeCpuSecondsSampled": 2.21875,
+                "peakTreeRssBytes": 180371456,
+                "lastTreeRssBytes": 130007040,
+                "processesSeen": 1,
+                "samples": 67,
+                "samplingErrors": 0
+              }
+            }
+          ]
+        }
+      ],
+      "captureInventory": [
+        {
+          "file": "metadata.json",
+          "sha256": "5ef59b790b40b9647bd69fd9b3b7ff6ef8e815421b7e459353d2a2ecbb3582b1"
+        },
+        {
+          "file": "summary.json",
+          "sha256": "a1081b58b788ad4bba5315317121ec0c933b816ce2d463661f87c3fb07f01e86"
+        },
+        {
+          "file": "0-chrome\\backend.log",
+          "sha256": "8d3f108c2a417a0e223894a9deb317910e5c149302f32647d86c10fe5e4bb27b"
+        },
+        {
+          "file": "0-chrome\\client-errors.log",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "file": "0-chrome\\client-events.jsonl",
+          "sha256": "69893413328f0bb5a730195e431651a6710fbfbe2a2c7e6dc22e734b87eebb70"
+        },
+        {
+          "file": "0-chrome\\launch.json",
+          "sha256": "fce74e9aad706ac337e7616c38282c99af98f8849bd0ce3e912cc5f91271091d"
+        },
+        {
+          "file": "0-chrome\\result.json",
+          "sha256": "58eef621e2001f8f561ac8774acac4bdf867c1c634c9b135069a380e5ea561dd"
+        },
+        {
+          "file": "0-chrome\\snapshot-0.html",
+          "sha256": "8ec5e236c57580d0d50c8d79c18cb303961c4a6dd6cf6f35e3095daad7ad0db5"
+        },
+        {
+          "file": "0-chrome\\snapshot-1.html",
+          "sha256": "c9514f92b7f4b6ccccad7e49f23f57d0c380c233269c7aff9264fd1836f236fc"
+        },
+        {
+          "file": "0-chrome\\snapshot-2.html",
+          "sha256": "335f5155976729363d39e6e11f70391b068512d30e1341c5fb1f201121fdcfc7"
+        },
+        {
+          "file": "0-chrome\\snapshot-3.html",
+          "sha256": "3d2642e010425d16f9ac68167c369199f68b1fe5200e7bf7e4b2eb3be2e5ece6"
+        },
+        {
+          "file": "0-chrome\\snapshot-4.html",
+          "sha256": "c4b12e397dba94cc17a3a2308034e15dc20c99362d52e7fef3070fa7b81d0504"
+        },
+        {
+          "file": "0-chrome\\snapshot-5.html",
+          "sha256": "64f513b55d2201d15de1314c5180296d0c5471665425539aa409e5ad59d6b829"
+        },
+        {
+          "file": "0-mimic\\backend.log",
+          "sha256": "3e20676ecf1918fde4050c9ce794d99c1a11711ea6dafd24760a938111de5404"
+        },
+        {
+          "file": "0-mimic\\client-errors.log",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "file": "0-mimic\\client-events.jsonl",
+          "sha256": "6523522d78c62e0a142fef1deaad3e994198ca8fc3e584dfd50eb91f551fcab7"
+        },
+        {
+          "file": "0-mimic\\launch.json",
+          "sha256": "51fe1292d87960189ff474b60d0d1547bf4936f087dcc299b54ede7a6783ec2b"
+        },
+        {
+          "file": "0-mimic\\result.json",
+          "sha256": "471a2067b147b0ea8d31165360b9bedb7f5a15699f0ea194ddafa6c9ff1877be"
+        },
+        {
+          "file": "0-mimic\\snapshot-0.html",
+          "sha256": "8ec5e236c57580d0d50c8d79c18cb303961c4a6dd6cf6f35e3095daad7ad0db5"
+        },
+        {
+          "file": "0-mimic\\snapshot-1.html",
+          "sha256": "c9514f92b7f4b6ccccad7e49f23f57d0c380c233269c7aff9264fd1836f236fc"
+        },
+        {
+          "file": "0-mimic\\snapshot-2.html",
+          "sha256": "335f5155976729363d39e6e11f70391b068512d30e1341c5fb1f201121fdcfc7"
+        },
+        {
+          "file": "0-mimic\\snapshot-3.html",
+          "sha256": "3d2642e010425d16f9ac68167c369199f68b1fe5200e7bf7e4b2eb3be2e5ece6"
+        },
+        {
+          "file": "0-mimic\\snapshot-4.html",
+          "sha256": "c4b12e397dba94cc17a3a2308034e15dc20c99362d52e7fef3070fa7b81d0504"
+        },
+        {
+          "file": "0-mimic\\snapshot-5.html",
+          "sha256": "64f513b55d2201d15de1314c5180296d0c5471665425539aa409e5ad59d6b829"
+        },
+        {
+          "file": "1-chrome\\backend.log",
+          "sha256": "ab8dd59e0ad906f2275560e11eeba773e6d9b7838602ff6e54dc44f63e66d457"
+        },
+        {
+          "file": "1-chrome\\client-errors.log",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "file": "1-chrome\\client-events.jsonl",
+          "sha256": "01f4020cda056fe67f05dd76ef7365a3f57dce8676500a5873f03572a2ad8fe3"
+        },
+        {
+          "file": "1-chrome\\launch.json",
+          "sha256": "bd893d57ab11d5aef6930db2c5ff3cc1cadc1d7bd6f1a1af4ab647a2a5ddabff"
+        },
+        {
+          "file": "1-chrome\\result.json",
+          "sha256": "51ea46506736d81a2bd9ad724c9c27a043945079cae2fad2f4cbef7b68208aa1"
+        },
+        {
+          "file": "1-chrome\\snapshot-0.html",
+          "sha256": "8ec5e236c57580d0d50c8d79c18cb303961c4a6dd6cf6f35e3095daad7ad0db5"
+        },
+        {
+          "file": "1-chrome\\snapshot-1.html",
+          "sha256": "c9514f92b7f4b6ccccad7e49f23f57d0c380c233269c7aff9264fd1836f236fc"
+        },
+        {
+          "file": "1-chrome\\snapshot-2.html",
+          "sha256": "335f5155976729363d39e6e11f70391b068512d30e1341c5fb1f201121fdcfc7"
+        },
+        {
+          "file": "1-chrome\\snapshot-3.html",
+          "sha256": "3d2642e010425d16f9ac68167c369199f68b1fe5200e7bf7e4b2eb3be2e5ece6"
+        },
+        {
+          "file": "1-chrome\\snapshot-4.html",
+          "sha256": "c4b12e397dba94cc17a3a2308034e15dc20c99362d52e7fef3070fa7b81d0504"
+        },
+        {
+          "file": "1-chrome\\snapshot-5.html",
+          "sha256": "64f513b55d2201d15de1314c5180296d0c5471665425539aa409e5ad59d6b829"
+        },
+        {
+          "file": "1-mimic\\backend.log",
+          "sha256": "3e20676ecf1918fde4050c9ce794d99c1a11711ea6dafd24760a938111de5404"
+        },
+        {
+          "file": "1-mimic\\client-errors.log",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "file": "1-mimic\\client-events.jsonl",
+          "sha256": "0318af9220dfd49353aa33cbca65fe79f907d41123a7fd6a79d5e45d546c744c"
+        },
+        {
+          "file": "1-mimic\\launch.json",
+          "sha256": "51fe1292d87960189ff474b60d0d1547bf4936f087dcc299b54ede7a6783ec2b"
+        },
+        {
+          "file": "1-mimic\\result.json",
+          "sha256": "7c8209e220ca5a6824e45eb82bdf601abef7f7a56036203bed63d81ca9dcbb49"
+        },
+        {
+          "file": "1-mimic\\snapshot-0.html",
+          "sha256": "8ec5e236c57580d0d50c8d79c18cb303961c4a6dd6cf6f35e3095daad7ad0db5"
+        },
+        {
+          "file": "1-mimic\\snapshot-1.html",
+          "sha256": "c9514f92b7f4b6ccccad7e49f23f57d0c380c233269c7aff9264fd1836f236fc"
+        },
+        {
+          "file": "1-mimic\\snapshot-2.html",
+          "sha256": "335f5155976729363d39e6e11f70391b068512d30e1341c5fb1f201121fdcfc7"
+        },
+        {
+          "file": "1-mimic\\snapshot-3.html",
+          "sha256": "3d2642e010425d16f9ac68167c369199f68b1fe5200e7bf7e4b2eb3be2e5ece6"
+        },
+        {
+          "file": "1-mimic\\snapshot-4.html",
+          "sha256": "c4b12e397dba94cc17a3a2308034e15dc20c99362d52e7fef3070fa7b81d0504"
+        },
+        {
+          "file": "1-mimic\\snapshot-5.html",
+          "sha256": "64f513b55d2201d15de1314c5180296d0c5471665425539aa409e5ad59d6b829"
+        },
+        {
+          "file": "2-chrome\\backend.log",
+          "sha256": "e250d856c8a4e2fdfa335f27008a3c608a39d26a3e10fe5c266c99473daff7a5"
+        },
+        {
+          "file": "2-chrome\\client-errors.log",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "file": "2-chrome\\client-events.jsonl",
+          "sha256": "aaa1cb4d9e53f6cc6137174128b4783ba5f976a54893adbe8000e6a52247f0ad"
+        },
+        {
+          "file": "2-chrome\\launch.json",
+          "sha256": "fd4dddf04ff8013f2611cd5230c09097524c95e6a16d7f4cd10a086b9e112edc"
+        },
+        {
+          "file": "2-chrome\\result.json",
+          "sha256": "1ebc04f6687a27f98f10e5ee4b3a3ce16dde20ce12987d2b2ff7e4737daf237c"
+        },
+        {
+          "file": "2-chrome\\snapshot-0.html",
+          "sha256": "8ec5e236c57580d0d50c8d79c18cb303961c4a6dd6cf6f35e3095daad7ad0db5"
+        },
+        {
+          "file": "2-chrome\\snapshot-1.html",
+          "sha256": "c9514f92b7f4b6ccccad7e49f23f57d0c380c233269c7aff9264fd1836f236fc"
+        },
+        {
+          "file": "2-chrome\\snapshot-2.html",
+          "sha256": "335f5155976729363d39e6e11f70391b068512d30e1341c5fb1f201121fdcfc7"
+        },
+        {
+          "file": "2-chrome\\snapshot-3.html",
+          "sha256": "3d2642e010425d16f9ac68167c369199f68b1fe5200e7bf7e4b2eb3be2e5ece6"
+        },
+        {
+          "file": "2-chrome\\snapshot-4.html",
+          "sha256": "c4b12e397dba94cc17a3a2308034e15dc20c99362d52e7fef3070fa7b81d0504"
+        },
+        {
+          "file": "2-chrome\\snapshot-5.html",
+          "sha256": "64f513b55d2201d15de1314c5180296d0c5471665425539aa409e5ad59d6b829"
+        },
+        {
+          "file": "2-mimic\\backend.log",
+          "sha256": "3e20676ecf1918fde4050c9ce794d99c1a11711ea6dafd24760a938111de5404"
+        },
+        {
+          "file": "2-mimic\\client-errors.log",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "file": "2-mimic\\client-events.jsonl",
+          "sha256": "5b3641f284d5da9b7eb6f7d7cd6e20a54894629f034f9a1cf6baa8506b736735"
+        },
+        {
+          "file": "2-mimic\\launch.json",
+          "sha256": "51fe1292d87960189ff474b60d0d1547bf4936f087dcc299b54ede7a6783ec2b"
+        },
+        {
+          "file": "2-mimic\\result.json",
+          "sha256": "07ace4c000b08ad76b9bb0db40b5517b689ee0ae1e12d7d3aabca1c6f91c30f6"
+        },
+        {
+          "file": "2-mimic\\snapshot-0.html",
+          "sha256": "8ec5e236c57580d0d50c8d79c18cb303961c4a6dd6cf6f35e3095daad7ad0db5"
+        },
+        {
+          "file": "2-mimic\\snapshot-1.html",
+          "sha256": "c9514f92b7f4b6ccccad7e49f23f57d0c380c233269c7aff9264fd1836f236fc"
+        },
+        {
+          "file": "2-mimic\\snapshot-2.html",
+          "sha256": "335f5155976729363d39e6e11f70391b068512d30e1341c5fb1f201121fdcfc7"
+        },
+        {
+          "file": "2-mimic\\snapshot-3.html",
+          "sha256": "3d2642e010425d16f9ac68167c369199f68b1fe5200e7bf7e4b2eb3be2e5ece6"
+        },
+        {
+          "file": "2-mimic\\snapshot-4.html",
+          "sha256": "c4b12e397dba94cc17a3a2308034e15dc20c99362d52e7fef3070fa7b81d0504"
+        },
+        {
+          "file": "2-mimic\\snapshot-5.html",
+          "sha256": "64f513b55d2201d15de1314c5180296d0c5471665425539aa409e5ad59d6b829"
+        },
+        {
+          "file": "upstream\\changedetectionio\\html_tools.py",
+          "sha256": "e9d947799d06571f9ed8e5d69460dae85256f13348a7e522e6a102c7adc5c88f"
+        },
+        {
+          "file": "upstream\\changedetectionio\\strtobool.py",
+          "sha256": "edf20b78855e3cda645fdf9c1f3d3780da0670ebd071bd8ffde47688a85e473e"
+        },
+        {
+          "file": "upstream\\changedetectionio\\__pycache__\\html_tools.cpython-314.pyc",
+          "sha256": "efd59427019c69e6b7eeb57ba192060731c9d79cadc911eda9bc6337d51f3c6c"
+        },
+        {
+          "file": "upstream\\changedetectionio\\__pycache__\\strtobool.cpython-314.pyc",
+          "sha256": "0802033d44b96e09b883e18c6cd10d945af1c3c4e6ec8c60301015db809aa6dd"
+        }
+      ]
+    }
+  }
+}
