@@ -3976,10 +3976,21 @@
     // trees innerText observes CSS visibility and generated line boundaries.
     if (!element.isConnected) return element.textContent;
     const chunks = [];
-    const newline = () => chunks.push('\n');
+    // Adjacent required line breaks combine by maximum, rather than adding
+    // lines for every enclosing block (for example a list and its list item).
+    const newline = (count = 1) => chunks.push(count);
     const visit = (node) => {
       if (node.nodeType === 3) {
-        chunks.push(node.data);
+        // Source line breaks collapse to spaces in normal inline text. Keep
+        // them separate from the rendered line boundaries inserted below.
+        const whiteSpace = cssComputedValue(node.parentElement, 'white-space');
+        chunks.push(
+          whiteSpace === 'pre' || whiteSpace === 'pre-wrap' || whiteSpace === 'break-spaces'
+            ? node.data
+            : whiteSpace === 'pre-line'
+              ? node.data.replace(/[\t\f\r ]+/g, ' ')
+              : node.data.replace(/[\t\n\f\r ]+/g, ' '),
+        );
         return;
       }
 
@@ -3992,25 +4003,45 @@
       if (visibility === 'hidden' || visibility === 'collapse') return;
 
       if (node.tagName === 'BR') {
-        newline();
+        chunks.push('\n');
         return;
       }
 
       const block = innerTextBlockDisplays.has(display);
+      const paragraph = block && node.tagName === 'P';
 
-      if (block) newline();
+      if (block) {
+        newline(paragraph ? 2 : 1);
+      }
 
       for (const child of node.childNodes) visit(child);
 
-      if (block) newline();
+      if (block) {
+        newline(paragraph ? 2 : 1);
+      }
     };
     visit(element);
-    return chunks
-      .join('')
+    let text = '',
+      pendingBreaks = 0;
+    for (const chunk of chunks) {
+      if (typeof chunk === 'number') {
+        pendingBreaks = Math.max(pendingBreaks, chunk);
+      } else if (pendingBreaks && !chunk.trim() && !chunk.includes('\n')) {
+        continue;
+      } else {
+        if (pendingBreaks) {
+          text = text.replace(/ +$/g, '');
+          if (text) text += '\n'.repeat(pendingBreaks);
+          pendingBreaks = 0;
+        }
+        text += chunk;
+      }
+    }
+    return text
       .replace(/[\t\f\r ]+/g, ' ')
       .replace(/ *\n */g, '\n')
       .replace(/\n{3,}/g, '\n\n')
-      .replace(/^\n+|\n+$/g, '');
+      .replace(/^[ \n]+|[ \n]+$/g, '');
   }
   class HTMLElement extends Element {
     constructor(token, data) {

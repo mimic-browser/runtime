@@ -262,6 +262,18 @@ func TestIsolatedInnerTextTracksOwnerMutations(t *testing.T) {
 		read("AB")
 		debuggerEval(t, d, `document.querySelector('#probe span').textContent='C'`, DebuggerOptions{})
 		read("CB")
+		// Frozen headful Chrome 152 keeps source newlines between inline buttons
+		// as spaces; they are not rendered line boundaries (cloro fixture capture).
+		debuggerEval(t, d, `document.getElementById('probe').innerHTML='<button>First sources</button>\n    <button>Second sources</button>'`, DebuggerOptions{})
+		read("First sources Second sources")
+		debuggerEval(t, d, `document.getElementById('probe').innerHTML='<p>Paragraph</p>\n<button>First sources</button>\n<button>Second sources</button>'`, DebuggerOptions{})
+		read("Paragraph\n\nFirst sources Second sources")
+		debuggerEval(t, d, `document.getElementById('probe').innerHTML='<p>Paragraph</p><button>Sources</button><ul><li>Reference</li></ul>'`, DebuggerOptions{})
+		read("Paragraph\n\nSources\nReference")
+		debuggerEval(t, d, `document.getElementById('probe').innerHTML='First<br><br>Second'`, DebuggerOptions{})
+		read("First\n\nSecond")
+		debuggerEval(t, d, `document.getElementById('probe').innerHTML='\n<button>Sources</button>\n<ul style="display:none"><li>Hidden</li></ul>\n'`, DebuggerOptions{})
+		read("Sources")
 		result, err := d.Evaluate(context.Background(), p.Top.ID, world, `(()=>{const inert=document.implementation.createHTMLDocument(''),node=inert.createElement('div');node.textContent='detached';return node.innerText})()`, DebuggerOptions{ReturnByValue: true})
 		if err != nil || result["exceptionDetails"] != nil || result["result"].(map[string]any)["value"] != "detached" {
 			t.Fatalf("inert innerText: %#v %v", result, err)
