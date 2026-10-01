@@ -805,7 +805,12 @@ const compatibilityElementState = {};
     queueRecord('attributes', node, { attributeName: name, oldValue });
     const definition = upgraded.get(node);
     if (definition && definition.attributes.includes(name))
-      reaction(node, 'attributeChangedCallback', [name, oldValue, node.getAttribute(name), null]);
+      reaction(node, 'attributeChangedCallback', [
+        name,
+        oldValue,
+        intrinsicGetAttribute.call(node, name),
+        null,
+      ]);
   };
   compatibilityElementState.inlineStyleChanged = (node, oldValue) => {
     if (observers.size || definitions.size) attributeChanged(node, 'style', oldValue);
@@ -825,7 +830,7 @@ const compatibilityElementState = {};
           this.namespaceURI === 'http://www.w3.org/1999/xhtml'
             ? String(key).toLowerCase()
             : String(key);
-        const old = this.getAttribute(key);
+        const old = intrinsicGetAttribute.call(this, key);
         const result = original.apply(this, arguments);
         if (name === 'setAttribute' || old !== null) attributeChanged(this, key, old);
         return result;
@@ -835,6 +840,9 @@ const compatibilityElementState = {};
       enumerable: true,
     });
   }
+  // Internal token/reflection writes retain observation and CE reactions while
+  // bypassing public attribute methods that frameworks may override.
+  intrinsicSetAttribute = Element.prototype.setAttribute;
   // Mutation algorithms own one record transaction. Recursive fragment
   // insertion and replaceChild's remove/insert steps must not emit duplicates.
   const mutationOriginals = Object.fromEntries(

@@ -1253,14 +1253,14 @@
     domTokenState = (value) => domTokenSlots.get(value),
     domTokens = (value) => {
       const state = domTokenState(value);
-      return (state.element.getAttribute(state.attribute) || '')
+      return (intrinsicGetAttribute.call(state.element, state.attribute) || '')
         .trim()
         .split(/\s+/)
         .filter(Boolean);
     },
     writeDOMTokens = (value, tokens) => {
       const state = domTokenState(value);
-      state.element.setAttribute(state.attribute, [...new Set(tokens)].join(' '));
+      intrinsicSetAttribute.call(state.element, state.attribute, [...new Set(tokens)].join(' '));
     };
   class DOMTokenList {
     constructor(element, attribute) {
@@ -1271,11 +1271,11 @@
     }
     get value() {
       const state = domTokenState(this);
-      return state.element.getAttribute(state.attribute) || '';
+      return intrinsicGetAttribute.call(state.element, state.attribute) || '';
     }
     set value(v) {
       const state = domTokenState(this);
-      state.element.setAttribute(state.attribute, String(v));
+      intrinsicSetAttribute.call(state.element, state.attribute, String(v));
     }
     item(i) {
       return domTokens(this)[Number(i)] ?? null;
@@ -3202,7 +3202,7 @@
   // Internal reflection invokes the captured platform operations. Page code may
   // override public attribute methods without changing native IDL accessors.
   const intrinsicGetAttribute = Element.prototype.getAttribute;
-  const intrinsicSetAttribute = Element.prototype.setAttribute;
+  let intrinsicSetAttribute = Element.prototype.setAttribute;
   const intrinsicRemoveAttribute = Element.prototype.removeAttribute;
   const intrinsicHasAttribute = Element.prototype.hasAttribute;
   Object.defineProperty(Element.prototype, 'previousElementSibling', {
