@@ -4537,24 +4537,3 @@ independent Page owners and first ordinary Page cold semantics remain intact.
 Focused cache admission and restored-frame callback/job tests pass on Windows
 and Linux. This removes measured duplicate initialization; no latency percentage,
 memory improvement or Wikipedia E2E result is claimed.
-
-## Nonvisual changedetection monitoring, 2026-09-30
-
-A bounded local JS price/restock/text fixture passed genuine unchanged upstream
-CSS, XPath and HTML-to-text helpers on Mimic and frozen Chrome 152. Three fresh
-process pairs, six Pages per process, produced 18 correct snapshots per backend
-in both headful and explicitly headless modes. This is a standalone opt-in path,
-not the full changedetection application or its unconditional screenshot fetcher.
-
-Against optimized reusable headless Chrome without screenshots or fixed extra
-waits, median warm checks including both filter paths were 294.34 ms Mimic and
-153.76 ms Chrome. Browser-start-to-first-snapshot medians were 1217.09 and
-940.03 ms. Peak sampled backend-tree RSS medians were 169.94 and 1044.68 MiB;
-sampled CPU per six-check run was 2.40625 and 4.03125 seconds. Mimic was slower.
-RSS sums double count shared pages and exclude clients, filters and server;
-short-lived descendant CPU may be missed. No throughput or leak claim is made.
-Final Page counts returned to baseline; retained RSS after 100 ms was 122.21 /
-1042.86 MiB. No runtime fix was needed for this workload.
-
-See [method, commands and limitations](../compatibility/changedetection-nonvisual.md)
-and [per-check measurement data](changedetection-nonvisual-20260930.json).

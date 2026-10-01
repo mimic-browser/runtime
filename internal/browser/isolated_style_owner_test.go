@@ -263,7 +263,7 @@ func TestIsolatedInnerTextTracksOwnerMutations(t *testing.T) {
 		debuggerEval(t, d, `document.querySelector('#probe span').textContent='C'`, DebuggerOptions{})
 		read("CB")
 		// Frozen headful Chrome 152 keeps source newlines between inline buttons
-		// as spaces; they are not rendered line boundaries (cloro fixture capture).
+		// as spaces; they are not rendered line boundaries.
 		debuggerEval(t, d, `document.getElementById('probe').innerHTML='<button>First sources</button>\n    <button>Second sources</button>'`, DebuggerOptions{})
 		read("First sources Second sources")
 		debuggerEval(t, d, `document.getElementById('probe').innerHTML='<p>Paragraph</p>\n<button>First sources</button>\n<button>Second sources</button>'`, DebuggerOptions{})
