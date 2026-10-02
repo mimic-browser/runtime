@@ -1363,6 +1363,14 @@ func (r *Realm) installBindingsOnOwner() error {
 	host["performanceNow"] = r.transientFn(func(engine.Value, []engine.Value) (engine.Value, error) {
 		return r.val(p.performanceClamper.now(r.performanceClockNow(), r.performanceOrigin, performanceIsolated)), nil
 	})
+	host["animationTimelineNow"] = r.transientFn(func(engine.Value, []engine.Value) (engine.Value, error) {
+		// Borrowed frame/world operations observe the active Page turn's sample.
+		clock := p.activeClock.Load()
+		if clock == nil {
+			clock = r.scheduler
+		}
+		return r.val(p.performanceClamper.now(clock.SampledNow(), r.performanceOrigin, performanceIsolated)), nil
+	})
 	host["performanceTimeOrigin"] = r.transientFn(func(engine.Value, []engine.Value) (engine.Value, error) {
 		return r.val(float64(p.performanceClamper.micros(r.performanceOrigin.UnixMicro(), performanceIsolated)) / 1000), nil
 	})

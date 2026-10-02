@@ -2,6 +2,7 @@ package browser
 
 import (
 	"context"
+	"math"
 	"strconv"
 	"testing"
 )
@@ -58,6 +59,86 @@ animation.startTime=performance.now()-250;const running={pending:animation.pendi
 		count, countOK := numberParameter(canceled["count"])
 		if canceled["state"] != "idle" || canceled["current"] != nil || !countOK || count != 0 {
 			t.Fatalf("canceled animation: %#v", canceled)
+		}
+	})
+}
+
+// Chrome 152 AnimationClock::CurrentTime caches its sample for the running task:
+// https://github.com/chromium/chromium/blob/152.0.7977.82/third_party/blink/renderer/core/animation/animation_clock.cc
+func TestWebAnimationObservationsShareTaskTime(t *testing.T) {
+	parallelBrowserTest(t)
+	historyTestPages(t, func(t *testing.T, page *Page) {
+		value, err := page.Evaluate(context.Background(), `(() => {
+  const element = document.createElement("div");
+  document.body.append(element);
+  const animation = element.animate(
+    { opacity: [0, 1] },
+    { duration: 1000, fill: "both" },
+  );
+  animation.startTime = document.timeline.currentTime - 250;
+  const before = {
+    timeline: document.timeline.currentTime,
+    current: animation.currentTime,
+    timing: animation.effect.getComputedTiming(),
+    opacity: Number(getComputedStyle(element).opacity),
+  };
+  const started = performance.now();
+  while (performance.now() - started < 100) {}
+  const after = {
+    timeline: document.timeline.currentTime,
+    current: animation.currentTime,
+    timing: animation.effect.getComputedTiming(),
+    opacity: Number(getComputedStyle(element).opacity),
+  };
+  animation.pause();
+  queueMicrotask(() => {
+    globalThis.animationTaskSample = document.timeline.currentTime;
+  });
+  return { before, after };
+})();`)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := value.(map[string]any)
+		before, after := got["before"].(map[string]any), got["after"].(map[string]any)
+		for _, sample := range []map[string]any{before, after} {
+			current, _ := numberParameter(sample["current"])
+			opacity, _ := numberParameter(sample["opacity"])
+			timing := sample["timing"].(map[string]any)
+			local, _ := numberParameter(timing["localTime"])
+			progress, _ := numberParameter(timing["progress"])
+			if current != 250 || local != current || progress != .25 || opacity != .25 {
+				t.Fatalf("incoherent animation sample: %#v", sample)
+			}
+		}
+		if before["timeline"] != after["timeline"] || before["current"] != after["current"] {
+			t.Fatalf("animation time advanced inside one task: %#v", got)
+		}
+		value, err = page.Evaluate(context.Background(), `(() => {
+  const animation = document.getAnimations()[0];
+  animation.play();
+  animation.startTime = document.timeline.currentTime - 400;
+  const current = animation.currentTime;
+  const result = {
+    timeline: document.timeline.currentTime,
+    microtask: globalThis.animationTaskSample,
+    current,
+    local: animation.effect.getComputedTiming().localTime,
+    opacity: Number(getComputedStyle(document.querySelector("div")).opacity),
+  };
+  animation.cancel();
+  return result;
+})();`)
+		if err != nil {
+			t.Fatal(err)
+		}
+		next := value.(map[string]any)
+		oldTime, _ := numberParameter(before["timeline"])
+		nextTime, _ := numberParameter(next["timeline"])
+		nextCurrent, _ := numberParameter(next["current"])
+		nextOpacity, _ := numberParameter(next["opacity"])
+		if nextTime <= oldTime || next["microtask"] != before["timeline"] || next["current"] != next["local"] || nextCurrent != 400 || math.Abs(nextOpacity-nextCurrent/1000) > .0001 {
+			t.Fatalf("next task or microtask animation observations: %#v", next)
 		}
 	})
 }

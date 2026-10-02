@@ -7,6 +7,9 @@ const webAnimations = (() => {
     animationsByTarget = new WeakMap(),
     animationState = new WeakMap(),
     effectState = new WeakMap();
+  // Chrome 152 AnimationClock caches one timestamp for a task. Keep animation
+  // time separate from the advancing performance clock, but in the same origin.
+  const timelineTime = () => host.animationTimelineNow();
   const member = (prototype, name, value) => {
     Object.defineProperty(value, 'name', { value: name, configurable: true });
     markNative(value, name);
@@ -115,6 +118,14 @@ const webAnimations = (() => {
     const timing = effectFor(state.effect).timing;
     return Math.max(0, timing.delay + timing.duration * timing.iterations + timing.endDelay);
   };
+  const currentTime = (state) => {
+    if (state.playState === 'running' && state.startTime !== null)
+      return Math.min(
+        total(state),
+        Math.max(0, (timelineTime() - state.startTime) * state.playbackRate),
+      );
+    return state.currentTime;
+  };
   const complete = (animation, state) => {
     if (state.playState === 'idle' || state.playState === 'finished') return;
     clear(state);
@@ -143,7 +154,7 @@ const webAnimations = (() => {
     });
     member(globalThis.KeyframeEffect.prototype, 'getComputedTiming', function () {
       const state = effectFor(this),
-        localTime = state.animation ? stateFor(state.animation).currentTime : null,
+        localTime = state.animation ? currentTime(stateFor(state.animation)) : null,
         { delay, duration, iterations, iterationStart } = state.timing,
         activeDuration = duration * iterations;
       let progress = null,
@@ -284,10 +295,7 @@ const webAnimations = (() => {
         state.startTime = value == null ? null : number(value);
         state.pending = false;
         if (state.startTime !== null)
-          state.currentTime = Math.max(
-            0,
-            (performance.now() - state.startTime) * state.playbackRate,
-          );
+          state.currentTime = Math.max(0, (timelineTime() - state.startTime) * state.playbackRate);
         schedule(this, state);
       },
     );
@@ -295,19 +303,13 @@ const webAnimations = (() => {
       globalThis.Animation.prototype,
       'currentTime',
       function () {
-        const state = stateFor(this);
-        if (state.playState === 'running' && state.startTime !== null)
-          return Math.min(
-            total(state),
-            Math.max(0, (performance.now() - state.startTime) * state.playbackRate),
-          );
-        return state.currentTime;
+        return currentTime(stateFor(this));
       },
       function (value) {
         const state = stateFor(this);
         state.currentTime = value == null ? null : number(value);
         if (state.startTime !== null && state.currentTime !== null)
-          state.startTime = performance.now() - state.currentTime / state.playbackRate;
+          state.startTime = timelineTime() - state.currentTime / state.playbackRate;
         schedule(this, state);
       },
     );
@@ -353,7 +355,7 @@ const webAnimations = (() => {
       state.playState = 'running';
       state.pending = true;
       if (state.startTime === null)
-        state.startTime = performance.now() - (state.currentTime || 0) / state.playbackRate;
+        state.startTime = timelineTime() - (state.currentTime || 0) / state.playbackRate;
       queueMicrotask(() => {
         state.pending = false;
         schedule(this, state);
@@ -459,7 +461,7 @@ const webAnimations = (() => {
     }
     queueMicrotask(() => {
       if (state.playState === 'running') {
-        state.startTime = performance.now();
+        state.startTime = timelineTime();
         state.pending = false;
         schedule(animation, state);
       }
@@ -483,10 +485,9 @@ const webAnimations = (() => {
   });
   if (typeof globalThis.DocumentTimeline === 'function') {
     const timelinePrototype = globalThis.DocumentTimeline.prototype,
-      timeline = Object.create(timelinePrototype),
-      origin = performance.now();
+      timeline = Object.create(timelinePrototype);
     accessor(timelinePrototype, 'currentTime', function () {
-      return performance.now() - origin;
+      return timelineTime();
     });
     Object.defineProperty(Document.prototype, 'timeline', {
       get() {
@@ -503,7 +504,7 @@ const webAnimations = (() => {
     const animation = state.animation;
     if (!animation) return undefined;
     const control = stateFor(animation),
-      time = animation.currentTime;
+      time = currentTime(control);
     if (time === null) return undefined;
     const { delay, duration, iterations, fill, direction } = state.timing,
       end = duration * iterations;

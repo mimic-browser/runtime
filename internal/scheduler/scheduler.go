@@ -97,6 +97,7 @@ type Scheduler struct {
 	taskStarted        func()
 	runningAt          time.Time
 	runningBase        time.Time
+	runningSample      time.Time
 	runningTaskID      uint64
 	runningSource      Source
 	runningPhase       string
@@ -316,6 +317,7 @@ func (s *Scheduler) RunInline(ctx context.Context, callback Callback) error {
 func (s *Scheduler) beginExecution() {
 	s.mu.Lock()
 	s.runningBase = s.now
+	s.runningSample = time.Time{}
 	s.runningAt = monotime.Now()
 	started := s.taskStarted
 	s.mu.Unlock()
@@ -331,6 +333,7 @@ func (s *Scheduler) endExecution() {
 	end, observer := s.now, s.taskObserver
 	s.runningAt = time.Time{}
 	s.runningBase = time.Time{}
+	s.runningSample = time.Time{}
 	s.runningTaskID = 0
 	s.runningSource = ""
 	s.runningPhase = ""
@@ -474,6 +477,7 @@ func (s *Scheduler) beginTask(t *task) {
 	s.runningWebPriority, s.runningWebSignal = t.webPriority, t.webSignal
 	s.runningPhase = "callback"
 	s.runningBase = s.now
+	s.runningSample = time.Time{}
 	s.runningAt = monotime.Now()
 	started := s.taskStarted
 	s.mu.Unlock()
@@ -657,6 +661,21 @@ func (s *Scheduler) nowLocked() time.Time {
 	return s.now
 }
 func (s *Scheduler) Now() time.Time { s.mu.Lock(); defer s.mu.Unlock(); return s.nowLocked() }
+
+// SampledNow projects the canonical clock once per event-loop turn, including
+// its microtask checkpoint. Animation observations share this sample while
+// performance.now and timer scheduling continue to use the live Now clock.
+func (s *Scheduler) SampledNow() time.Time {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.runningAt.IsZero() {
+		return s.now
+	}
+	if s.runningSample.IsZero() {
+		s.runningSample = s.nowLocked()
+	}
+	return s.runningSample
+}
 
 func (s *Scheduler) HasPendingInput() bool {
 	s.mu.Lock()
