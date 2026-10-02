@@ -67,17 +67,21 @@ released executable has no Go/Rust/Cargo dependency. See
 ### Connect with Playwright
 
 ```javascript
-import { chromium } from "playwright";
+import { chromium } from "playwright-core";
 
 const browser = await chromium.connectOverCDP("http://127.0.0.1:9222");
 const context = browser.contexts()[0];
-const page = context.pages()[0];
+const page = await context.newPage();
 
-await page.goto("https://example.com/");
+await page.goto("https://books.toscrape.com/", { waitUntil: "load" });
 console.log(await page.locator("h1").innerText());
 
 await browser.close();
 ```
+
+This example reads `All products` from [Books to Scrape](https://books.toscrape.com/),
+a public web-scraping sandbox. External sites can change or become unavailable;
+check the response and DOM if the expected element is missing.
 
 ### Advanced example: 100 separate identities
 
