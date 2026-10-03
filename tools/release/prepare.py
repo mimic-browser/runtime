@@ -204,7 +204,7 @@ def main():
     (stage / 'README.md').write_text(
         '# Mimic Public Beta\n\n[Documentation](https://github.com/moreveal/mimic) · '
         '[Examples](examples/README.md) · [Release notes](RELEASE_NOTES.md) · [License](LICENSE)\n\n'
-        'Website: https://moreveal.github.io/mimic-overview/\n', encoding='utf-8')
+        'Website: https://mimic.boo\n', encoding='utf-8')
     guide = stage / 'docs/compatibility/crawlee-playwright.md'
     guide.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(ROOT / 'docs/compatibility/crawlee-playwright.md', guide)

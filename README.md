@@ -1,10 +1,12 @@
+# Mimic: lightweight browser automation without Chromium
+
 <p align="center">
   <img src="docs/assets/readme-hero.png" alt="Mimic — Run the web. Skip the rendering." width="1200">
 </p>
 
 <p align="center">
-  <strong>Browser logic without Chromium's rendering pipeline.</strong><br>
-  Run website JavaScript and automate Chrome-visible browser state through CDP.
+  <strong>Lightweight browser automation without Chromium.</strong><br>
+  JavaScript automation and web scraping with Playwright, Puppeteer and CDP.
 </p>
 
 <p align="center">
@@ -24,8 +26,8 @@
 
 ## What is Mimic?
 
-Mimic is a lightweight browser execution runtime for automation workloads. It
-loads resources, executes JavaScript in V8, maintains DOM/style/layout state and
+Mimic is a source-available public beta for JavaScript automation and web scraping.
+It is a lightweight browser execution runtime that loads resources, executes JavaScript in V8, maintains DOM/style/layout state and
 exposes it through the Chrome DevTools Protocol—without embedding Chromium,
 opening a window or rendering pixels.
 
@@ -170,8 +172,12 @@ Evaluate your workload against the
 - [Performance report](docs/performance/report.md)
 - [Contributing](CONTRIBUTING.md)
 
-Website: [moreveal.github.io/mimic-overview](https://moreveal.github.io/mimic-overview/)
-· Feedback: DM **`moreveal`** on Discord.
+Website: [mimic.boo](https://mimic.boo)
+
+- [Run Playwright without Chromium](https://mimic.boo/playwright-without-chromium/)
+- [Mimic versus Chromium for nonvisual extraction](https://mimic.boo/mimic-vs-chromium/)
+
+Feedback: DM **`moreveal`** on Discord.
 
 ## License
 
