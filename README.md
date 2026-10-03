@@ -1,7 +1,5 @@
-# Mimic: lightweight browser automation without Chromium
-
 <p align="center">
-  <img src="docs/assets/readme-hero.png" alt="Mimic — Run the web. Skip the rendering." width="1200">
+  <img src="docs/assets/readme-hero.png" alt="Mimic — Browser automation without Chromium. The blue Mimic mascot starts a simple web-to-JavaScript-to-data automation flow." width="1200">
 </p>
 
 <p align="center">
