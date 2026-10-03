@@ -31,6 +31,8 @@ It is a lightweight browser execution runtime that loads resources, executes Jav
 exposes it through the Chrome DevTools Protocol—without embedding Chromium,
 opening a window or rendering pixels.
 
+MIMIC stands for “Mimic Implements Modern Internet Compatibility.”
+
 - Use familiar Playwright, Puppeteer and CDP clients.
 - Run independent Pages concurrently with one event loop per Page.
 - Observe canonical DOM, navigation, CSSOM and geometry state.
