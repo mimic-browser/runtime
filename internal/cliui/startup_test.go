@@ -7,6 +7,19 @@ import (
 	"testing"
 )
 
+func TestOptimizeHeaderHasPlainAndStyledPresentations(t *testing.T) {
+	for _, styled := range []bool{false, true} {
+		var output bytes.Buffer
+		if err := WriteOptimizeHeader(&output, styled); err != nil {
+			t.Fatal(err)
+		}
+		text := output.String()
+		if !strings.Contains(text, "Mimic Optimize") || !strings.Contains(text, "network traffic") || strings.Contains(text, "\x1b[") != styled {
+			t.Fatalf("invalid header presentation: %q", text)
+		}
+	}
+}
+
 func TestWriteStartupPlain(t *testing.T) {
 	var output bytes.Buffer
 	info := StartupInfo{Version: "v0.1.4", Chrome: 152, Engine: "v8", Address: "127.0.0.1:9222"}

@@ -90,6 +90,7 @@ type ResourcePolicyStats struct {
 type compiledResourcePolicy struct {
 	config     ResourcePolicy
 	generation uint64
+	generated  []ResourceRule
 }
 
 // ResourcePolicyState belongs to one BrowserContext and is shared by its Page
@@ -247,7 +248,11 @@ func (s *ResourcePolicyState) Update(config ResourcePolicy) (uint64, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	generation := s.stats.Generation + 1
-	s.current.Store(&compiledResourcePolicy{config: owned, generation: generation})
+	var generated []ResourceRule
+	if previous := s.current.Load(); previous != nil {
+		generated = previous.generated
+	}
+	s.current.Store(&compiledResourcePolicy{config: owned, generation: generation, generated: generated})
 	s.stats.Generation = generation
 	return generation, nil
 }
@@ -264,6 +269,17 @@ func presetRules(names []string) []ResourceRule {
 		case "noSpeculativeLoads":
 			rules = append(rules, ResourceRule{ID: "preset:noSpeculativeLoads", Match: ResourceMatch{Mechanisms: []string{"preload", "prefetch"}}, Work: ResourceWork{CacheRead: &no, Network: &no}})
 		}
+	}
+	return rules
+}
+
+// ExpandedRules is the common manual/generated resource frontend. The caller
+// owns the returned representation; installation clones it before publication.
+func ExpandedRules(config ResourcePolicy) []ResourceRule {
+	rules := append([]ResourceRule(nil), config.Rules...)
+	rules = append(rules, presetRules(config.Presets)...)
+	for index := range rules {
+		rules[index].ID = fmt.Sprintf("generated:%d:%s", index, rules[index].ID)
 	}
 	return rules
 }
@@ -293,6 +309,36 @@ func (s *ResourcePolicyState) recordBudgetExceeded() {
 
 func (s *ResourcePolicyState) Capture() *compiledResourcePolicy { return s.current.Load() }
 
+// InstallSpecialization compiles generated resource actions into the existing
+// policy generation. Explicit manual matches win; omitted manual fields keep
+// their ordinary meaning. Admission is captured separately by each Page loader.
+func (s *ResourcePolicyState) InstallSpecialization(rules []ResourceRule) error {
+	config := ResourcePolicy{Rules: rules}
+	if err := config.Validate(); err != nil {
+		return err
+	}
+	raw, err := json.Marshal(config)
+	if err != nil {
+		return err
+	}
+	var owned ResourcePolicy
+	if err := json.Unmarshal(raw, &owned); err != nil {
+		return err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	current := s.current.Load()
+	next := &compiledResourcePolicy{}
+	if current != nil {
+		*next = *current
+	}
+	next.generated = owned.Rules
+	next.generation = s.stats.Generation + 1
+	s.stats.Generation = next.generation
+	s.current.Store(next)
+	return nil
+}
+
 func (s *ResourcePolicyState) Policy() (ResourcePolicy, bool) {
 	p := s.Capture()
 	if p == nil {
@@ -320,7 +366,15 @@ func (p *compiledResourcePolicy) decide(r Request) ResourceDecision {
 	for _, rule := range p.config.Rules {
 		if rule.Match.matches(r) {
 			d.RuleID, d.Work = rule.ID, rule.Work
-			break
+			return d
+		}
+	}
+	if r.specializationAllowed {
+		for _, rule := range p.generated {
+			if rule.Match.matches(r) {
+				d.RuleID, d.Work = rule.ID, rule.Work
+				break
+			}
 		}
 	}
 	return d

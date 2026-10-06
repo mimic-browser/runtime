@@ -143,7 +143,7 @@
         : 'text/plain;charset=UTF-8';
     return { stream: streamBytes(new Encoder().encode(String(input))), type };
   }
-  function responseBody(value, signal, type) {
+  function responseBody(value, signal, type, unavailable) {
     let cleanup = () => {};
     const stream = new Streams({
       type: 'bytes',
@@ -155,6 +155,10 @@
         cleanup = () => signal.removeEventListener('abort', abort);
         if (signal.aborted) {
           abort();
+          return;
+        }
+        if (unavailable) {
+          controller.error(new TypeError('Response body unavailable under execution policy'));
           return;
         }
         signal.addEventListener('abort', abort, { once: true });
@@ -553,7 +557,7 @@
             request.method === 'HEAD' ||
             ['opaque', 'opaqueredirect', 'error'].includes(raw.type)
             ? { stream: null, type: null }
-            : responseBody(bodyBytes, signal, list.get('content-type')),
+            : responseBody(bodyBytes, signal, list.get('content-type'), raw.bodyUnavailable),
         );
       })();
       return await platformPromiseRace([operation, aborted]);

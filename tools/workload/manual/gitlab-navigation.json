@@ -1,0 +1,62 @@
+{
+  "presets": ["noVisualAssets", "noSpeculativeLoads"],
+  "rules": [
+    {
+      "id": "telemetry-and-tracking",
+      "match": {
+        "hosts": [
+          "www.googletagmanager.com",
+          "www.google-analytics.com",
+          "o398706.ingest.us.sentry.io",
+          "new-sentry.gitlab.net",
+          "snowplowprd.trx.gitlab.net",
+          "api.usercentrics.eu"
+        ]
+      },
+      "work": {
+        "network": false,
+        "cacheRead": false
+      }
+    },
+    {
+      "id": "SSR-navigation-does-not-query-project-API",
+      "match": {
+        "urlGlob": "https://gitlab.com/api/graphql"
+      },
+      "work": {
+        "network": false,
+        "cacheRead": false
+      }
+    },
+    {
+      "id": "unused-tracking-library",
+      "match": {
+        "urlGlob": "https://gitlab.com/assets/webpack/tracker.*.chunk.js"
+      },
+      "work": {
+        "network": false,
+        "cacheRead": false
+      }
+    },
+    {
+      "id": "unused-error-reporting-library",
+      "match": {
+        "urlGlob": "https://gitlab.com/assets/webpack/sentry.*.chunk.js"
+      },
+      "work": {
+        "network": false,
+        "cacheRead": false
+      }
+    },
+    {
+      "id": "SSR-content-and-sidebar-do-not-use-project-tree-widget",
+      "match": {
+        "urlGlob": "https://gitlab.com/assets/webpack/pages.projects.show.vue3.*.chunk.js"
+      },
+      "work": {
+        "network": false,
+        "cacheRead": false
+      }
+    }
+  ]
+}

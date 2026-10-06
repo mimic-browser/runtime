@@ -51,9 +51,17 @@ type Request struct {
 	// Kind, Owner and Mechanism describe why the browser requested this URL.
 	// They are policy inputs, separate from wire headers and CDP Initiator.
 	Kind, Owner, Mechanism string
-	policySnapshot         *compiledResourcePolicy
+	// CauseURL is coarse provenance for synchronous author execution. It is
+	// diagnostic evidence, never an assertion that the resource is unnecessary.
+	CauseURL              string
+	policySnapshot        *compiledResourcePolicy
+	specializationAllowed bool
 	// ClientIsWorker identifies the initiating realm, not the resource type:
 	// a worker script loaded by a document still has a document client.
+	// ExecutionOwner binds training evidence to the top frame without changing wire/CDP identity.
+	ExecutionOwner       string
+	HistoryPhase         int // Initiating Page history index, not a wire/CDP field.
+	ClientIsSubframe     bool
 	ClientIsWorker       bool
 	TopLevelURL          *url.URL
 	Credentials          string
@@ -181,6 +189,7 @@ type HTTPTransport struct{ Client *http.Client }
 func (t HTTPTransport) RoundTrip(r *http.Request) (*http.Response, error) { return t.Client.Do(r) }
 
 type Loader struct {
+	executionGate           ExecutionGate
 	resourcePolicy          *ResourcePolicyState
 	ignoreCertificateErrors atomic.Bool
 	ownsTransport           bool
@@ -206,10 +215,49 @@ type Loader struct {
 
 func (l *Loader) SetResourcePolicy(policy *ResourcePolicyState) { l.resourcePolicy = policy }
 
+// ExecutionGate is Page-owned evidence admission, not a second rule engine.
+// Manual and generated rules are evaluated by the same immutable Context plan.
+type ExecutionGate interface {
+	Allows(Request) bool
+	Observe(Request, Response)
+}
+
+func (l *Loader) SetExecutionGate(gate ExecutionGate) { l.executionGate = gate }
+
+// SpeculationAllowed decides before a speculative fetch enters a browser-owned
+// pending/module map. A policy denial must not cache a failed speculative fetch
+// as the result of a later, independently permitted demand for the same URL.
+func (l *Loader) SpeculationAllowed(request Request) bool {
+	if l.resourcePolicy == nil {
+		return true
+	}
+	if l.executionGate != nil {
+		request.specializationAllowed = l.executionGate.Allows(request)
+	}
+	snapshot := l.resourcePolicy.Capture()
+	if snapshot == nil {
+		return true
+	}
+	decision := snapshot.decide(request)
+	if decision.ReportOnly || decision.Work.Network == nil || *decision.Work.Network || decision.Work.CacheRead == nil || *decision.Work.CacheRead {
+		return true
+	}
+	if observer, ok := l.transport.(interface{ BeforeResource(Request) }); ok {
+		observer.BeforeResource(request)
+	}
+	l.resourcePolicy.recordDecision(decision, false)
+	_, err := l.checkWholeResourcePolicy(decision, false)
+	l.trace.Add(trace.Resource, "speculationAdmission", map[string]any{"url": request.URL.String(), "ruleId": decision.RuleID, "allowed": err == nil})
+	return err == nil
+}
+
 // CheckLocalResourcePolicy applies the shared whole-resource decision to a
 // browser-owned attachment. It does not manufacture a request/response body,
 // acquire a connection, or charge HTTP body/cache budgets.
 func (l *Loader) CheckLocalResourcePolicy(request Request) error {
+	if l.executionGate != nil {
+		request.specializationAllowed = l.executionGate.Allows(request)
+	}
 	if l.resourcePolicy == nil {
 		return nil
 	}
@@ -241,6 +289,9 @@ func (l *Loader) checkWholeResourcePolicy(decision ResourceDecision, localAttach
 // ResourceReuseAllowed covers document preloads and already available images,
 // which can satisfy a consumer without entering the transport/cache loader.
 func (l *Loader) ResourceReuseAllowed(request Request) bool {
+	if l.executionGate != nil {
+		request.specializationAllowed = l.executionGate.Allows(request)
+	}
 	if l.resourcePolicy == nil {
 		return true
 	}
@@ -253,6 +304,9 @@ func (l *Loader) ResourceReuseAllowed(request Request) bool {
 }
 
 func (l *Loader) ResourceDecodeAllowed(request Request) bool {
+	if l.executionGate != nil {
+		request.specializationAllowed = l.executionGate.Allows(request)
+	}
 	if l.resourcePolicy == nil {
 		return true
 	}
@@ -298,6 +352,12 @@ func (l *Loader) Use(i Interceptor) func() {
 	}
 }
 func (l *Loader) Load(ctx context.Context, r Request) (response Response, loadErr error) {
+	if observer, ok := l.transport.(interface{ BeforeResource(Request) }); ok {
+		observer.BeforeResource(r)
+	}
+	if l.executionGate != nil {
+		r.specializationAllowed = l.executionGate.Allows(r)
+	}
 	if l.resourcePolicy != nil && r.policySnapshot == nil {
 		r.policySnapshot = l.resourcePolicy.Capture()
 	}
@@ -474,6 +534,9 @@ func (l *Loader) Load(ctx context.Context, r Request) (response Response, loadEr
 		}
 	}
 	if r.policySnapshot != nil && r.URL.String() != originalURL {
+		if l.executionGate != nil {
+			r.specializationAllowed = l.executionGate.Allows(r)
+		}
 		decision = r.policySnapshot.decide(r)
 		l.trace.Add(trace.Resource, "policyDecision", map[string]any{"id": r.ID, "url": r.URL.String(), "kind": r.ResourceKind(), "ruleId": decision.RuleID, "generation": decision.Generation, "reportOnly": decision.ReportOnly, "afterInterception": true})
 	}
@@ -573,6 +636,9 @@ func (l *Loader) Load(ctx context.Context, r Request) (response Response, loadEr
 		return Response{}, err
 	}
 	req.Header = r.Headers.Clone()
+	if _, observed := l.transport.(interface{ WantsResourceMetadata() }); observed {
+		req = req.WithContext(context.WithValue(req.Context(), resourceRequestKey{}, r))
+	}
 	req = req.WithContext(withBrowserHeaderLayout(req.Context(), r.Initiator, r.AuthorHeaderOrder))
 	req = req.WithContext(withTransportTiming(httptrace.WithClientTrace(req.Context(), timing.standardTrace()), timing))
 	raw, err := l.roundTrip(req)
@@ -868,6 +934,14 @@ func applyBrowserRequestHeaders(r *Request) {
 	}
 }
 func (l *Loader) after(ctx context.Context, r Request, res Response) (Response, error) {
+	if l.executionGate != nil {
+		defer func() { l.executionGate.Observe(r, res) }()
+	}
+	if observer, ok := l.transport.(interface {
+		ObserveResource(Request, Response, *SessionState)
+	}); ok {
+		defer func() { observer.ObserveResource(r, res, l.session) }()
+	}
 	res.policyOwner, res.policySnapshot = l.resourcePolicy, r.policySnapshot
 	if r.policySnapshot != nil {
 		d := r.policySnapshot.decide(r)
@@ -984,7 +1058,10 @@ func (l *Loader) after(ctx context.Context, r Request, res Response) (Response, 
 		}
 	}
 	res.Redirected = r.redirectCount > 0
-	if res.Partial {
+	// Fetch exposes the response headers before consumption of its body. A
+	// policy-truncated body is an errored stream, not a failed HTTP transaction.
+	// Other consumers (scripts, XHR, images) still require a complete body.
+	if res.Partial && r.Initiator != Fetch {
 		return res, fmt.Errorf("resource policy: response body unavailable after %s", r.policySnapshot.decide(r).Work.Body)
 	}
 	return filterFetchResponse(r, res), nil

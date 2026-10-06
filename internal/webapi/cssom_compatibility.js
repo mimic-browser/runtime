@@ -771,7 +771,9 @@ const readBlitzInputs = () => {
       let box;
       blitzShadowAdmissionDepth++;
       try {
-        box = cssBoxModel.rect(shadowHost);
+        // Native admission can be requested from an isolated world's read.
+        // Its canonical owner callback does not inherit that world's snapshot.
+        box = withStyleReadCache(() => cssBoxModel.rect(shadowHost));
       } finally {
         blitzShadowAdmissionDepth--;
       }

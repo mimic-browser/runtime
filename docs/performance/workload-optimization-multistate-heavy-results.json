@@ -1,0 +1,371 @@
+{
+  "date": "2026-10-06",
+  "scope": "Windows/V8; encoded HTTP bodies, not physical wire traffic",
+  "experiments": {
+    "react_current": {
+      "BuildSHA256": "9ead017cf5aba3954d55135c938e04426010b166ff5089eee70d19d03d31a566",
+      "Success": true,
+      "RecordedStates": 3,
+      "StateNames": [
+        "Quick Start",
+        "Adding Interactivity",
+        "Managing State"
+      ],
+      "Trials": 4,
+      "SearchMs": 63405.3881,
+      "TrainingMs": 267778.3468,
+      "TrainingBodyBytes": 0,
+      "DefaultReplayUnsupported": true,
+      "StateSummary": {
+        "0": {
+          "Manual": {
+            "MinBodyBytes": 556903,
+            "MaxBodyBytes": 556903,
+            "BodyBytes": 556903,
+            "Responses": 20,
+            "Scripts": 21,
+            "ElapsedMs": 3020.9116,
+            "CPUms": 3625,
+            "PeakRSS": 237305856,
+            "RetainedRSS": 141344768,
+            "Passes": 5,
+            "Trials": 5
+          },
+          "Optimized": {
+            "MinBodyBytes": 526843,
+            "MaxBodyBytes": 526843,
+            "BodyBytes": 526843,
+            "Responses": 18,
+            "Scripts": 19,
+            "ElapsedMs": 3097.7354,
+            "CPUms": 3671.875,
+            "PeakRSS": 233725952,
+            "RetainedRSS": 139845632,
+            "Passes": 5,
+            "Trials": 5
+          }
+        },
+        "1": {
+          "Manual": {
+            "MinBodyBytes": 558985,
+            "MaxBodyBytes": 558985,
+            "BodyBytes": 558985,
+            "Responses": 20,
+            "Scripts": 21,
+            "ElapsedMs": 4887.84,
+            "CPUms": 5890.625,
+            "PeakRSS": 263454720,
+            "RetainedRSS": 143818752,
+            "Passes": 5,
+            "Trials": 5
+          },
+          "Optimized": {
+            "MinBodyBytes": 528925,
+            "MaxBodyBytes": 528925,
+            "BodyBytes": 528925,
+            "Responses": 18,
+            "Scripts": 19,
+            "ElapsedMs": 4907.0517,
+            "CPUms": 5578.125,
+            "PeakRSS": 258625536,
+            "RetainedRSS": 146104320,
+            "Passes": 5,
+            "Trials": 5
+          }
+        },
+        "2": {
+          "Manual": {
+            "MinBodyBytes": 557776,
+            "MaxBodyBytes": 557776,
+            "BodyBytes": 557776,
+            "Responses": 20,
+            "Scripts": 21,
+            "ElapsedMs": 5229.267,
+            "CPUms": 6125,
+            "PeakRSS": 267325440,
+            "RetainedRSS": 142532608,
+            "Passes": 5,
+            "Trials": 5
+          },
+          "Optimized": {
+            "MinBodyBytes": 527716,
+            "MaxBodyBytes": 527716,
+            "BodyBytes": 527716,
+            "Responses": 18,
+            "Scripts": 19,
+            "ElapsedMs": 5117.687,
+            "CPUms": 6015.625,
+            "PeakRSS": 263405568,
+            "RetainedRSS": 143962112,
+            "Passes": 5,
+            "Trials": 5
+          }
+        }
+      },
+      "Summary": {
+        "Manual": {
+          "MinBodyBytes": 556903,
+          "MaxBodyBytes": 558985,
+          "BodyBytes": 557776,
+          "Responses": 20,
+          "Scripts": 21,
+          "ElapsedMs": 4830.9392,
+          "CPUms": 5171.875,
+          "PeakRSS": 263139328,
+          "RetainedRSS": 142798848,
+          "Passes": 15,
+          "Trials": 15
+        },
+        "Optimized": {
+          "MinBodyBytes": 526843,
+          "MaxBodyBytes": 528925,
+          "BodyBytes": 527716,
+          "Responses": 18,
+          "Scripts": 19,
+          "ElapsedMs": 4797.5411,
+          "CPUms": 5546.875,
+          "PeakRSS": 257306624,
+          "RetainedRSS": 143962112,
+          "Passes": 15,
+          "Trials": 15
+        }
+      },
+      "evidencePath": ".build/multistate-product-20261006/react/optimization/run-476304792/report.json",
+      "changes": [
+        "Avoid https://react.dev/_next/static/chunks/834.fdb5399aa041241a.js",
+        "Avoid https://react.dev/_next/static/chunks/921.2a9510deb51459cd.js"
+      ]
+    },
+    "react_initial": {
+      "BuildSHA256": "89bae51969cc0d796aaf2e1fae44b9de191fb23d80ba0a9b722619d2dc66ea29",
+      "Success": true,
+      "RecordedStates": 3,
+      "StateNames": [
+        "Quick Start",
+        "Adding Interactivity",
+        "Managing State"
+      ],
+      "Trials": 18,
+      "SearchMs": 300061.7146,
+      "TrainingMs": 610445.9333,
+      "TrainingBodyBytes": 5681885,
+      "DefaultReplayUnsupported": true,
+      "StateSummary": {
+        "0": {
+          "Manual": {
+            "MinBodyBytes": 556903,
+            "MaxBodyBytes": 556903,
+            "BodyBytes": 556903,
+            "Responses": 20,
+            "Scripts": 21,
+            "ElapsedMs": 3138.9957,
+            "CPUms": 3781.25,
+            "PeakRSS": 235216896,
+            "RetainedRSS": 138858496,
+            "Passes": 5,
+            "Trials": 5
+          },
+          "Optimized": {
+            "MinBodyBytes": 526843,
+            "MaxBodyBytes": 526843,
+            "BodyBytes": 526843,
+            "Responses": 18,
+            "Scripts": 19,
+            "ElapsedMs": 3052.5473,
+            "CPUms": 3625,
+            "PeakRSS": 233570304,
+            "RetainedRSS": 137891840,
+            "Passes": 5,
+            "Trials": 5
+          }
+        },
+        "1": {
+          "Manual": {
+            "MinBodyBytes": 558985,
+            "MaxBodyBytes": 558985,
+            "BodyBytes": 558985,
+            "Responses": 20,
+            "Scripts": 21,
+            "ElapsedMs": 5289.4012,
+            "CPUms": 6515.625,
+            "PeakRSS": 269500416,
+            "RetainedRSS": 145559552,
+            "Passes": 5,
+            "Trials": 5
+          },
+          "Optimized": {
+            "MinBodyBytes": 528925,
+            "MaxBodyBytes": 528925,
+            "BodyBytes": 528925,
+            "Responses": 18,
+            "Scripts": 19,
+            "ElapsedMs": 5038.3514,
+            "CPUms": 6156.25,
+            "PeakRSS": 261214208,
+            "RetainedRSS": 146173952,
+            "Passes": 5,
+            "Trials": 5
+          }
+        },
+        "2": {
+          "Manual": {
+            "MinBodyBytes": 557776,
+            "MaxBodyBytes": 557776,
+            "BodyBytes": 557776,
+            "Responses": 20,
+            "Scripts": 21,
+            "ElapsedMs": 5530.1636,
+            "CPUms": 6750,
+            "PeakRSS": 268931072,
+            "RetainedRSS": 146796544,
+            "Passes": 5,
+            "Trials": 5
+          },
+          "Optimized": {
+            "MinBodyBytes": 527716,
+            "MaxBodyBytes": 527716,
+            "BodyBytes": 527716,
+            "Responses": 18,
+            "Scripts": 19,
+            "ElapsedMs": 5224.8835,
+            "CPUms": 5906.25,
+            "PeakRSS": 265355264,
+            "RetainedRSS": 144678912,
+            "Passes": 5,
+            "Trials": 5
+          }
+        }
+      },
+      "Summary": {
+        "Manual": {
+          "MinBodyBytes": 556903,
+          "MaxBodyBytes": 558985,
+          "BodyBytes": 557776,
+          "Responses": 20,
+          "Scripts": 21,
+          "ElapsedMs": 5226.0294,
+          "CPUms": 6140.625,
+          "PeakRSS": 266080256,
+          "RetainedRSS": 145477632,
+          "Passes": 15,
+          "Trials": 15
+        },
+        "Optimized": {
+          "MinBodyBytes": 526843,
+          "MaxBodyBytes": 528925,
+          "BodyBytes": 527716,
+          "Responses": 18,
+          "Scripts": 19,
+          "ElapsedMs": 5038.3514,
+          "CPUms": 5890.625,
+          "PeakRSS": 260833280,
+          "RetainedRSS": 144146432,
+          "Passes": 15,
+          "Trials": 15
+        }
+      },
+      "evidencePath": ".build/multistate-20261006/react/optimization/run-3082240589/report.json",
+      "changes": [
+        "Avoid https://react.dev/_next/static/chunks/834.fdb5399aa041241a.js",
+        "Avoid https://react.dev/_next/static/chunks/921.2a9510deb51459cd.js"
+      ]
+    },
+    "gitlab_strong": {
+      "BuildSHA256": "65f95291f1237c3a01202ed32b904417bb3c44cb06fcdab7075216fb81407f86",
+      "Success": true,
+      "RecordedStates": 1,
+      "StateNames": [
+        "default"
+      ],
+      "Trials": 12,
+      "SearchMs": 180051.8244,
+      "TrainingMs": 236644.839,
+      "TrainingBodyBytes": 0,
+      "DefaultReplayUnsupported": true,
+      "StateSummary": {
+        "0": {
+          "Manual": {
+            "MinBodyBytes": 1110148,
+            "MaxBodyBytes": 1110148,
+            "BodyBytes": 1110148,
+            "Responses": 51,
+            "Scripts": 40,
+            "ElapsedMs": 3288.0047,
+            "CPUms": 4656.25,
+            "PeakRSS": 338837504,
+            "RetainedRSS": 148246528,
+            "Passes": 5,
+            "Trials": 5
+          },
+          "Optimized": {
+            "MinBodyBytes": 1013774,
+            "MaxBodyBytes": 1013774,
+            "BodyBytes": 1013774,
+            "Responses": 50,
+            "Scripts": 39,
+            "ElapsedMs": 3315.3044,
+            "CPUms": 4765.625,
+            "PeakRSS": 338358272,
+            "RetainedRSS": 146149376,
+            "Passes": 5,
+            "Trials": 5
+          }
+        }
+      },
+      "Summary": {
+        "Manual": {
+          "MinBodyBytes": 1110148,
+          "MaxBodyBytes": 1110148,
+          "BodyBytes": 1110148,
+          "Responses": 51,
+          "Scripts": 40,
+          "ElapsedMs": 3288.0047,
+          "CPUms": 4656.25,
+          "PeakRSS": 338837504,
+          "RetainedRSS": 148246528,
+          "Passes": 5,
+          "Trials": 5
+        },
+        "Optimized": {
+          "MinBodyBytes": 1013774,
+          "MaxBodyBytes": 1013774,
+          "BodyBytes": 1013774,
+          "Responses": 50,
+          "Scripts": 39,
+          "ElapsedMs": 3315.3044,
+          "CPUms": 4765.625,
+          "PeakRSS": 338358272,
+          "RetainedRSS": 146149376,
+          "Passes": 5,
+          "Trials": 5
+        }
+      },
+      "evidencePath": ".build/heavy-strong-20261006/gitlab/optimization/run-2699774050/report.json",
+      "changes": [
+        "Acquire headers only: https://gitlab.com/gitlab-org/gitlab/-/refs/master/logs_tree/?format=json&offset=0&ref_type=HEADS",
+        "Acquire headers only: https://gitlab.com/gitlab-org/gitlab/-/blob/master/README.md?format=json&ref_type=heads&viewer=rich",
+        "Avoid https://gitlab.com/assets/webpack/commons-pages.groups.activity.vue3-pages.groups.analytics.ci_cd_analytics.vue3-pages.groups.analytic-5dbacc84.b9767e6a.chunk.js"
+      ]
+    },
+    "supabase_rejected": {
+      "BuildSHA256": "65f95291f1237c3a01202ed32b904417bb3c44cb06fcdab7075216fb81407f86",
+      "Success": false,
+      "RecordedStates": 1,
+      "StateNames": [
+        "default"
+      ],
+      "Trials": 15,
+      "SearchMs": 240047.3913,
+      "TrainingMs": 0,
+      "TrainingBodyBytes": 0,
+      "DefaultReplayUnsupported": true,
+      "StateSummary": null,
+      "Summary": null,
+      "evidencePath": ".build/heavy-reference-final-20261006/supabase/optimization/run-4052217374/report.json",
+      "changes": [
+        "Avoid https://frontend-assets.supabase.com/docs/d21c20eae640/_next/static/chunks/54b60c1a.1cca5a4c56308192.js"
+      ],
+      "note": "No installed profile. TrainingMs=0 in historical failed-run report is unavailable, not zero training cost."
+    }
+  }
+}

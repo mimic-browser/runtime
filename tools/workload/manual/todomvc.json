@@ -1,0 +1,31 @@
+{
+  "rules": [
+    {
+      "id": "site-docs-scaffolding",
+      "match": {
+        "urlGlob": "*/base.js"
+      },
+      "work": {
+        "cacheRead": false,
+        "network": false
+      }
+    },
+    {
+      "id": "presentation",
+      "match": {
+        "kinds": [
+          "stylesheet",
+          "favicon"
+        ]
+      },
+      "work": {
+        "cacheRead": false,
+        "network": false
+      }
+    }
+  ],
+  "presets": [
+    "noVisualAssets",
+    "noSpeculativeLoads"
+  ]
+}

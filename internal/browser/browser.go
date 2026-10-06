@@ -15,28 +15,41 @@ import (
 	"github.com/moreveal/mimic/internal/speech"
 	"github.com/moreveal/mimic/internal/state"
 	"github.com/moreveal/mimic/internal/textmetrics"
+	"github.com/moreveal/mimic/internal/workload"
 )
 
 type Browser struct {
-	defaultResourcePolicy *network.ResourcePolicy
-	devPreview            bool
-	speechProvider        speech.Provider
-	mu                    sync.RWMutex
-	lifetime              context.Context
-	cancel                context.CancelFunc
-	closed                bool
-	closeDone             chan struct{}
-	closeErr              error
-	factory               engine.Factory
-	env                   state.Environment
-	compat                compatibility.Bundle
-	contexts              map[string]*Context
-	bootstrapSnapshots    bootstrapSnapshotCache
-	profileBootstrapMu    sync.Mutex
-	profileBootstraps     map[[32]byte]*profileBootstrapAttempt
+	executionProfile       *workload.Profile
+	profileNote            func(string)
+	transportWrapper       func(network.Transport) network.Transport
+	classicScriptAdmission func(url, source string, external bool) bool
+	classicScriptSkipped   func(url, source string, external bool)
+	defaultResourcePolicy  *network.ResourcePolicy
+	devPreview             bool
+	speechProvider         speech.Provider
+	mu                     sync.RWMutex
+	lifetime               context.Context
+	cancel                 context.CancelFunc
+	closed                 bool
+	closeDone              chan struct{}
+	closeErr               error
+	factory                engine.Factory
+	env                    state.Environment
+	compat                 compatibility.Bundle
+	contexts               map[string]*Context
+	bootstrapSnapshots     bootstrapSnapshotCache
+	profileBootstrapMu     sync.Mutex
+	profileBootstraps      map[[32]byte]*profileBootstrapAttempt
 }
 
 type Options struct {
+	ExecutionProfile *workload.Profile
+	ProfileNote      func(string)
+	// TransportWrapper and ClassicScriptAdmission are private experiment hooks.
+	// A wrapper is created once per Context, before any Page can issue requests.
+	TransportWrapper       func(network.Transport) network.Transport
+	ClassicScriptAdmission func(url, source string, external bool) bool
+	ClassicScriptSkipped   func(url, source string, external bool)
 	// ResourcePolicy supplies an opt-in template for newly created Contexts.
 	ResourcePolicyJSON []byte
 	// DevPreview enables private debug observations and the CDP preview routes.
@@ -66,6 +79,18 @@ func NewWithOptions(factory engine.Factory, bundle compatibility.Bundle, options
 	textmetrics.WarmSystemCatalog()
 	lifetime, cancel := context.WithCancel(context.Background())
 	b := &Browser{devPreview: options.DevPreview, speechProvider: provider, factory: factory, env: env.Clone(), compat: bundle, contexts: map[string]*Context{}, lifetime: lifetime, cancel: cancel}
+	b.transportWrapper = options.TransportWrapper
+	if options.ExecutionProfile != nil {
+		if err := options.ExecutionProfile.Validate(); err != nil {
+			cancel()
+			return nil, err
+		}
+		owned := options.ExecutionProfile.Clone()
+		b.executionProfile = &owned
+	}
+	b.profileNote = options.ProfileNote
+	b.classicScriptAdmission = options.ClassicScriptAdmission
+	b.classicScriptSkipped = options.ClassicScriptSkipped
 	if len(options.ResourcePolicyJSON) != 0 {
 		policy, err := network.ParseResourcePolicy(options.ResourcePolicyJSON)
 		if err != nil {
@@ -93,6 +118,9 @@ func (b *Browser) newConfiguredContext(d *profile.Document, policy *network.Reso
 	}
 	if policy != nil {
 		_, _ = c.resourcePolicy.Update(*policy)
+	}
+	if b.executionProfile != nil && len(b.executionProfile.Plan.Resources) > 0 {
+		_ = c.resourcePolicy.InstallSpecialization(b.executionProfile.Plan.Resources)
 	}
 	if b.closed {
 		cancel()
@@ -167,7 +195,14 @@ func (c *Context) NewPage() (*Page, error) {
 				c.mu.Unlock()
 				return nil, fmt.Errorf("create %s network transport: %w", c.browser.Environment().Network.WireProfile, err)
 			}
+			if c.browser.transportWrapper != nil {
+				transport = c.browser.transportWrapper(transport)
+			}
 			c.transport = transport
+		}
+		if c.transport == nil && c.browser.transportWrapper != nil {
+			c.mu.Unlock()
+			return nil, fmt.Errorf("workload experiment requires an explicit Context transport")
 		}
 	}
 	p, err := newPage(c)

@@ -1,0 +1,1343 @@
+{
+  "format": "mimic-optimize-dynamic-evaluation",
+  "date": "2026-10-05",
+  "platform": "Windows amd64",
+  "engine": "v8",
+  "browserMode": "headless",
+  "binarySHA256": "7e35b4093ccd25881ae36b5859bd42714ec937017cc79c575fea51905509e9f5",
+  "cases": [
+    {
+      "workload": "react-article",
+      "clientSHA256": "63f1977d06ea5c64247a62f9cb38b0b21ee48659c5ce5b414e2ee699fd24b648",
+      "manualPolicySHA256": "abeef63aa8d13ff8f97a91f462b1b6f91fc3d9988924ae5a9fe11092474d0c73",
+      "inputCapturesSHA256": {
+        "supplementalCapture": "1678bc44be7ecb3411a169614b76c24d87533f753eb7d69dd1a1d8ab078ae0b5",
+        "capture": "376b61b39ddaeb9699c164c9a143ede32aa72dfb1628f4d53a15ac60cb66b5f5"
+      },
+      "profileSHA256": "4c2710fd9db3a221ae5dfaeee1b921398d60ea606d8aaed90bc48828629619d5",
+      "installedCaptureSHA256": [
+        "cd23cd5f09bf9e22ffd7d263adc437a3125004d3a337a71fd972662897840f79"
+      ],
+      "nativeReportRelativePath": ".build/dynamic-challenge/matched-current/react-article/optimization/run-306372794/report.json",
+      "recordedStates": 1,
+      "defaultReplayUnsupported": true,
+      "manualCoverageAdjusted": false,
+      "baselineNoiseBytes": 25284,
+      "search": {
+        "trials": 14,
+        "memoHits": 0,
+        "searchMs": 180047.5008,
+        "trainingMs": 238699.3769,
+        "candidateStatuses": {
+          "FAIL": 10,
+          "PASS": 1,
+          "UNSUPPORTED": 2,
+          "CANCELLED": 1
+        }
+      },
+      "selectedChanges": [
+        "Avoid https://react.dev/_next/static/chunks/834.fdb5399aa041241a.js",
+        "Avoid https://react.dev/_next/static/chunks/921.2a9510deb51459cd.js",
+        "Seed: generated:0:modern-runtime-does-not-need-legacy-polyfills",
+        "Seed: generated:1:article-does-not-navigate-to-prefetched-routes",
+        "Seed: generated:2:analytics",
+        "Seed: generated:3:article-does-not-use-live-editor",
+        "Seed: generated:4:preset:noVisualAssets",
+        "Seed: generated:5:preset:noSpeculativeLoads"
+      ],
+      "variants": {
+        "Manual": {
+          "summary": {
+            "MinBodyBytes": 556903,
+            "MaxBodyBytes": 556903,
+            "BodyBytes": 556903,
+            "Responses": 20,
+            "Scripts": 21,
+            "ElapsedMs": 3431.052,
+            "CPUms": 4359.375,
+            "PeakRSS": 238776320,
+            "RetainedRSS": 140337152,
+            "Passes": 5,
+            "Trials": 5
+          },
+          "counters": {
+            "requests": 20,
+            "responseAcquisitions": 20,
+            "encodedBodyBytes": 556903,
+            "processedBodyBytes": 1952920,
+            "scriptsAcquired": 18,
+            "classicScriptsExecuted": 21,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 1952920,
+            "retainedBodyBytes": 0
+          },
+          "measurements": [
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 3273.3265,
+              "browserCpuMs": 4187.5,
+              "peakRssBytes": 238776320,
+              "retainedRssBytes": 137912320,
+              "counters": {
+                "requests": 20,
+                "responseAcquisitions": 20,
+                "encodedBodyBytes": 556903,
+                "processedBodyBytes": 1952920,
+                "scriptsAcquired": 18,
+                "classicScriptsExecuted": 21,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 1952920,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 3763.5292,
+              "browserCpuMs": 4406.25,
+              "peakRssBytes": 238952448,
+              "retainedRssBytes": 139751424,
+              "counters": {
+                "requests": 20,
+                "responseAcquisitions": 20,
+                "encodedBodyBytes": 556903,
+                "processedBodyBytes": 1952920,
+                "scriptsAcquired": 18,
+                "classicScriptsExecuted": 21,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 1952920,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 3431.052,
+              "browserCpuMs": 4375,
+              "peakRssBytes": 237748224,
+              "retainedRssBytes": 140337152,
+              "counters": {
+                "requests": 20,
+                "responseAcquisitions": 20,
+                "encodedBodyBytes": 556903,
+                "processedBodyBytes": 1952920,
+                "scriptsAcquired": 18,
+                "classicScriptsExecuted": 21,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 1952920,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 3506.0769,
+              "browserCpuMs": 4359.375,
+              "peakRssBytes": 239476736,
+              "retainedRssBytes": 140500992,
+              "counters": {
+                "requests": 20,
+                "responseAcquisitions": 20,
+                "encodedBodyBytes": 556903,
+                "processedBodyBytes": 1952920,
+                "scriptsAcquired": 18,
+                "classicScriptsExecuted": 21,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 1952920,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 3420.5271,
+              "browserCpuMs": 4000,
+              "peakRssBytes": 237621248,
+              "retainedRssBytes": 141758464,
+              "counters": {
+                "requests": 20,
+                "responseAcquisitions": 20,
+                "encodedBodyBytes": 556903,
+                "processedBodyBytes": 1952920,
+                "scriptsAcquired": 18,
+                "classicScriptsExecuted": 21,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 1952920,
+                "retainedBodyBytes": 0
+              }
+            }
+          ]
+        },
+        "Optimized": {
+          "summary": {
+            "MinBodyBytes": 526843,
+            "MaxBodyBytes": 526843,
+            "BodyBytes": 526843,
+            "Responses": 18,
+            "Scripts": 19,
+            "ElapsedMs": 3296.8865,
+            "CPUms": 4015.625,
+            "PeakRSS": 233381888,
+            "RetainedRSS": 139431936,
+            "Passes": 5,
+            "Trials": 5
+          },
+          "counters": {
+            "requests": 18,
+            "responseAcquisitions": 18,
+            "encodedBodyBytes": 526843,
+            "processedBodyBytes": 1781662,
+            "scriptsAcquired": 16,
+            "classicScriptsExecuted": 19,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 1781662,
+            "retainedBodyBytes": 0
+          },
+          "measurements": [
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 3250.0231,
+              "browserCpuMs": 4015.625,
+              "peakRssBytes": 233816064,
+              "retainedRssBytes": 139485184,
+              "counters": {
+                "requests": 18,
+                "responseAcquisitions": 18,
+                "encodedBodyBytes": 526843,
+                "processedBodyBytes": 1781662,
+                "scriptsAcquired": 16,
+                "classicScriptsExecuted": 19,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 1781662,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 3911.3002,
+              "browserCpuMs": 4656.25,
+              "peakRssBytes": 237711360,
+              "retainedRssBytes": 139431936,
+              "counters": {
+                "requests": 18,
+                "responseAcquisitions": 18,
+                "encodedBodyBytes": 526843,
+                "processedBodyBytes": 1781662,
+                "scriptsAcquired": 16,
+                "classicScriptsExecuted": 19,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 1781662,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 3764.4512,
+              "browserCpuMs": 4578.125,
+              "peakRssBytes": 233381888,
+              "retainedRssBytes": 138883072,
+              "counters": {
+                "requests": 18,
+                "responseAcquisitions": 18,
+                "encodedBodyBytes": 526843,
+                "processedBodyBytes": 1781662,
+                "scriptsAcquired": 16,
+                "classicScriptsExecuted": 19,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 1781662,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 3296.8865,
+              "browserCpuMs": 3921.875,
+              "peakRssBytes": 232230912,
+              "retainedRssBytes": 137076736,
+              "counters": {
+                "requests": 18,
+                "responseAcquisitions": 18,
+                "encodedBodyBytes": 526843,
+                "processedBodyBytes": 1781662,
+                "scriptsAcquired": 16,
+                "classicScriptsExecuted": 19,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 1781662,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 3279.7376,
+              "browserCpuMs": 3796.875,
+              "peakRssBytes": 232386560,
+              "retainedRssBytes": 139493376,
+              "counters": {
+                "requests": 18,
+                "responseAcquisitions": 18,
+                "encodedBodyBytes": 526843,
+                "processedBodyBytes": 1781662,
+                "scriptsAcquired": 16,
+                "classicScriptsExecuted": 19,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 1781662,
+                "retainedBodyBytes": 0
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "workload": "vue-guide",
+      "clientSHA256": "f1efaa5a187c2379c97b94ffd805a5eea6f71afc177c69900989c34049464879",
+      "manualPolicySHA256": "801820a7ce3b3db88867038c6b3d436ed9e9aaf55e93c804e40fdc6e45b6db0e",
+      "inputCapturesSHA256": {
+        "capture": "7f755212dcf04a5ada625c8890d66f5ff77e44c23be8a5370c1650a0365d15e3"
+      },
+      "profileSHA256": "f85e203896c6462c3a8b17c0daee8a2a6d1e86f692035bb3d5d7a4859276d0f8",
+      "installedCaptureSHA256": [
+        "7f755212dcf04a5ada625c8890d66f5ff77e44c23be8a5370c1650a0365d15e3"
+      ],
+      "nativeReportRelativePath": ".build/dynamic-challenge/matched-current/vue-guide/optimization/run-1544348102/report.json",
+      "recordedStates": 1,
+      "defaultReplayUnsupported": true,
+      "manualCoverageAdjusted": false,
+      "baselineNoiseBytes": 0,
+      "search": {
+        "trials": 11,
+        "memoHits": 1,
+        "searchMs": 180045.8576,
+        "trainingMs": 211022.804,
+        "candidateStatuses": {
+          "FAIL": 10,
+          "CANCELLED": 1
+        }
+      },
+      "selectedChanges": [
+        "Manual reference policy"
+      ],
+      "variants": {
+        "Manual": {
+          "summary": {
+            "MinBodyBytes": 88870,
+            "MaxBodyBytes": 88870,
+            "BodyBytes": 88870,
+            "Responses": 13,
+            "Scripts": 5,
+            "ElapsedMs": 1800.9521,
+            "CPUms": 1968.75,
+            "PeakRSS": 193814528,
+            "RetainedRSS": 127979520,
+            "Passes": 5,
+            "Trials": 5
+          },
+          "counters": {
+            "requests": 13,
+            "responseAcquisitions": 13,
+            "encodedBodyBytes": 88870,
+            "processedBodyBytes": 336175,
+            "scriptsAcquired": 12,
+            "classicScriptsExecuted": 5,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 336175,
+            "retainedBodyBytes": 0
+          },
+          "measurements": [
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1792.5561,
+              "browserCpuMs": 2031.25,
+              "peakRssBytes": 192794624,
+              "retainedRssBytes": 126062592,
+              "counters": {
+                "requests": 13,
+                "responseAcquisitions": 13,
+                "encodedBodyBytes": 88870,
+                "processedBodyBytes": 336175,
+                "scriptsAcquired": 12,
+                "classicScriptsExecuted": 5,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 336175,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1796.1931,
+              "browserCpuMs": 1875,
+              "peakRssBytes": 193814528,
+              "retainedRssBytes": 127979520,
+              "counters": {
+                "requests": 13,
+                "responseAcquisitions": 13,
+                "encodedBodyBytes": 88870,
+                "processedBodyBytes": 336175,
+                "scriptsAcquired": 12,
+                "classicScriptsExecuted": 5,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 336175,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1800.9521,
+              "browserCpuMs": 2234.375,
+              "peakRssBytes": 194064384,
+              "retainedRssBytes": 128483328,
+              "counters": {
+                "requests": 13,
+                "responseAcquisitions": 13,
+                "encodedBodyBytes": 88870,
+                "processedBodyBytes": 336175,
+                "scriptsAcquired": 12,
+                "classicScriptsExecuted": 5,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 336175,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1801.2848,
+              "browserCpuMs": 1968.75,
+              "peakRssBytes": 195158016,
+              "retainedRssBytes": 129155072,
+              "counters": {
+                "requests": 13,
+                "responseAcquisitions": 13,
+                "encodedBodyBytes": 88870,
+                "processedBodyBytes": 336175,
+                "scriptsAcquired": 12,
+                "classicScriptsExecuted": 5,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 336175,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1915.1955,
+              "browserCpuMs": 1953.125,
+              "peakRssBytes": 193069056,
+              "retainedRssBytes": 127160320,
+              "counters": {
+                "requests": 13,
+                "responseAcquisitions": 13,
+                "encodedBodyBytes": 88870,
+                "processedBodyBytes": 336175,
+                "scriptsAcquired": 12,
+                "classicScriptsExecuted": 5,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 336175,
+                "retainedBodyBytes": 0
+              }
+            }
+          ]
+        },
+        "Optimized": {
+          "summary": {
+            "MinBodyBytes": 88870,
+            "MaxBodyBytes": 88870,
+            "BodyBytes": 88870,
+            "Responses": 13,
+            "Scripts": 5,
+            "ElapsedMs": 1809.5879,
+            "CPUms": 1875,
+            "PeakRSS": 193327104,
+            "RetainedRSS": 127389696,
+            "Passes": 5,
+            "Trials": 5
+          },
+          "counters": {
+            "requests": 13,
+            "responseAcquisitions": 13,
+            "encodedBodyBytes": 88870,
+            "processedBodyBytes": 336175,
+            "scriptsAcquired": 12,
+            "classicScriptsExecuted": 5,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 336175,
+            "retainedBodyBytes": 0
+          },
+          "measurements": [
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1778.3116,
+              "browserCpuMs": 1843.75,
+              "peakRssBytes": 193327104,
+              "retainedRssBytes": 127389696,
+              "counters": {
+                "requests": 13,
+                "responseAcquisitions": 13,
+                "encodedBodyBytes": 88870,
+                "processedBodyBytes": 336175,
+                "scriptsAcquired": 12,
+                "classicScriptsExecuted": 5,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 336175,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1855.1259,
+              "browserCpuMs": 1875,
+              "peakRssBytes": 192573440,
+              "retainedRssBytes": 126676992,
+              "counters": {
+                "requests": 13,
+                "responseAcquisitions": 13,
+                "encodedBodyBytes": 88870,
+                "processedBodyBytes": 336175,
+                "scriptsAcquired": 12,
+                "classicScriptsExecuted": 5,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 336175,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1863.7882,
+              "browserCpuMs": 2078.125,
+              "peakRssBytes": 194441216,
+              "retainedRssBytes": 127516672,
+              "counters": {
+                "requests": 13,
+                "responseAcquisitions": 13,
+                "encodedBodyBytes": 88870,
+                "processedBodyBytes": 336175,
+                "scriptsAcquired": 12,
+                "classicScriptsExecuted": 5,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 336175,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1809.5879,
+              "browserCpuMs": 1812.5,
+              "peakRssBytes": 192753664,
+              "retainedRssBytes": 127197184,
+              "counters": {
+                "requests": 13,
+                "responseAcquisitions": 13,
+                "encodedBodyBytes": 88870,
+                "processedBodyBytes": 336175,
+                "scriptsAcquired": 12,
+                "classicScriptsExecuted": 5,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 336175,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1795.4782,
+              "browserCpuMs": 2078.125,
+              "peakRssBytes": 193576960,
+              "retainedRssBytes": 127832064,
+              "counters": {
+                "requests": 13,
+                "responseAcquisitions": 13,
+                "encodedBodyBytes": 88870,
+                "processedBodyBytes": 336175,
+                "scriptsAcquired": 12,
+                "classicScriptsExecuted": 5,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 336175,
+                "retainedBodyBytes": 0
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "workload": "realworld",
+      "clientSHA256": "8c73a378167d25a50bca5824804fb6014e9fd355301a3aa83c7b4300d64720b8",
+      "manualPolicySHA256": "c21a39dedf9854a2d3fb518ac124b79ffd6f713fdd37641e17fba4cfc2b3475a",
+      "inputCapturesSHA256": {
+        "capture": "94e7beac58acd727c8f6133048522b67ae6ceea32f91ac5cac4dda40e744379a"
+      },
+      "profileSHA256": "69f99894b636ad733521d3233f05af35f6594f4e0570f2a1acb8607c613c2d18",
+      "installedCaptureSHA256": [
+        "94e7beac58acd727c8f6133048522b67ae6ceea32f91ac5cac4dda40e744379a"
+      ],
+      "nativeReportRelativePath": ".build/dynamic-challenge/matched-current/realworld/optimization/run-1344903160/report.json",
+      "recordedStates": 1,
+      "defaultReplayUnsupported": true,
+      "manualCoverageAdjusted": false,
+      "baselineNoiseBytes": 0,
+      "search": {
+        "trials": 9,
+        "memoHits": 1,
+        "searchMs": 180046.7066,
+        "trainingMs": 207514.8939,
+        "candidateStatuses": {
+          "FAIL": 8,
+          "CANCELLED": 1
+        }
+      },
+      "selectedChanges": [
+        "Manual reference policy"
+      ],
+      "variants": {
+        "Manual": {
+          "summary": {
+            "MinBodyBytes": 159719,
+            "MaxBodyBytes": 159719,
+            "BodyBytes": 159719,
+            "Responses": 21,
+            "Scripts": 0,
+            "ElapsedMs": 1559.516,
+            "CPUms": 1718.75,
+            "PeakRSS": 173817856,
+            "RetainedRSS": 116899840,
+            "Passes": 5,
+            "Trials": 5
+          },
+          "counters": {
+            "requests": 21,
+            "responseAcquisitions": 21,
+            "encodedBodyBytes": 159719,
+            "processedBodyBytes": 446058,
+            "scriptsAcquired": 16,
+            "classicScriptsExecuted": 0,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 446058,
+            "retainedBodyBytes": 0
+          },
+          "measurements": [
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1560.3377,
+              "browserCpuMs": 1718.75,
+              "peakRssBytes": 175685632,
+              "retainedRssBytes": 119476224,
+              "counters": {
+                "requests": 21,
+                "responseAcquisitions": 21,
+                "encodedBodyBytes": 159719,
+                "processedBodyBytes": 446058,
+                "scriptsAcquired": 16,
+                "classicScriptsExecuted": 0,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 446058,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1644.5231,
+              "browserCpuMs": 1875,
+              "peakRssBytes": 174243840,
+              "retainedRssBytes": 118059008,
+              "counters": {
+                "requests": 21,
+                "responseAcquisitions": 21,
+                "encodedBodyBytes": 159719,
+                "processedBodyBytes": 446058,
+                "scriptsAcquired": 16,
+                "classicScriptsExecuted": 0,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 446058,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1559.516,
+              "browserCpuMs": 2031.25,
+              "peakRssBytes": 173817856,
+              "retainedRssBytes": 116899840,
+              "counters": {
+                "requests": 21,
+                "responseAcquisitions": 21,
+                "encodedBodyBytes": 159719,
+                "processedBodyBytes": 446058,
+                "scriptsAcquired": 16,
+                "classicScriptsExecuted": 0,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 446058,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1540.7037,
+              "browserCpuMs": 1531.25,
+              "peakRssBytes": 171663360,
+              "retainedRssBytes": 115306496,
+              "counters": {
+                "requests": 21,
+                "responseAcquisitions": 21,
+                "encodedBodyBytes": 159719,
+                "processedBodyBytes": 446058,
+                "scriptsAcquired": 16,
+                "classicScriptsExecuted": 0,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 446058,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1550.088,
+              "browserCpuMs": 1656.25,
+              "peakRssBytes": 169828352,
+              "retainedRssBytes": 114135040,
+              "counters": {
+                "requests": 21,
+                "responseAcquisitions": 21,
+                "encodedBodyBytes": 159719,
+                "processedBodyBytes": 446058,
+                "scriptsAcquired": 16,
+                "classicScriptsExecuted": 0,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 446058,
+                "retainedBodyBytes": 0
+              }
+            }
+          ]
+        },
+        "Optimized": {
+          "summary": {
+            "MinBodyBytes": 159719,
+            "MaxBodyBytes": 159719,
+            "BodyBytes": 159719,
+            "Responses": 21,
+            "Scripts": 0,
+            "ElapsedMs": 1595.0286,
+            "CPUms": 1734.375,
+            "PeakRSS": 173125632,
+            "RetainedRSS": 117035008,
+            "Passes": 5,
+            "Trials": 5
+          },
+          "counters": {
+            "requests": 21,
+            "responseAcquisitions": 21,
+            "encodedBodyBytes": 159719,
+            "processedBodyBytes": 446058,
+            "scriptsAcquired": 16,
+            "classicScriptsExecuted": 0,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 446058,
+            "retainedBodyBytes": 0
+          },
+          "measurements": [
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1605.5432,
+              "browserCpuMs": 1796.875,
+              "peakRssBytes": 172904448,
+              "retainedRssBytes": 116686848,
+              "counters": {
+                "requests": 21,
+                "responseAcquisitions": 21,
+                "encodedBodyBytes": 159719,
+                "processedBodyBytes": 446058,
+                "scriptsAcquired": 16,
+                "classicScriptsExecuted": 0,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 446058,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1615.4423,
+              "browserCpuMs": 1656.25,
+              "peakRssBytes": 172769280,
+              "retainedRssBytes": 117035008,
+              "counters": {
+                "requests": 21,
+                "responseAcquisitions": 21,
+                "encodedBodyBytes": 159719,
+                "processedBodyBytes": 446058,
+                "scriptsAcquired": 16,
+                "classicScriptsExecuted": 0,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 446058,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1595.0286,
+              "browserCpuMs": 1734.375,
+              "peakRssBytes": 173977600,
+              "retainedRssBytes": 117968896,
+              "counters": {
+                "requests": 21,
+                "responseAcquisitions": 21,
+                "encodedBodyBytes": 159719,
+                "processedBodyBytes": 446058,
+                "scriptsAcquired": 16,
+                "classicScriptsExecuted": 0,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 446058,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1552.0685,
+              "browserCpuMs": 1968.75,
+              "peakRssBytes": 173125632,
+              "retainedRssBytes": 116523008,
+              "counters": {
+                "requests": 21,
+                "responseAcquisitions": 21,
+                "encodedBodyBytes": 159719,
+                "processedBodyBytes": 446058,
+                "scriptsAcquired": 16,
+                "classicScriptsExecuted": 0,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 446058,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1534.3881,
+              "browserCpuMs": 1593.75,
+              "peakRssBytes": 174198784,
+              "retainedRssBytes": 117080064,
+              "counters": {
+                "requests": 21,
+                "responseAcquisitions": 21,
+                "encodedBodyBytes": 159719,
+                "processedBodyBytes": 446058,
+                "scriptsAcquired": 16,
+                "classicScriptsExecuted": 0,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 446058,
+                "retainedBodyBytes": 0
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "workload": "books",
+      "clientSHA256": "48d4942bdc55b6ea102a175ff9d21178b5516d4d148846c71984ac49d911a89f",
+      "manualPolicySHA256": "651e9571ef055bc0ce6512eaac58509349fda76e1e6c49191009677caa2a921c",
+      "inputCapturesSHA256": {
+        "capture": "b07c4b9c4f8040707357c4c0993b53f0d41cf009f41a2398394e4c6d80c8339b"
+      },
+      "profileSHA256": "2e92710cf111b467f4049e9177543842247c374a3f1b9c140c9d44697e843225",
+      "installedCaptureSHA256": [
+        "b07c4b9c4f8040707357c4c0993b53f0d41cf009f41a2398394e4c6d80c8339b"
+      ],
+      "nativeReportRelativePath": ".build/dynamic-challenge/matched-current/books/optimization/run-1618675197/report.json",
+      "recordedStates": 1,
+      "defaultReplayUnsupported": false,
+      "manualCoverageAdjusted": false,
+      "baselineNoiseBytes": 0,
+      "search": {
+        "trials": 0,
+        "memoHits": 0,
+        "searchMs": 0,
+        "trainingMs": 27120.5385,
+        "candidateStatuses": {}
+      },
+      "selectedChanges": [
+        "Manual reference policy"
+      ],
+      "variants": {
+        "Default": {
+          "summary": {
+            "MinBodyBytes": 284591,
+            "MaxBodyBytes": 284591,
+            "BodyBytes": 284591,
+            "Responses": 29,
+            "Scripts": 7,
+            "ElapsedMs": 1378.0644,
+            "CPUms": 1468.75,
+            "PeakRSS": 194416640,
+            "RetainedRSS": 126439424,
+            "Passes": 5,
+            "Trials": 5
+          },
+          "counters": {
+            "requests": 30,
+            "responseAcquisitions": 29,
+            "encodedBodyBytes": 284591,
+            "processedBodyBytes": 682045,
+            "scriptsAcquired": 5,
+            "classicScriptsExecuted": 7,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 682045,
+            "retainedBodyBytes": 0
+          },
+          "measurements": [
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1445.4219,
+              "browserCpuMs": 1593.75,
+              "peakRssBytes": 194416640,
+              "retainedRssBytes": 125751296,
+              "counters": {
+                "requests": 30,
+                "responseAcquisitions": 29,
+                "encodedBodyBytes": 284591,
+                "processedBodyBytes": 682045,
+                "scriptsAcquired": 5,
+                "classicScriptsExecuted": 7,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 682045,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1424.7801,
+              "browserCpuMs": 1468.75,
+              "peakRssBytes": 193445888,
+              "retainedRssBytes": 127860736,
+              "counters": {
+                "requests": 30,
+                "responseAcquisitions": 29,
+                "encodedBodyBytes": 284591,
+                "processedBodyBytes": 682045,
+                "scriptsAcquired": 5,
+                "classicScriptsExecuted": 7,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 682045,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1356.5088,
+              "browserCpuMs": 1468.75,
+              "peakRssBytes": 193945600,
+              "retainedRssBytes": 126439424,
+              "counters": {
+                "requests": 30,
+                "responseAcquisitions": 29,
+                "encodedBodyBytes": 284591,
+                "processedBodyBytes": 682045,
+                "scriptsAcquired": 5,
+                "classicScriptsExecuted": 7,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 682045,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1378.0644,
+              "browserCpuMs": 1343.75,
+              "peakRssBytes": 194428928,
+              "retainedRssBytes": 126197760,
+              "counters": {
+                "requests": 30,
+                "responseAcquisitions": 29,
+                "encodedBodyBytes": 284591,
+                "processedBodyBytes": 682045,
+                "scriptsAcquired": 5,
+                "classicScriptsExecuted": 7,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 682045,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1372.4167,
+              "browserCpuMs": 1359.375,
+              "peakRssBytes": 194600960,
+              "retainedRssBytes": 126590976,
+              "counters": {
+                "requests": 30,
+                "responseAcquisitions": 29,
+                "encodedBodyBytes": 284591,
+                "processedBodyBytes": 682045,
+                "scriptsAcquired": 5,
+                "classicScriptsExecuted": 7,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 682045,
+                "retainedBodyBytes": 0
+              }
+            }
+          ]
+        },
+        "Manual": {
+          "summary": {
+            "MinBodyBytes": 5276,
+            "MaxBodyBytes": 5276,
+            "BodyBytes": 5276,
+            "Responses": 1,
+            "Scripts": 2,
+            "ElapsedMs": 1166.1354,
+            "CPUms": 1203.125,
+            "PeakRSS": 164671488,
+            "RetainedRSS": 114462720,
+            "Passes": 5,
+            "Trials": 5
+          },
+          "counters": {
+            "requests": 1,
+            "responseAcquisitions": 1,
+            "encodedBodyBytes": 5276,
+            "processedBodyBytes": 51294,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 2,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 51294,
+            "retainedBodyBytes": 0
+          },
+          "measurements": [
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1166.1354,
+              "browserCpuMs": 1171.875,
+              "peakRssBytes": 162328576,
+              "retainedRssBytes": 112963584,
+              "counters": {
+                "requests": 1,
+                "responseAcquisitions": 1,
+                "encodedBodyBytes": 5276,
+                "processedBodyBytes": 51294,
+                "scriptsAcquired": 0,
+                "classicScriptsExecuted": 2,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 51294,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1187.1068,
+              "browserCpuMs": 1375,
+              "peakRssBytes": 171020288,
+              "retainedRssBytes": 121597952,
+              "counters": {
+                "requests": 1,
+                "responseAcquisitions": 1,
+                "encodedBodyBytes": 5276,
+                "processedBodyBytes": 51294,
+                "scriptsAcquired": 0,
+                "classicScriptsExecuted": 2,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 51294,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1190.1893,
+              "browserCpuMs": 1218.75,
+              "peakRssBytes": 164671488,
+              "retainedRssBytes": 109191168,
+              "counters": {
+                "requests": 1,
+                "responseAcquisitions": 1,
+                "encodedBodyBytes": 5276,
+                "processedBodyBytes": 51294,
+                "scriptsAcquired": 0,
+                "classicScriptsExecuted": 2,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 51294,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1154.5793,
+              "browserCpuMs": 1203.125,
+              "peakRssBytes": 163667968,
+              "retainedRssBytes": 116166656,
+              "counters": {
+                "requests": 1,
+                "responseAcquisitions": 1,
+                "encodedBodyBytes": 5276,
+                "processedBodyBytes": 51294,
+                "scriptsAcquired": 0,
+                "classicScriptsExecuted": 2,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 51294,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1155.5111,
+              "browserCpuMs": 1156.25,
+              "peakRssBytes": 167071744,
+              "retainedRssBytes": 114462720,
+              "counters": {
+                "requests": 1,
+                "responseAcquisitions": 1,
+                "encodedBodyBytes": 5276,
+                "processedBodyBytes": 51294,
+                "scriptsAcquired": 0,
+                "classicScriptsExecuted": 2,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 51294,
+                "retainedBodyBytes": 0
+              }
+            }
+          ]
+        },
+        "Optimized": {
+          "summary": {
+            "MinBodyBytes": 5276,
+            "MaxBodyBytes": 5276,
+            "BodyBytes": 5276,
+            "Responses": 1,
+            "Scripts": 2,
+            "ElapsedMs": 1172.5636,
+            "CPUms": 1171.875,
+            "PeakRSS": 160751616,
+            "RetainedRSS": 113086464,
+            "Passes": 5,
+            "Trials": 5
+          },
+          "counters": {
+            "requests": 1,
+            "responseAcquisitions": 1,
+            "encodedBodyBytes": 5276,
+            "processedBodyBytes": 51294,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 2,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 51294,
+            "retainedBodyBytes": 0
+          },
+          "measurements": [
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1246.2987,
+              "browserCpuMs": 1171.875,
+              "peakRssBytes": 160198656,
+              "retainedRssBytes": 113627136,
+              "counters": {
+                "requests": 1,
+                "responseAcquisitions": 1,
+                "encodedBodyBytes": 5276,
+                "processedBodyBytes": 51294,
+                "scriptsAcquired": 0,
+                "classicScriptsExecuted": 2,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 51294,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1188.5901,
+              "browserCpuMs": 1171.875,
+              "peakRssBytes": 161259520,
+              "retainedRssBytes": 112160768,
+              "counters": {
+                "requests": 1,
+                "responseAcquisitions": 1,
+                "encodedBodyBytes": 5276,
+                "processedBodyBytes": 51294,
+                "scriptsAcquired": 0,
+                "classicScriptsExecuted": 2,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 51294,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1148.67,
+              "browserCpuMs": 1296.875,
+              "peakRssBytes": 159244288,
+              "retainedRssBytes": 113086464,
+              "counters": {
+                "requests": 1,
+                "responseAcquisitions": 1,
+                "encodedBodyBytes": 5276,
+                "processedBodyBytes": 51294,
+                "scriptsAcquired": 0,
+                "classicScriptsExecuted": 2,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 51294,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1139.0729,
+              "browserCpuMs": 1093.75,
+              "peakRssBytes": 163504128,
+              "retainedRssBytes": 113946624,
+              "counters": {
+                "requests": 1,
+                "responseAcquisitions": 1,
+                "encodedBodyBytes": 5276,
+                "processedBodyBytes": 51294,
+                "scriptsAcquired": 0,
+                "classicScriptsExecuted": 2,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 51294,
+                "retainedBodyBytes": 0
+              }
+            },
+            {
+              "status": "PASS",
+              "workloadStatus": "PASS",
+              "elapsedMs": 1172.5636,
+              "browserCpuMs": 1328.125,
+              "peakRssBytes": 160751616,
+              "retainedRssBytes": 112828416,
+              "counters": {
+                "requests": 1,
+                "responseAcquisitions": 1,
+                "encodedBodyBytes": 5276,
+                "processedBodyBytes": 51294,
+                "scriptsAcquired": 0,
+                "classicScriptsExecuted": 2,
+                "classicScriptsSuppressed": 0,
+                "peakRetainedBodyBytes": 51294,
+                "retainedBodyBytes": 0
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "liveReceipts": [
+    {
+      "variant": "Vue Default",
+      "status": "PASS",
+      "workloadStatus": "PASS",
+      "elapsedMs": 3748.5450000094716,
+      "counters": {
+        "requests": 69,
+        "responseAcquisitions": 68,
+        "encodedBodyBytes": 597236,
+        "processedBodyBytes": 1755954,
+        "scriptsAcquired": 14,
+        "classicScriptsExecuted": 8,
+        "classicScriptsSuppressed": 0,
+        "peakRetainedBodyBytes": 1706398,
+        "retainedBodyBytes": 0
+      },
+      "receiptRelativePath": ".build/dynamic-challenge/live-current-vue/0001-benchmark-live-default/run.json"
+    },
+    {
+      "variant": "RealWorld Default",
+      "status": "UNSUPPORTED_CAPTURE",
+      "workloadStatus": "PASS",
+      "elapsedMs": 3520.8327999862377,
+      "counters": {
+        "requests": 40,
+        "responseAcquisitions": 40,
+        "encodedBodyBytes": 312790,
+        "processedBodyBytes": 657054,
+        "scriptsAcquired": 16,
+        "classicScriptsExecuted": 0,
+        "classicScriptsSuppressed": 0,
+        "peakRetainedBodyBytes": 657054,
+        "retainedBodyBytes": 0
+      },
+      "receiptRelativePath": ".build/dynamic-challenge/live-current-realworld/0001-benchmark-live-default/run.json"
+    },
+    {
+      "variant": "React Manual",
+      "status": "PASS",
+      "workloadStatus": "PASS",
+      "elapsedMs": 4357.975299993996,
+      "counters": {
+        "requests": 20,
+        "responseAcquisitions": 20,
+        "encodedBodyBytes": 556903,
+        "processedBodyBytes": 1952920,
+        "scriptsAcquired": 18,
+        "classicScriptsExecuted": 21,
+        "classicScriptsSuppressed": 0,
+        "peakRetainedBodyBytes": 1952920,
+        "retainedBodyBytes": 0
+      },
+      "receiptRelativePath": ".build/dynamic-challenge/live-manual-react-current/0001-benchmark-live-manual/run.json"
+    },
+    {
+      "variant": "React Auto",
+      "status": "PASS",
+      "workloadStatus": "PASS",
+      "elapsedMs": 4669.227399979718,
+      "counters": {
+        "requests": 18,
+        "responseAcquisitions": 18,
+        "encodedBodyBytes": 526843,
+        "processedBodyBytes": 1781662,
+        "scriptsAcquired": 16,
+        "classicScriptsExecuted": 19,
+        "classicScriptsSuppressed": 0,
+        "peakRetainedBodyBytes": 1781662,
+        "retainedBodyBytes": 0
+      },
+      "receiptRelativePath": ".build/dynamic-challenge/live-profile-react-current/0001-benchmark-live-auto/run.json"
+    }
+  ],
+  "residualProbes": [
+    {
+      "name": "vue-sponsors",
+      "exitCode": 1,
+      "url": "https://vuejs.org/assets/chunks/SponsorsGroup.DCKN6C6f.js"
+    },
+    {
+      "name": "realworld-comments",
+      "exitCode": 1,
+      "url": "https://api.realworld.show/api/articles/how-to-learn-javascript-efficiently/comments"
+    },
+    {
+      "name": "realworld-markdown",
+      "exitCode": 1,
+      "url": "https://demo.realworld.show/chunk-ZZXAKVAV.js"
+    }
+  ]
+}

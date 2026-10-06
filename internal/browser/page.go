@@ -19,6 +19,7 @@ import (
 	"github.com/moreveal/mimic/internal/state"
 	"github.com/moreveal/mimic/internal/textmetrics"
 	"github.com/moreveal/mimic/internal/trace"
+	"github.com/moreveal/mimic/internal/workload"
 )
 
 type InitScript struct{ ID, Source, WorldName string }
@@ -30,6 +31,7 @@ type documentSecurity struct {
 	permissionsPolicy   string
 }
 type Page struct {
+	executionGate       *workload.Gate
 	geolocationOverride *GeolocationOverride // Protected by mu; persists across navigation.
 
 	previewObservers   map[*PreviewSubscription]struct{} // command-owned; nil without viewers
@@ -171,6 +173,10 @@ func newPage(c *Context) (*Page, error) {
 	p.eventLoopWake = make(chan struct{}, 1)
 	p.loader = network.NewLoaderWithSession(func() state.Environment { p.mu.RLock(); defer p.mu.RUnlock(); return p.env }, c.cookies, c.network, p.trace)
 	p.loader.SetResourcePolicy(c.resourcePolicy)
+	if profile := c.browser.executionProfile; profile != nil && (len(profile.Plan.Resources) > 0 || len(profile.Plan.SuppressClassic) > 0) {
+		p.executionGate = workload.NewGate(*c.browser.executionProfile, c.browser.profileNote)
+		p.loader.SetExecutionGate(p.executionGate)
+	}
 	if c.transport != nil {
 		p.loader.SetTransport(c.transport)
 	}

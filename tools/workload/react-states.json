@@ -1,0 +1,7 @@
+{
+  "states": [
+    { "name": "Quick Start", "env": { "REACT_ARTICLE": "quick" } },
+    { "name": "Adding Interactivity", "env": { "REACT_ARTICLE": "interactivity" } },
+    { "name": "Managing State", "env": { "REACT_ARTICLE": "state" } }
+  ]
+}

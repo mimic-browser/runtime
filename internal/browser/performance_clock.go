@@ -12,6 +12,21 @@ import (
 // Bind once to the initiating realm, not whichever document occupies its
 // frame when the response arrives. No runtime handle escapes to the loader.
 func (r *Realm) withResourceTiming(request network.Request) network.Request {
+	request.ExecutionOwner = r.agent.Page().Top.ID
+	p := r.agent.Page()
+	p.mu.RLock()
+	request.HistoryPhase = p.historyIndex
+	p.mu.RUnlock()
+	if frame, ok := r.agent.(*Frame); ok && frame != r.agent.Page().Top {
+		request.ClientIsSubframe = true
+	}
+	if request.CauseURL == "" && r.currentScript != 0 {
+		if source, exists := r.document.GetAttribute(r.currentScript, "src"); exists && request.SourceURL != nil {
+			if u, err := url.Parse(source); err == nil {
+				request.CauseURL = request.SourceURL.ResolveReference(u).String()
+			}
+		}
+	}
 	if request.Owner == "" {
 		request.Owner = "frame"
 	}

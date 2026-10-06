@@ -22,6 +22,18 @@
   <a href="docs/cdp-compatibility.md">CDP support</a>
 </p>
 
+## Optimize a repeatable workload
+
+```sh
+mimic optimize --name shop -- node scraper.js
+mimic --profile shop
+```
+
+Optimize searches locally for unnecessary network acquisition using your ordinary
+workload assertions, then saves a reusable empirical profile. See the
+[getting-started guide](docs/optimize/index.md) and
+[safety limits](docs/optimize/safety.md). No language-specific SDK is required.
+
 ## What is Mimic?
 
 Mimic is a source-available public beta for JavaScript automation and web scraping.

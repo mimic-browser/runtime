@@ -32,5 +32,5 @@ func fetchResponse(response network.Response) map[string]any {
 	for name, values := range response.Headers {
 		headers[name] = strings.Join(values, ", ")
 	}
-	return map[string]any{"status": response.Status, "statusText": http.StatusText(response.Status), "url": urlString(response.URL), "headers": headers, "bodyBytes": engine.BinaryBuffer(response.Body), "type": typeName, "redirected": response.Redirected}
+	return map[string]any{"status": response.Status, "statusText": http.StatusText(response.Status), "url": urlString(response.URL), "headers": headers, "bodyBytes": engine.BinaryBuffer(response.Body), "bodyUnavailable": response.Partial, "type": typeName, "redirected": response.Redirected}
 }

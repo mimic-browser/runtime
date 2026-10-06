@@ -277,6 +277,47 @@ func TestStreamExternalScriptPauseQueuesWritesAndClose(t *testing.T) {
 		t.Fatalf("calls=%d closed=%v", calls, s.Closed())
 	}
 }
+
+func TestStreamNestedWritePausePreservesBothInsertionTails(t *testing.T) {
+	d, s := newTestStream(t)
+	ready := false
+	inlineCalls := 0
+	var execute func(Node) error
+	execute = func(script Node) error {
+		if script.Attributes["src"] != "" {
+			if !ready {
+				return ErrStreamPaused
+			}
+			return nil
+		}
+		inlineCalls++
+		err := s.Write(`<script src="/nested.js"></script><i id=inner-tail>inner</i>`, execute)
+		// document.write returns to the author while the browser resumes its
+		// parser later. The Stream must retain the outer insertion point.
+		if errors.Is(err, ErrStreamPaused) {
+			return nil
+		}
+		return err
+	}
+	if err := s.Write(`<body><script>write nested</script><b id=outer-tail>outer</b>`, execute); !errors.Is(err, ErrStreamPaused) {
+		t.Fatalf("nested pause: %v", err)
+	}
+	if err := s.Close(execute); err != nil {
+		t.Fatal(err)
+	}
+	ready = true
+	if err := s.Resume(execute); err != nil {
+		t.Fatal(err)
+	}
+	for _, selector := range []string{"#inner-tail", "#outer-tail"} {
+		if _, ok := d.FindWithin(d.Root().ID, selector); !ok {
+			t.Fatalf("lost insertion tail %s", selector)
+		}
+	}
+	if inlineCalls != 1 || !s.Closed() {
+		t.Fatalf("inline replayed or parser incomplete: calls %d closed %v", inlineCalls, s.Closed())
+	}
+}
 func TestStreamHTML5TreeConstructionMatchesBatch(t *testing.T) {
 	fixtures := []string{
 		"<!doctype html><p>a<b>b<i>c</b>d</i>e",

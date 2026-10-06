@@ -28,6 +28,7 @@ import (
 )
 
 type Server struct {
+	connectionOpened  func()
 	certificateMu     sync.Mutex
 	lifecycleMu       sync.Mutex
 	connections       map[*websocket.Conn]context.CancelFunc
@@ -60,6 +61,10 @@ func New(b *browser.Browser) (*Server, error) {
 	}
 	return &Server{Browser: b, Context: c, Page: p, browserID: uuid.NewString(), clients: make(map[*connection]struct{}), connections: make(map[*websocket.Conn]context.CancelFunc), pumps: make(map[*browser.Page]context.CancelFunc), executions: make(map[*browser.Page]context.CancelFunc), targetObservers: make(map[*browser.Page]func()), targetNavigations: make(map[*browser.Page]string), popupOpeners: make(map[*browser.Page]*browser.Page)}, nil
 }
+
+// SetConnectionOpened installs a private runner observation before Serve.
+// It does not intercept commands or alter their protocol semantics.
+func (s *Server) SetConnectionOpened(observer func()) { s.connectionOpened = observer }
 func (s *Server) SetNavigationTimeout(timeout time.Duration) {
 	if timeout >= 0 {
 		s.navigationTimeout = timeout

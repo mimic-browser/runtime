@@ -1,0 +1,29 @@
+{
+  "rules": [
+    {
+      "id": "no-speculation",
+      "match": {"mechanisms": ["preload", "prefetch"]},
+      "work": {"network": false, "cacheRead": false}
+    },
+    {
+      "id": "tags-are-outside-the-feed-and-article-contract",
+      "match": {"urlGlob": "https://api.realworld.show/api/tags*"},
+      "work": {"network": false, "cacheRead": false}
+    },
+    {
+      "id": "application-documents-and-modules",
+      "match": {"hosts": ["demo.realworld.show"], "kinds": ["document", "script"]},
+      "work": {}
+    },
+    {
+      "id": "required-feed-and-article-api",
+      "match": {"urlGlob": "https://api.realworld.show/api/articles*", "kinds": ["fetch", "xhr"]},
+      "work": {}
+    },
+    {
+      "id": "no-other-acquisition",
+      "match": {},
+      "work": {"network": false, "cacheRead": false}
+    }
+  ]
+}

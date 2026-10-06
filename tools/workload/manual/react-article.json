@@ -1,0 +1,25 @@
+{
+  "presets": ["noVisualAssets", "noSpeculativeLoads"],
+  "rules": [
+    {
+      "id": "modern-runtime-does-not-need-legacy-polyfills",
+      "match": {"urlGlob": "https://react.dev/_next/static/chunks/polyfills-*"},
+      "work": {"network": false, "cacheRead": false}
+    },
+    {
+      "id": "article-does-not-navigate-to-prefetched-routes",
+      "match": {"urlGlob": "https://react.dev/_next/data/*"},
+      "work": {"network": false, "cacheRead": false}
+    },
+    {
+      "id": "analytics",
+      "match": {"hosts": ["www.googletagmanager.com", "www.google-analytics.com"]},
+      "work": {"network": false, "cacheRead": false}
+    },
+    {
+      "id": "article-does-not-use-live-editor",
+      "match": {"hosts": ["786946de.sandpack-bundler-4bw.pages.dev", "sandpack-cdn-staging.blazingly.io"]},
+      "work": {"network": false, "cacheRead": false}
+    }
+  ]
+}

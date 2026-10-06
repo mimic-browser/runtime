@@ -1,0 +1,14 @@
+{
+  "rules": [
+    {
+      "id": "required-application",
+      "match": { "kinds": ["document", "script", "fetch", "xhr", "worker"] },
+      "work": {}
+    },
+    {
+      "id": "visual-and-speculative",
+      "match": {},
+      "work": { "network": false, "cacheRead": false }
+    }
+  ]
+}

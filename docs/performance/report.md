@@ -4537,3 +4537,65 @@ independent Page owners and first ordinary Page cold semantics remain intact.
 Focused cache admission and restored-frame callback/job tests pass on Windows
 and Linux. This removes measured duplicate initialization; no latency percentage,
 memory improvement or Wikipedia E2E result is claimed.
+
+## Offline workload optimization PoC, 2026-10-05
+
+An external-process runner now records one binary HTTP environment, validates
+fresh local replay, performs bounded resource/external-classic-script elimination,
+and measures Default/competent Manual/Auto with ordinary workload assertions as
+the primary oracle. Recording streams bodies to disk; replay opens them lazily.
+Normal acquired-body retention remains enabled. Profiles are experimental and
+offline-only; the public ResourcePolicy API is unchanged.
+
+Five rotated fresh-process repetitions per variant passed for real Books SSR,
+existing async, existing React, and the unchanged saved Wikipedia workload:
+60/60 final trials. Books encoded acquired bodies fell from 284591 to 5276 bytes
+(-98.15%), but competent document-only achieved the same result. Async/React
+yielded no acquisition savings after 12/15 rejected candidates. Wikipedia fixture
+fulfillment acquires zero transport bytes and therefore cannot establish internet
+savings; manual reduced its runtime cost, and classic-execution ablation passed.
+An earlier passing workload with an uncovered late favicon remains preserved as
+an unsupported replay result, not hidden as semantic failure.
+
+These results validate the experimental pipeline, **not** an advantage over
+strong manual traffic control or safe live generalization. Keep the tool
+experimental pending multi-state real dynamic application evidence. See the
+[full report and metric receipts](workload-optimization-poc.md) for costs,
+limitations, exact build/capture provenance, negative outcomes and focused tests.
+
+## Native Optimize: dynamic acquisition challenge (2026-10-05)
+
+The native feature now trains ordinary external CDP commands, keeps strict local
+capture/replay, searches branch combinations and installs named binary profiles.
+Manual/generated resource actions share one compiler; classic execution and
+headers-only Fetch are separate execution-stage decisions. Speculative denials
+no longer poison later demanded modules, and browser-owned cancelled response
+prefixes replay without fabricated EOF.
+
+The final sequential Windows/V8 matrix demonstrates React documentation
+556,903 -> 526,843 encoded body bytes versus a strong Manual (-5.4%, two responses),
+with 5/5 installed-profile passes. A separate live Manual/Auto pair reproduces the
+same acquisition difference, but shows no live latency gain. Vue/VitePress,
+RealWorld/Angular and document-only Books tie Manual. Static sponsor dependencies
+and a comments resolver expose model limits rather than proving global minima.
+The weak RealWorld placeholder-content win was discarded; current API-content
+assertions reject Markdown removal.
+
+Dynamic Default replay remains uncovered; its matched metrics are explicitly
+unavailable. Fresh live eligibility, training cost, unsupported cases, residual
+probes and the original PoC evidence remain distinct. See
+[the report](workload-optimization-feature.md) and
+[machine-readable measurements](workload-optimization-feature-results.json).
+Documentation/site preparation remains local and unpublished.
+
+## 2026-10-06: multi-state and heavy acquisition checkpoint
+
+Optimize defaults to a private free-port listener and supports named external
+command input states. React validates three states with 15/15 installed-profile
+passes and 5.4% acquisition savings beyond strong Manual. GitLab saves 8.68% beyond
+1.11 MB strong Manual in five matched local trials, but live document admission
+falls back and loses savings. Supabase final validation is uncovered; four other
+default dynamic scenarios fail eligibility. No consistent CPU/time benefit or
+future generalization is claimed. See the
+[multi-state/heavy report](workload-optimization-multistate-heavy.md) and
+[numeric evidence](workload-optimization-multistate-heavy-results.json).

@@ -60,6 +60,9 @@ func (s *Server) ws(w http.ResponseWriter, r *http.Request) {
 	s.clients[c] = struct{}{}
 	s.workers.Add(1)
 	s.lifecycleMu.Unlock()
+	if s.connectionOpened != nil {
+		s.connectionOpened()
+	}
 	defer s.workers.Done()
 	c.root = c.newSession(page, "", nil, false, isBrowser)
 	defer func() {

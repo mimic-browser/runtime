@@ -42,10 +42,13 @@ again using the captured generation. The `noVisualAssets`, `headersOnly`,
 
 `body` can be `full`, `none` or `prefix`; prefix requires a positive
 `prefixBytes`. The original GET remains a GET. With `none` or `prefix`, the
-loader closes the body after the permitted bytes and returns a partial response
-with a policy error when bytes remain. Browser consumers observe a load failure;
-the response headers and permitted bytes remain available to direct Loader
-callers. A partial response is not cached or retained for CDP body retrieval.
+loader closes the body after the permitted bytes when bytes remain. Fetch
+resolves with the admitted status and headers, but its body stream errors when
+read (including through a clone). This permits status/header-only operations
+without inventing an empty JSON payload. CORS, redirects and cookies still use
+the normal loader. Script, image and XHR consumers require a complete body and
+observe a load failure; direct Loader callers receive the partial response and
+policy error. A partial response is not cached or retained for CDP body retrieval.
 No later API access silently fetches the rest. For a prefix image, intrinsic
 dimensions may be extracted into a diagnostic `policyMetadata` trace event;
 their source is marked `prefix`, and the image still fails to load.

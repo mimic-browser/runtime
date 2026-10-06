@@ -61,6 +61,9 @@ func (r *Realm) moduleRequest(target, referrer *url.URL) network.Request {
 	headers := make(http.Header)
 	headers.Set("Origin", r.origin)
 	request := network.Request{ContextID: r.agent.ContextID(), URL: target, Referrer: referrer, SourceURL: referrer, Initiator: network.Script, Mode: "cors", Credentials: "same-origin", Headers: headers}
+	if referrer != nil {
+		request.CauseURL = referrer.String()
+	}
 	r.applyClientHints(&request)
 	return request
 }
@@ -90,6 +93,12 @@ func (r *Realm) preloadModules() {
 		}
 		r.preloadedModuleLinks[link.ID] = true
 		request.PerformanceInitiatorType = "link"
+		request.Mechanism = "preload"
+		if !r.agent.Page().loader.SpeculationAllowed(r.withResourceTiming(request)) {
+			id := link.ID
+			r.scheduler.Post(scheduler.Network, 0, func(ctx context.Context) error { return r.dispatchResourceEvent(ctx, id, "error") })
+			continue
+		}
 		pending := r.fetchModule(request)
 		id := link.ID
 		r.resourceWG.Add(1)

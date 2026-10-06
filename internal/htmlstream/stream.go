@@ -38,6 +38,7 @@ type Stream struct {
 	abortOnce                               sync.Once
 	waiting, closed, paused, closeRequested bool
 	writes, scripts                         int
+	outerResumes                            int
 	pausedScript                            int64
 	queued                                  string
 	line, column                            int
@@ -321,6 +322,13 @@ func (s *Stream) drive(onScript func(int64) error) error {
 			}
 			if event.need {
 				s.waiting = true
+				if s.outerResumes > 0 && s.scripts == 0 {
+					s.outerResumes--
+					if err := s.command(streamInput{resume: true}); err != nil {
+						return err
+					}
+					continue
+				}
 				if s.closeRequested && s.scripts == 0 && s.writes <= 1 {
 					if err := s.command(streamInput{eof: true}); err != nil {
 						return err
@@ -336,6 +344,13 @@ func (s *Stream) drive(onScript func(int64) error) error {
 					err = onScript(event.script)
 				}
 				s.scripts--
+				// A nested document.write can suspend at a different external
+				// script. Its pause owns the tokenizer continuation; the outer
+				// script must not send a second resume and consume that boundary.
+				if s.paused && err == nil {
+					s.outerResumes++
+					return ErrPaused
+				}
 				if err != nil {
 					if errors.Is(err, ErrPaused) {
 						s.paused = true
@@ -396,6 +411,10 @@ func (s *Stream) Resume(onScript func(int64) error) error {
 		scriptErr = onScript(s.pausedScript)
 	}
 	s.scripts--
+	if s.paused && scriptErr == nil {
+		s.outerResumes++
+		return ErrPaused
+	}
 	if scriptErr != nil {
 		if errors.Is(scriptErr, ErrPaused) {
 			s.paused = true

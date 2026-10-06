@@ -32,6 +32,17 @@ type StartupInfo struct {
 	Address string
 }
 
+// WriteOptimizeHeader shares the normal runtime's identity without emitting a
+// large decorative banner into redirected output or CI logs.
+func WriteOptimizeHeader(w io.Writer, styled bool) error {
+	if styled {
+		_, err := fmt.Fprintf(w, "\n%s%s\n%s%s\n\n  %sMimic Optimize%s  %s%s%s\n  %sLearn which network traffic your workload needs.%s\n\n", blue, logoBlue, logoGreen, reset, white, reset, dim, BuildVersion(), reset, dim, reset)
+		return err
+	}
+	_, err := fmt.Fprintf(w, "Mimic Optimize · %s\nLearn which network traffic your workload needs.\n\n", BuildVersion())
+	return err
+}
+
 // BuildVersion returns the module version for releases and a short VCS
 // revision for development builds.
 func BuildVersion() string {

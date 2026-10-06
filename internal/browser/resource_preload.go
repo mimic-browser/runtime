@@ -108,6 +108,10 @@ func (r *Realm) preloadResource(id int64, attributes map[string]string) {
 	request := r.elementRequest(u, attributes, initiator)
 	request.Mechanism = "preload"
 	request.PerformanceInitiatorType = "link"
+	if !r.agent.Page().loader.SpeculationAllowed(r.withResourceTiming(request)) {
+		r.scheduler.Post(scheduler.Network, 0, func(ctx context.Context) error { return r.dispatchResourceEvent(ctx, id, "error") })
+		return
+	}
 	if r.preloadContext == nil {
 		r.preloadContext, r.cancelPreloads = context.WithCancel(r.resourceContext)
 	}

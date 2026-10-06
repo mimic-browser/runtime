@@ -495,6 +495,24 @@ func (r *Realm) checkpointRuntime(ctx context.Context) error {
 // Promise reactions at that checkpoint still observe the executing script in
 // Chrome; subsequent tasks (including its load event) must not observe it.
 func (r *Realm) evaluateClassicScript(ctx context.Context, source, name string, scriptID int64) error {
+	frame, topFrame := r.agent.(*Frame)
+	if gate := r.agent.Page().executionGate; gate != nil && topFrame && frame == r.agent.Page().Top {
+		_, external := r.document.GetAttribute(scriptID, "src")
+		if !gate.AdmitClassic(r.documentURL().String(), name, source, external) {
+			if observe := r.agent.Page().ctx.browser.classicScriptSkipped; observe != nil {
+				observe(name, source, external)
+			}
+			return r.checkpoint(ctx)
+		}
+	}
+	if admit := r.agent.Page().ctx.browser.classicScriptAdmission; admit != nil {
+		_, external := r.document.GetAttribute(scriptID, "src")
+		if !admit(name, source, external) {
+			// Acquisition, parser scheduling and element load events stay on their
+			// ordinary paths. Only author execution is omitted by this experiment.
+			return r.checkpoint(ctx)
+		}
+	}
 	previous := r.currentScript
 	r.currentScript = scriptID
 	defer func() { r.currentScript = previous }()

@@ -61,7 +61,16 @@ func (l *Loader) DialWebSocket(ctx context.Context, rawURL string, headers http.
 			headers.Set("Cookie", strings.Join(request.Header.Values("Cookie"), "; "))
 		}
 	}
-	if transport, ok := l.transport.(*TLSClientTransport); ok {
+	if guard, ok := l.transport.(interface{ BeforeWebSocket() error }); ok {
+		if err := guard.BeforeWebSocket(); err != nil {
+			return nil, err
+		}
+	}
+	transportBase := l.transport
+	if wrapper, ok := transportBase.(interface{ WebSocketBase() Transport }); ok {
+		transportBase = wrapper.WebSocketBase()
+	}
+	if transport, ok := transportBase.(*TLSClientTransport); ok {
 		return transport.dialWebSocket(ctx, rawURL, websocketHeaders(headers))
 	}
 	dialer := *ws.DefaultDialer

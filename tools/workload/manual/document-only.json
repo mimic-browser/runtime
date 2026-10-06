@@ -1,0 +1,10 @@
+{
+  "rules": [
+    {
+      "id": "documents",
+      "match": { "kinds": ["document"] },
+      "work": {}
+    },
+    { "id": "other-resources", "match": {}, "work": { "network": false, "cacheRead": false } }
+  ]
+}

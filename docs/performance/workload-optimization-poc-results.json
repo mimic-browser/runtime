@@ -1,0 +1,4259 @@
+{
+  "date": "2026-10-05",
+  "baseCommit": "244be86d8d991a41eda470a4be0ac6878bd4c91e",
+  "platform": "Windows amd64",
+  "goVersion": "go1.26.4",
+  "binarySHA256": "95de8c94593c957e60f8578d4483687fd58e643aca3960970ace937c77192ee8",
+  "frozenBenchmarkSHA256": "ce1fce42fa9b9e03f105900601db4d6d7fa9b0d9cda51d5096322357277673e7",
+  "unchangedWikipediaClientSHA256": "5b340d5c51d1ce7f291c1fb9f635df7e5a7d29cd12255ee2e09e59918325e444",
+  "workloads": {
+    "books": {
+      "binarySHA256": "95de8c94593c957e60f8578d4483687fd58e643aca3960970ace937c77192ee8",
+      "captureSHA256": "b07c4b9c4f8040707357c4c0993b53f0d41cf009f41a2398394e4c6d80c8339b",
+      "startedAt": "2026-10-05T04:24:52Z",
+      "replayStable": true,
+      "summary": {
+        "Default": {
+          "passes": 5,
+          "trials": 5,
+          "elapsedMs": 1398.997699987376,
+          "browserCpuMs": 1546.875,
+          "peakRssBytes": 204038144,
+          "retainedRssBytes": 136728576,
+          "requests": 30,
+          "responseAcquisitions": 29,
+          "encodedBodyBytes": 284591,
+          "processedBodyBytes": 682045,
+          "scriptsAcquired": 5,
+          "classicScriptsExecuted": 7,
+          "classicScriptsSuppressed": 0,
+          "peakRetainedBodyBytes": 682045,
+          "retainedBodyBytes": 0
+        },
+        "Manual": {
+          "passes": 5,
+          "trials": 5,
+          "elapsedMs": 1181.4303999999538,
+          "browserCpuMs": 1140.625,
+          "peakRssBytes": 171167744,
+          "retainedRssBytes": 117727232,
+          "requests": 1,
+          "responseAcquisitions": 1,
+          "encodedBodyBytes": 5276,
+          "processedBodyBytes": 51294,
+          "scriptsAcquired": 0,
+          "classicScriptsExecuted": 2,
+          "classicScriptsSuppressed": 0,
+          "peakRetainedBodyBytes": 51294,
+          "retainedBodyBytes": 0
+        },
+        "Auto": {
+          "passes": 5,
+          "trials": 5,
+          "elapsedMs": 1164.659699992626,
+          "browserCpuMs": 1156.25,
+          "peakRssBytes": 171122688,
+          "retainedRssBytes": 120909824,
+          "requests": 2,
+          "responseAcquisitions": 1,
+          "encodedBodyBytes": 5276,
+          "processedBodyBytes": 51294,
+          "scriptsAcquired": 0,
+          "classicScriptsExecuted": 2,
+          "classicScriptsSuppressed": 0,
+          "peakRetainedBodyBytes": 51294,
+          "retainedBodyBytes": 0
+        }
+      },
+      "manualPolicy": {
+        "rules": [
+          {
+            "id": "documents",
+            "match": {
+              "kinds": ["document"]
+            },
+            "work": {}
+          },
+          {
+            "id": "other-resources",
+            "match": {},
+            "work": {
+              "network": false,
+              "cacheRead": false
+            }
+          }
+        ]
+      },
+      "selectedPolicy": {
+        "rules": [
+          {
+            "id": "remove-kind-image",
+            "match": {
+              "kinds": ["image"]
+            },
+            "work": {
+              "cacheRead": false,
+              "network": false
+            }
+          },
+          {
+            "id": "remove-kind-script",
+            "match": {
+              "kinds": ["script"]
+            },
+            "work": {
+              "cacheRead": false,
+              "network": false
+            }
+          },
+          {
+            "id": "remove-kind-stylesheet",
+            "match": {
+              "kinds": ["stylesheet"]
+            },
+            "work": {
+              "cacheRead": false,
+              "network": false
+            }
+          }
+        ]
+      },
+      "selectedSuppressClassic": [],
+      "selectedOrigin": "automatic",
+      "discoveredActions": [
+        {
+          "id": "remove-kind-image",
+          "action": "block",
+          "match": {
+            "kinds": ["image"]
+          },
+          "work": {
+            "cacheRead": false,
+            "network": false
+          }
+        },
+        {
+          "id": "remove-kind-script",
+          "action": "block",
+          "match": {
+            "kinds": ["script"]
+          },
+          "work": {
+            "cacheRead": false,
+            "network": false
+          }
+        },
+        {
+          "id": "remove-kind-stylesheet",
+          "action": "block",
+          "match": {
+            "kinds": ["stylesheet"]
+          },
+          "work": {
+            "cacheRead": false,
+            "network": false
+          }
+        }
+      ],
+      "optimizerTrials": 1,
+      "optimizerWallMs": 1601.0392000025604,
+      "optimizerMemoHits": 0,
+      "conclusion": "offline specialization validated",
+      "runs": [
+        {
+          "label": "stability",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1400.6769999978133,
+          "totalMs": 2012.040599991451,
+          "browserCpuMs": 1390.625,
+          "peakRssBytes": 202899456,
+          "retainedRssBytes": 136003584,
+          "captureError": "",
+          "metrics": {
+            "requests": 30,
+            "responseAcquisitions": 29,
+            "encodedBodyBytes": 284591,
+            "processedBodyBytes": 682045,
+            "scriptsAcquired": 5,
+            "classicScriptsExecuted": 7,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 682045,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "stability",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1387.4060999951325,
+          "totalMs": 1798.3318000042345,
+          "browserCpuMs": 1421.875,
+          "peakRssBytes": 204525568,
+          "retainedRssBytes": 137588736,
+          "captureError": "",
+          "metrics": {
+            "requests": 30,
+            "responseAcquisitions": 29,
+            "encodedBodyBytes": 284591,
+            "processedBodyBytes": 682045,
+            "scriptsAcquired": 5,
+            "classicScriptsExecuted": 7,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 682045,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "stability",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1408.0416000069818,
+          "totalMs": 1829.617399998824,
+          "browserCpuMs": 1562.5,
+          "peakRssBytes": 206827520,
+          "retainedRssBytes": 139202560,
+          "captureError": "",
+          "metrics": {
+            "requests": 30,
+            "responseAcquisitions": 29,
+            "encodedBodyBytes": 284591,
+            "processedBodyBytes": 682045,
+            "scriptsAcquired": 5,
+            "classicScriptsExecuted": 7,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 682045,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "manual-validation",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1176.5615999902366,
+          "totalMs": 1602.9626999952598,
+          "browserCpuMs": 984.375,
+          "peakRssBytes": 173129728,
+          "retainedRssBytes": 120176640,
+          "captureError": "",
+          "metrics": {
+            "requests": 1,
+            "responseAcquisitions": 1,
+            "encodedBodyBytes": 5276,
+            "processedBodyBytes": 51294,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 2,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 51294,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "runtime-ablation",
+          "status": "UNSUPPORTED_REPLAY",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1306.8941999954404,
+          "totalMs": 1753.2127000013134,
+          "browserCpuMs": 1187.5,
+          "peakRssBytes": 199061504,
+          "retainedRssBytes": 135213056,
+          "captureError": "",
+          "metrics": {
+            "requests": 31,
+            "responseAcquisitions": 29,
+            "encodedBodyBytes": 284591,
+            "processedBodyBytes": 682045,
+            "scriptsAcquired": 5,
+            "classicScriptsExecuted": 2,
+            "classicScriptsSuppressed": 5,
+            "peakRetainedBodyBytes": 682045,
+            "retainedBodyBytes": 0,
+            "captureMisses": [
+              "GET https://books.toscrape.com/static/oscar/js/jquery/jquery-1.9.1.min.js"
+            ],
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          },
+          "failureTail": []
+        },
+        {
+          "label": "search",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1174.3601999914972,
+          "totalMs": 1596.2064000050304,
+          "browserCpuMs": 1109.375,
+          "peakRssBytes": 175980544,
+          "retainedRssBytes": 125153280,
+          "captureError": "",
+          "actions": [
+            {
+              "id": "remove-kind-image",
+              "action": "block",
+              "match": {
+                "kinds": ["image"]
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              }
+            },
+            {
+              "id": "remove-kind-script",
+              "action": "block",
+              "match": {
+                "kinds": ["script"]
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              }
+            },
+            {
+              "id": "remove-kind-stylesheet",
+              "action": "block",
+              "match": {
+                "kinds": ["stylesheet"]
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              }
+            }
+          ],
+          "metrics": {
+            "requests": 2,
+            "responseAcquisitions": 1,
+            "encodedBodyBytes": 5276,
+            "processedBodyBytes": 51294,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 2,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 51294,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Default",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1393.3747999981279,
+          "totalMs": 1798.3433999906993,
+          "browserCpuMs": 1781.25,
+          "peakRssBytes": 204599296,
+          "retainedRssBytes": 136503296,
+          "captureError": "",
+          "metrics": {
+            "requests": 30,
+            "responseAcquisitions": 29,
+            "encodedBodyBytes": 284591,
+            "processedBodyBytes": 682045,
+            "scriptsAcquired": 5,
+            "classicScriptsExecuted": 7,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 682045,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Manual",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1177.192000002833,
+          "totalMs": 1589.7804999985965,
+          "browserCpuMs": 1328.125,
+          "peakRssBytes": 174989312,
+          "retainedRssBytes": 131887104,
+          "captureError": "",
+          "metrics": {
+            "requests": 1,
+            "responseAcquisitions": 1,
+            "encodedBodyBytes": 5276,
+            "processedBodyBytes": 51294,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 2,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 51294,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Auto",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1190.270299994154,
+          "totalMs": 1626.0518999915803,
+          "browserCpuMs": 1312.5,
+          "peakRssBytes": 171552768,
+          "retainedRssBytes": 120909824,
+          "captureError": "",
+          "metrics": {
+            "requests": 2,
+            "responseAcquisitions": 1,
+            "encodedBodyBytes": 5276,
+            "processedBodyBytes": 51294,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 2,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 51294,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Manual",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1218.5698999965098,
+          "totalMs": 1657.622899991111,
+          "browserCpuMs": 1140.625,
+          "peakRssBytes": 182005760,
+          "retainedRssBytes": 120373248,
+          "captureError": "",
+          "metrics": {
+            "requests": 1,
+            "responseAcquisitions": 1,
+            "encodedBodyBytes": 5276,
+            "processedBodyBytes": 51294,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 2,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 51294,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Auto",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1162.876000002143,
+          "totalMs": 1587.2836999915307,
+          "browserCpuMs": 1312.5,
+          "peakRssBytes": 169078784,
+          "retainedRssBytes": 121020416,
+          "captureError": "",
+          "metrics": {
+            "requests": 2,
+            "responseAcquisitions": 1,
+            "encodedBodyBytes": 5276,
+            "processedBodyBytes": 51294,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 2,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 51294,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Default",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1412.3693000001367,
+          "totalMs": 1849.4149000034668,
+          "browserCpuMs": 1328.125,
+          "peakRssBytes": 204038144,
+          "retainedRssBytes": 136962048,
+          "captureError": "",
+          "metrics": {
+            "requests": 30,
+            "responseAcquisitions": 29,
+            "encodedBodyBytes": 284591,
+            "processedBodyBytes": 682045,
+            "scriptsAcquired": 5,
+            "classicScriptsExecuted": 7,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 682045,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Auto",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1194.527100000414,
+          "totalMs": 1584.8152999969898,
+          "browserCpuMs": 1000.0,
+          "peakRssBytes": 179892224,
+          "retainedRssBytes": 123957248,
+          "captureError": "",
+          "metrics": {
+            "requests": 2,
+            "responseAcquisitions": 1,
+            "encodedBodyBytes": 5276,
+            "processedBodyBytes": 51294,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 2,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 51294,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Default",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1398.997699987376,
+          "totalMs": 1809.875999999349,
+          "browserCpuMs": 1343.75,
+          "peakRssBytes": 203522048,
+          "retainedRssBytes": 136728576,
+          "captureError": "",
+          "metrics": {
+            "requests": 30,
+            "responseAcquisitions": 29,
+            "encodedBodyBytes": 284591,
+            "processedBodyBytes": 682045,
+            "scriptsAcquired": 5,
+            "classicScriptsExecuted": 7,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 682045,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Manual",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1197.8406999987783,
+          "totalMs": 1643.8061999942875,
+          "browserCpuMs": 1156.25,
+          "peakRssBytes": 165842944,
+          "retainedRssBytes": 115736576,
+          "captureError": "",
+          "metrics": {
+            "requests": 1,
+            "responseAcquisitions": 1,
+            "encodedBodyBytes": 5276,
+            "processedBodyBytes": 51294,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 2,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 51294,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Default",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1378.989899996668,
+          "totalMs": 1782.1111000084784,
+          "browserCpuMs": 1546.875,
+          "peakRssBytes": 205459456,
+          "retainedRssBytes": 137797632,
+          "captureError": "",
+          "metrics": {
+            "requests": 30,
+            "responseAcquisitions": 29,
+            "encodedBodyBytes": 284591,
+            "processedBodyBytes": 682045,
+            "scriptsAcquired": 5,
+            "classicScriptsExecuted": 7,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 682045,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Manual",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1181.4303999999538,
+          "totalMs": 1617.5893999898108,
+          "browserCpuMs": 1046.875,
+          "peakRssBytes": 169328640,
+          "retainedRssBytes": 116502528,
+          "captureError": "",
+          "metrics": {
+            "requests": 1,
+            "responseAcquisitions": 1,
+            "encodedBodyBytes": 5276,
+            "processedBodyBytes": 51294,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 2,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 51294,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Auto",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1164.659699992626,
+          "totalMs": 1573.3935999887763,
+          "browserCpuMs": 1156.25,
+          "peakRssBytes": 171122688,
+          "retainedRssBytes": 118124544,
+          "captureError": "",
+          "metrics": {
+            "requests": 2,
+            "responseAcquisitions": 1,
+            "encodedBodyBytes": 5276,
+            "processedBodyBytes": 51294,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 2,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 51294,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Manual",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1173.8060999923619,
+          "totalMs": 1567.6345999963814,
+          "browserCpuMs": 1125.0,
+          "peakRssBytes": 171167744,
+          "retainedRssBytes": 117727232,
+          "captureError": "",
+          "metrics": {
+            "requests": 1,
+            "responseAcquisitions": 1,
+            "encodedBodyBytes": 5276,
+            "processedBodyBytes": 51294,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 2,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 51294,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Auto",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1161.5634000045247,
+          "totalMs": 1572.3657999915304,
+          "browserCpuMs": 1046.875,
+          "peakRssBytes": 170131456,
+          "retainedRssBytes": 118829056,
+          "captureError": "",
+          "metrics": {
+            "requests": 2,
+            "responseAcquisitions": 1,
+            "encodedBodyBytes": 5276,
+            "processedBodyBytes": 51294,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 2,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 51294,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Default",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1399.5501000026707,
+          "totalMs": 1842.4546000023838,
+          "browserCpuMs": 1546.875,
+          "peakRssBytes": 201728000,
+          "retainedRssBytes": 135340032,
+          "captureError": "",
+          "metrics": {
+            "requests": 30,
+            "responseAcquisitions": 29,
+            "encodedBodyBytes": 284591,
+            "processedBodyBytes": 682045,
+            "scriptsAcquired": 5,
+            "classicScriptsExecuted": 7,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 682045,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        }
+      ],
+      "sumTrainingAndValidationTrialMs": 10592.371599996113
+    },
+    "async": {
+      "binarySHA256": "95de8c94593c957e60f8578d4483687fd58e643aca3960970ace937c77192ee8",
+      "captureSHA256": "9fb97493e9d598c5f7480bb27b624a313549e83c958fd3a7c5f1a55c69bc0a13",
+      "startedAt": "2026-10-05T04:25:28Z",
+      "replayStable": true,
+      "summary": {
+        "Default": {
+          "passes": 5,
+          "trials": 5,
+          "elapsedMs": 1405.5698000011034,
+          "browserCpuMs": 1203.125,
+          "peakRssBytes": 181321728,
+          "retainedRssBytes": 123760640,
+          "requests": 5,
+          "responseAcquisitions": 5,
+          "encodedBodyBytes": 5480,
+          "processedBodyBytes": 5480,
+          "scriptsAcquired": 2,
+          "classicScriptsExecuted": 1,
+          "classicScriptsSuppressed": 0,
+          "peakRetainedBodyBytes": 5480,
+          "retainedBodyBytes": 0
+        },
+        "Manual": {
+          "passes": 5,
+          "trials": 5,
+          "elapsedMs": 1405.7432999979937,
+          "browserCpuMs": 1093.75,
+          "peakRssBytes": 179503104,
+          "retainedRssBytes": 123019264,
+          "requests": 5,
+          "responseAcquisitions": 5,
+          "encodedBodyBytes": 5480,
+          "processedBodyBytes": 5480,
+          "scriptsAcquired": 2,
+          "classicScriptsExecuted": 1,
+          "classicScriptsSuppressed": 0,
+          "peakRetainedBodyBytes": 5480,
+          "retainedBodyBytes": 0
+        },
+        "Auto": {
+          "passes": 5,
+          "trials": 5,
+          "elapsedMs": 1396.7210999981035,
+          "browserCpuMs": 1156.25,
+          "peakRssBytes": 178896896,
+          "retainedRssBytes": 120659968,
+          "requests": 5,
+          "responseAcquisitions": 5,
+          "encodedBodyBytes": 5480,
+          "processedBodyBytes": 5480,
+          "scriptsAcquired": 2,
+          "classicScriptsExecuted": 1,
+          "classicScriptsSuppressed": 0,
+          "peakRetainedBodyBytes": 5480,
+          "retainedBodyBytes": 0
+        }
+      },
+      "manualPolicy": {
+        "rules": [
+          {
+            "id": "required-application",
+            "match": {
+              "kinds": ["document", "script", "fetch", "xhr", "worker"]
+            },
+            "work": {}
+          },
+          {
+            "id": "visual-and-speculative",
+            "match": {},
+            "work": {
+              "network": false,
+              "cacheRead": false
+            }
+          }
+        ]
+      },
+      "selectedPolicy": {},
+      "selectedSuppressClassic": [],
+      "selectedOrigin": "default",
+      "discoveredActions": [],
+      "optimizerTrials": 12,
+      "optimizerWallMs": 136850.19299999112,
+      "optimizerMemoHits": 0,
+      "conclusion": "offline specialization validated",
+      "runs": [
+        {
+          "label": "stability",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1404.0365999971982,
+          "totalMs": 2028.3678999985568,
+          "browserCpuMs": 1031.25,
+          "peakRssBytes": 174325760,
+          "retainedRssBytes": 121348096,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 5480,
+            "processedBodyBytes": 5480,
+            "scriptsAcquired": 2,
+            "classicScriptsExecuted": 1,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 5480,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "stability",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1386.7470999975922,
+          "totalMs": 1773.666899985983,
+          "browserCpuMs": 1156.25,
+          "peakRssBytes": 181960704,
+          "retainedRssBytes": 116985856,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 5480,
+            "processedBodyBytes": 5480,
+            "scriptsAcquired": 2,
+            "classicScriptsExecuted": 1,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 5480,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "stability",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1405.345799998031,
+          "totalMs": 1857.2463000018615,
+          "browserCpuMs": 1265.625,
+          "peakRssBytes": 175628288,
+          "retainedRssBytes": 119898112,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 5480,
+            "processedBodyBytes": 5480,
+            "scriptsAcquired": 2,
+            "classicScriptsExecuted": 1,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 5480,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "manual-validation",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1417.135399999097,
+          "totalMs": 1818.155699991621,
+          "browserCpuMs": 1171.875,
+          "peakRssBytes": 175759360,
+          "retainedRssBytes": 116146176,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 5480,
+            "processedBodyBytes": 5480,
+            "scriptsAcquired": 2,
+            "classicScriptsExecuted": 1,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 5480,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "runtime-ablation",
+          "status": "WORKLOAD_FAILURE",
+          "workloadStatus": "WORKLOAD_FAILURE",
+          "exitCode": 1,
+          "elapsedMs": 20523.686700005783,
+          "totalMs": 20938.16700000025,
+          "browserCpuMs": 4812.5,
+          "peakRssBytes": 170610688,
+          "retainedRssBytes": 117923840,
+          "captureError": "",
+          "metrics": {
+            "requests": 2,
+            "responseAcquisitions": 2,
+            "encodedBodyBytes": 5423,
+            "processedBodyBytes": 5423,
+            "scriptsAcquired": 1,
+            "classicScriptsExecuted": 0,
+            "classicScriptsSuppressed": 1,
+            "peakRetainedBodyBytes": 5423,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          },
+          "failureTail": [
+            "TimeoutError: completion timeout; last={'ready': 'complete', 'runner': 'undefined'}"
+          ]
+        },
+        {
+          "label": "search",
+          "status": "WORKLOAD_FAILURE",
+          "workloadStatus": "WORKLOAD_FAILURE",
+          "exitCode": 1,
+          "elapsedMs": 20572.062200008077,
+          "totalMs": 21022.592199995415,
+          "browserCpuMs": 4125.0,
+          "peakRssBytes": 169009152,
+          "retainedRssBytes": 119644160,
+          "captureError": "",
+          "actions": [
+            {
+              "id": "remove-kind-fetch",
+              "action": "block",
+              "match": {
+                "kinds": ["fetch"]
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              }
+            },
+            {
+              "id": "remove-kind-script",
+              "action": "block",
+              "match": {
+                "kinds": ["script"]
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              }
+            },
+            {
+              "id": "remove-kind-worker",
+              "action": "block",
+              "match": {
+                "kinds": ["worker"]
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              }
+            },
+            {
+              "id": "remove-kind-xhr",
+              "action": "block",
+              "match": {
+                "kinds": ["xhr"]
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              }
+            }
+          ],
+          "metrics": {
+            "requests": 1,
+            "responseAcquisitions": 1,
+            "encodedBodyBytes": 194,
+            "processedBodyBytes": 194,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 0,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 194,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          },
+          "failureTail": [
+            "TimeoutError: completion timeout; last={'ready': 'complete', 'runner': 'undefined'}"
+          ]
+        },
+        {
+          "label": "search",
+          "status": "WORKLOAD_FAILURE",
+          "workloadStatus": "WORKLOAD_FAILURE",
+          "exitCode": 1,
+          "elapsedMs": 20541.86290000507,
+          "totalMs": 20980.690700002015,
+          "browserCpuMs": 4671.875,
+          "peakRssBytes": 166993920,
+          "retainedRssBytes": 118968320,
+          "captureError": "",
+          "actions": [
+            {
+              "id": "remove-kind-fetch",
+              "action": "block",
+              "match": {
+                "kinds": ["fetch"]
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              }
+            },
+            {
+              "id": "remove-kind-script",
+              "action": "block",
+              "match": {
+                "kinds": ["script"]
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              }
+            }
+          ],
+          "metrics": {
+            "requests": 1,
+            "responseAcquisitions": 1,
+            "encodedBodyBytes": 194,
+            "processedBodyBytes": 194,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 0,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 194,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          },
+          "failureTail": [
+            "TimeoutError: completion timeout; last={'ready': 'complete', 'runner': 'undefined'}"
+          ]
+        },
+        {
+          "label": "search",
+          "status": "WORKLOAD_FAILURE",
+          "workloadStatus": "WORKLOAD_FAILURE",
+          "exitCode": 1,
+          "elapsedMs": 1397.3891000059666,
+          "totalMs": 1819.4013000029372,
+          "browserCpuMs": 1140.625,
+          "peakRssBytes": 177352704,
+          "retainedRssBytes": 123015168,
+          "captureError": "",
+          "actions": [
+            {
+              "id": "remove-kind-fetch",
+              "action": "block",
+              "match": {
+                "kinds": ["fetch"]
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              }
+            }
+          ],
+          "metrics": {
+            "requests": 3,
+            "responseAcquisitions": 3,
+            "encodedBodyBytes": 5458,
+            "processedBodyBytes": 5458,
+            "scriptsAcquired": 2,
+            "classicScriptsExecuted": 1,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 5458,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          },
+          "failureTail": [
+            "AssertionError: {'done': True, 'error': 'TypeError: Failed to fetch', 'js_ms': 71.1, 'result': None}"
+          ]
+        },
+        {
+          "label": "search",
+          "status": "WORKLOAD_FAILURE",
+          "workloadStatus": "WORKLOAD_FAILURE",
+          "exitCode": 1,
+          "elapsedMs": 20518.494699994335,
+          "totalMs": 20918.923100005486,
+          "browserCpuMs": 4687.5,
+          "peakRssBytes": 167186432,
+          "retainedRssBytes": 118693888,
+          "captureError": "",
+          "actions": [
+            {
+              "id": "remove-kind-script",
+              "action": "block",
+              "match": {
+                "kinds": ["script"]
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              }
+            }
+          ],
+          "metrics": {
+            "requests": 1,
+            "responseAcquisitions": 1,
+            "encodedBodyBytes": 194,
+            "processedBodyBytes": 194,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 0,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 194,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          },
+          "failureTail": [
+            "TimeoutError: completion timeout; last={'ready': 'complete', 'runner': 'undefined'}"
+          ]
+        },
+        {
+          "label": "search",
+          "status": "WORKLOAD_FAILURE",
+          "workloadStatus": "WORKLOAD_FAILURE",
+          "exitCode": 1,
+          "elapsedMs": 1381.1638999904972,
+          "totalMs": 1776.5800999914063,
+          "browserCpuMs": 1187.5,
+          "peakRssBytes": 172015616,
+          "retainedRssBytes": 118693888,
+          "captureError": "",
+          "actions": [
+            {
+              "id": "remove-kind-worker",
+              "action": "block",
+              "match": {
+                "kinds": ["worker"]
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              }
+            },
+            {
+              "id": "remove-kind-xhr",
+              "action": "block",
+              "match": {
+                "kinds": ["xhr"]
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              }
+            }
+          ],
+          "metrics": {
+            "requests": 2,
+            "responseAcquisitions": 2,
+            "encodedBodyBytes": 5423,
+            "processedBodyBytes": 5423,
+            "scriptsAcquired": 1,
+            "classicScriptsExecuted": 1,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 5423,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          },
+          "failureTail": [
+            "AssertionError: {'done': True, 'error': 'Error: worker error', 'js_ms': 80.8, 'result': None}"
+          ]
+        },
+        {
+          "label": "search",
+          "status": "WORKLOAD_FAILURE",
+          "workloadStatus": "WORKLOAD_FAILURE",
+          "exitCode": 1,
+          "elapsedMs": 1357.1508000022732,
+          "totalMs": 1781.203699996695,
+          "browserCpuMs": 1187.5,
+          "peakRssBytes": 187379712,
+          "retainedRssBytes": 127041536,
+          "captureError": "",
+          "actions": [
+            {
+              "id": "remove-kind-worker",
+              "action": "block",
+              "match": {
+                "kinds": ["worker"]
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              }
+            }
+          ],
+          "metrics": {
+            "requests": 2,
+            "responseAcquisitions": 2,
+            "encodedBodyBytes": 5423,
+            "processedBodyBytes": 5423,
+            "scriptsAcquired": 1,
+            "classicScriptsExecuted": 1,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 5423,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          },
+          "failureTail": [
+            "AssertionError: {'done': True, 'error': 'Error: worker error', 'js_ms': 72.6, 'result': None}"
+          ]
+        },
+        {
+          "label": "search",
+          "status": "WORKLOAD_FAILURE",
+          "workloadStatus": "WORKLOAD_FAILURE",
+          "exitCode": 1,
+          "elapsedMs": 1385.8338999998523,
+          "totalMs": 1835.3807999956189,
+          "browserCpuMs": 1359.375,
+          "peakRssBytes": 179924992,
+          "retainedRssBytes": 125054976,
+          "captureError": "",
+          "actions": [
+            {
+              "id": "remove-kind-xhr",
+              "action": "block",
+              "match": {
+                "kinds": ["xhr"]
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              }
+            }
+          ],
+          "metrics": {
+            "requests": 4,
+            "responseAcquisitions": 4,
+            "encodedBodyBytes": 5469,
+            "processedBodyBytes": 5469,
+            "scriptsAcquired": 2,
+            "classicScriptsExecuted": 1,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 5469,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          },
+          "failureTail": [
+            "AssertionError: {'done': True, 'error': '[object Event]', 'js_ms': 83.9, 'result': None}"
+          ]
+        },
+        {
+          "label": "search",
+          "status": "WORKLOAD_FAILURE",
+          "workloadStatus": "WORKLOAD_FAILURE",
+          "exitCode": 1,
+          "elapsedMs": 20524.205299996538,
+          "totalMs": 20940.11209999735,
+          "browserCpuMs": 4109.375,
+          "peakRssBytes": 170037248,
+          "retainedRssBytes": 119222272,
+          "captureError": "",
+          "actions": [
+            {
+              "id": "remove-0",
+              "action": "block",
+              "match": {
+                "urlGlob": "http://127.0.0.1:49152/workload.js"
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              },
+              "resource": {
+                "url": "http://127.0.0.1:49152/workload.js",
+                "kind": "script",
+                "owner": "frame",
+                "mechanism": "",
+                "bytes": 5229,
+                "synthetic": false
+              }
+            },
+            {
+              "id": "remove-1",
+              "action": "block",
+              "match": {
+                "urlGlob": "http://127.0.0.1:49152/worker.js"
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              },
+              "resource": {
+                "url": "http://127.0.0.1:49152/worker.js",
+                "kind": "worker",
+                "owner": "frame",
+                "mechanism": "",
+                "bytes": 35,
+                "synthetic": false
+              }
+            },
+            {
+              "id": "remove-2",
+              "action": "block",
+              "match": {
+                "urlGlob": "http://127.0.0.1:49152/data.json"
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              },
+              "resource": {
+                "url": "http://127.0.0.1:49152/data.json",
+                "kind": "xhr",
+                "owner": "frame",
+                "mechanism": "",
+                "bytes": 11,
+                "synthetic": false
+              }
+            }
+          ],
+          "metrics": {
+            "requests": 1,
+            "responseAcquisitions": 1,
+            "encodedBodyBytes": 194,
+            "processedBodyBytes": 194,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 0,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 194,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          },
+          "failureTail": [
+            "TimeoutError: completion timeout; last={'ready': 'complete', 'runner': 'undefined'}"
+          ]
+        },
+        {
+          "label": "search",
+          "status": "WORKLOAD_FAILURE",
+          "workloadStatus": "WORKLOAD_FAILURE",
+          "exitCode": 1,
+          "elapsedMs": 20523.405900006765,
+          "totalMs": 20937.503299996024,
+          "browserCpuMs": 4312.5,
+          "peakRssBytes": 168538112,
+          "retainedRssBytes": 117788672,
+          "captureError": "",
+          "actions": [
+            {
+              "id": "remove-0",
+              "action": "block",
+              "match": {
+                "urlGlob": "http://127.0.0.1:49152/workload.js"
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              },
+              "resource": {
+                "url": "http://127.0.0.1:49152/workload.js",
+                "kind": "script",
+                "owner": "frame",
+                "mechanism": "",
+                "bytes": 5229,
+                "synthetic": false
+              }
+            }
+          ],
+          "metrics": {
+            "requests": 1,
+            "responseAcquisitions": 1,
+            "encodedBodyBytes": 194,
+            "processedBodyBytes": 194,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 0,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 194,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          },
+          "failureTail": [
+            "TimeoutError: completion timeout; last={'ready': 'complete', 'runner': 'undefined'}"
+          ]
+        },
+        {
+          "label": "search",
+          "status": "WORKLOAD_FAILURE",
+          "workloadStatus": "WORKLOAD_FAILURE",
+          "exitCode": 1,
+          "elapsedMs": 1409.3837999971583,
+          "totalMs": 1825.220899991109,
+          "browserCpuMs": 1140.625,
+          "peakRssBytes": 174276608,
+          "retainedRssBytes": 120483840,
+          "captureError": "",
+          "actions": [
+            {
+              "id": "remove-1",
+              "action": "block",
+              "match": {
+                "urlGlob": "http://127.0.0.1:49152/worker.js"
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              },
+              "resource": {
+                "url": "http://127.0.0.1:49152/worker.js",
+                "kind": "worker",
+                "owner": "frame",
+                "mechanism": "",
+                "bytes": 35,
+                "synthetic": false
+              }
+            }
+          ],
+          "metrics": {
+            "requests": 2,
+            "responseAcquisitions": 2,
+            "encodedBodyBytes": 5423,
+            "processedBodyBytes": 5423,
+            "scriptsAcquired": 1,
+            "classicScriptsExecuted": 1,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 5423,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          },
+          "failureTail": [
+            "AssertionError: {'done': True, 'error': 'Error: worker error', 'js_ms': 74.1, 'result': None}"
+          ]
+        },
+        {
+          "label": "search",
+          "status": "WORKLOAD_FAILURE",
+          "workloadStatus": "WORKLOAD_FAILURE",
+          "exitCode": 1,
+          "elapsedMs": 1407.0593000069493,
+          "totalMs": 1820.246799994493,
+          "browserCpuMs": 953.125,
+          "peakRssBytes": 177143808,
+          "retainedRssBytes": 119889920,
+          "captureError": "",
+          "actions": [
+            {
+              "id": "remove-2",
+              "action": "block",
+              "match": {
+                "urlGlob": "http://127.0.0.1:49152/data.json"
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              },
+              "resource": {
+                "url": "http://127.0.0.1:49152/data.json",
+                "kind": "xhr",
+                "owner": "frame",
+                "mechanism": "",
+                "bytes": 11,
+                "synthetic": false
+              }
+            }
+          ],
+          "metrics": {
+            "requests": 3,
+            "responseAcquisitions": 3,
+            "encodedBodyBytes": 5458,
+            "processedBodyBytes": 5458,
+            "scriptsAcquired": 2,
+            "classicScriptsExecuted": 1,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 5458,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          },
+          "failureTail": [
+            "AssertionError: {'done': True, 'error': 'TypeError: Failed to fetch', 'js_ms': 82.39999999999999, 'result': None}"
+          ]
+        },
+        {
+          "label": "search",
+          "status": "WORKLOAD_FAILURE",
+          "workloadStatus": "WORKLOAD_FAILURE",
+          "exitCode": 1,
+          "elapsedMs": 20538.15219999524,
+          "totalMs": 20982.490799986408,
+          "browserCpuMs": 4656.25,
+          "peakRssBytes": 169357312,
+          "retainedRssBytes": 119070720,
+          "captureError": "",
+          "actions": [
+            {
+              "id": "suppress-7332a96fa0d27595f7ae5d742bad61f09c1e5cadc5220a77236897f1301e6f8d",
+              "action": "suppress",
+              "script": "7332a96fa0d27595f7ae5d742bad61f09c1e5cadc5220a77236897f1301e6f8d",
+              "url": "http://127.0.0.1:49152/workload.js"
+            }
+          ],
+          "metrics": {
+            "requests": 2,
+            "responseAcquisitions": 2,
+            "encodedBodyBytes": 5423,
+            "processedBodyBytes": 5423,
+            "scriptsAcquired": 1,
+            "classicScriptsExecuted": 0,
+            "classicScriptsSuppressed": 1,
+            "peakRetainedBodyBytes": 5423,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          },
+          "failureTail": [
+            "TimeoutError: completion timeout; last={'ready': 'complete', 'runner': 'undefined'}"
+          ]
+        },
+        {
+          "label": "benchmark-Default",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1415.0104000000283,
+          "totalMs": 1836.8533000029856,
+          "browserCpuMs": 1078.125,
+          "peakRssBytes": 175493120,
+          "retainedRssBytes": 124542976,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 5480,
+            "processedBodyBytes": 5480,
+            "scriptsAcquired": 2,
+            "classicScriptsExecuted": 1,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 5480,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Manual",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1439.6902000007685,
+          "totalMs": 1888.613000002806,
+          "browserCpuMs": 1125.0,
+          "peakRssBytes": 189190144,
+          "retainedRssBytes": 123019264,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 5480,
+            "processedBodyBytes": 5480,
+            "scriptsAcquired": 2,
+            "classicScriptsExecuted": 1,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 5480,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Auto",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1426.4508999913232,
+          "totalMs": 1861.4229000086198,
+          "browserCpuMs": 1218.75,
+          "peakRssBytes": 184229888,
+          "retainedRssBytes": 123723776,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 5480,
+            "processedBodyBytes": 5480,
+            "scriptsAcquired": 2,
+            "classicScriptsExecuted": 1,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 5480,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Manual",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1405.7432999979937,
+          "totalMs": 1815.4058000072837,
+          "browserCpuMs": 1093.75,
+          "peakRssBytes": 182140928,
+          "retainedRssBytes": 120717312,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 5480,
+            "processedBodyBytes": 5480,
+            "scriptsAcquired": 2,
+            "classicScriptsExecuted": 1,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 5480,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Auto",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1414.27449999901,
+          "totalMs": 1858.6378000036348,
+          "browserCpuMs": 1109.375,
+          "peakRssBytes": 171143168,
+          "retainedRssBytes": 121810944,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 5480,
+            "processedBodyBytes": 5480,
+            "scriptsAcquired": 2,
+            "classicScriptsExecuted": 1,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 5480,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Default",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1424.3040000001201,
+          "totalMs": 1840.6530000065686,
+          "browserCpuMs": 1203.125,
+          "peakRssBytes": 182308864,
+          "retainedRssBytes": 120250368,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 5480,
+            "processedBodyBytes": 5480,
+            "scriptsAcquired": 2,
+            "classicScriptsExecuted": 1,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 5480,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Auto",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1396.7210999981035,
+          "totalMs": 1796.8095999967773,
+          "browserCpuMs": 1156.25,
+          "peakRssBytes": 178896896,
+          "retainedRssBytes": 119480320,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 5480,
+            "processedBodyBytes": 5480,
+            "scriptsAcquired": 2,
+            "classicScriptsExecuted": 1,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 5480,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Default",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1398.8706999953138,
+          "totalMs": 1826.88560000679,
+          "browserCpuMs": 1078.125,
+          "peakRssBytes": 184815616,
+          "retainedRssBytes": 123760640,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 5480,
+            "processedBodyBytes": 5480,
+            "scriptsAcquired": 2,
+            "classicScriptsExecuted": 1,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 5480,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Manual",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1390.1343999896199,
+          "totalMs": 1789.279799995711,
+          "browserCpuMs": 1078.125,
+          "peakRssBytes": 179503104,
+          "retainedRssBytes": 124878848,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 5480,
+            "processedBodyBytes": 5480,
+            "scriptsAcquired": 2,
+            "classicScriptsExecuted": 1,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 5480,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Default",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1405.5698000011034,
+          "totalMs": 1826.5371000015875,
+          "browserCpuMs": 1281.25,
+          "peakRssBytes": 177946624,
+          "retainedRssBytes": 123826176,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 5480,
+            "processedBodyBytes": 5480,
+            "scriptsAcquired": 2,
+            "classicScriptsExecuted": 1,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 5480,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Manual",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1387.0300999988103,
+          "totalMs": 1843.7711000005947,
+          "browserCpuMs": 1046.875,
+          "peakRssBytes": 173817856,
+          "retainedRssBytes": 121499648,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 5480,
+            "processedBodyBytes": 5480,
+            "scriptsAcquired": 2,
+            "classicScriptsExecuted": 1,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 5480,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Auto",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1370.4370000050403,
+          "totalMs": 1814.667400001781,
+          "browserCpuMs": 1109.375,
+          "peakRssBytes": 179425280,
+          "retainedRssBytes": 120659968,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 5480,
+            "processedBodyBytes": 5480,
+            "scriptsAcquired": 2,
+            "classicScriptsExecuted": 1,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 5480,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Manual",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1420.220200001495,
+          "totalMs": 1836.94039999682,
+          "browserCpuMs": 1140.625,
+          "peakRssBytes": 175218688,
+          "retainedRssBytes": 123977728,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 5480,
+            "processedBodyBytes": 5480,
+            "scriptsAcquired": 2,
+            "classicScriptsExecuted": 1,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 5480,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Auto",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1393.6944999877596,
+          "totalMs": 1830.6340999988606,
+          "browserCpuMs": 1265.625,
+          "peakRssBytes": 173985792,
+          "retainedRssBytes": 119074816,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 5480,
+            "processedBodyBytes": 5480,
+            "scriptsAcquired": 2,
+            "classicScriptsExecuted": 1,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 5480,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Default",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1387.0456000004197,
+          "totalMs": 1802.8109000006225,
+          "browserCpuMs": 1281.25,
+          "peakRssBytes": 181321728,
+          "retainedRssBytes": 118788096,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 5480,
+            "processedBodyBytes": 5480,
+            "scriptsAcquired": 2,
+            "classicScriptsExecuted": 1,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 5480,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        }
+      ],
+      "sumTrainingAndValidationTrialMs": 165055.94959993323
+    },
+    "react": {
+      "binarySHA256": "95de8c94593c957e60f8578d4483687fd58e643aca3960970ace937c77192ee8",
+      "captureSHA256": "f99800b0d7647308a815f11db0836af1fa088abaae1e0fe1f230d90fd9792379",
+      "startedAt": "2026-10-05T04:28:42Z",
+      "replayStable": true,
+      "summary": {
+        "Default": {
+          "passes": 5,
+          "trials": 5,
+          "elapsedMs": 1405.8493000047747,
+          "browserCpuMs": 1062.5,
+          "peakRssBytes": 168960000,
+          "retainedRssBytes": 124456960,
+          "requests": 5,
+          "responseAcquisitions": 5,
+          "encodedBodyBytes": 148134,
+          "processedBodyBytes": 148134,
+          "scriptsAcquired": 3,
+          "classicScriptsExecuted": 3,
+          "classicScriptsSuppressed": 0,
+          "peakRetainedBodyBytes": 148134,
+          "retainedBodyBytes": 0
+        },
+        "Manual": {
+          "passes": 5,
+          "trials": 5,
+          "elapsedMs": 1392.0851000002585,
+          "browserCpuMs": 1140.625,
+          "peakRssBytes": 171933696,
+          "retainedRssBytes": 122286080,
+          "requests": 5,
+          "responseAcquisitions": 5,
+          "encodedBodyBytes": 148134,
+          "processedBodyBytes": 148134,
+          "scriptsAcquired": 3,
+          "classicScriptsExecuted": 3,
+          "classicScriptsSuppressed": 0,
+          "peakRetainedBodyBytes": 148134,
+          "retainedBodyBytes": 0
+        },
+        "Auto": {
+          "passes": 5,
+          "trials": 5,
+          "elapsedMs": 1382.9484000016237,
+          "browserCpuMs": 1078.125,
+          "peakRssBytes": 167944192,
+          "retainedRssBytes": 123445248,
+          "requests": 5,
+          "responseAcquisitions": 5,
+          "encodedBodyBytes": 148134,
+          "processedBodyBytes": 148134,
+          "scriptsAcquired": 3,
+          "classicScriptsExecuted": 3,
+          "classicScriptsSuppressed": 0,
+          "peakRetainedBodyBytes": 148134,
+          "retainedBodyBytes": 0
+        }
+      },
+      "manualPolicy": {
+        "rules": [
+          {
+            "id": "required-application",
+            "match": {
+              "kinds": ["document", "script", "fetch", "xhr", "worker"]
+            },
+            "work": {}
+          },
+          {
+            "id": "visual-and-speculative",
+            "match": {},
+            "work": {
+              "network": false,
+              "cacheRead": false
+            }
+          }
+        ]
+      },
+      "selectedPolicy": {},
+      "selectedSuppressClassic": [],
+      "selectedOrigin": "default",
+      "discoveredActions": [],
+      "optimizerTrials": 15,
+      "optimizerWallMs": 200085.19929999602,
+      "optimizerMemoHits": 0,
+      "conclusion": "offline specialization validated",
+      "runs": [
+        {
+          "label": "stability",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1372.4236999987625,
+          "totalMs": 1977.9680000065127,
+          "browserCpuMs": 1312.5,
+          "peakRssBytes": 179761152,
+          "retainedRssBytes": 128344064,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 148134,
+            "processedBodyBytes": 148134,
+            "scriptsAcquired": 3,
+            "classicScriptsExecuted": 3,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 148134,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "stability",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1381.689899993944,
+          "totalMs": 1773.713400005363,
+          "browserCpuMs": 1031.25,
+          "peakRssBytes": 166027264,
+          "retainedRssBytes": 116224000,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 148134,
+            "processedBodyBytes": 148134,
+            "scriptsAcquired": 3,
+            "classicScriptsExecuted": 3,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 148134,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "stability",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1365.3484000096796,
+          "totalMs": 1798.0131999938749,
+          "browserCpuMs": 1234.375,
+          "peakRssBytes": 166105088,
+          "retainedRssBytes": 122462208,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 148134,
+            "processedBodyBytes": 148134,
+            "scriptsAcquired": 3,
+            "classicScriptsExecuted": 3,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 148134,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "manual-validation",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1374.2605000006733,
+          "totalMs": 1804.3583000107901,
+          "browserCpuMs": 1218.75,
+          "peakRssBytes": 176029696,
+          "retainedRssBytes": 121286656,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 148134,
+            "processedBodyBytes": 148134,
+            "scriptsAcquired": 3,
+            "classicScriptsExecuted": 3,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 148134,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "runtime-ablation",
+          "status": "WORKLOAD_FAILURE",
+          "workloadStatus": "WORKLOAD_FAILURE",
+          "exitCode": 1,
+          "elapsedMs": 20536.42370000307,
+          "totalMs": 20975.762300004135,
+          "browserCpuMs": 4156.25,
+          "peakRssBytes": 169914368,
+          "retainedRssBytes": 119992320,
+          "captureError": "",
+          "metrics": {
+            "requests": 4,
+            "responseAcquisitions": 4,
+            "encodedBodyBytes": 148123,
+            "processedBodyBytes": 148123,
+            "scriptsAcquired": 3,
+            "classicScriptsExecuted": 0,
+            "classicScriptsSuppressed": 3,
+            "peakRetainedBodyBytes": 148123,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          },
+          "failureTail": [
+            "TimeoutError: completion timeout; last={'ready': 'complete', 'runner': 'undefined'}"
+          ]
+        },
+        {
+          "label": "search",
+          "status": "WORKLOAD_FAILURE",
+          "workloadStatus": "WORKLOAD_FAILURE",
+          "exitCode": 1,
+          "elapsedMs": 20546.58080000081,
+          "totalMs": 20987.751599997864,
+          "browserCpuMs": 4562.5,
+          "peakRssBytes": 170573824,
+          "retainedRssBytes": 118464512,
+          "captureError": "",
+          "actions": [
+            {
+              "id": "remove-kind-fetch",
+              "action": "block",
+              "match": {
+                "kinds": ["fetch"]
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              }
+            },
+            {
+              "id": "remove-kind-script",
+              "action": "block",
+              "match": {
+                "kinds": ["script"]
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              }
+            }
+          ],
+          "metrics": {
+            "requests": 1,
+            "responseAcquisitions": 1,
+            "encodedBodyBytes": 308,
+            "processedBodyBytes": 308,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 0,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 308,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          },
+          "failureTail": [
+            "TimeoutError: completion timeout; last={'ready': 'complete', 'runner': 'undefined'}"
+          ]
+        },
+        {
+          "label": "search",
+          "status": "WORKLOAD_FAILURE",
+          "workloadStatus": "WORKLOAD_FAILURE",
+          "exitCode": 1,
+          "elapsedMs": 1310.5114000063622,
+          "totalMs": 1744.8648999998113,
+          "browserCpuMs": 1031.25,
+          "peakRssBytes": 168042496,
+          "retainedRssBytes": 120872960,
+          "captureError": "",
+          "actions": [
+            {
+              "id": "remove-kind-fetch",
+              "action": "block",
+              "match": {
+                "kinds": ["fetch"]
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              }
+            }
+          ],
+          "metrics": {
+            "requests": 4,
+            "responseAcquisitions": 4,
+            "encodedBodyBytes": 148123,
+            "processedBodyBytes": 148123,
+            "scriptsAcquired": 3,
+            "classicScriptsExecuted": 3,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 148123,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          },
+          "failureTail": [
+            "AssertionError: {'done': True, 'error': 'TypeError: Failed to fetch', 'js_ms': 5.300000000000001, 'result': None}"
+          ]
+        },
+        {
+          "label": "search",
+          "status": "WORKLOAD_FAILURE",
+          "workloadStatus": "WORKLOAD_FAILURE",
+          "exitCode": 1,
+          "elapsedMs": 20533.26849998848,
+          "totalMs": 20957.77480000106,
+          "browserCpuMs": 4796.875,
+          "peakRssBytes": 172302336,
+          "retainedRssBytes": 118153216,
+          "captureError": "",
+          "actions": [
+            {
+              "id": "remove-kind-script",
+              "action": "block",
+              "match": {
+                "kinds": ["script"]
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              }
+            }
+          ],
+          "metrics": {
+            "requests": 1,
+            "responseAcquisitions": 1,
+            "encodedBodyBytes": 308,
+            "processedBodyBytes": 308,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 0,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 308,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          },
+          "failureTail": [
+            "TimeoutError: completion timeout; last={'ready': 'complete', 'runner': 'undefined'}"
+          ]
+        },
+        {
+          "label": "search",
+          "status": "WORKLOAD_FAILURE",
+          "workloadStatus": "WORKLOAD_FAILURE",
+          "exitCode": 1,
+          "elapsedMs": 20542.940499988617,
+          "totalMs": 20973.429899997427,
+          "browserCpuMs": 3984.375,
+          "peakRssBytes": 173252608,
+          "retainedRssBytes": 119832576,
+          "captureError": "",
+          "actions": [
+            {
+              "id": "remove-0",
+              "action": "block",
+              "match": {
+                "urlGlob": "http://127.0.0.1:49153/vendor/react-dom.production.min.js"
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              },
+              "resource": {
+                "url": "http://127.0.0.1:49153/vendor/react-dom.production.min.js",
+                "kind": "script",
+                "owner": "frame",
+                "mechanism": "",
+                "bytes": 131835,
+                "synthetic": false
+              }
+            },
+            {
+              "id": "remove-1",
+              "action": "block",
+              "match": {
+                "urlGlob": "http://127.0.0.1:49153/vendor/react.production.min.js"
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              },
+              "resource": {
+                "url": "http://127.0.0.1:49153/vendor/react.production.min.js",
+                "kind": "script",
+                "owner": "frame",
+                "mechanism": "",
+                "bytes": 10751,
+                "synthetic": false
+              }
+            },
+            {
+              "id": "remove-2",
+              "action": "block",
+              "match": {
+                "urlGlob": "http://127.0.0.1:49153/workload.js"
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              },
+              "resource": {
+                "url": "http://127.0.0.1:49153/workload.js",
+                "kind": "script",
+                "owner": "frame",
+                "mechanism": "",
+                "bytes": 5229,
+                "synthetic": false
+              }
+            },
+            {
+              "id": "remove-3",
+              "action": "block",
+              "match": {
+                "urlGlob": "http://127.0.0.1:49153/data.json"
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              },
+              "resource": {
+                "url": "http://127.0.0.1:49153/data.json",
+                "kind": "fetch",
+                "owner": "frame",
+                "mechanism": "api",
+                "bytes": 11,
+                "synthetic": false
+              }
+            }
+          ],
+          "metrics": {
+            "requests": 1,
+            "responseAcquisitions": 1,
+            "encodedBodyBytes": 308,
+            "processedBodyBytes": 308,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 0,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 308,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          },
+          "failureTail": [
+            "TimeoutError: completion timeout; last={'ready': 'complete', 'runner': 'undefined'}"
+          ]
+        },
+        {
+          "label": "search",
+          "status": "WORKLOAD_FAILURE",
+          "workloadStatus": "WORKLOAD_FAILURE",
+          "exitCode": 1,
+          "elapsedMs": 20509.15569999779,
+          "totalMs": 20934.591199998977,
+          "browserCpuMs": 4218.75,
+          "peakRssBytes": 171626496,
+          "retainedRssBytes": 118587392,
+          "captureError": "",
+          "actions": [
+            {
+              "id": "remove-0",
+              "action": "block",
+              "match": {
+                "urlGlob": "http://127.0.0.1:49153/vendor/react-dom.production.min.js"
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              },
+              "resource": {
+                "url": "http://127.0.0.1:49153/vendor/react-dom.production.min.js",
+                "kind": "script",
+                "owner": "frame",
+                "mechanism": "",
+                "bytes": 131835,
+                "synthetic": false
+              }
+            },
+            {
+              "id": "remove-1",
+              "action": "block",
+              "match": {
+                "urlGlob": "http://127.0.0.1:49153/vendor/react.production.min.js"
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              },
+              "resource": {
+                "url": "http://127.0.0.1:49153/vendor/react.production.min.js",
+                "kind": "script",
+                "owner": "frame",
+                "mechanism": "",
+                "bytes": 10751,
+                "synthetic": false
+              }
+            },
+            {
+              "id": "remove-2",
+              "action": "block",
+              "match": {
+                "urlGlob": "http://127.0.0.1:49153/workload.js"
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              },
+              "resource": {
+                "url": "http://127.0.0.1:49153/workload.js",
+                "kind": "script",
+                "owner": "frame",
+                "mechanism": "",
+                "bytes": 5229,
+                "synthetic": false
+              }
+            }
+          ],
+          "metrics": {
+            "requests": 1,
+            "responseAcquisitions": 1,
+            "encodedBodyBytes": 308,
+            "processedBodyBytes": 308,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 0,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 308,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          },
+          "failureTail": [
+            "TimeoutError: completion timeout; last={'ready': 'complete', 'runner': 'undefined'}"
+          ]
+        },
+        {
+          "label": "search",
+          "status": "WORKLOAD_FAILURE",
+          "workloadStatus": "WORKLOAD_FAILURE",
+          "exitCode": 1,
+          "elapsedMs": 1311.278699999093,
+          "totalMs": 1722.7596000011545,
+          "browserCpuMs": 1015.625,
+          "peakRssBytes": 165003264,
+          "retainedRssBytes": 120561664,
+          "captureError": "",
+          "actions": [
+            {
+              "id": "remove-0",
+              "action": "block",
+              "match": {
+                "urlGlob": "http://127.0.0.1:49153/vendor/react-dom.production.min.js"
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              },
+              "resource": {
+                "url": "http://127.0.0.1:49153/vendor/react-dom.production.min.js",
+                "kind": "script",
+                "owner": "frame",
+                "mechanism": "",
+                "bytes": 131835,
+                "synthetic": false
+              }
+            }
+          ],
+          "metrics": {
+            "requests": 4,
+            "responseAcquisitions": 4,
+            "encodedBodyBytes": 16299,
+            "processedBodyBytes": 16299,
+            "scriptsAcquired": 2,
+            "classicScriptsExecuted": 2,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 16299,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          },
+          "failureTail": [
+            "AssertionError: {'done': True, 'error': 'ReferenceError: ReactDOM is not defined', 'js_ms': 4.699999999999999, 'result': None}"
+          ]
+        },
+        {
+          "label": "search",
+          "status": "WORKLOAD_FAILURE",
+          "workloadStatus": "WORKLOAD_FAILURE",
+          "exitCode": 1,
+          "elapsedMs": 20515.170999991824,
+          "totalMs": 20945.464699994773,
+          "browserCpuMs": 4859.375,
+          "peakRssBytes": 171941888,
+          "retainedRssBytes": 119533568,
+          "captureError": "",
+          "actions": [
+            {
+              "id": "remove-1",
+              "action": "block",
+              "match": {
+                "urlGlob": "http://127.0.0.1:49153/vendor/react.production.min.js"
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              },
+              "resource": {
+                "url": "http://127.0.0.1:49153/vendor/react.production.min.js",
+                "kind": "script",
+                "owner": "frame",
+                "mechanism": "",
+                "bytes": 10751,
+                "synthetic": false
+              }
+            },
+            {
+              "id": "remove-2",
+              "action": "block",
+              "match": {
+                "urlGlob": "http://127.0.0.1:49153/workload.js"
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              },
+              "resource": {
+                "url": "http://127.0.0.1:49153/workload.js",
+                "kind": "script",
+                "owner": "frame",
+                "mechanism": "",
+                "bytes": 5229,
+                "synthetic": false
+              }
+            }
+          ],
+          "metrics": {
+            "requests": 2,
+            "responseAcquisitions": 2,
+            "encodedBodyBytes": 132143,
+            "processedBodyBytes": 132143,
+            "scriptsAcquired": 1,
+            "classicScriptsExecuted": 1,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 132143,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          },
+          "failureTail": [
+            "TimeoutError: completion timeout; last={'ready': 'complete', 'runner': 'undefined'}"
+          ]
+        },
+        {
+          "label": "search",
+          "status": "WORKLOAD_FAILURE",
+          "workloadStatus": "WORKLOAD_FAILURE",
+          "exitCode": 1,
+          "elapsedMs": 1338.6163000104716,
+          "totalMs": 1783.993000004557,
+          "browserCpuMs": 921.875,
+          "peakRssBytes": 169209856,
+          "retainedRssBytes": 124821504,
+          "captureError": "",
+          "actions": [
+            {
+              "id": "remove-1",
+              "action": "block",
+              "match": {
+                "urlGlob": "http://127.0.0.1:49153/vendor/react.production.min.js"
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              },
+              "resource": {
+                "url": "http://127.0.0.1:49153/vendor/react.production.min.js",
+                "kind": "script",
+                "owner": "frame",
+                "mechanism": "",
+                "bytes": 10751,
+                "synthetic": false
+              }
+            }
+          ],
+          "metrics": {
+            "requests": 4,
+            "responseAcquisitions": 4,
+            "encodedBodyBytes": 137383,
+            "processedBodyBytes": 137383,
+            "scriptsAcquired": 2,
+            "classicScriptsExecuted": 2,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 137383,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          },
+          "failureTail": [
+            "AssertionError: {'done': True, 'error': 'ReferenceError: React is not defined', 'js_ms': 7.199999999999999, 'result': None}"
+          ]
+        },
+        {
+          "label": "search",
+          "status": "WORKLOAD_FAILURE",
+          "workloadStatus": "WORKLOAD_FAILURE",
+          "exitCode": 1,
+          "elapsedMs": 20507.375699991826,
+          "totalMs": 20951.188399994862,
+          "browserCpuMs": 4500.0,
+          "peakRssBytes": 171696128,
+          "retainedRssBytes": 118349824,
+          "captureError": "",
+          "actions": [
+            {
+              "id": "remove-2",
+              "action": "block",
+              "match": {
+                "urlGlob": "http://127.0.0.1:49153/workload.js"
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              },
+              "resource": {
+                "url": "http://127.0.0.1:49153/workload.js",
+                "kind": "script",
+                "owner": "frame",
+                "mechanism": "",
+                "bytes": 5229,
+                "synthetic": false
+              }
+            }
+          ],
+          "metrics": {
+            "requests": 3,
+            "responseAcquisitions": 3,
+            "encodedBodyBytes": 142894,
+            "processedBodyBytes": 142894,
+            "scriptsAcquired": 2,
+            "classicScriptsExecuted": 2,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 142894,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          },
+          "failureTail": [
+            "TimeoutError: completion timeout; last={'ready': 'complete', 'runner': 'undefined'}"
+          ]
+        },
+        {
+          "label": "search",
+          "status": "WORKLOAD_FAILURE",
+          "workloadStatus": "WORKLOAD_FAILURE",
+          "exitCode": 1,
+          "elapsedMs": 1322.8145000030054,
+          "totalMs": 1746.780999994371,
+          "browserCpuMs": 984.375,
+          "peakRssBytes": 163876864,
+          "retainedRssBytes": 120115200,
+          "captureError": "",
+          "actions": [
+            {
+              "id": "remove-3",
+              "action": "block",
+              "match": {
+                "urlGlob": "http://127.0.0.1:49153/data.json"
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              },
+              "resource": {
+                "url": "http://127.0.0.1:49153/data.json",
+                "kind": "fetch",
+                "owner": "frame",
+                "mechanism": "api",
+                "bytes": 11,
+                "synthetic": false
+              }
+            }
+          ],
+          "metrics": {
+            "requests": 4,
+            "responseAcquisitions": 4,
+            "encodedBodyBytes": 148123,
+            "processedBodyBytes": 148123,
+            "scriptsAcquired": 3,
+            "classicScriptsExecuted": 3,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 148123,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          },
+          "failureTail": [
+            "AssertionError: {'done': True, 'error': 'TypeError: Failed to fetch', 'js_ms': 5.4, 'result': None}"
+          ]
+        },
+        {
+          "label": "search",
+          "status": "WORKLOAD_FAILURE",
+          "workloadStatus": "WORKLOAD_FAILURE",
+          "exitCode": 1,
+          "elapsedMs": 20563.53380001383,
+          "totalMs": 21015.43679999304,
+          "browserCpuMs": 4265.625,
+          "peakRssBytes": 170754048,
+          "retainedRssBytes": 118571008,
+          "captureError": "",
+          "actions": [
+            {
+              "id": "suppress-a87f7d37ed162500d51d76e3456ea6a30bc109137c0fe0510bf55316117bf0d1",
+              "action": "suppress",
+              "script": "a87f7d37ed162500d51d76e3456ea6a30bc109137c0fe0510bf55316117bf0d1",
+              "url": "http://127.0.0.1:49153/vendor/react-dom.production.min.js"
+            },
+            {
+              "id": "suppress-30324de88aef0471299cd867127821cae7cfae5116e56685d6d1bfac7c0bb6b9",
+              "action": "suppress",
+              "script": "30324de88aef0471299cd867127821cae7cfae5116e56685d6d1bfac7c0bb6b9",
+              "url": "http://127.0.0.1:49153/vendor/react.production.min.js"
+            },
+            {
+              "id": "suppress-6126f4d2294a324c206f29ed05abfc69e3afdd8b9db9cfecb79c6aecfdc6efc7",
+              "action": "suppress",
+              "script": "6126f4d2294a324c206f29ed05abfc69e3afdd8b9db9cfecb79c6aecfdc6efc7",
+              "url": "http://127.0.0.1:49153/workload.js"
+            }
+          ],
+          "metrics": {
+            "requests": 4,
+            "responseAcquisitions": 4,
+            "encodedBodyBytes": 148123,
+            "processedBodyBytes": 148123,
+            "scriptsAcquired": 3,
+            "classicScriptsExecuted": 0,
+            "classicScriptsSuppressed": 3,
+            "peakRetainedBodyBytes": 148123,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          },
+          "failureTail": [
+            "TimeoutError: completion timeout; last={'ready': 'complete', 'runner': 'undefined'}"
+          ]
+        },
+        {
+          "label": "search",
+          "status": "WORKLOAD_FAILURE",
+          "workloadStatus": "WORKLOAD_FAILURE",
+          "exitCode": 1,
+          "elapsedMs": 1340.0934999954188,
+          "totalMs": 1798.625199997332,
+          "browserCpuMs": 1062.5,
+          "peakRssBytes": 159092736,
+          "retainedRssBytes": 114688000,
+          "captureError": "",
+          "actions": [
+            {
+              "id": "suppress-a87f7d37ed162500d51d76e3456ea6a30bc109137c0fe0510bf55316117bf0d1",
+              "action": "suppress",
+              "script": "a87f7d37ed162500d51d76e3456ea6a30bc109137c0fe0510bf55316117bf0d1",
+              "url": "http://127.0.0.1:49153/vendor/react-dom.production.min.js"
+            }
+          ],
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 148134,
+            "processedBodyBytes": 148134,
+            "scriptsAcquired": 3,
+            "classicScriptsExecuted": 2,
+            "classicScriptsSuppressed": 1,
+            "peakRetainedBodyBytes": 148134,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          },
+          "failureTail": [
+            "AssertionError: {'done': True, 'error': 'ReferenceError: ReactDOM is not defined', 'js_ms': 5.1, 'result': None}"
+          ]
+        },
+        {
+          "label": "search",
+          "status": "WORKLOAD_FAILURE",
+          "workloadStatus": "WORKLOAD_FAILURE",
+          "exitCode": 1,
+          "elapsedMs": 20593.285000009928,
+          "totalMs": 21018.7869000074,
+          "browserCpuMs": 4109.375,
+          "peakRssBytes": 165826560,
+          "retainedRssBytes": 119279616,
+          "captureError": "",
+          "actions": [
+            {
+              "id": "suppress-30324de88aef0471299cd867127821cae7cfae5116e56685d6d1bfac7c0bb6b9",
+              "action": "suppress",
+              "script": "30324de88aef0471299cd867127821cae7cfae5116e56685d6d1bfac7c0bb6b9",
+              "url": "http://127.0.0.1:49153/vendor/react.production.min.js"
+            },
+            {
+              "id": "suppress-6126f4d2294a324c206f29ed05abfc69e3afdd8b9db9cfecb79c6aecfdc6efc7",
+              "action": "suppress",
+              "script": "6126f4d2294a324c206f29ed05abfc69e3afdd8b9db9cfecb79c6aecfdc6efc7",
+              "url": "http://127.0.0.1:49153/workload.js"
+            }
+          ],
+          "metrics": {
+            "requests": 4,
+            "responseAcquisitions": 4,
+            "encodedBodyBytes": 148123,
+            "processedBodyBytes": 148123,
+            "scriptsAcquired": 3,
+            "classicScriptsExecuted": 1,
+            "classicScriptsSuppressed": 2,
+            "peakRetainedBodyBytes": 148123,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          },
+          "failureTail": [
+            "TimeoutError: completion timeout; last={'ready': 'complete', 'runner': 'undefined'}"
+          ]
+        },
+        {
+          "label": "search",
+          "status": "WORKLOAD_FAILURE",
+          "workloadStatus": "WORKLOAD_FAILURE",
+          "exitCode": 1,
+          "elapsedMs": 1346.2233000027481,
+          "totalMs": 1784.290299998247,
+          "browserCpuMs": 1203.125,
+          "peakRssBytes": 165654528,
+          "retainedRssBytes": 121528320,
+          "captureError": "",
+          "actions": [
+            {
+              "id": "suppress-30324de88aef0471299cd867127821cae7cfae5116e56685d6d1bfac7c0bb6b9",
+              "action": "suppress",
+              "script": "30324de88aef0471299cd867127821cae7cfae5116e56685d6d1bfac7c0bb6b9",
+              "url": "http://127.0.0.1:49153/vendor/react.production.min.js"
+            }
+          ],
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 148134,
+            "processedBodyBytes": 148134,
+            "scriptsAcquired": 3,
+            "classicScriptsExecuted": 2,
+            "classicScriptsSuppressed": 1,
+            "peakRetainedBodyBytes": 148134,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          },
+          "failureTail": [
+            "AssertionError: {'done': True, 'error': 'ReferenceError: React is not defined', 'js_ms': 6.899999999999999, 'result': None}"
+          ]
+        },
+        {
+          "label": "search",
+          "status": "WORKLOAD_FAILURE",
+          "workloadStatus": "WORKLOAD_FAILURE",
+          "exitCode": 1,
+          "elapsedMs": 20508.402999999817,
+          "totalMs": 20951.32249999733,
+          "browserCpuMs": 4484.375,
+          "peakRssBytes": 169054208,
+          "retainedRssBytes": 118755328,
+          "captureError": "",
+          "actions": [
+            {
+              "id": "suppress-6126f4d2294a324c206f29ed05abfc69e3afdd8b9db9cfecb79c6aecfdc6efc7",
+              "action": "suppress",
+              "script": "6126f4d2294a324c206f29ed05abfc69e3afdd8b9db9cfecb79c6aecfdc6efc7",
+              "url": "http://127.0.0.1:49153/workload.js"
+            }
+          ],
+          "metrics": {
+            "requests": 4,
+            "responseAcquisitions": 4,
+            "encodedBodyBytes": 148123,
+            "processedBodyBytes": 148123,
+            "scriptsAcquired": 3,
+            "classicScriptsExecuted": 2,
+            "classicScriptsSuppressed": 1,
+            "peakRetainedBodyBytes": 148123,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          },
+          "failureTail": [
+            "TimeoutError: completion timeout; last={'ready': 'complete', 'runner': 'undefined'}"
+          ]
+        },
+        {
+          "label": "benchmark-Default",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1405.8493000047747,
+          "totalMs": 1811.3030999957118,
+          "browserCpuMs": 1062.5,
+          "peakRssBytes": 168960000,
+          "retainedRssBytes": 121925632,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 148134,
+            "processedBodyBytes": 148134,
+            "scriptsAcquired": 3,
+            "classicScriptsExecuted": 3,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 148134,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Manual",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1406.4863999956287,
+          "totalMs": 1841.413599991938,
+          "browserCpuMs": 1281.25,
+          "peakRssBytes": 167292928,
+          "retainedRssBytes": 122286080,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 148134,
+            "processedBodyBytes": 148134,
+            "scriptsAcquired": 3,
+            "classicScriptsExecuted": 3,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 148134,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Auto",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1382.425100004184,
+          "totalMs": 1801.2745000014547,
+          "browserCpuMs": 1125.0,
+          "peakRssBytes": 167944192,
+          "retainedRssBytes": 119402496,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 148134,
+            "processedBodyBytes": 148134,
+            "scriptsAcquired": 3,
+            "classicScriptsExecuted": 3,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 148134,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Manual",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1351.2559000082547,
+          "totalMs": 1774.7069000033662,
+          "browserCpuMs": 1218.75,
+          "peakRssBytes": 166367232,
+          "retainedRssBytes": 120537088,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 148134,
+            "processedBodyBytes": 148134,
+            "scriptsAcquired": 3,
+            "classicScriptsExecuted": 3,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 148134,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Auto",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1382.9484000016237,
+          "totalMs": 1821.2791999976616,
+          "browserCpuMs": 1078.125,
+          "peakRssBytes": 166871040,
+          "retainedRssBytes": 123445248,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 148134,
+            "processedBodyBytes": 148134,
+            "scriptsAcquired": 3,
+            "classicScriptsExecuted": 3,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 148134,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Default",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1367.3981000029016,
+          "totalMs": 1780.9267999982694,
+          "browserCpuMs": 1140.625,
+          "peakRssBytes": 164364288,
+          "retainedRssBytes": 124456960,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 148134,
+            "processedBodyBytes": 148134,
+            "scriptsAcquired": 3,
+            "classicScriptsExecuted": 3,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 148134,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Auto",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1388.7959999992745,
+          "totalMs": 1812.0592999912333,
+          "browserCpuMs": 1000.0,
+          "peakRssBytes": 172851200,
+          "retainedRssBytes": 125947904,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 148134,
+            "processedBodyBytes": 148134,
+            "scriptsAcquired": 3,
+            "classicScriptsExecuted": 3,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 148134,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Default",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1409.8392000014428,
+          "totalMs": 1842.9413000121713,
+          "browserCpuMs": 1046.875,
+          "peakRssBytes": 171266048,
+          "retainedRssBytes": 124604416,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 148134,
+            "processedBodyBytes": 148134,
+            "scriptsAcquired": 3,
+            "classicScriptsExecuted": 3,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 148134,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Manual",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1392.0851000002585,
+          "totalMs": 1807.865100010531,
+          "browserCpuMs": 1140.625,
+          "peakRssBytes": 181637120,
+          "retainedRssBytes": 134791168,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 148134,
+            "processedBodyBytes": 148134,
+            "scriptsAcquired": 3,
+            "classicScriptsExecuted": 3,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 148134,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Default",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1380.1867000001948,
+          "totalMs": 1779.4800999981817,
+          "browserCpuMs": 1250.0,
+          "peakRssBytes": 170815488,
+          "retainedRssBytes": 124747776,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 148134,
+            "processedBodyBytes": 148134,
+            "scriptsAcquired": 3,
+            "classicScriptsExecuted": 3,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 148134,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Manual",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1363.6799000087194,
+          "totalMs": 1780.210500000976,
+          "browserCpuMs": 1093.75,
+          "peakRssBytes": 172879872,
+          "retainedRssBytes": 127475712,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 148134,
+            "processedBodyBytes": 148134,
+            "scriptsAcquired": 3,
+            "classicScriptsExecuted": 3,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 148134,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Auto",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1374.4945999933407,
+          "totalMs": 1806.8701999873156,
+          "browserCpuMs": 1062.5,
+          "peakRssBytes": 158842880,
+          "retainedRssBytes": 117923840,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 148134,
+            "processedBodyBytes": 148134,
+            "scriptsAcquired": 3,
+            "classicScriptsExecuted": 3,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 148134,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Manual",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1446.0443999996642,
+          "totalMs": 1871.8757000024198,
+          "browserCpuMs": 1062.5,
+          "peakRssBytes": 171933696,
+          "retainedRssBytes": 118120448,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 148134,
+            "processedBodyBytes": 148134,
+            "scriptsAcquired": 3,
+            "classicScriptsExecuted": 3,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 148134,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Auto",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1428.3448000060162,
+          "totalMs": 1841.8992000079015,
+          "browserCpuMs": 1281.25,
+          "peakRssBytes": 176144384,
+          "retainedRssBytes": 127287296,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 148134,
+            "processedBodyBytes": 148134,
+            "scriptsAcquired": 3,
+            "classicScriptsExecuted": 3,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 148134,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Default",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 1418.64629999327,
+          "totalMs": 1833.803399989847,
+          "browserCpuMs": 921.875,
+          "peakRssBytes": 167387136,
+          "retainedRssBytes": 124452864,
+          "captureError": "",
+          "metrics": {
+            "requests": 5,
+            "responseAcquisitions": 5,
+            "encodedBodyBytes": 148134,
+            "processedBodyBytes": 148134,
+            "scriptsAcquired": 3,
+            "classicScriptsExecuted": 3,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 148134,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        }
+      ],
+      "sumTrainingAndValidationTrialMs": 227646.87599999888
+    },
+    "wikipedia": {
+      "binarySHA256": "95de8c94593c957e60f8578d4483687fd58e643aca3960970ace937c77192ee8",
+      "captureSHA256": "2924b39dfdb48790ff714bbe156084d3ddb58f9412c1733174b07358039c42e7",
+      "startedAt": "2026-10-05T04:32:58Z",
+      "replayStable": true,
+      "summary": {
+        "Default": {
+          "passes": 5,
+          "trials": 5,
+          "elapsedMs": 10909.199499990791,
+          "browserCpuMs": 17781.25,
+          "peakRssBytes": 447737856,
+          "retainedRssBytes": 217985024,
+          "requests": 0,
+          "responseAcquisitions": 0,
+          "encodedBodyBytes": 0,
+          "processedBodyBytes": 7024306,
+          "scriptsAcquired": 0,
+          "classicScriptsExecuted": 30,
+          "classicScriptsSuppressed": 0,
+          "peakRetainedBodyBytes": 7024306,
+          "retainedBodyBytes": 0
+        },
+        "Manual": {
+          "passes": 5,
+          "trials": 5,
+          "elapsedMs": 6428.476800007047,
+          "browserCpuMs": 8515.625,
+          "peakRssBytes": 329703424,
+          "retainedRssBytes": 177381376,
+          "requests": 0,
+          "responseAcquisitions": 0,
+          "encodedBodyBytes": 0,
+          "processedBodyBytes": 2812481,
+          "scriptsAcquired": 0,
+          "classicScriptsExecuted": 12,
+          "classicScriptsSuppressed": 0,
+          "peakRetainedBodyBytes": 2812481,
+          "retainedBodyBytes": 0
+        },
+        "Auto": {
+          "passes": 5,
+          "trials": 5,
+          "elapsedMs": 10860.2830000018,
+          "browserCpuMs": 16953.125,
+          "peakRssBytes": 467750912,
+          "retainedRssBytes": 223092736,
+          "requests": 0,
+          "responseAcquisitions": 0,
+          "encodedBodyBytes": 0,
+          "processedBodyBytes": 7024306,
+          "scriptsAcquired": 0,
+          "classicScriptsExecuted": 30,
+          "classicScriptsSuppressed": 0,
+          "peakRetainedBodyBytes": 7024306,
+          "retainedBodyBytes": 0
+        }
+      },
+      "manualPolicy": {
+        "rules": [
+          {
+            "id": "documents",
+            "match": {
+              "kinds": ["document"]
+            },
+            "work": {}
+          },
+          {
+            "id": "other-resources",
+            "match": {},
+            "work": {
+              "network": false,
+              "cacheRead": false
+            }
+          }
+        ]
+      },
+      "selectedPolicy": {},
+      "selectedSuppressClassic": [],
+      "selectedOrigin": "default",
+      "discoveredActions": [
+        {
+          "id": "remove-kind-favicon",
+          "action": "block",
+          "match": {
+            "kinds": ["favicon"]
+          },
+          "work": {
+            "cacheRead": false,
+            "network": false
+          }
+        },
+        {
+          "id": "remove-kind-image",
+          "action": "block",
+          "match": {
+            "kinds": ["image"]
+          },
+          "work": {
+            "cacheRead": false,
+            "network": false
+          }
+        },
+        {
+          "id": "remove-kind-script",
+          "action": "block",
+          "match": {
+            "kinds": ["script"]
+          },
+          "work": {
+            "cacheRead": false,
+            "network": false
+          }
+        },
+        {
+          "id": "remove-kind-stylesheet",
+          "action": "block",
+          "match": {
+            "kinds": ["stylesheet"]
+          },
+          "work": {
+            "cacheRead": false,
+            "network": false
+          }
+        }
+      ],
+      "optimizerTrials": 1,
+      "optimizerWallMs": 6795.435799998813,
+      "optimizerMemoHits": 0,
+      "conclusion": "offline specialization validated",
+      "runs": [
+        {
+          "label": "stability",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 11089.464399992721,
+          "totalMs": 11710.822099994402,
+          "browserCpuMs": 18296.875,
+          "peakRssBytes": 453681152,
+          "retainedRssBytes": 221941760,
+          "captureError": "",
+          "metrics": {
+            "requests": 0,
+            "responseAcquisitions": 0,
+            "encodedBodyBytes": 0,
+            "processedBodyBytes": 7021572,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 30,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 7021572,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "stability",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 10743.824099990888,
+          "totalMs": 11193.558200000552,
+          "browserCpuMs": 17000.0,
+          "peakRssBytes": 458289152,
+          "retainedRssBytes": 216395776,
+          "captureError": "",
+          "metrics": {
+            "requests": 0,
+            "responseAcquisitions": 0,
+            "encodedBodyBytes": 0,
+            "processedBodyBytes": 7021572,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 30,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 7021572,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "stability",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 10703.331400000025,
+          "totalMs": 11106.73400000087,
+          "browserCpuMs": 17140.625,
+          "peakRssBytes": 445509632,
+          "retainedRssBytes": 220442624,
+          "captureError": "",
+          "metrics": {
+            "requests": 0,
+            "responseAcquisitions": 0,
+            "encodedBodyBytes": 0,
+            "processedBodyBytes": 7024306,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 30,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 7024306,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "manual-validation",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 6633.305199997267,
+          "totalMs": 7056.254299997818,
+          "browserCpuMs": 8203.125,
+          "peakRssBytes": 326303744,
+          "retainedRssBytes": 177324032,
+          "captureError": "",
+          "metrics": {
+            "requests": 0,
+            "responseAcquisitions": 0,
+            "encodedBodyBytes": 0,
+            "processedBodyBytes": 2812481,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 12,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 2812481,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "runtime-ablation",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 7333.046800005832,
+          "totalMs": 7747.166700006346,
+          "browserCpuMs": 11296.875,
+          "peakRssBytes": 389623808,
+          "retainedRssBytes": 216944640,
+          "captureError": "",
+          "metrics": {
+            "requests": 0,
+            "responseAcquisitions": 0,
+            "encodedBodyBytes": 0,
+            "processedBodyBytes": 4765414,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 12,
+            "classicScriptsSuppressed": 4,
+            "peakRetainedBodyBytes": 4765414,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "search",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 6375.399700002163,
+          "totalMs": 6792.734300004668,
+          "browserCpuMs": 7562.5,
+          "peakRssBytes": 335708160,
+          "retainedRssBytes": 178946048,
+          "captureError": "",
+          "actions": [
+            {
+              "id": "remove-kind-favicon",
+              "action": "block",
+              "match": {
+                "kinds": ["favicon"]
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              }
+            },
+            {
+              "id": "remove-kind-image",
+              "action": "block",
+              "match": {
+                "kinds": ["image"]
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              }
+            },
+            {
+              "id": "remove-kind-script",
+              "action": "block",
+              "match": {
+                "kinds": ["script"]
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              }
+            },
+            {
+              "id": "remove-kind-stylesheet",
+              "action": "block",
+              "match": {
+                "kinds": ["stylesheet"]
+              },
+              "work": {
+                "cacheRead": false,
+                "network": false
+              }
+            }
+          ],
+          "metrics": {
+            "requests": 0,
+            "responseAcquisitions": 0,
+            "encodedBodyBytes": 0,
+            "processedBodyBytes": 2812481,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 12,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 2812481,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Default",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 10909.199499990791,
+          "totalMs": 11312.483899993822,
+          "browserCpuMs": 17078.125,
+          "peakRssBytes": 444628992,
+          "retainedRssBytes": 221138944,
+          "captureError": "",
+          "metrics": {
+            "requests": 0,
+            "responseAcquisitions": 0,
+            "encodedBodyBytes": 0,
+            "processedBodyBytes": 7024306,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 30,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 7024306,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Manual",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 6407.888900008402,
+          "totalMs": 6820.645700005116,
+          "browserCpuMs": 8593.75,
+          "peakRssBytes": 329703424,
+          "retainedRssBytes": 175996928,
+          "captureError": "",
+          "metrics": {
+            "requests": 0,
+            "responseAcquisitions": 0,
+            "encodedBodyBytes": 0,
+            "processedBodyBytes": 2812481,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 12,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 2812481,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Auto",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 10726.837900001556,
+          "totalMs": 11164.877600007458,
+          "browserCpuMs": 16031.25,
+          "peakRssBytes": 444301312,
+          "retainedRssBytes": 219029504,
+          "captureError": "",
+          "metrics": {
+            "requests": 0,
+            "responseAcquisitions": 0,
+            "encodedBodyBytes": 0,
+            "processedBodyBytes": 7024306,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 30,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 7024306,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Manual",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 6428.476800007047,
+          "totalMs": 6875.471299994388,
+          "browserCpuMs": 8515.625,
+          "peakRssBytes": 327004160,
+          "retainedRssBytes": 179445760,
+          "captureError": "",
+          "metrics": {
+            "requests": 0,
+            "responseAcquisitions": 0,
+            "encodedBodyBytes": 0,
+            "processedBodyBytes": 2812481,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 12,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 2812481,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Auto",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 11678.18790000456,
+          "totalMs": 12103.057400003308,
+          "browserCpuMs": 16953.125,
+          "peakRssBytes": 467763200,
+          "retainedRssBytes": 223600640,
+          "captureError": "",
+          "metrics": {
+            "requests": 0,
+            "responseAcquisitions": 0,
+            "encodedBodyBytes": 0,
+            "processedBodyBytes": 7024306,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 30,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 7024306,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Default",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 11254.779900002177,
+          "totalMs": 11692.975300000398,
+          "browserCpuMs": 17781.25,
+          "peakRssBytes": 464941056,
+          "retainedRssBytes": 215736320,
+          "captureError": "",
+          "metrics": {
+            "requests": 0,
+            "responseAcquisitions": 0,
+            "encodedBodyBytes": 0,
+            "processedBodyBytes": 7024306,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 30,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 7024306,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Auto",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 10966.18839999428,
+          "totalMs": 11374.117300001672,
+          "browserCpuMs": 16921.875,
+          "peakRssBytes": 452976640,
+          "retainedRssBytes": 225382400,
+          "captureError": "",
+          "metrics": {
+            "requests": 0,
+            "responseAcquisitions": 0,
+            "encodedBodyBytes": 0,
+            "processedBodyBytes": 7024306,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 30,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 7024306,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Default",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 10612.43550000654,
+          "totalMs": 11011.060499993619,
+          "browserCpuMs": 17203.125,
+          "peakRssBytes": 447737856,
+          "retainedRssBytes": 221974528,
+          "captureError": "",
+          "metrics": {
+            "requests": 0,
+            "responseAcquisitions": 0,
+            "encodedBodyBytes": 0,
+            "processedBodyBytes": 7021572,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 30,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 7021572,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Manual",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 6466.411000001244,
+          "totalMs": 6889.148300004308,
+          "browserCpuMs": 9109.375,
+          "peakRssBytes": 332603392,
+          "retainedRssBytes": 177352704,
+          "captureError": "",
+          "metrics": {
+            "requests": 0,
+            "responseAcquisitions": 0,
+            "encodedBodyBytes": 0,
+            "processedBodyBytes": 2812481,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 12,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 2812481,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Default",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 10816.21200000518,
+          "totalMs": 11270.189899994875,
+          "browserCpuMs": 18125.0,
+          "peakRssBytes": 467509248,
+          "retainedRssBytes": 216530944,
+          "captureError": "",
+          "metrics": {
+            "requests": 0,
+            "responseAcquisitions": 0,
+            "encodedBodyBytes": 0,
+            "processedBodyBytes": 7024306,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 30,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 7024306,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Manual",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 6415.678799996385,
+          "totalMs": 6837.188499994227,
+          "browserCpuMs": 7734.375,
+          "peakRssBytes": 334426112,
+          "retainedRssBytes": 177381376,
+          "captureError": "",
+          "metrics": {
+            "requests": 0,
+            "responseAcquisitions": 0,
+            "encodedBodyBytes": 0,
+            "processedBodyBytes": 2812481,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 12,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 2812481,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Auto",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 10860.2830000018,
+          "totalMs": 11277.04710001126,
+          "browserCpuMs": 18312.5,
+          "peakRssBytes": 479191040,
+          "retainedRssBytes": 223092736,
+          "captureError": "",
+          "metrics": {
+            "requests": 0,
+            "responseAcquisitions": 0,
+            "encodedBodyBytes": 0,
+            "processedBodyBytes": 7024306,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 30,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 7024306,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Manual",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 6607.066399999894,
+          "totalMs": 7045.513499993831,
+          "browserCpuMs": 7437.5,
+          "peakRssBytes": 329428992,
+          "retainedRssBytes": 177463296,
+          "captureError": "",
+          "metrics": {
+            "requests": 0,
+            "responseAcquisitions": 0,
+            "encodedBodyBytes": 0,
+            "processedBodyBytes": 2812481,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 12,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 2812481,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Auto",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 10789.358300011372,
+          "totalMs": 11230.653100006748,
+          "browserCpuMs": 17500.0,
+          "peakRssBytes": 467750912,
+          "retainedRssBytes": 217169920,
+          "captureError": "",
+          "metrics": {
+            "requests": 0,
+            "responseAcquisitions": 0,
+            "encodedBodyBytes": 0,
+            "processedBodyBytes": 7024306,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 30,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 7024306,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        },
+        {
+          "label": "benchmark-Default",
+          "status": "PASS",
+          "workloadStatus": "PASS",
+          "exitCode": 0,
+          "elapsedMs": 10934.753499997896,
+          "totalMs": 11341.339100006735,
+          "browserCpuMs": 17937.5,
+          "peakRssBytes": 446263296,
+          "retainedRssBytes": 217985024,
+          "captureError": "",
+          "metrics": {
+            "requests": 0,
+            "responseAcquisitions": 0,
+            "encodedBodyBytes": 0,
+            "processedBodyBytes": 7024306,
+            "scriptsAcquired": 0,
+            "classicScriptsExecuted": 30,
+            "classicScriptsSuppressed": 0,
+            "peakRetainedBodyBytes": 7024306,
+            "retainedBodyBytes": 0,
+            "captureMisses": null,
+            "unsupported": null,
+            "violations": null,
+            "active": 0
+          }
+        }
+      ],
+      "sumTrainingAndValidationTrialMs": 55607.269600004656
+    }
+  },
+  "preservedEarlierCoverageFailure": [
+    {
+      "label": "benchmark-Default",
+      "status": "UNSUPPORTED_REPLAY",
+      "workloadStatus": "PASS",
+      "captureMisses": ["GET https://en.wikipedia.org/static/favicon/wikipedia.ico"],
+      "binarySHA256": "b44e3565c123e2611041052c3f8711908fb380dec2c239944af979da09d0f426"
+    }
+  ],
+  "sourceNetworkProof": {
+    "async": {
+      "sourceRequests": 5,
+      "recordedTransportRequests": 5,
+      "noNetworkDuringReplay": true
+    },
+    "react": {
+      "sourceRequests": 5,
+      "recordedTransportRequests": 5,
+      "noNetworkDuringReplay": true
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "rules": [
+    {
+      "id": "no-speculation",
+      "match": {"mechanisms": ["preload", "prefetch"]},
+      "work": {"network": false, "cacheRead": false}
+    },
+    {
+      "id": "guide-needs-first-party-documents-and-modules",
+      "match": {"hosts": ["vuejs.org"], "kinds": ["document", "script"]},
+      "work": {}
+    },
+    {
+      "id": "no-api-ads-analytics-or-visual-resources",
+      "match": {},
+      "work": {"network": false, "cacheRead": false}
+    }
+  ]
+}
