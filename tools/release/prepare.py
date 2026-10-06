@@ -30,13 +30,13 @@ def digest(path):
 
 def verified_ci_binary(run_id, revision, host, destination):
     """Copy the successful CI job's executable without rebuilding or altering it."""
-    run_data = json.loads(run('gh', 'run', 'view', str(run_id), '--repo', 'moreveal/mimic',
+    run_data = json.loads(run('gh', 'run', 'view', str(run_id), '--repo', 'mimic-browser/runtime',
                               '--json', 'headSha,status,conclusion', capture=True))
     if (run_data['headSha'] != revision or run_data['status'] != 'completed'
             or run_data['conclusion'] != 'success'):
         raise RuntimeError('CI run does not successfully validate the binary source revision')
     with tempfile.TemporaryDirectory(prefix='mimic-ci-binary-') as temp:
-        run('gh', 'run', 'download', str(run_id), '--repo', 'moreveal/mimic',
+        run('gh', 'run', 'download', str(run_id), '--repo', 'mimic-browser/runtime',
             '--name', f'mimic-{host.title()}-amd64', '--dir', temp)
         source = Path(temp) / destination.name
         if not source.is_file():
@@ -92,7 +92,7 @@ def resolve_unbundled_links(stage, source_revision):
             if not source.is_relative_to(ROOT) or not source.exists():
                 return match.group(0)
             relative = source.relative_to(ROOT).as_posix()
-            return f'](https://github.com/moreveal/mimic/blob/{source_revision}/{relative})'
+            return f'](https://github.com/mimic-browser/runtime/blob/{source_revision}/{relative})'
         updated = re.sub(r'\]\(([^)]+)\)', replace, content)
         if updated != content:
             document.write_text(updated, encoding='utf-8', newline='\n')
@@ -194,15 +194,15 @@ def main():
     inventory = notices(stage / 'THIRD_PARTY_NOTICES.txt')
     (stage / 'README.txt').write_text(
         f'Mimic {args.version} Public Beta\n\n'
-        'Start here: https://github.com/moreveal/mimic/blob/main/docs/getting-started.md\n'
+        'Start here: https://github.com/mimic-browser/runtime/blob/main/docs/getting-started.md\n'
         'Runnable examples: examples/README.md.\n'
         'License: LICENSE (Prosperity Public License 3.0.0). Third-party terms: THIRD_PARTY_NOTICES.txt.\n'
-        'Source, documentation, and downloads: https://github.com/moreveal/mimic\n'
+        'Source, documentation, and downloads: https://github.com/mimic-browser/runtime\n'
         'Windows amd64 or Linux amd64 (glibc 2.39+, libgcc_s, installed fonts).\n'
         'No Go, Rust, Chromium, display server, or GPU is needed to run Mimic.\n'
         'Node.js 22+ is only needed for the example clients.\n', encoding='utf-8')
     (stage / 'README.md').write_text(
-        '# Mimic Public Beta\n\n[Documentation](https://github.com/moreveal/mimic) · '
+        '# Mimic Public Beta\n\n[Documentation](https://github.com/mimic-browser/runtime) · '
         '[Examples](examples/README.md) · [Release notes](RELEASE_NOTES.md) · [License](LICENSE)\n\n'
         'Website: https://mimic.boo\n', encoding='utf-8')
     guide = stage / 'docs/compatibility/crawlee-playwright.md'
@@ -255,7 +255,7 @@ def main():
         'version': args.version, 'platform': f'{host}-amd64',
         'sourceRevision': source_revision,
         'packagingRevision': packaging_revision,
-        'ciRun': f'https://github.com/moreveal/mimic/actions/runs/{args.ci_run}' if args.ci_run else None,
+        'ciRun': f'https://github.com/mimic-browser/runtime/actions/runs/{args.ci_run}' if args.ci_run else None,
         'binariesReusedUnchanged': bool(args.ci_run),
         'goVersion': run('go', 'version', capture=True).strip(),
         'archive': archive.name, 'sha256': digest(archive), 'size': archive.stat().st_size,

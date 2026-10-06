@@ -1,6 +1,6 @@
 # Mimic releases
 
-Release archives are packaged from a clean, committed `moreveal/mimic` revision.
+Release archives are packaged from a clean, committed `mimic-browser/runtime` revision.
 Windows and Linux must use the same binary source revision. The Package release
 CI workflow uploads verified archives and receipts. Download both artifacts into
 `.build/releases/VERSION/` before publishing. The receipts identify both the
@@ -74,7 +74,7 @@ python tools/release/prepare.py --version v0.1.9 --ci-run 36577485575 --binary-s
 
 ## Publish
 
-Push the exact release commit to `moreveal/mimic`, then run:
+Push the exact release commit to `mimic-browser/runtime`, then run:
 
 ```powershell
 python tools/release/publish.py --version v0.1.6

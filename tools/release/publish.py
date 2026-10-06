@@ -10,7 +10,7 @@ import tempfile
 
 from prepare import ROOT, clean_revision, digest, run
 
-REPO = 'moreveal/mimic'
+REPO = 'mimic-browser/runtime'
 CHECKS = {'runtimecheck:v8', 'runtimecheck:quickjs', 'runtimecheck:goja',
           'examples:puppeteer', 'examples:playwright', 'examples:concurrency'}
 
