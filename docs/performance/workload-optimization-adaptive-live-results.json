@@ -1,0 +1,170 @@
+{
+  "date": "2026-10-06",
+  "binarySHA256": "83ed9b8bafed21d6bf0641184640d3a151c55cc593a97930c242cf4fa10ddc2b",
+  "clientSHA256": "cf49a8f747ac7d7cc803d65275129e54933214314d029451a6c87c99e0b3a960",
+  "playwright": "1.58.2",
+  "url": "https://gitlab.com/gitlab-org/gitlab",
+  "evidence": ".build\\adaptive-gitlab-20261006",
+  "trainingMs": 297106.2937,
+  "searchMs": 240072.6363,
+  "trials": 18,
+  "trainingBodyBytes": 1480238,
+  "localReplay": {
+    "Manual": {
+      "MinBodyBytes": 1109441,
+      "MaxBodyBytes": 1109441,
+      "BodyBytes": 1109441,
+      "Responses": 51,
+      "Scripts": 40,
+      "ElapsedMs": 3578.4108,
+      "CPUms": 4953.125,
+      "PeakRSS": 337870848,
+      "RetainedRSS": 146071552,
+      "Passes": 3,
+      "Trials": 3
+    },
+    "Optimized": {
+      "MinBodyBytes": 979837,
+      "MaxBodyBytes": 979837,
+      "BodyBytes": 979837,
+      "Responses": 48,
+      "Scripts": 37,
+      "ElapsedMs": 3600.0218,
+      "CPUms": 5359.375,
+      "PeakRSS": 336252928,
+      "RetainedRSS": 145686528,
+      "Passes": 3,
+      "Trials": 3
+    }
+  },
+  "liveRuns": [
+    {
+      "run": "live-1-auto",
+      "workload": "PASS",
+      "captureStatus": "UNSUPPORTED_CAPTURE",
+      "bodyBytes": 989858,
+      "responses": 52,
+      "elapsedMs": 5455.0848999933805,
+      "cpuMs": 5968.75,
+      "peakRSS": 355696640,
+      "scriptsExecuted": 37,
+      "unsupported": [
+        "incomplete capture response: https://gitlab.com/gitlab-org/gitlab/-/refs/master/logs_tree/?format=json&offset=0&ref_type=HEADS",
+        "incomplete capture response: https://gitlab.com/gitlab-org/gitlab/-/blob/master/README.md?format=json&ref_type=heads&viewer=rich"
+      ],
+      "violations": null,
+      "active": 0
+    },
+    {
+      "run": "live-1-manual",
+      "workload": "PASS",
+      "captureStatus": "PASS",
+      "bodyBytes": 1109594,
+      "responses": 51,
+      "elapsedMs": 4940.536599984625,
+      "cpuMs": 5828.125,
+      "peakRSS": 356630528,
+      "scriptsExecuted": 40,
+      "unsupported": null,
+      "violations": null,
+      "active": 0
+    },
+    {
+      "run": "live-2-auto",
+      "workload": "PASS",
+      "captureStatus": "UNSUPPORTED_CAPTURE",
+      "bodyBytes": 989832,
+      "responses": 52,
+      "elapsedMs": 5381.483600009233,
+      "cpuMs": 6343.75,
+      "peakRSS": 357502976,
+      "scriptsExecuted": 37,
+      "unsupported": [
+        "incomplete capture response: https://gitlab.com/gitlab-org/gitlab/-/refs/master/logs_tree/?format=json&offset=0&ref_type=HEADS",
+        "incomplete capture response: https://gitlab.com/gitlab-org/gitlab/-/blob/master/README.md?format=json&ref_type=heads&viewer=rich"
+      ],
+      "violations": null,
+      "active": 0
+    },
+    {
+      "run": "live-2-manual",
+      "workload": "PASS",
+      "captureStatus": "PASS",
+      "bodyBytes": 1109244,
+      "responses": 51,
+      "elapsedMs": 4917.591999983415,
+      "cpuMs": 5875.0,
+      "peakRSS": 353763328,
+      "scriptsExecuted": 40,
+      "unsupported": null,
+      "violations": null,
+      "active": 0
+    },
+    {
+      "run": "live-3-auto",
+      "workload": "PASS",
+      "captureStatus": "UNSUPPORTED_CAPTURE",
+      "bodyBytes": 989843,
+      "responses": 52,
+      "elapsedMs": 9372.801000019535,
+      "cpuMs": 6093.75,
+      "peakRSS": 353624064,
+      "scriptsExecuted": 37,
+      "unsupported": [
+        "incomplete capture response: https://gitlab.com/gitlab-org/gitlab/-/refs/master/logs_tree/?format=json&offset=0&ref_type=HEADS",
+        "incomplete capture response: https://gitlab.com/gitlab-org/gitlab/-/blob/master/README.md?format=json&ref_type=heads&viewer=rich"
+      ],
+      "violations": null,
+      "active": 0
+    },
+    {
+      "run": "live-3-manual",
+      "workload": "PASS",
+      "captureStatus": "PASS",
+      "bodyBytes": 1110173,
+      "responses": 51,
+      "elapsedMs": 4960.353200003738,
+      "cpuMs": 5656.25,
+      "peakRSS": 357093376,
+      "scriptsExecuted": 40,
+      "unsupported": null,
+      "violations": null,
+      "active": 0
+    }
+  ],
+  "liveMedians": {
+    "manual": {
+      "bodyBytes": 1109594,
+      "responses": 51,
+      "elapsedMs": 4940.536599984625,
+      "cpuMs": 5828.125,
+      "peakRSS": 356630528,
+      "scriptsExecuted": 40
+    },
+    "auto": {
+      "bodyBytes": 989843,
+      "responses": 52,
+      "elapsedMs": 5455.0848999933805,
+      "cpuMs": 6093.75,
+      "peakRSS": 355696640,
+      "scriptsExecuted": 37
+    }
+  },
+  "manualDocumentBodies": [
+    {
+      "run": "live-1-manual",
+      "bytes": 65854,
+      "sha256": "fc519f56a1ac222a76bacacdea51dbc7a0021e32bc091ecd3df5c79e71e336b0"
+    },
+    {
+      "run": "live-2-manual",
+      "bytes": 65854,
+      "sha256": "0dd76d0a01c74106164df1189b46d99d04de335db78da4cb2980cb83b628d4b7"
+    },
+    {
+      "run": "live-3-manual",
+      "bytes": 65854,
+      "sha256": "d4dc929b82d5911bdca4b585a37eae4a6129d810abffb16cb0dc9f5f81c0891a"
+    }
+  ]
+}

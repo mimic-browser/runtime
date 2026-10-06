@@ -4618,3 +4618,13 @@ navigation reset and script source identity. A local HTTP browser regression
 validates two held-out HTML revisions while retaining the known exclusion, then
 validates normal acquisition on an untrained route. No new public-site savings
 are claimed; the previous GitLab live fallback remains historical evidence.
+
+### 2026-10-06: independent guest GitLab live validation
+
+The unchanged guest content/Code-menu workload passed fresh training and three
+subsequent installed-profile live trials. Auto acquired a median 989,843 encoded
+body bytes versus strong Manual's 1,109,594 (10.79% reduction); both passed 3/3.
+CPU/time and acquired response count did not improve. Auto live recording is
+unsupported because intentional header-only responses cannot form a complete
+replay capture; workload success and capture status are reported separately.
+See [method, negative results and numeric evidence](workload-optimization-adaptive-live.md).
