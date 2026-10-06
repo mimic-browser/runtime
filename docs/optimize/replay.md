@@ -29,3 +29,13 @@ original unsupported run remains unsupported. Removing speculation can change
 cookies or headers and require separate evidence. Mutable and Set-Cookie
 responses are not silently merged as immutable resources. Installed guarded
 profiles are validated again; uncovered final replay prevents installation.
+
+### Intentionally limited response bodies
+
+When an enforced resource policy acquires headers only or a body prefix, the
+capture records that explicit outcome, the received bytes and their integrity
+hash. This is complete evidence of a limited acquisition, not a complete HTTP
+body. Replay can serve the recorded prefix under the same or a stricter limit.
+Reading beyond it is UNSUPPORTED; it never fabricates an empty successful body
+or contacts the live network. An unexplained early close or failed read is still
+incomplete evidence. Full-body captures remain usable by limited-body trials.

@@ -688,6 +688,13 @@ func (l *Loader) Load(ctx context.Context, r Request) (response Response, loadEr
 		l.resourcePolicy.recordBody(0, int64(len(encodedBody)), bodyMode)
 	}
 	stopBodyCancellation()
+	// Tell recording transports why this successful read stops early. Ordinary
+	// Close, cancellation and failed reads must not become replayable truncation.
+	if err == nil && ctx.Err() == nil && bodyMode != "full" {
+		if observer, ok := raw.Body.(interface{ MarkPolicyLimitedBody() }); ok {
+			observer.MarkPolicyLimitedBody()
+		}
+	}
 	closeErr := raw.Body.Close()
 	if contextErr := ctx.Err(); contextErr != nil {
 		return Response{}, contextErr

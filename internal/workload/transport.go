@@ -275,7 +275,7 @@ func validRecordedResponse(e *entry) bool {
 	if e.Failure == "context-canceled" {
 		return e.Status == 0 && e.BodyBytes == 0
 	}
-	return (e.Failure == "" || e.Failure == "context-canceled-body") && e.Status >= 100 && e.Status <= 599
+	return (e.Failure == "" || e.Failure == "context-canceled-body" || e.Failure == "policy-limited-body") && e.Status >= 100 && e.Status <= 599
 }
 
 func ambiguousOccurrences(c capture) map[string]bool {
@@ -795,17 +795,28 @@ func immutableRepresentation(e *entry) bool {
 
 type observedBody struct {
 	io.ReadCloser
-	ctx      context.Context
-	mu       sync.Mutex
-	session  *Session
-	entry    *entry
-	record   bool
-	response *http.Response
-	digest   hashpkg.Hash
-	read     int64
-	eof      bool
-	closed   bool
-	finish   func()
+	ctx           context.Context
+	mu            sync.Mutex
+	session       *Session
+	entry         *entry
+	record        bool
+	response      *http.Response
+	digest        hashpkg.Hash
+	read          int64
+	eof           bool
+	closed        bool
+	policyLimited bool
+	finish        func()
+}
+
+// MarkPolicyLimitedBody is called only by the loader after a successful
+// policy-limited acquisition. It does not convert arbitrary Close into success.
+func (b *observedBody) MarkPolicyLimitedBody() {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if !b.closed {
+		b.policyLimited = true
+	}
 }
 
 func (b *observedBody) Read(p []byte) (int, error) {
@@ -853,6 +864,13 @@ func (b *observedBody) Read(p []byte) (int, error) {
 		err = b.session.violationLocked("capture body integrity mismatch")
 		b.session.mu.Unlock()
 	}
+	if err == io.EOF && !b.record && b.entry != nil && b.entry.Failure == "policy-limited-body" {
+		b.session.mu.Lock()
+		message := "recorded response body was intentionally limited by policy; requested bytes are not covered: " + b.entry.URL
+		b.session.metrics.Unsupported = append(b.session.metrics.Unsupported, message)
+		b.session.mu.Unlock()
+		return n, fmt.Errorf("unsupported workload replay: %s", message)
+	}
 	return n, err
 }
 func (b *observedBody) Close() error {
@@ -876,6 +894,11 @@ func (b *observedBody) Close() error {
 		b.entry.BodySHA256 = hex.EncodeToString(b.digest.Sum(nil))
 		b.entry.BodyBytes = b.read
 		b.entry.Complete = b.eof || (b.response.ContentLength >= 0 && b.read == b.response.ContentLength)
+		if !b.entry.Complete && b.policyLimited && b.ctx.Err() == nil && err == nil {
+			b.entry.Failure = "policy-limited-body"
+			// Complete evidence of an intentional prefix, not a complete body.
+			b.entry.Complete = true
+		}
 		if !b.entry.Complete && b.ctx.Err() == context.Canceled {
 			// The environment contains a received prefix and browser-owned
 			// cancellation, not a complete HTTP response. Replay waits for that
