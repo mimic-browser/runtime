@@ -494,7 +494,7 @@ func Main(arguments []string) int {
 	if ctx.Err() != nil {
 		return fail("Optimization cancelled; completed evidence was preserved")
 	}
-	profile := workload.Profile{Format: "mimic-workload-profile", Version: 1, RuntimeABI: workload.RuntimeABI, Name: *name, Engine: *engine, BrowserMode: *mode, Chrome: 152, BuildSHA256: binaryID, CreatedAt: time.Now().UTC().Format(time.RFC3339), Confidence: "empirical-document-guarded", Documents: uniqueDocuments(documents), Requests: uniqueRequests(requests), CaptureSHA256: captureIDs, VolatileQuery: volatile, Plan: workload.ExecutionPlan{Resources: network.ExpandedRules(best.Policy), SuppressClassic: best.Suppressed}}
+	profile := workload.Profile{Format: "mimic-workload-profile", Version: 1, RuntimeABI: workload.RuntimeABI, Name: *name, Engine: *engine, BrowserMode: *mode, Chrome: 152, BuildSHA256: binaryID, CreatedAt: time.Now().UTC().Format(time.RFC3339), Confidence: "empirical-request-scoped", Documents: uniqueDocuments(documents), Requests: uniqueRequests(requests), CaptureSHA256: captureIDs, VolatileQuery: volatile, Plan: workload.ExecutionPlan{Resources: network.ExpandedRules(best.Policy), SuppressClassic: best.Suppressed}}
 	candidatePath := filepath.Join(directory, "finalist.mprofile")
 	if err = workload.WriteProfile(candidatePath, profile); err != nil {
 		return fail(err.Error())
@@ -604,7 +604,7 @@ func Main(arguments []string) int {
 		}
 		return path
 	}()))
-	ui.line("NOTE", fmt.Sprintf("Validated against %d recorded state(s). Profile admission is document-guarded, not a proof of future site behavior. Only behavior your workload verifies is covered.", len(captures)))
+	ui.line("NOTE", fmt.Sprintf("Validated against %d recorded state(s). Known request inputs are specialized even when HTML changes; unknown requests use general Mimic. This is not a proof of future site behavior. Only behavior your workload verifies is covered.", len(captures)))
 	fmt.Fprintln(ui.out, "Learn more: "+documentation+"safety/")
 	fmt.Fprintln(ui.out, "Detailed evidence: "+filepath.Join(directory, "report.json"))
 	return 0

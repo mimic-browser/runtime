@@ -4599,3 +4599,22 @@ default dynamic scenarios fail eligibility. No consistent CPU/time benefit or
 future generalization is claimed. See the
 [multi-state/heavy report](workload-optimization-multistate-heavy.md) and
 [numeric evidence](workload-optimization-multistate-heavy-results.json).
+
+### 2026-10-06: request-scoped live profile admission
+
+Replaced the all-or-nothing document-body hash gate with recorded document
+URL/status admission and individual exact request-input coverage. HTML content
+and nonce changes no longer discard unrelated network exclusions. Unknown
+routes/requests use normal acquisition; no automatic path, header or payload
+normalization was introduced. Classic suppression still checks exact source bytes
+and now requires recorded script coverage for the current route. Captures retain
+exact digests and strict offline replay. This is empirical generalization, not
+semantic drift detection or rollback. Old profile confidence contracts are
+rejected and require retraining.
+
+Focused tests cover changed HTML, new resource acquisition/execution, observed
+new data, unknown route/status/source/query/body/header fallback, Page isolation,
+navigation reset and script source identity. A local HTTP browser regression
+validates two held-out HTML revisions while retaining the known exclusion, then
+validates normal acquisition on an untrained route. No new public-site savings
+are claimed; the previous GitLab live fallback remains historical evidence.

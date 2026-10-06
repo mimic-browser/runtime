@@ -143,7 +143,7 @@ func Run() {
 	options.ExecutionProfile = activeProfile
 	options.ProfileNote = func(note string) { log.Print(note) }
 	if activeProfile != nil {
-		log.Printf("Workload profile %s: %d recorded states; empirically validated, document-guarded. Only asserted behavior is covered. https://mimic.boo/docs/optimize/safety/", *profilePath, len(activeProfile.CaptureSHA256))
+		log.Printf("Workload profile %s: %d recorded states; empirically validated, request-scoped. Only asserted behavior is covered. https://mimic.boo/docs/optimize/safety/", *profilePath, len(activeProfile.CaptureSHA256))
 	}
 	var experiment *workload.Session
 	if *workloadControl == "" && (*workloadCapture != "" || *workloadReplay != "" || *workloadPlan != "") {

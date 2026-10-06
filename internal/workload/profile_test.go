@@ -14,7 +14,7 @@ import (
 )
 
 func testProfile() Profile {
-	return Profile{Format: "mimic-workload-profile", Version: 1, RuntimeABI: RuntimeABI, Engine: "v8", BrowserMode: "headful", Chrome: 152, BuildSHA256: strings.Repeat("a", 64), Confidence: "empirical-document-guarded", CaptureSHA256: []string{strings.Repeat("b", 64)}, Documents: []DocumentEvidence{{URL: "https://site.test/", Status: 200, SHA256: hash([]byte("known document"))}}, Requests: []RequestEvidence{{URL: "https://site.test/api/product?id=42", Method: "GET", Kind: "fetch", DocumentURL: "https://site.test/", DocumentSHA256: hash([]byte("known document")), SourceURL: "https://site.test/", BodySHA256: hash(nil), HeadersSHA256: hash([]byte("{}"))}}}
+	return Profile{Format: "mimic-workload-profile", Version: 1, RuntimeABI: RuntimeABI, Engine: "v8", BrowserMode: "headful", Chrome: 152, BuildSHA256: strings.Repeat("a", 64), Confidence: "empirical-request-scoped", CaptureSHA256: []string{strings.Repeat("b", 64)}, Documents: []DocumentEvidence{{URL: "https://site.test/", Status: 200, SHA256: hash([]byte("known document"))}}, Requests: []RequestEvidence{{URL: "https://site.test/api/product?id=42", Method: "GET", Kind: "fetch", DocumentURL: "https://site.test/", DocumentSHA256: hash([]byte("known document")), SourceURL: "https://site.test/", BodySHA256: hash(nil), HeadersSHA256: hash([]byte("{}"))}}}
 }
 
 func TestProfilePageAdmissionUnknownsAndNavigation(t *testing.T) {
@@ -69,8 +69,13 @@ func TestProfilePageAdmissionUnknownsAndNavigation(t *testing.T) {
 		t.Fatal("navigation did not revoke admission before work")
 	}
 	gate.Observe(network.Request{URL: document, Initiator: network.Navigation}, network.Response{URL: document, Status: 200, Body: []byte("changed document")})
+	if !gate.Allows(request) || len(notes) != 0 {
+		t.Fatal("HTML content changes revoked a known request scope")
+	}
+	gate.Allows(network.Request{URL: document, Initiator: network.Navigation})
+	gate.Observe(network.Request{Initiator: network.Navigation}, network.Response{URL: unknown, Status: 200})
 	if gate.Allows(request) || len(notes) != 1 {
-		t.Fatal("changed document did not take the general path")
+		t.Fatal("untrained route did not take the general path")
 	}
 }
 
@@ -79,6 +84,7 @@ func TestProfileScriptIdentityAndRealmBoundary(t *testing.T) {
 	script := "https://site.test/app.js?b=2&a=1"
 	source := "window.ready=true;"
 	p.Plan.SuppressClassic = []string{hash(mustJSON([]string{script, source}))}
+	p.Requests = append(p.Requests, RequestEvidence{DocumentURL: "https://site.test/", SourceURL: "https://site.test/", URL: script, Kind: "script"})
 	g := NewGate(p, nil)
 	u, _ := url.Parse("https://site.test/")
 	g.Observe(network.Request{Initiator: network.Navigation}, network.Response{URL: u, Status: 200, Body: []byte("known document")})
@@ -152,5 +158,77 @@ func TestVolatileNormalizationPreservesSemanticQueryOrder(t *testing.T) {
 	}
 	if normalizeRequestURL(first, keys) == normalizeRequestURL(other, keys) {
 		t.Fatal("nonvolatile semantic parameter order was lost")
+	}
+}
+
+func TestProfileRequestScopeDoesNotBroadenOnHTMLChanges(t *testing.T) {
+	p := testProfile()
+	doc, _ := url.Parse("https://site.test/")
+	resource, _ := url.Parse(p.Requests[0].URL)
+	for _, body := range []string{"<h1>Price 20</h1>", "<h1>Price 30</h1><script nonce='new'>updated()</script>"} {
+		g := NewGate(p, nil)
+		g.Observe(network.Request{Initiator: network.Navigation}, network.Response{URL: doc, Status: 200, Body: []byte(body)})
+		known := network.Request{URL: resource, SourceURL: doc, Initiator: network.Fetch}
+		if !g.Allows(known) {
+			t.Fatal("content disabled known request")
+		}
+		for _, raw := range []string{"https://site.test/api/product?id=43", "https://site.test/api/product?id=42&ts=1", "https://other.test/api/product?id=42"} {
+			u, _ := url.Parse(raw)
+			changed := known
+			changed.URL = u
+			if g.Allows(changed) {
+				t.Fatalf("untrained request admitted: %s", raw)
+			}
+		}
+		changed := known
+		changed.ClientIsWorker = true
+		if g.Allows(changed) {
+			t.Fatal("worker admitted")
+		}
+		g.Allows(network.Request{Initiator: network.Navigation, URL: doc})
+		g.Observe(network.Request{Initiator: network.Navigation}, network.Response{URL: doc, Status: 201})
+		if g.Allows(known) {
+			t.Fatal("unknown document status admitted")
+		}
+	}
+}
+
+func TestProfileVolatilityIsExplicitAndOldAdmissionRejected(t *testing.T) {
+	p := testProfile()
+	p.Confidence = "empirical-document-guarded"
+	if p.Validate() == nil {
+		t.Fatal("old admission silently reinterpreted")
+	}
+	p.Confidence = "empirical-request-scoped"
+	p.VolatileQuery = []string{"ts"}
+	p.Requests[0].URL += "&ts=1"
+	g := NewGate(p, nil)
+	doc, _ := url.Parse(p.Documents[0].URL)
+	g.Observe(network.Request{Initiator: network.Navigation}, network.Response{URL: doc, Status: 200})
+	u, _ := url.Parse("https://site.test/api/product?id=42&ts=999")
+	if !g.Allows(network.Request{URL: u, SourceURL: doc, Initiator: network.Fetch}) {
+		t.Fatal("explicit volatility was lost")
+	}
+}
+
+func TestProfileClassicSuppressionNeedsCoverageOnCurrentRoute(t *testing.T) {
+	p := testProfile()
+	script := "https://site.test/shared.js"
+	source := "optional()"
+	p.Plan.SuppressClassic = []string{hash(mustJSON([]string{script, source}))}
+	doc, _ := url.Parse(p.Documents[0].URL)
+	g := NewGate(p, nil)
+	g.Observe(network.Request{Initiator: network.Navigation}, network.Response{URL: doc, Status: 200})
+	if !g.AdmitClassic(doc.String(), script, source, true) {
+		t.Fatal("script without route coverage suppressed")
+	}
+	p.Requests = append(p.Requests, RequestEvidence{DocumentURL: doc.String(), SourceURL: doc.String(), URL: script, Kind: "script"})
+	g = NewGate(p, nil)
+	g.Observe(network.Request{Initiator: network.Navigation}, network.Response{URL: doc, Status: 200, Body: []byte("new HTML")})
+	if g.AdmitClassic(doc.String(), script, source, true) {
+		t.Fatal("known exact script not suppressed")
+	}
+	if !g.AdmitClassic(doc.String(), script, source+";required()", true) {
+		t.Fatal("changed source suppressed")
 	}
 }

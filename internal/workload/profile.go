@@ -69,7 +69,10 @@ func (p Profile) Validate() error {
 		(p.BrowserMode != "headful" && p.BrowserMode != "headless") || len(p.BuildSHA256) != 64 {
 		return fmt.Errorf("invalid workload profile runtime identity")
 	}
-	if p.Confidence != "empirical-document-guarded" || len(p.CaptureSHA256) == 0 {
+	if p.Confidence != "empirical-request-scoped" {
+		return fmt.Errorf("incompatible profile admission; re-optimize with this Mimic release")
+	}
+	if len(p.CaptureSHA256) == 0 {
 		return fmt.Errorf("workload profile has no validation evidence")
 	}
 	for _, document := range p.Documents {
@@ -210,28 +213,41 @@ func ProfilePath(name string) (string, error) {
 }
 
 // Gate belongs to one Page. Unknown documents and resources take the general
-// path. Exact document identity is evidence, not proof about external server
-// state. A late deviation cannot restore effects already omitted.
+// path. Document digests retain capture provenance; live admission is scoped to
+// recorded routes and individual request inputs, not HTML bytes. This is empirical
+// specialization, not proof about server state or rollback of omitted effects.
 type Gate struct {
-	mu             sync.Mutex
-	profile        Profile
-	documentURL    string
-	documentSHA256 string
-	active         bool
-	note           func(string)
-	suppressed     map[string]bool
-	requests       map[string]bool
+	mu          sync.Mutex
+	profile     Profile
+	documentURL string
+	active      bool
+	note        func(string)
+	suppressed  map[string]bool
+	requests    map[requestScope]bool
 }
 
 func NewGate(p Profile, note func(string)) *Gate {
-	g := &Gate{profile: p, note: note, suppressed: map[string]bool{}, requests: map[string]bool{}}
+	g := &Gate{profile: p, note: note, suppressed: map[string]bool{}, requests: map[requestScope]bool{}}
 	for _, id := range p.Plan.SuppressClassic {
 		g.suppressed[id] = true
 	}
 	for _, r := range p.Requests {
-		g.requests[g.normalize(r.DocumentURL)+" "+r.DocumentSHA256+" "+g.normalize(r.SourceURL)+" "+r.Method+" "+g.normalize(r.URL)+" "+r.Kind+" "+r.BodySHA256+" "+r.HeadersSHA256] = true
+		g.requests[g.scope(r.DocumentURL, r.SourceURL, r.URL, r.Method, r.Kind, r.BodySHA256, r.HeadersSHA256)] = true
 	}
 	return g
+}
+
+// Keep request fields separate: URL or method contents cannot collide with a
+// delimiter-based composite key. No path/payload/header similarity is inferred.
+type requestScope struct {
+	Document, Source, URL, Method, Kind, Body, Headers string
+}
+
+func (g *Gate) scope(document, source, rawURL, method, kind, body, headers string) requestScope {
+	if method == "" {
+		method = "GET"
+	}
+	return requestScope{g.normalize(document), g.normalize(source), g.normalize(rawURL), method, kind, body, headers}
 }
 
 func (g *Gate) normalize(raw string) string {
@@ -259,7 +275,7 @@ func (g *Gate) Allows(r network.Request) bool {
 		method = "GET"
 	}
 	body, headers := RequestIdentity(r)
-	known := r.URL != nil && r.SourceURL != nil && g.requests[g.documentURL+" "+g.documentSHA256+" "+g.normalize(r.SourceURL.String())+" "+method+" "+g.normalize(r.URL.String())+" "+r.ResourceKind()+" "+body+" "+headers]
+	known := r.URL != nil && r.SourceURL != nil && g.requests[g.scope(g.documentURL, r.SourceURL.String(), r.URL.String(), method, r.ResourceKind(), body, headers)]
 	return g.active && known && !r.ClientIsWorker && !r.ClientIsSubframe && r.SourceURL != nil
 }
 
@@ -267,14 +283,12 @@ func (g *Gate) Observe(r network.Request, res network.Response) {
 	if r.ResourceKind() != "document" || r.Initiator != network.Navigation || res.URL == nil || res.Status < 200 || res.Status >= 300 {
 		return
 	}
-	identity := hash(res.Body)
 	documentURL := g.normalize(res.URL.String())
 	g.mu.Lock()
 	g.documentURL = documentURL
-	g.documentSHA256 = identity
 	g.active = false
 	for _, known := range g.profile.Documents {
-		if known.Status == res.Status && g.normalize(known.URL) == documentURL && known.SHA256 == identity {
+		if known.Status == res.Status && g.normalize(known.URL) == documentURL {
 			g.active = true
 			break
 		}
@@ -282,7 +296,7 @@ func (g *Gate) Observe(r network.Request, res network.Response) {
 	active := g.active
 	g.mu.Unlock()
 	if !active && g.note != nil {
-		g.note("Profile assumptions did not match this document; using general Mimic: " + res.URL.String())
+		g.note("Profile has no evidence for this document URL/status; using general Mimic: " + res.URL.String())
 	}
 }
 
@@ -293,7 +307,19 @@ func (g *Gate) AdmitClassic(documentURL, rawURL, source string, external bool) b
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	identityURL := normalizeRequestURL(rawURL, g.profile.VolatileQuery)
-	return !g.active || g.normalize(documentURL) != g.documentURL || !g.suppressed[hash(mustJSON([]string{identityURL, source}))]
+	if !g.active || g.normalize(documentURL) != g.documentURL || !g.suppressed[hash(mustJSON([]string{identityURL, source}))] {
+		return true
+	}
+	// A script learned on another route must not inherit suppression merely
+	// because its bytes happen to match. The final multi-state oracle checks
+	// the shared plan; this boundary retains its recorded per-route coverage.
+	for _, request := range g.profile.Requests {
+		if request.Kind == "script" && g.normalize(request.DocumentURL) == g.documentURL &&
+			g.normalize(request.SourceURL) == g.normalize(documentURL) && g.normalize(request.URL) == g.normalize(rawURL) {
+			return false
+		}
+	}
+	return true
 }
 
 func normalizeRequestURL(raw string, keys []string) string {
