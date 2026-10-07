@@ -4,9 +4,29 @@ Start Mimic with `-dev-preview`, then open
 `http://127.0.0.1:9222/debug/preview/` in a browser. Select the CDP target;
 `?target=<target-id>` selects it directly. Refresh targets after creating or
 closing a target. The viewer is an observation surface, not page automation:
-drive the real Page over CDP. The mirrored page fills the available browser
-window beneath the sticky control header and scrolls inside its iframe. Its
-visual viewport follows the viewer window; it does not resize the Mimic target.
+drive the real Page over CDP. The viewer includes a passive viewport and a live
+activity panel. Light, dark and system themes are available; the choice is saved
+locally in the viewer browser. The theme changes only the viewer's interface.
+
+The mirrored viewport keeps the target's dimensions. Fit scales it to the
+available space; explicit zoom levels let users inspect a larger view by scrolling
+the surrounding workspace. Neither option resizes the Mimic target. A shield,
+disabled pointer hit testing and an inert iframe prevent viewer mouse/keyboard
+input, selection and author hover effects. Scrolling the workspace moves the
+visual surface; page scrolling and form input remain under automation control.
+Restoring mirrored modal state preserves the viewer's keyboard focus.
+An overlay shows observed CDP mouse coordinates and press pulses.
+
+Activity streams commands as they are dispatched, command errors, Page lifecycle,
+network requests/responses/failures, formatted console text and exceptions for the
+selected target. Command dispatch is not a success/completion assertion. Logs
+start when the viewer connects; earlier activity is not replayed. The latest 500
+entries are retained, with category filters, text search, expandable details,
+clear and follow-latest controls. Pause view freezes the visual snapshot while
+activity continues; resume applies the latest pending snapshot. A new connection
+resumes the view, and selecting another target clears the previous target's log
+and pointer overlay. Discovery and WebSocket reconnection recover automatically
+after a local server restart.
 
 The viewer displays the current DOM as an ordinary styled website, using the
 viewer's browser for rendering. Mimic does not gain a renderer, GPU requirement,
@@ -39,6 +59,14 @@ focus and selection survive ordinary updates; a new document resets scroll.
 The iframe gets one empty bootstrap document, not a new `srcdoc` per update.
 Snapshot work itself runs under the Page command lock.
 
+Activity uses the Page's existing filtered trace subscription without enabling
+API/property tracing or creating a debugger session or request interceptor.
+It has a separate, nonblocking 256-entry mailbox, so visual coalescing cannot
+erase commands and a slow viewer cannot stall Page execution. Overflow is
+reported explicitly. Activity fields and console text are bounded; request
+headers, response bodies and debugger object handles are not sent to the viewer.
+Viewer subscriptions are removed on disconnect and server shutdown.
+
 Dialog top-layer membership is projected separately from the `open` attribute.
 The viewer restores native modal state after reconciling the connected tree, so
 `:modal`, backdrops and centering apply without running site scripts in the mirror.
@@ -69,3 +97,11 @@ identity, nested iframe and shadow content, scroll, focus, selection, identical
 updates, script isolation and navigation.
 It also checks modal centering, persistence across updates, closing and reopening.
 `tools/compatibility/preview_dom_smoke.py` runs it in a temporary Chrome 152 context.
+
+The same static server also serves `testdata/dev_preview_ui_test.html`. This uses
+the real embedded client with a deterministic test transport and checks passive
+hit testing, hover isolation, input overlays, safe activity text, category filters,
+search, pause/resume, stable mirror identity, themes, scaling, bounded retention,
+clearing, target changes and mobile layout. It requires no live Chrome oracle
+capture or external site. Focused server coverage is `go test ./internal/cdp
+-run TestDevPreview -count=1`.

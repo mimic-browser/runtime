@@ -250,6 +250,9 @@ func (s *session) reply(id int64, result any, err error) {
 		}
 	}
 	if err != nil {
+		if s.server.Browser.DevPreviewEnabled() && s.page.Trace().Wants(trace.CDP) {
+			s.page.Trace().Add(trace.CDP, "commandError", map[string]any{"commandId": id, "sessionId": s.id, "error": err.Error()})
+		}
 		code := -32000
 		// Generated validation errors retain Chrome's protocol error class.
 		if e, ok := err.(interface{ ProtocolCode() int }); ok {

@@ -1,183 +1,147 @@
 <!doctype html>
-<meta charset="utf-8" />
-<title>Mimic · Live preview</title>
-<style>
-  * {
-    box-sizing: border-box;
-  }
-  html,
-  body {
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-  }
-  body {
-    margin: 0;
-    height: 100dvh;
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
-    color: #182234;
-    font: 14px system-ui;
-  }
-  header {
-    position: sticky;
-    top: 0;
-    z-index: 2;
-    padding: 12px 20px;
-    background: #182234;
-    color: white;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px 14px;
-    align-items: center;
-    min-width: 0;
-  }
-  header strong,
-  header button {
-    flex-shrink: 0;
-  }
-  select {
-    min-width: 0;
-    max-width: min(480px, 100%);
-    flex: 0 1 480px;
-  }
-  button,
-  select {
-    padding: 6px;
-  }
-  #status {
-    font-size: 12px;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    flex: 1 1 120px;
-  }
-  main {
-    min-width: 0;
-    min-height: 0;
-    overflow: auto;
-    background: #e2e5e9;
-  }
-  iframe {
-    display: block;
-    background: white;
-    border: 0;
-  }
-</style>
-<header>
-  <strong>Mimic / live preview</strong
-  ><select id="targets"></select
-  ><button id="refresh">Refresh targets</button><span id="status">Connecting…</span>
-</header>
-<main>
-  <iframe id="view" sandbox="" title="Live site preview" referrerpolicy="no-referrer"></iframe>
-</main>
-<script>
-  'use strict';
-  /* preview_dom */
-  const mirror = createPreviewMirror();
-  let pendingPreview = null,
-    previewPaint = 0;
-  function schedulePreview(packet) {
-    pendingPreview = packet;
-    if (!previewPaint)
-      previewPaint = requestAnimationFrame(() => {
-        previewPaint = 0;
-        const p = pendingPreview;
-        pendingPreview = null;
-        if (p.width > 0 && p.height > 0) {
-          view.style.width = p.width + 'px';
-          view.style.height = p.height + 'px';
-        }
-        mirror.update(view, p.html || '');
-      });
-  }
-  const targets = document.querySelector('#targets'),
-    status = document.querySelector('#status'),
-    view = document.querySelector('#view');
-  let socket,
-    reconnectTimer = 0,
-    reconnectDelay = 250;
-  function queueReconnect() {
-    if (reconnectTimer) return;
-    status.textContent = 'Disconnected — reconnecting…';
-    const delay = reconnectDelay;
-    reconnectDelay = Math.min(reconnectDelay * 2, 5000);
-    reconnectTimer = setTimeout(() => {
-      reconnectTimer = 0;
-      list(true);
-    }, delay);
-  }
-  async function list(retrying = false) {
-    try {
-      const response = await fetch('/json/list', { cache: 'no-store' });
-      if (!response.ok) throw Error('Target discovery failed: ' + response.status);
-      const data = await response.json(),
-        old = targets.value || new URLSearchParams(location.search).get('target');
-      targets.replaceChildren();
-      for (const t of data) {
-        const o = document.createElement('option');
-        o.value = t.id;
-        o.textContent = (t.title || t.url) + ' · ' + t.id;
-        targets.append(o);
-      }
-      if (data.some((t) => t.id === old)) targets.value = old;
-      reconnectDelay = 250;
-      connect();
-    } catch (e) {
-      status.textContent = String(e);
-      if (retrying) queueReconnect();
-    }
-  }
-  function connect() {
-    if (socket) {
-      socket.onclose = null;
-      socket.close();
-    }
-    if (previewPaint) cancelAnimationFrame(previewPaint);
-    previewPaint = 0;
-    pendingPreview = null;
-    mirror.update(view, '');
-    if (!targets.value) {
-      socket = null;
-      status.textContent = 'No targets';
-      queueReconnect();
-      return;
-    }
-    const current = new WebSocket(
-      (location.protocol === 'https:' ? 'wss:' : 'ws:') +
-        '//' +
-        location.host +
-        '/debug/preview/ws?target=' +
-        encodeURIComponent(targets.value),
-    );
-    socket = current;
-    status.textContent = 'Connecting…';
-    current.onopen = () => {
-      if (socket === current) reconnectDelay = 250;
-    };
-    current.onclose = () => {
-      if (socket === current) {
-        socket = null;
-        queueReconnect();
-      }
-    };
-    current.onmessage = (event) => {
-      if (socket !== current) return;
-      const p = JSON.parse(event.data);
-      if (p.error) {
-        status.textContent = 'Observation error: ' + p.error;
-        return;
-      }
-      status.textContent = p.closed ? 'Target closed' : p.url;
-      schedulePreview(p);
-    };
-  }
-  targets.onchange = connect;
-  document.querySelector('#refresh').onclick = () => {
-    reconnectDelay = 250;
-    list();
-  };
-  list();
-</script>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mimic · Live preview</title>
+    <style>
+      /* preview_css */
+    </style>
+  </head>
+  <body tabindex="-1">
+    <header class="app-header">
+      <a class="brand" href="/debug/preview/" aria-label="Mimic live preview"
+        ><span class="brand-mark">m</span
+        ><strong
+          >mimic<span class="brand-divider">/</span
+          ><span class="brand-label">Live preview</span></strong
+        ></a
+      >
+      <span class="local-tag">LOCAL</span>
+      <div class="connection" id="connection" data-state="connecting">
+        <span class="status-dot"></span><span id="status" role="status">Connecting…</span>
+      </div>
+      <label class="sr-only" for="theme">Color theme</label>
+      <select id="theme" aria-label="Color theme">
+        <option value="system">System theme</option>
+        <option value="light">Light theme</option>
+        <option value="dark">Dark theme</option>
+      </select>
+    </header>
+    <div class="target-bar">
+      <label for="targets">TARGET</label>
+      <select id="targets" aria-label="Observed target">
+        <option value="">Discovering targets…</option>
+      </select>
+      <button id="refresh" class="icon-button" title="Refresh targets" aria-label="Refresh targets">
+        ↻
+      </button>
+      <span class="observer-tag"><span>◉</span> Observation only</span>
+    </div>
+    <main class="workspace">
+      <section class="preview-panel" aria-label="Visual preview">
+        <div class="panel-toolbar">
+          <div class="panel-heading">
+            <span class="status-dot"></span>
+            <h1>Viewport</h1>
+            <span id="dimensions" class="subtle">Waiting for snapshot</span>
+          </div>
+          <div class="toolbar-actions">
+            <label class="sr-only" for="zoom">Preview scale</label>
+            <select id="zoom">
+              <option value="fit">Fit</option>
+              <option value="0.5">50%</option>
+              <option value="0.75">75%</option>
+              <option value="1">100%</option>
+              <option value="1.25">125%</option>
+            </select>
+            <button id="pause" aria-pressed="false">Pause view</button>
+          </div>
+        </div>
+        <div id="stage" class="stage">
+          <div id="screen-space" hidden>
+            <div id="screen">
+              <iframe
+                id="view"
+                sandbox=""
+                inert
+                tabindex="-1"
+                title="Passive visual mirror"
+                referrerpolicy="no-referrer"
+              ></iframe>
+              <div id="surface" aria-hidden="true">
+                <div id="automation-cursor" hidden>
+                  <svg width="24" height="28" viewBox="0 0 24 28">
+                    <path
+                      d="M3 2v21l5.5-5.5 4 8 4-2-4-8H21Z"
+                      fill="#5668ee"
+                      stroke="white"
+                      stroke-width="2"
+                      stroke-linejoin="round"
+                    /></svg
+                  ><span>Automation</span>
+                </div>
+                <div id="click-ring" hidden></div>
+              </div>
+            </div>
+          </div>
+          <div id="empty-state" class="empty-state">
+            <div class="empty-icon">▧</div>
+            <h2 id="empty-title">Waiting for a page</h2>
+            <p id="empty-description">
+              Connect your automation to Mimic. Its page will appear here as it runs.
+            </p>
+          </div>
+        </div>
+        <footer class="preview-footer">
+          <span
+            ><span class="passive-dot"></span> Passive surface · input stays with automation</span
+          ><span id="snapshot-status">No snapshots yet</span>
+        </footer>
+      </section>
+      <aside class="activity-panel" aria-label="Activity log">
+        <div class="panel-toolbar">
+          <div class="panel-heading">
+            <h2>Activity</h2>
+            <span id="event-count" class="count">0</span>
+          </div>
+          <button id="clear" class="text-button">Clear</button>
+        </div>
+        <div class="activity-controls">
+          <div class="filters" role="group" aria-label="Filter activity">
+            <button class="filter active" data-filter="all" aria-pressed="true">All</button
+            ><button class="filter" data-filter="actions" aria-pressed="false">Actions</button
+            ><button class="filter" data-filter="network" aria-pressed="false">Network</button
+            ><button class="filter" data-filter="console" aria-pressed="false">Console</button
+            ><button class="filter" data-filter="errors" aria-pressed="false">Errors</button>
+          </div>
+          <input
+            id="search"
+            type="search"
+            placeholder="Search activity…"
+            aria-label="Search activity"
+          />
+        </div>
+        <div id="activity-scroll" class="activity-scroll">
+          <div id="activity-empty" class="activity-empty">
+            <span>◎</span><strong>Follow every step</strong>
+            <p>
+              Commands, requests, console output and errors appear here while this target is
+              connected.
+            </p>
+          </div>
+          <ol id="activity-list" aria-label="Recent activity"></ol>
+        </div>
+        <footer class="activity-footer">
+          <label><input id="follow" type="checkbox" checked /> Follow latest</label
+          ><span id="retention">Last 500 events</span>
+        </footer>
+      </aside>
+    </main>
+    <script>
+      'use strict';
+      /* preview_dom */
+      /* preview_client */
+    </script>
+  </body>
+</html>

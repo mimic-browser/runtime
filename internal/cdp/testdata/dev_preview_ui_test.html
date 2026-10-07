@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" />
+  <title>Preview UI regression</title>
+  <h1 id="result">Running preview UI regression…</h1>
+  <iframe
+    id="viewer"
+    title="Viewer under test"
+    style="width: 1200px; height: 760px; border: 0"
+  ></iframe>
+  <script>
+    (async () => {
+      const result = document.querySelector('#result'),
+        frame = document.querySelector('#viewer');
+      const check = (condition, message) => {
+        if (!condition) throw Error(message);
+      };
+      const tick = () =>
+        new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const wait = async (predicate) => {
+        for (let i = 0; i < 100; i++) {
+          if (predicate()) return;
+          await tick();
+        }
+        throw Error('Viewer timed out');
+      };
+      // Run the real client/reconciler, replacing only target discovery and transport.
+      const transport = () => {
+        window.fetch = async () => ({
+          ok: true,
+          json: async () => [
+            { id: 'test-target', type: 'page', title: 'Test page', url: 'https://example.test/' },
+            { id: 'other-target', type: 'page', title: 'Other page', url: 'about:blank' },
+          ],
+        });
+        window.history.replaceState = () => {};
+        window.testSockets = [];
+        window.WebSocket = class {
+          static OPEN = 1;
+          constructor() {
+            this.readyState = 0;
+            window.testSockets.push(this);
+            setTimeout(() => {
+              this.readyState = 1;
+              this.onopen?.();
+            }, 0);
+          }
+          close() {
+            this.readyState = 3;
+            this.onclose?.();
+          }
+          packet(packet) {
+            this.onmessage?.({ data: JSON.stringify(packet) });
+          }
+        };
+      };
+      try {
+        const names = [
+          'dev_preview.html',
+          'dev_preview.css',
+          'dev_preview_dom.js',
+          'dev_preview.js',
+        ];
+        const [html, css, dom, client] = await Promise.all(
+          names.map(async (name) => (await fetch('../' + name, { cache: 'no-store' })).text()),
+        );
+        frame.srcdoc = html
+          .replace('/* preview_css */', css)
+          .replace('/* preview_dom */', `(${transport.toString()})();\n${dom}`)
+          .replace('/* preview_client */', client);
+        await wait(() => frame.contentWindow.testSockets?.[0]?.readyState === 1);
+        const win = frame.contentWindow,
+          doc = frame.contentDocument,
+          query = (selector) => doc.querySelector(selector);
+        let socket = win.testSockets[0];
+        const snapshot = (text) => ({
+          target: 'test-target',
+          url: 'https://example.test/',
+          width: 800,
+          height: 500,
+          html: `<!doctype html><html data-mimic-preview-node="r:1"><head><style>body{margin:0}a{display:block;padding:20px;cursor:pointer}a:hover{background:red}</style></head><body><a id="link" href="https://example.test/">${text}</a><input id="input" value="unchanged"></body></html>`,
+        });
+        const event = (kind, name, data = {}) =>
+          socket.packet({
+            type: 'activity',
+            event: { kind, name, data, time: '2026-10-07T01:00:00Z' },
+          });
+        socket.packet(snapshot('First snapshot'));
+        await wait(() => query('#view').contentDocument?.querySelector('#link'));
+        const view = query('#view'),
+          mirrorDoc = view.contentDocument;
+        check(
+          view.inert && view.tabIndex === -1 && win.getComputedStyle(view).pointerEvents === 'none',
+          'Mirror accepts user input',
+        );
+        const rect = query('#screen').getBoundingClientRect();
+        check(
+          doc.elementFromPoint(rect.left + 30, rect.top + 30).id === 'surface',
+          'Shield allows page hit testing',
+        );
+        check(!mirrorDoc.querySelector('#link').matches(':hover'), 'Mirror has author hover');
+        event('cdp', 'method', {
+          method: 'Input.dispatchMouseEvent',
+          type: 'mousePressed',
+          x: 90,
+          y: 70,
+          button: 'left',
+        });
+        event('network', 'response', { url: 'https://example.test/asset', status: 200 });
+        event('console', 'log', { args: '["hello <img src=x onerror=alert(1)>"]' });
+        event('cdp', 'commandError', { commandId: 3, error: 'Unsupported command' });
+        await tick();
+        check(doc.querySelectorAll('.event').length === 5, 'Activity lost');
+        check(query('#automation-cursor').style.left === '90px', 'Cursor missing');
+        check(!query('#activity-list img'), 'Log injected HTML');
+        query('[data-filter="errors"]').click();
+        await tick();
+        check(doc.querySelectorAll('.event:not([hidden])').length === 1, 'Error filter incorrect');
+        query('[data-filter="network"]').click();
+        await tick();
+        check(
+          doc.querySelectorAll('.event:not([hidden])').length === 1,
+          'Network filter incorrect',
+        );
+        query('[data-filter="all"]').click();
+        const search = query('#search');
+        search.value = 'hello';
+        search.dispatchEvent(new Event('input'));
+        await tick();
+        check(doc.querySelectorAll('.event:not([hidden])').length === 1, 'Search incorrect');
+        search.value = '';
+        search.dispatchEvent(new Event('input'));
+        search.focus();
+        check(doc.activeElement === search, 'Search did not receive focus before modal');
+        const modal = snapshot('First snapshot');
+        modal.html = modal.html.replace(
+          '</body>',
+          '<dialog data-mimic-preview-modal="1" open>Passive modal <input></dialog></body>',
+        );
+        socket.packet(modal);
+        await tick();
+        check(mirrorDoc.querySelector('dialog').matches(':modal'), 'Passive modal missing');
+        check(
+          doc.activeElement === search,
+          'Mirrored modal stole viewer focus: ' +
+            doc.activeElement?.tagName +
+            ':' +
+            doc.activeElement?.id,
+        );
+        socket.packet(snapshot('First snapshot'));
+        await tick();
+        search.blur();
+        socket.packet(modal);
+        await tick();
+        check(doc.activeElement === doc.body, 'Passive modal focused mirror from viewer body');
+        socket.packet(snapshot('First snapshot'));
+        await tick();
+        query('#pause').click();
+        socket.packet(snapshot('Paused update'));
+        event('console', 'log', { args: '["during pause"]' });
+        await tick();
+        check(
+          mirrorDoc.querySelector('#link').textContent === 'First snapshot',
+          'Paused view updated',
+        );
+        check(
+          query('#activity-list').textContent.includes('during pause'),
+          'Pause stopped activity',
+        );
+        query('#pause').click();
+        await tick();
+        check(
+          mirrorDoc.querySelector('#link').textContent === 'Paused update' &&
+            view.contentDocument === mirrorDoc,
+          'Resume reloaded or missed update',
+        );
+        const theme = query('#theme');
+        for (const value of ['dark', 'light']) {
+          theme.value = value;
+          theme.dispatchEvent(new Event('change'));
+          check(doc.documentElement.dataset.theme === value, 'Theme failed');
+        }
+        const zoom = query('#zoom');
+        zoom.value = '0.5';
+        zoom.dispatchEvent(new Event('change'));
+        check(query('#screen-space').style.width === '400px', 'Scale failed');
+        for (let i = 0; i < 550; i++) event('console', 'log', { args: `["event ${i}"]` });
+        await tick();
+        check(doc.querySelectorAll('.event').length === 500, 'Unbounded log');
+        query('#clear').click();
+        await tick();
+        check(doc.querySelectorAll('.event').length === 0, 'Clear failed');
+        query('#pause').click();
+        const targets = query('#targets');
+        targets.value = 'other-target';
+        targets.dispatchEvent(new Event('change'));
+        await tick();
+        check(query('#pause').getAttribute('aria-pressed') === 'false', 'Target kept stale pause');
+        check(query('#automation-cursor').hidden, 'Target retained cursor');
+        socket = win.testSockets.at(-1);
+        socket.packet(snapshot('Other target'));
+        await tick();
+        frame.style.width = '390px';
+        frame.style.height = '780px';
+        await tick();
+        check(
+          query('.activity-panel').getBoundingClientRect().top >=
+            query('.preview-panel').getBoundingClientRect().bottom,
+          'Mobile panels do not stack',
+        );
+        check(doc.documentElement.scrollWidth <= 390, 'Mobile overflow');
+        result.textContent =
+          'PASS: passive shield/hover; input/network/console/errors; safe text; filters/search; pause/resume; stable mirror; themes; scaling; 500-event retention; clear; target isolation; mobile layout';
+      } catch (error) {
+        result.textContent = 'FAIL: ' + error.stack;
+        throw error;
+      }
+    })();
+  </script>
+</html>

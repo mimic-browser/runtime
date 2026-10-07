@@ -550,7 +550,12 @@ func (s *session) handleCommand(m message) (afterUnlock func()) {
 		s.reply(m.ID, value, err)
 		return
 	}
-	s.page.Trace().Add(trace.CDP, "method", map[string]any{"method": m.Method, "sessionId": s.id})
+	commandData := map[string]any{"method": m.Method, "sessionId": s.id}
+	if s.server.Browser.DevPreviewEnabled() && s.page.Trace().Wants(trace.CDP) {
+		commandData["commandId"] = m.ID
+		commandData["params"] = m.Params
+	}
+	s.page.Trace().Add(trace.CDP, "method", commandData)
 	if !strings.HasPrefix(m.Method, "Mimic.") {
 		if err := validateCommand(m.Method, m.Params); err != nil {
 			s.reply(m.ID, nil, err)
