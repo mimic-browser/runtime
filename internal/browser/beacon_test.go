@@ -92,29 +92,41 @@ func TestBeaconQueueQuotaNavigationAndContextTeardown(t *testing.T) {
 		if err := p.Navigate(context.Background(), server.URL); err != nil {
 			t.Fatal(err)
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
+		// Bound transport observations separately from realm/bootstrap work.
+		// Sharing one deadline across three navigations can expire before any
+		// upload assertion runs on slower machines, without a transport failure.
+		awaitUpload := func(want string) {
+			t.Helper()
+			select {
+			case got := <-started:
+				if got != want {
+					t.Fatalf("accepted upload: got %q, want %q", got, want)
+				}
+			case <-time.After(time.Second):
+				t.Fatal("accepted upload was not started")
+			}
+		}
+		navigate := func(page *Page, url string) {
+			t.Helper()
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := page.Navigate(ctx, url); err != nil {
+				t.Fatal(err)
+			}
+		}
 		historyEval(t, p, `navigator.sendBeacon('/hold/old','x'.repeat(60000))&&!navigator.sendBeacon('/hold/overflow','x'.repeat(6000))&&!navigator.sendBeacon('/hold/utf8','é'.repeat(4000))`, true)
+		awaitUpload("/hold/old")
 		historyEval(t, p, `fetch('/hold/fetch',{method:'POST',body:'x'.repeat(6000),keepalive:true}).then(()=>false,e=>e instanceof TypeError)`, true)
 		other, err := p.ctx.NewPage()
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err = other.Navigate(ctx, server.URL); err != nil {
-			t.Fatal(err)
-		}
+		navigate(other, server.URL)
 		historyEval(t, other, `navigator.sendBeacon('/hold/other','x'.repeat(60000))`, true)
-		if err = p.Navigate(ctx, server.URL+"/next"); err != nil {
-			t.Fatal(err)
-		}
+		awaitUpload("/hold/other")
+		navigate(p, server.URL+"/next")
 		historyEval(t, p, `navigator.sendBeacon('/hold/new','x'.repeat(60000))`, true)
-		for i := 0; i < 3; i++ {
-			select {
-			case <-started:
-			case <-ctx.Done():
-				t.Fatal("accepted upload was not started")
-			}
-		}
+		awaitUpload("/hold/new")
 		closed := make(chan struct{})
 		go func() { p.ctx.ClosePage(p.ID); close(closed) }()
 		select {
@@ -127,6 +139,8 @@ func TestBeaconQueueQuotaNavigationAndContextTeardown(t *testing.T) {
 			t.Fatalf("Page close cancelled accepted upload %s", path)
 		default:
 		}
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
 		if err = p.ctx.Close(); err != nil {
 			t.Fatal(err)
 		}

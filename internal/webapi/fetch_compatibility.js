@@ -95,7 +95,9 @@
     }
     return result;
   }
-  function extract(input) {
+  // Beacons snapshot bytes synchronously and never consume a body stream.
+  // Fetch still builds the stream used by its Body APIs.
+  function extract(input, createStream = true) {
     if (input == null) return { stream: null, type: null, bytes: new Uint8Array() };
     if (input instanceof Streams) {
       if (input.locked || disturbed(input))
@@ -104,11 +106,11 @@
     }
     if (ArrayBuffer.isView(input) || input instanceof ArrayBuffer) {
       const value = bytes(input);
-      return { stream: streamBytes(value), type: null, bytes: value };
+      return { stream: createStream ? streamBytes(value) : null, type: null, bytes: value };
     }
     if (input instanceof NativeBlob)
       return {
-        stream: input.stream(),
+        stream: createStream ? input.stream() : null,
         type: input.type || null,
         bytes: new Uint8Array(blobState(input).bytes).slice(),
       };
@@ -143,7 +145,7 @@
         offset += part.byteLength;
       }
       return {
-        stream: streamBytes(value),
+        stream: createStream ? streamBytes(value) : null,
         type: 'multipart/form-data; boundary=' + boundary,
         bytes: value,
       };
@@ -154,7 +156,7 @@
         : 'text/plain;charset=UTF-8';
     if (typeof input === 'symbol') throw new TypeError('Cannot convert a Symbol value to a string');
     const value = new Encoder().encode(String(input));
-    return { stream: streamBytes(value), type, bytes: value };
+    return { stream: createStream ? streamBytes(value) : null, type, bytes: value };
   }
   if (typeof document !== 'undefined' && typeof host.sendBeacon === 'function') {
     const prefix = "Failed to execute 'sendBeacon' on 'Navigator': ";
@@ -171,9 +173,10 @@
         return url.href;
       },
       sendBeacon(url, body, type) {
-        // A borrowed operation may receive a foreign-realm array proxy. Copy
-        // its numeric observations into the owner's ordinary host argument.
-        return host.sendBeacon(url, Array.from(body), type);
+        // Same-realm byte views use the existing binary host projection. Only
+        // borrowed operations need to copy a foreign array proxy's numeric
+        // observations into an ordinary owner-realm host argument.
+        return host.sendBeacon(url, ArrayBuffer.isView(body) ? body : Array.from(body), type);
       },
     };
     const sendBeacon = {
@@ -188,10 +191,10 @@
           throw new TypeError(prefix + 'sendBeacon cannot have a ReadableStream body.');
         if (typeof data === 'symbol')
           throw new TypeError(prefix + 'Cannot convert a Symbol value to a string');
-        const body = extract(data);
+        const body = extract(data, false);
         return callRealmBinding(this, binding, 'sendBeacon', [
           resolved,
-          Array.from(body.bytes),
+          bindingGet(this) === binding ? body.bytes : Array.from(body.bytes),
           body.type,
         ]);
       },
