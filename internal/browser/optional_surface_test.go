@@ -37,6 +37,9 @@ func TestSelectedBundleOptionalInstallers(t *testing.T) {
 				navigateCapabilityFixture(t, p)
 				expression := fmt.Sprintf(`(()=>{
      const selected=%d;
+     for(const name of ['MediaStream','MediaStreamTrack']){
+      if(Object.hasOwn(globalThis,name))throw Error('Capture constructor invented '+name);
+     }
      for(const [index,name]of ['MediaSource','StorageManager','WGSLLanguageFeatures'].entries()){
       if((typeof globalThis[name]==='function')!==!!(selected&(1<<index)))throw Error('Unexpected exposure '+name);
      }

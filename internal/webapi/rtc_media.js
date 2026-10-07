@@ -2,6 +2,7 @@
 // session must be negotiated. Offline offer observations retain their existing
 // catalog path; a connected peer's state comes exclusively from the transport.
 (() => {
+  if (!cameraCaptureModel) return;
   const peers = new WeakMap(),
     peerWrappers = new Map(),
     senders = new WeakMap(),

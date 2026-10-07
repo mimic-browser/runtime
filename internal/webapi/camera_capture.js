@@ -1,6 +1,9 @@
 // Capture sources and frames belong to the browser host. These maps own only
 // canonical JS wrappers, stream membership, and video-element attachments.
 const cameraCaptureModel = (() => {
+  // A selected compatibility bundle may omit media constructors. Preserve that
+  // exposure instead of making its unrelated realm bootstrap depend on capture.
+  if (typeof MediaStreamTrack !== 'function' || typeof MediaStream !== 'function') return null;
   const tracks = new WeakMap(),
     streams = new WeakMap(),
     wrappers = new Map();
