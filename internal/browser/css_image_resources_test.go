@@ -6,9 +6,44 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
+
+func TestCSSBackgroundAdmissionIncludesNewAdoptedSheets(t *testing.T) {
+	parallelBrowserTest(t)
+	historyTestPages(t, func(t *testing.T, p *Page) {
+		var images atomic.Int32
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/adopted.svg" {
+				images.Add(1)
+				w.Header().Set("Content-Type", "image/svg+xml")
+				fmt.Fprint(w, `<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>`)
+			} else {
+				fmt.Fprint(w, `<!doctype html><body><div>Initially unstyled</div>`)
+			}
+		}))
+		defer server.Close()
+		if err := p.Navigate(context.Background(), server.URL); err != nil {
+			t.Fatal(err)
+		}
+		historyEval(t, p, `(() => {
+ const sheet = new CSSStyleSheet();
+ sheet.replaceSync('div { background-image: url(/adopted.svg) }');
+ document.adoptedStyleSheets = [sheet];
+ return true;
+})()`, true)
+		historyEval(t, p, `new Promise(resolve => setTimeout(() => resolve(true), 30))`, true)
+		deadline := time.Now().Add(time.Second)
+		for images.Load() == 0 && time.Now().Before(deadline) {
+			time.Sleep(time.Millisecond)
+		}
+		if images.Load() != 1 {
+			t.Fatalf("adopted background requests: %d", images.Load())
+		}
+	})
+}
 
 func TestCSSBackgroundResourcesUseAppliedDeclarations(t *testing.T) {
 	parallelBrowserTest(t)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/moreveal/mimic/internal/engine"
 	"github.com/moreveal/mimic/internal/network"
@@ -22,6 +23,14 @@ func (r *Realm) syncCSSImageResources(ctx context.Context) error {
 		return nil
 	}
 	r.cssImageEpoch, r.cssImageEpochValid = epoch, true
+	// A resource checkpoint must not execute selector/style JavaScript when no
+	// canonical input can contain an image. Apart from unnecessary work, doing
+	// so observes author-modified intrinsics even on completely unstyled pages.
+	// CSSOM edits conservatively admit discovery because their source lives in
+	// the owning realm; no independent declaration/cascade state is maintained.
+	if !r.cssImageCSSOMModified && !r.cssImageSourceCandidate() {
+		return nil
+	}
 	args := []engine.Value{r.val(0), r.val("imageResources"), r.val("")}
 	for _, arg := range args {
 		defer releaseDebuggerValue(r, arg)
@@ -72,4 +81,30 @@ func (r *Realm) syncCSSImageResources(ctx context.Context) error {
 		}()
 	}
 	return nil
+}
+
+func (r *Realm) cssImageSourceCandidate() bool {
+	possible := func(source string) bool {
+		lower := strings.ToLower(source)
+		return strings.Contains(lower, "url") || strings.Contains(lower, "@import") || strings.Contains(source, `\`)
+	}
+	for _, source := range r.document.InlineStyleSources() {
+		if possible(source) {
+			return true
+		}
+	}
+	for _, node := range r.document.FindAllByTagName("style") {
+		if possible(r.document.TextContent(node.ID)) {
+			return true
+		}
+	}
+	// Linked sheets may complete asynchronously or be inserted after parsing.
+	// Admit them before their body is available; the existing resource revision
+	// schedules another discovery when the canonical sheet becomes available.
+	for _, node := range r.document.FindAllByTagName("link") {
+		if hasLinkRelation(node.Attributes["rel"], "stylesheet") {
+			return true
+		}
+	}
+	return false
 }

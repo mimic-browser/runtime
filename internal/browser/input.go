@@ -318,7 +318,10 @@ func (r *Realm) installProtocolInput(host map[string]any) {
 		_, err := r.invokeInputWorld(context.Background(), frame.parent.Realm, frame.elementID, "scroll", strarg(args, 0))
 		return nil, err
 	})
-	host["invalidateStyleObservations"] = r.transientFn(func(engine.Value, []engine.Value) (engine.Value, error) {
+	host["invalidateStyleObservations"] = r.transientFn(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
+		if changed, _ := arg(args, 0).(bool); changed {
+			r.cssImageCSSOMModified = true
+		}
 		r.document.InvalidateObservations()
 		return nil, nil
 	})

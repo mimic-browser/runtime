@@ -171,6 +171,7 @@ type Realm struct {
 	keepaliveBudget          keepaliveBudget
 	cssImageEpoch            styleProjectionEpoch
 	cssImageEpochValid       bool
+	cssImageCSSOMModified    bool
 	cssImageLoads            map[preloadKey]bool
 	moduleFetches            map[string]*scriptFetch
 	moduleGraphs             map[string]*moduleGraph

@@ -13,7 +13,7 @@ const constructedStyleSheets = (() => {
   let revision = 0;
   const changed = () => {
     revision++;
-    host.invalidateStyleObservations();
+    host.invalidateStyleObservations(true);
   };
   const sourceCache = new WeakMap();
   const nativeEligibilityCache = new WeakMap();
