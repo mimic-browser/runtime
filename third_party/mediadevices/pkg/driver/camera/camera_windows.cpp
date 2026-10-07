@@ -500,6 +500,26 @@ int openCamera(camera* cam, const char** errstr)
   safeRelease(&end);
   safeRelease(&nul);
 
+  {
+    // This graph captures samples; it has no playback presentation timeline.
+    // A renderer clock can hold subsequent live samples (observed as a
+    // first-sample-only stall with an already running OBS input). Consume
+    // arrivals immediately; the source still owns its cadence.
+    IMediaFilter* graphFilter = nullptr;
+    if (FAILED(graphBuilder->QueryInterface(IID_IMediaFilter, (void**)&graphFilter)))
+    {
+      *errstr = errNoControl;
+      goto fail;
+    }
+    HRESULT clockResult = graphFilter->SetSyncSource(nullptr);
+    safeRelease(&graphFilter);
+    if (FAILED(clockResult))
+    {
+      *errstr = errNoControl;
+      goto fail;
+    }
+  }
+
   safeRelease(&nullFilter);
   safeRelease(&captureFilter);
   safeRelease(&grabberFilter);
