@@ -128,6 +128,10 @@ func TestNavigatorCapturedOperationsV8(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Match the retained capture's input availability without depending on the
+	// CI host's hardware. Speaker output remains an explicit unsupported boundary.
+	b.cameraProvider = &fixtureCameraProvider{}
+	b.microphoneProvider = &fixtureMicrophoneProvider{}
 	for _, target := range []struct {
 		name         string
 		observations observations
@@ -158,11 +162,45 @@ func TestNavigatorCapturedOperationsV8(t *testing.T) {
 				encoded, _ := json.Marshal(value)
 				var actual any
 				_ = json.Unmarshal(encoded, &actual)
-				if !reflect.DeepEqual(actual, target.observations.Operations[probe.Name]) {
-					t.Errorf("%s: want %v, got %v", probe.Name, target.observations.Operations[probe.Name], actual)
+				want := target.observations.Operations[probe.Name]
+				if target.name == "secure" {
+					want = navigatorAutomationObservation(t, probe.Name, want)
+				}
+				if !reflect.DeepEqual(actual, want) {
+					t.Errorf("%s: want %v, got %v (retained Chrome: %v)", probe.Name, want, actual, target.observations.Operations[probe.Name])
 				}
 			}
 		})
+	}
+}
+
+// Keep the frozen observations unchanged and verify them before asserting the
+// explicitly requested automation policy. A prompt must reject rather than
+// wait for UI; enumerated devices must belong to implemented native backends.
+func navigatorAutomationObservation(t *testing.T, name string, frozen any) any {
+	t.Helper()
+	switch name {
+	case "clipboard.read", "keyboard.lock", "media.getUserMedia":
+		chrome := map[string]any{"value": map[string]any{"pending": true}}
+		if !reflect.DeepEqual(frozen, chrome) {
+			t.Fatalf("%s: retained interactive Chrome observation changed: %v", name, frozen)
+		}
+		message := "Permission requires an explicit automation decision"
+		if name == "media.getUserMedia" {
+			message = "Permission denied; grant access through Browser.setPermission or Browser.grantPermissions"
+		}
+		return map[string]any{"error": map[string]any{"name": "NotAllowedError", "message": message}}
+	case "media.enumerate":
+		anonymous := func(kind string) any {
+			return map[string]any{"deviceId": "", "groupId": "", "kind": kind, "label": ""}
+		}
+		chrome := map[string]any{"value": []any{anonymous("audioinput"), anonymous("videoinput"), anonymous("audiooutput")}}
+		if !reflect.DeepEqual(frozen, chrome) {
+			t.Fatalf("retained Chrome device observation changed: %v", frozen)
+		}
+		return map[string]any{"value": []any{anonymous("audioinput"), anonymous("videoinput")}}
+	default:
+		return frozen
 	}
 }
 

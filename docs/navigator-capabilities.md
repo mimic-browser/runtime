@@ -71,3 +71,11 @@ Exposure is selected from the pinned snapshot and may then be restricted by expl
 The matrix does not imply complete implementation of every method on these interfaces. `capability-only` and `unsupported by design` remain explicit boundaries even when shape matches completely.
 
 Camera and microphone operations now use real device capture and explicit Context/origin grants; interactive prompt waiting is not part of the automation runtime. See [camera, microphone and WebRTC capture](camera.md) for lazy ownership, bundled codecs, current limits, and retained hardware evidence. The historical operation totals above describe the original capability probes.
+
+The operation regression preserves and asserts the original Chrome prompt and
+device observations before checking the requested automation policy separately:
+ungranted clipboard, keyboard-lock and capture requests reject with
+`NotAllowedError`. Input enumeration uses deterministic provider fixtures,
+retains Chrome's audio-input-before-video-input ordering and permission
+redaction, and omits unsupported speaker outputs. The frozen capture and shared
+capture probes remain unchanged; these differences are not Chrome parity claims.

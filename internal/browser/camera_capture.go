@@ -373,14 +373,8 @@ func addCameraHosts(r *Realm, h map[string]any) {
 			microphones, audioErr := r.agent.Page().ctx.browser.microphoneProvider.Devices(r.resourceContext)
 			r.scheduler.Post(scheduler.DOM, 0, func(context.Context) error {
 				rows := []map[string]any{}
-				allowed := r.cameraPermission() == "granted"
-				for _, d := range devices {
-					if !allowed {
-						rows = append(rows, map[string]any{"deviceId": "", "groupId": "", "label": "", "kind": "videoinput"})
-						break
-					}
-					rows = append(rows, map[string]any{"deviceId": r.cameraDeviceID(d.ID), "groupId": r.cameraDeviceID("group:" + d.ID), "label": d.Label, "kind": "videoinput"})
-				}
+				// The retained Chrome 152 enumeration groups audio inputs before video
+				// inputs. Native backend availability still determines membership.
 				audioAllowed := r.capturePermission("microphone") == "granted"
 				for _, d := range microphones {
 					row := map[string]any{"deviceId": "", "groupId": "", "label": "", "kind": "audioinput"}
@@ -393,6 +387,14 @@ func addCameraHosts(r *Realm, h map[string]any) {
 					if !audioAllowed {
 						break
 					}
+				}
+				allowed := r.cameraPermission() == "granted"
+				for _, d := range devices {
+					if !allowed {
+						rows = append(rows, map[string]any{"deviceId": "", "groupId": "", "label": "", "kind": "videoinput"})
+						break
+					}
+					rows = append(rows, map[string]any{"deviceId": r.cameraDeviceID(d.ID), "groupId": r.cameraDeviceID("group:" + d.ID), "label": d.Label, "kind": "videoinput"})
 				}
 				// An unavailable native backend contributes no devices of its kind;
 				// a capture request still reports the concrete backend failure.
