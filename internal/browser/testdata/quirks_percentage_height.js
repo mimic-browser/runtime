@@ -16,30 +16,36 @@
     ],
   ];
   return JSON.stringify(
-    cases.map(([name, doctype, body, parent, height]) => {
-      const frame = document.createElement('iframe');
-      frame.style.cssText = 'width:400px;height:202px;border:0';
-      document.body.appendChild(frame);
-      const doc = frame.contentDocument;
-      doc.open();
-      doc.write(
-        doctype +
-          '<style>body{margin:1px;' +
-          body +
-          '}#parent{' +
-          parent +
-          '}#target{display:inline-block;vertical-align:top;width:100px;height:' +
-          height +
-          '}</style><div id="parent"><section><div id="target"></div></section></div>',
-      );
-      doc.close();
-      const result = [
-        name,
-        doc.compatMode,
-        doc.getElementById('target').getBoundingClientRect().height,
-      ];
-      frame.remove();
-      return result;
-    }),
+    cases
+      .filter(
+        (_, index) =>
+          globalThis.quirksPercentageHeightProbeIndex == null ||
+          globalThis.quirksPercentageHeightProbeIndex === index,
+      )
+      .map(([name, doctype, body, parent, height]) => {
+        const frame = document.createElement('iframe');
+        frame.style.cssText = 'width:400px;height:202px;border:0';
+        document.body.appendChild(frame);
+        const doc = frame.contentDocument;
+        doc.open();
+        doc.write(
+          doctype +
+            '<style>body{margin:1px;' +
+            body +
+            '}#parent{' +
+            parent +
+            '}#target{display:inline-block;vertical-align:top;width:100px;height:' +
+            height +
+            '}</style><div id="parent"><section><div id="target"></div></section></div>',
+        );
+        doc.close();
+        const result = [
+          name,
+          doc.compatMode,
+          doc.getElementById('target').getBoundingClientRect().height,
+        ];
+        frame.remove();
+        return result;
+      }),
   );
 })();

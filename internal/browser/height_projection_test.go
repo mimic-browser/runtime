@@ -3,6 +3,7 @@ package browser
 import (
 	"context"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -15,8 +16,25 @@ func TestQuirksPercentageHeightThroughAutoBlocks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	want := []string{
+		`["quirks-auto","BackCompat",200]`,
+		`["quirks-half","BackCompat",100]`,
+		`["quirks-edges","BackCompat",190]`,
+		`["quirks-definite","BackCompat",40]`,
+		`["quirks-inline-block","BackCompat",200]`,
+		`["quirks-flex","BackCompat",0]`,
+		`["standards-auto","CSS1Compat",0]`,
+		`["standards-definite","CSS1Compat",0]`,
+	}
 	historyTestPages(t, func(t *testing.T, p *Page) {
-		historyEval(t, p, string(script), `[["quirks-auto","BackCompat",200],["quirks-half","BackCompat",100],["quirks-edges","BackCompat",190],["quirks-definite","BackCompat",40],["quirks-inline-block","BackCompat",200],["quirks-flex","BackCompat",0],["standards-auto","CSS1Compat",0],["standards-definite","CSS1Compat",0]]`)
+		// Each evaluation measures one iframe. Creating unrelated realms must
+		// not consume the current case's evaluation deadline on a busy CI host.
+		for index, expected := range want {
+			t.Run(strconv.Itoa(index), func(t *testing.T) {
+				selection := "globalThis.quirksPercentageHeightProbeIndex = " + strconv.Itoa(index) + ";\n"
+				historyEval(t, p, selection+string(script), "["+expected+"]")
+			})
+		}
 	})
 }
 

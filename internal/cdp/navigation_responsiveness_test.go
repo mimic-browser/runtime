@@ -262,7 +262,6 @@ func TestSuspendedNavigationDeadlineAndTeardown(t *testing.T) {
 			defer fixture.Close()
 			defer close(release)
 			s, addr := runningServer(t)
-			s.SetNavigationTimeout(600 * time.Millisecond)
 			c, _, err := websocket.DefaultDialer.Dial("ws://"+addr+"/devtools/page/"+s.Page.ID, nil)
 			if err != nil {
 				t.Fatal(err)
@@ -280,6 +279,7 @@ func TestSuspendedNavigationDeadlineAndTeardown(t *testing.T) {
 				// The held script belongs to a new document. Admit that origin's
 				// runtime before the timed navigation, just as the old document's
 				// runtime was admitted above for the document response case.
+				s.Page.Trace().Start()
 				c.WriteJSON(map[string]any{"id": 3, "method": "Page.navigate", "params": map[string]any{"url": fixture.URL + "/warm"}})
 				readReply(t, c, 3)
 				c.WriteJSON(map[string]any{"id": 4, "method": "Runtime.evaluate", "params": map[string]any{"expression": "6*7"}})
@@ -287,7 +287,35 @@ func TestSuspendedNavigationDeadlineAndTeardown(t *testing.T) {
 				if warm["result"].(map[string]any)["result"].(map[string]any)["value"] != float64(42) {
 					t.Fatal(warm)
 				}
+				// The evaluation reply does not prove load has been emitted. Finish
+				// the untimed warm-up before starting a trace for the held resource;
+				// otherwise its late load can be attributed to the timed navigation.
+				warmDeadline := time.Now().Add(3 * time.Second)
+				loaded := false
+				for time.Now().Before(warmDeadline) && !loaded {
+					for _, event := range s.Page.Trace().Events() {
+						if event.Name == "load" && event.Data["url"] == fixture.URL+"/warm" {
+							loaded = true
+							break
+						}
+					}
+					if !loaded {
+						time.Sleep(10 * time.Millisecond)
+					}
+				}
+				if !loaded {
+					t.Fatal("warm navigation did not finish before the deadline test")
+				}
 			}
+			s.SetNavigationTimeout(600 * time.Millisecond)
+			// Connections capture the navigation timeout at creation. Reconnect
+			// after the untimed warm-up so only the measured navigation is capped.
+			c.Close()
+			c, _, err = websocket.DefaultDialer.Dial("ws://"+addr+"/devtools/page/"+s.Page.ID, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer c.Close()
 			s.Page.Trace().Start()
 			c.WriteJSON(map[string]any{"id": 1, "method": "Page.navigate", "params": map[string]any{"url": fixture.URL}})
 			readReply(t, c, 1)
@@ -304,7 +332,7 @@ func TestSuspendedNavigationDeadlineAndTeardown(t *testing.T) {
 						found = true
 					}
 					if event.Name == "DOMContentLoaded" || event.Name == "load" {
-						t.Fatalf("deadline fabricated lifecycle: %s", event.Name)
+						t.Fatalf("deadline fabricated lifecycle: %s %v", event.Name, event.Data)
 					}
 				}
 				if found {
