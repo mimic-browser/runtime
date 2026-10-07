@@ -165,5 +165,9 @@ The historical hidden-window gap remains attached to its original capture.
 Follow-up evidence is private under `.build/doctor-htmx-child-fix-20261007/`,
 `doctor-htmx-child-replay-20261007/`, `doctor-htmx-all-fixes-20261007/`,
 `doctor-beacon-probe-20261007/`, `doctor-mdn-beacon-fix-20261007/` and
-`doctor-css-images-20261007/`. The focused Doctor suite now contains 68 passing
-tests. Runtime checks remain focused; the full local suite is not run.
+`doctor-css-images-20261007/`. Windows CI additionally exposed automatic Go
+toolchain download during binary metadata inspection. Metadata now uses the
+installed toolchain without downloading; an unavailable observation remains an
+explicit gap and does not prevent the owned launch or cleanup. The focused Doctor
+suite now contains 69 passing tests. Runtime checks remain focused; the full local
+suite is not run.

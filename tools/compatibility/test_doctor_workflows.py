@@ -246,6 +246,18 @@ class RobustnessTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(result["processExitBeforeCleanup"], 7)
             self.assertEqual(verify(folder), result)
 
+    async def test_metadata_timeout_does_not_prevent_owned_launch_or_cleanup(self):
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory) / "capture"
+            with patch("doctor_capture.launch_arguments", return_value=[sys.executable, "-c", "raise SystemExit(7)"]), \
+                 patch("doctor_capture.shutil.which", return_value="go"), \
+                 patch("doctor_capture.subprocess.run", side_effect=subprocess.TimeoutExpired("go version -m", 10)) as metadata:
+                result = await capture("mimic", Path(sys.executable), 19379, folder, demo_scenario(19363))
+            self.assertEqual(metadata.call_args.kwargs["env"]["GOTOOLCHAIN"], "local")
+            self.assertEqual(result["processExitBeforeCleanup"], 7)
+            self.assertEqual(result["gaps"][0]["kind"], "build-metadata-unavailable")
+            self.assertEqual(verify(folder), result)
+
     async def test_cancellation_seals_evidence_and_stops_owned_process(self):
         with tempfile.TemporaryDirectory() as directory:
             folder = Path(directory) / "capture"

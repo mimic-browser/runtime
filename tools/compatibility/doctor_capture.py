@@ -671,10 +671,16 @@ async def capture(kind: str, binary: Path, port: int, folder: Path, scenario: di
                             "browserMode": browser_mode if kind == "chrome" else "nonvisual-runtime",
                             "host": platform.platform(), "context": "persistent-default"}
         if kind == "mimic" and shutil.which("go"):
-            build = subprocess.run(["go", "version", "-m", str(binary)], capture_output=True,
-                                   text=True, encoding="utf-8", errors="replace", timeout=10)
-            result["launch"]["buildMetadata"] = {"exitCode": build.returncode, "stdout": build.stdout,
-                                                  "stderr": build.stderr}
+            try:
+                # Inspect with the installed tool; metadata must not trigger a
+                # module-driven toolchain download before the browser launch.
+                build = subprocess.run(["go", "version", "-m", str(binary)], capture_output=True,
+                                       text=True, encoding="utf-8", errors="replace", timeout=10,
+                                       env={**os.environ, "GOTOOLCHAIN": "local"})
+                result["launch"]["buildMetadata"] = {"exitCode": build.returncode, "stdout": build.stdout,
+                                                      "stderr": build.stderr}
+            except (OSError, subprocess.TimeoutExpired) as error:
+                recorder.gap("build-metadata-unavailable", str(error))
         log = (folder / "process.log").open("wb")
         startup = None
         if os.name == "nt" and kind == "chrome" and not headless:
