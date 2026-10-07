@@ -378,12 +378,13 @@ const cameraCaptureModel = (() => {
       if (!id || track.kind !== 'audio')
         throw platformDOMException('Audio source is not captured', 'NotSupportedError');
       const row = host.cameraTrack(id, 'pcm', start, count, rate);
-      const raw = atob(row.pcm),
-        bytes = new Uint8Array(raw.length);
-      for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
-      const view = new DataView(bytes.buffer);
-      const samples = new Float32Array(raw.length / 4);
-      for (let i = 0; i < samples.length; i++) samples[i] = view.getFloat32(i * 4, true);
+      // The host returns an owned binary buffer, avoiding base64 and byte-wise
+      // JS conversion on the realtime graph path. PCM wire values are LE.
+      const samples = new Float32Array(row.pcm);
+      if (new Uint8Array(new Uint32Array([1]).buffer)[0] !== 1) {
+        const view = new DataView(row.pcm);
+        for (let i = 0; i < samples.length; i++) samples[i] = view.getFloat32(i * 4, true);
+      }
       return { ...row, samples };
     },
     makeTrack,

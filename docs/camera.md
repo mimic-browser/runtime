@@ -174,6 +174,15 @@ Goja, V8 and QuickJS. Native microphone capture is opt-in through
 The pinned Opus source commit provides the encoder; the older tagged release
 only provided decoding. Both are compiled into the executable through Go/cgo.
 
+Realtime audio graph advancement retains one owned PCM window before processing
+its quanta. This prevents a slow JavaScript engine from losing those samples to
+the bounded native history while processing the same interval. Binary buffers
+avoid base64 conversion on this path. Samples retain their original positions;
+expired or unavailable samples remain silence. Source attachment synchronizes
+the running context clock, and resuming a suspended context reconnects its graph
+timeline to the current capture block. Regression coverage includes delayed
+source attachment and suspension longer than the retained PCM history.
+
 The retained Chrome 152 capture is
 `internal/browser/testdata/camera_capture_chrome152.json`. Its launch metadata
 records the direct headful launch, unmodified `navigator.webdriver === false`,

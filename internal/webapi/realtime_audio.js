@@ -15,6 +15,26 @@ const advance = (object) => {
     ) * 128;
   c.advancing = true;
   try {
+    // Retain one coherent capture window for this graph advance. Reading each
+    // quantum separately both crosses the host boundary repeatedly and lets
+    // a slow JS engine lose earlier samples to the native history ring while
+    // it is still processing the same interval. Older expired samples remain
+    // silence; retained samples keep their original positions and identity.
+    const captureStart = Math.max(c.renderFrame, target - 32768);
+    for (const node of c.nodes) {
+      const n = nodes.get(node);
+      if (n.type === 'MediaStreamAudioSourceNode' && n.captureTrack && target > captureStart) {
+        n.captureWindow = {
+          start: captureStart,
+          ...cameraCaptureModel.audio(
+            n.captureTrack,
+            n.captureOrigin + (captureStart / c.sampleRate) * 48000,
+            target - captureStart,
+            c.sampleRate,
+          ),
+        };
+      }
+    }
     while (c.renderFrame < target) {
       render(object, c.renderFrame, 128);
       c.renderFrame += 128;
@@ -28,6 +48,7 @@ const advance = (object) => {
       }
     }
   } finally {
+    for (const node of c.nodes) delete nodes.get(node).captureWindow;
     c.advancing = false;
   }
 };
@@ -50,6 +71,17 @@ const startContext = (object) => {
   c.state = 'running';
   c.clockOrigin = currentClock();
   c.clockFrame = c.renderFrame;
+  // A suspended context stops its graph clock while native capture continues.
+  // Resume existing sources at the current capture block rather than at PCM
+  // that has expired from the bounded history during suspension.
+  for (const node of c.nodes) {
+    const n = nodes.get(node);
+    if (n.type === 'MediaStreamAudioSourceNode' && n.captureTrack) {
+      const capture = cameraCaptureModel.audio(n.captureTrack);
+      n.captureOrigin =
+        capture.end - capture.blockFrames - (c.renderFrame / c.sampleRate) * capture.sampleRate;
+    }
+  }
   stateEvent(object);
   scheduleAudio(object);
   const pending = c.pendingResume.splice(0);

@@ -513,7 +513,7 @@ func addCameraHosts(r *Realm, h map[string]any) {
 					}
 				}
 			}
-			return r.val(map[string]any{"pcm": base64.StdEncoding.EncodeToString(data), "channels": channels, "sampleRate": s.audioFormat.SampleRate, "end": float64(s.pcmSamples), "blockFrames": len(s.pcm) / channels}), nil
+			return r.val(map[string]any{"pcm": engine.BinaryBuffer(data), "channels": channels, "sampleRate": s.audioFormat.SampleRate, "end": float64(s.pcmSamples), "blockFrames": len(s.pcm) / channels}), nil
 		case "frame", "info":
 			s := t.source
 			s.mu.RLock()

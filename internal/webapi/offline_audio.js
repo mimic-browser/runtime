@@ -1450,16 +1450,15 @@
         }
       } else if (n.type === 'MediaStreamAudioSourceNode' && n.captureTrack) {
         const position = n.captureOrigin + (startFrame / c.sampleRate) * 48000;
-        const capture = cameraCaptureModel.audio(
-          n.captureTrack,
-          position,
-          processedFrames,
-          c.sampleRate,
-        );
+        const capture =
+          n.captureWindow ||
+          cameraCaptureModel.audio(n.captureTrack, position, processedFrames, c.sampleRate);
+        const offset = n.captureWindow ? startFrame - n.captureWindow.start : 0;
         result = allocate(capture.channels);
         for (let frame = 0; frame < processedFrames; frame++)
           for (let channel = 0; channel < capture.channels; channel++)
-            result[channel][frame] = capture.samples[frame * capture.channels + channel];
+            result[channel][frame] =
+              capture.samples[(offset + frame) * capture.channels + channel] ?? 0;
       } else if (n.type === 'OscillatorNode') {
         result = allocate(1);
         oscillatorOutput(object, result);

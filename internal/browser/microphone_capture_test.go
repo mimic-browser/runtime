@@ -24,18 +24,23 @@ func (*fixtureMicrophoneProvider) Devices(context.Context) ([]microphone.Device,
 }
 func (p *fixtureMicrophoneProvider) Open(_ context.Context, _ string, f microphone.Format) (microphone.Capture, error) {
 	p.opens.Add(1)
-	return &fixtureMicrophoneCapture{provider: p, format: f}, nil
+	return &fixtureMicrophoneCapture{provider: p, format: f, started: time.Now()}, nil
 }
 
 type fixtureMicrophoneCapture struct {
 	provider *fixtureMicrophoneProvider
 	format   microphone.Format
 	frame    int
+	started  time.Time
 	closed   bool
 }
 
 func (c *fixtureMicrophoneCapture) Read(ctx context.Context) ([]float32, error) {
-	timer := time.NewTimer(20 * time.Millisecond)
+	// Pace the declared 48 kHz sample clock, as a hardware capture callback
+	// does. Restarting a relative sleep on every read accumulates scheduler
+	// and sample-generation delays and eventually falls behind AudioContext.
+	deadline := c.started.Add(time.Duration(c.frame+960) * time.Second / 48000)
+	timer := time.NewTimer(time.Until(deadline))
 	defer timer.Stop()
 	select {
 	case <-ctx.Done():
@@ -103,6 +108,8 @@ func TestMicrophoneCapturePermissionsClonesAndPCM(t *testing.T) {
   await audio.play();
   if (audio.readyState !== 4 || audio.paused) throw Error('audio readiness');
   globalThis.micContext = new AudioContext({ sampleRate: 48000 });
+  // Attaching to an already running context must use its advanced graph clock.
+  await new Promise((r) => setTimeout(r, 70));
   const source = micContext.createMediaStreamSource(micStream),
     analyser = micContext.createAnalyser();
   analyser.fftSize = 256;
@@ -113,6 +120,13 @@ func TestMicrophoneCapturePermissionsClonesAndPCM(t *testing.T) {
   analyser.getFloatTimeDomainData(waveform);
   if (!waveform.some((v) => Math.abs(v) > 0.04))
     throw Error('captured waveform is silent: ' + Array.from(waveform.slice(0, 8)));
+  await micContext.suspend();
+  await new Promise((r) => setTimeout(r, 200));
+  await micContext.resume();
+  await new Promise((r) => setTimeout(r, 120));
+  analyser.getFloatTimeDomainData(waveform);
+  if (!waveform.some((v) => Math.abs(v) > 0.04))
+    throw Error('capture did not resume after its old PCM history expired');
   micTrack.enabled = false;
   await new Promise((r) => setTimeout(r, 100));
   analyser.getFloatTimeDomainData(waveform);

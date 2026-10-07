@@ -351,6 +351,7 @@ function MediaStreamAudioSourceNode(context, options = {}) {
   if (!captureTrack) throw exception('InvalidStateError');
   // Destination catalog streams retain their existing graph boundary. Native
   // captured streams supply PCM through their canonical capture track.
+  synchronizeOwner(context);
   const capture = audioStreams.has(stream) ? null : cameraCaptureModel.audio(captureTrack);
   const object = makeNode(context, 'MediaStreamAudioSourceNode', 0, 1, {
     mediaStream: stream,
