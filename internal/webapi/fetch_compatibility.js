@@ -96,15 +96,22 @@
     return result;
   }
   function extract(input) {
-    if (input == null) return { stream: null, type: null };
+    if (input == null) return { stream: null, type: null, bytes: new Uint8Array() };
     if (input instanceof Streams) {
       if (input.locked || disturbed(input))
         throw new TypeError('Body stream is locked or disturbed');
       return { stream: input, type: null };
     }
-    if (ArrayBuffer.isView(input) || input instanceof ArrayBuffer)
-      return { stream: streamBytes(bytes(input)), type: null };
-    if (input instanceof NativeBlob) return { stream: input.stream(), type: input.type || null };
+    if (ArrayBuffer.isView(input) || input instanceof ArrayBuffer) {
+      const value = bytes(input);
+      return { stream: streamBytes(value), type: null, bytes: value };
+    }
+    if (input instanceof NativeBlob)
+      return {
+        stream: input.stream(),
+        type: input.type || null,
+        bytes: new Uint8Array(blobState(input).bytes).slice(),
+      };
     if (input instanceof globalThis.FormData) {
       const boundary =
           '----WebKitFormBoundaryMimic' + (++multipartSequence).toString(16).padStart(8, '0'),
@@ -135,13 +142,66 @@
         value.set(part, offset);
         offset += part.byteLength;
       }
-      return { stream: streamBytes(value), type: 'multipart/form-data; boundary=' + boundary };
+      return {
+        stream: streamBytes(value),
+        type: 'multipart/form-data; boundary=' + boundary,
+        bytes: value,
+      };
     }
     const type =
       input instanceof globalThis.URLSearchParams
         ? 'application/x-www-form-urlencoded;charset=UTF-8'
         : 'text/plain;charset=UTF-8';
-    return { stream: streamBytes(new Encoder().encode(String(input))), type };
+    if (typeof input === 'symbol') throw new TypeError('Cannot convert a Symbol value to a string');
+    const value = new Encoder().encode(String(input));
+    return { stream: streamBytes(value), type, bytes: value };
+  }
+  if (typeof document !== 'undefined' && typeof host.sendBeacon === 'function') {
+    const prefix = "Failed to execute 'sendBeacon' on 'Navigator': ";
+    navigatorBeaconBindings = {
+      beaconURL(raw) {
+        let url;
+        try {
+          url = new globalThis.URL(raw, fetchBaseURL());
+        } catch {
+          throw new TypeError(prefix + 'The URL argument is ill-formed or unsupported.');
+        }
+        if (!['http:', 'https:'].includes(url.protocol))
+          throw new TypeError(prefix + 'Beacons are only supported over HTTP(S).');
+        return url.href;
+      },
+      sendBeacon(url, body, type) {
+        // A borrowed operation may receive a foreign-realm array proxy. Copy
+        // its numeric observations into the owner's ordinary host argument.
+        return host.sendBeacon(url, Array.from(body), type);
+      },
+    };
+    const sendBeacon = {
+      sendBeacon(url, data) {
+        const binding = requireRealmBinding(this, 'Navigator');
+        if (arguments.length === 0)
+          throw new TypeError(prefix + '1 argument required, but only 0 present.');
+        if (typeof url === 'symbol')
+          throw new TypeError(prefix + 'Cannot convert a Symbol value to a string');
+        const resolved = callRealmBinding(this, binding, 'beaconURL', [String(url)]);
+        if (data instanceof Streams)
+          throw new TypeError(prefix + 'sendBeacon cannot have a ReadableStream body.');
+        if (typeof data === 'symbol')
+          throw new TypeError(prefix + 'Cannot convert a Symbol value to a string');
+        const body = extract(data);
+        return callRealmBinding(this, binding, 'sendBeacon', [
+          resolved,
+          Array.from(body.bytes),
+          body.type,
+        ]);
+      },
+    }.sendBeacon;
+    Object.defineProperty(Navigator.prototype, 'sendBeacon', {
+      value: sendBeacon,
+      writable: true,
+      configurable: true,
+      enumerable: true,
+    });
   }
   function responseBody(value, signal, type, unavailable) {
     let cleanup = () => {};
@@ -204,10 +264,10 @@
   function cloneBody(object) {
     const body = slot(bodies, object);
     if (unusable(body)) throw new TypeError('Body is locked or already used');
-    if (body.stream === null) return { stream: null, type: body.type };
+    if (body.stream === null) return { ...body, stream: null };
     const [left, right] = body.stream.tee();
     body.stream = left;
-    return { stream: right, type: body.type };
+    return { ...body, stream: right };
   }
   function bodyMethods(prototype) {
     Object.defineProperties(prototype, {
@@ -395,6 +455,7 @@
       if (mode === 'no-cors' && !['GET', 'HEAD', 'POST'].includes(method))
         throw new TypeError('Invalid no-cors method');
       const supplied = init.body != null;
+      const keepalive = Boolean(init.keepalive ?? previous?.keepalive ?? false);
       let body;
       if (supplied) body = extract(init.body);
       else if (previous) {
@@ -402,6 +463,8 @@
         if (unusable(old)) throw new TypeError('Request body already used');
         body = { ...old };
       } else body = extract(null);
+      if (keepalive && body.stream !== null && body.bytes === undefined)
+        throw new TypeError('A keepalive request cannot have a streaming body');
       if (['GET', 'HEAD'].includes(method) && body.stream !== null)
         throw new TypeError('GET/HEAD request cannot have body');
       if (supplied && init.body instanceof Streams && init.duplex !== 'half')
@@ -428,7 +491,7 @@
         referrer,
         referrerPolicy: String(init.referrerPolicy ?? previous?.referrerPolicy ?? ''),
         integrity: String(init.integrity ?? previous?.integrity ?? ''),
-        keepalive: Boolean(init.keepalive ?? previous?.keepalive ?? false),
+        keepalive,
         signal,
         destination: '',
         duplex: 'half',
@@ -531,6 +594,7 @@
               cache: request.cache,
               redirect: request.redirect,
               referrer: request.referrer,
+              keepalive: request.keepalive,
             },
           );
         } catch (error) {

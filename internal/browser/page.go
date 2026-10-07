@@ -31,6 +31,7 @@ type documentSecurity struct {
 	permissionsPolicy   string
 }
 type Page struct {
+	closed              atomic.Bool
 	executionGate       *workload.Gate
 	geolocationOverride *GeolocationOverride // Protected by mu; persists across navigation.
 
@@ -211,6 +212,7 @@ func (p *Page) Loader() *network.Loader               { return p.loader }
 func (p *Page) Cookies() *network.CookieStore         { return p.ctx.cookies }
 func (p *Page) NetworkSession() *network.SessionState { return p.ctx.network }
 func (p *Page) Close() error {
+	p.closed.Store(true)
 	p.CancelNavigation()
 	defer p.loader.CloseOwnedTransport()
 	p.mu.Lock()

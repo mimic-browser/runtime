@@ -129,6 +129,7 @@ func (r *Realm) openDocumentStream(caller *Realm) error {
 	ctx, cancel := context.WithCancel(r.resourceContext)
 	r.documentStream = &documentStream{parser: parser, ctx: ctx, cancel: cancel, scripts: map[int64]*streamScriptResponse{}}
 	r.readyState = "loading"
+	r.cssImageEpochValid = false
 	r.loadEpoch++
 	r.loadRequested, r.loadScheduled, r.loadCompleted = false, false, false
 	r.navigationLoadEnd = time.Time{}

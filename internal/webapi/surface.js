@@ -3865,6 +3865,28 @@
   registerBootstrapCallback('installFrameViewport', readFrameViewport, frameHasLayout);
   registerBootstrapCallback('installComputedStyleFlatTree', (nodeID, kind, name) => {
     const element = wrap(nodeID);
+    if (kind === 'imageResources')
+      return withStyleReadCache(() => {
+        const sources = constructedStyleSheets.resourceSources(document);
+        if (
+          !sources.some((source) => /url\s*\(/i.test(source)) &&
+          !host.blitzInlineStyles().some((source) => /url\s*\(/i.test(source))
+        )
+          return '[]';
+        const urls = new Set();
+        for (const candidate of compatibilitySelectors.query(document, '*')) {
+          if (!frameHasLayout(elementSlot(candidate).nodeId)) continue;
+          const value = cssComputedValue(candidate, 'background-image');
+          if (!/url\s*\(/i.test(value)) continue;
+          const ast = mimicSelectorLibrary.parseStylesheet(value, { context: 'value' });
+          const visit = (node) => {
+            if (node.type === 'Url') urls.add(node.value);
+            if (node.children) node.children.forEach(visit);
+          };
+          visit(ast);
+        }
+        return JSON.stringify(Array.from(urls));
+      });
     return kind === 'values'
       ? withStyleReadCache(() => {
           const values = {};
@@ -9654,6 +9676,7 @@
       }
     }
   };
+  let navigatorBeaconBindings;
   const finalizeSingletonGetterBindings = () => {
     // These platform objects belong to a Window. Borrowed accessors must use
     // the receiver's owner, including across realms and after prototype edits.
@@ -9702,6 +9725,8 @@
           get: (name) => functionSourceApply(getters.get(name), owner, []),
           set: (name, value) => functionSourceApply(setters.get(name), owner, [value]),
         };
+        if (kind === 'Navigator' && navigatorBeaconBindings)
+          Object.assign(operations, navigatorBeaconBindings);
         if (kind === 'History') {
           operations.go = (n) => {
             requireActiveHistory();

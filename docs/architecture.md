@@ -73,6 +73,20 @@ sequence numbers.
 
 ## Networking
 
+Beacon and Window Fetch keepalive share the initiating document's 64 KiB
+outstanding upload budget. Accepted requests capture their URL, security policy,
+credentials, body and timing owner before entering the shared loader. They may
+outlive navigation and Page closure; their Context owns cancellation and joins
+pending transport work before closing its network pool. Transport completion
+does not enter a retired JavaScript realm. A successful Beacon return value
+means queue acceptance, not server delivery.
+
+Applied CSS background URLs are discovered from the canonical computed
+declarations at document task checkpoints. Their requests use the existing
+document network and load-blocker boundary; no drawing backend or separate
+cascade model is involved. Unmatched selectors and `display:none` descendants
+do not cause speculative background downloads.
+
 Navigation, fetch, XHR, external scripts and dynamically inserted scripts call
 the same ResourceLoader. Interceptors receive immutable request/response views
 and return explicit decisions. Cookie/header derivation is performed around

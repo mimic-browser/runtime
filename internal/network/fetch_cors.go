@@ -81,6 +81,10 @@ func corsSafeHeader(name, value string) bool {
 	return false
 }
 
+// CORSSafelistedRequestHeader is the shared Fetch policy used when Beacon
+// chooses its request mode from the extracted body's Content-Type.
+func CORSSafelistedRequestHeader(name, value string) bool { return corsSafeHeader(name, value) }
+
 func (l *Loader) prepareFetchCORS(ctx context.Context, r *Request) error {
 	if r.Initiator != Fetch && r.Initiator != XHR || r.corsPreflight {
 		return nil

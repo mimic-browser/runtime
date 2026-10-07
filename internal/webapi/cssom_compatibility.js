@@ -671,6 +671,10 @@ const constructedStyleSheets = (() => {
       };
     },
     ownerSheet,
+    resourceSources(root) {
+      const collection = new Set([...ownerCollection(root), ...adoption(root)]);
+      return Array.from(collection, (sheet) => sourceText(sheet));
+    },
     fontFaceRules(root) {
       const result = [];
       const visit = (rule, base) => {

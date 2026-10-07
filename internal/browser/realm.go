@@ -168,6 +168,10 @@ type Realm struct {
 	resourceContext          context.Context
 	cancelResources          context.CancelFunc
 	resourceWG               sync.WaitGroup
+	keepaliveBudget          keepaliveBudget
+	cssImageEpoch            styleProjectionEpoch
+	cssImageEpochValid       bool
+	cssImageLoads            map[preloadKey]bool
 	moduleFetches            map[string]*scriptFetch
 	moduleGraphs             map[string]*moduleGraph
 	preparedModules          map[string]bool
@@ -492,7 +496,7 @@ func (r *Realm) checkpointRuntime(ctx context.Context) error {
 			return nil // The scheduler performs the checkpoint after this task.
 		})
 	}
-	return nil
+	return r.syncCSSImageResources(ctx)
 }
 
 // A classic script's cleanup checkpoint runs before restoring currentScript.
@@ -626,6 +630,7 @@ func (r *Realm) Close() error {
 	r.moduleGraphs = nil
 	r.preparedModules = nil
 	r.imageLoads = nil
+	r.cssImageLoads = nil
 	r.mediaLoads = nil
 	r.cameraTracks = nil
 	r.rtcMediaPeers = nil
@@ -2266,6 +2271,7 @@ func (r *Realm) installBindingsOnOwner() error {
 		return nil, nil
 	})
 	host["fetch"] = r.transientFn(r.hostFetch)
+	host["sendBeacon"] = r.transientFn(r.hostSendBeacon)
 	host["openWindow"] = r.fn(func(_ engine.Value, a []engine.Value) (engine.Value, error) {
 		u, err := r.resolveDocument(strarg(a, 0))
 		if err != nil {
@@ -2702,21 +2708,57 @@ func (r *Realm) hostFetch(_ engine.Value, a []engine.Value) (engine.Value, error
 	request.ContentPolicyURL = r.documentURL()
 	r.applyClientHints(&request)
 	loadContext, cancel := context.WithCancel(r.resourceContext)
+	keepalive := false
+	if options, ok := arg(a, 5).(map[string]any); ok {
+		keepalive, _ = options["keepalive"].(bool)
+	}
+	var release func()
+	if keepalive {
+		var accepted bool
+		release, accepted = r.agent.Page().ctx.beginKeepalive(&r.keepaliveBudget, len(request.Body))
+		if !accepted {
+			cancel()
+			_ = promise.Reject("Keepalive upload quota exceeded")
+			return promise.Value, nil
+		}
+		cancel()
+		loadContext, cancel = context.WithCancel(r.agent.Page().ctx.lifetime)
+		request = r.withResourceTiming(request)
+	}
 	if requestID != "" {
 		if r.fetchCancels == nil {
 			r.fetchCancels = make(map[string]context.CancelFunc)
 		}
 		r.fetchCancels[requestID] = cancel
 	}
-	r.scheduler.Post(scheduler.Network, 0, func(context.Context) error {
+	start := func(context.Context) error {
 		if r.resourceContext.Err() != nil {
 			cancel()
+			if release != nil {
+				release()
+			}
 			return nil
 		}
-		r.resourceWG.Add(1)
+		if !keepalive {
+			r.resourceWG.Add(1)
+		}
+		p := r.agent.Page()
 		go func() {
-			defer r.resourceWG.Done()
-			res, loadErr := r.loadResource(loadContext, request)
+			if keepalive {
+				defer release()
+			} else {
+				defer r.resourceWG.Done()
+			}
+			var res network.Response
+			var loadErr error
+			if keepalive {
+				res, loadErr = p.loader.Load(loadContext, request)
+				if p.closed.Load() {
+					p.loader.CloseResponseBodies()
+				}
+			} else {
+				res, loadErr = r.loadResource(loadContext, request)
+			}
 			cancel()
 			if r.resourceContext.Err() != nil {
 				return
@@ -2731,7 +2773,12 @@ func (r *Realm) hostFetch(_ engine.Value, a []engine.Value) (engine.Value, error
 			})
 		}()
 		return nil
-	})
+	}
+	if keepalive {
+		_ = start(context.Background())
+	} else {
+		r.scheduler.Post(scheduler.Network, 0, start)
+	}
 	return promise.Value, nil
 }
 func (r *Realm) hostXHR(_ engine.Value, a []engine.Value) (engine.Value, error) {

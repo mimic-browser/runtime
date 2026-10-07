@@ -173,6 +173,8 @@ type Context struct {
 	storageMu            sync.Mutex
 	permissionRealms     map[*Realm]struct{}
 	lifetime             context.Context
+	keepaliveMu          sync.Mutex
+	keepaliveWG          sync.WaitGroup
 	cancel               context.CancelFunc
 	mu                   sync.RWMutex
 	ID                   string
@@ -370,6 +372,7 @@ func (b *Browser) String() string { return fmt.Sprintf("Mimic/%s", b.env.Product
 // Close releases all pages before their shared transport pool.
 func (c *Context) Close() error {
 	c.Cancel()
+	c.keepaliveWG.Wait()
 	for _, p := range c.Pages() {
 		c.ClosePage(p.ID)
 	}
@@ -390,4 +393,8 @@ func (c *Context) Close() error {
 
 // Cancel stops external work without touching realm-owned JavaScript state.
 // Shutdown can call it before joining active browser command runners.
-func (c *Context) Cancel() { c.cancel() }
+func (c *Context) Cancel() {
+	c.keepaliveMu.Lock()
+	c.cancel()
+	c.keepaliveMu.Unlock()
+}
