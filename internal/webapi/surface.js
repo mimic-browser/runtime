@@ -1202,11 +1202,7 @@
       return this.childNodes.length !== 0;
     }
     get isConnected() {
-      if (syntheticParents.has(this)) return syntheticParents.get(this).isConnected;
-      if (typeof ShadowRoot === 'function' && this instanceof ShadowRoot)
-        return this.host.isConnected;
-      const slot = elementSlot(this);
-      return slot ? host.isConnected(slot.nodeId) : this instanceof Document;
+      return isNodeConnected(this);
     }
     contains(other) {
       if (other == null) return false;
@@ -1216,7 +1212,7 @@
       if (own && (own.type === 'text' || own.type === 'comment')) return false;
       if (own && child && !syntheticParents.has(other))
         return host.contains(own.nodeId, child.nodeId);
-      for (let node = other; node; node = node.parentNode) if (node === this) return true;
+      for (let node = other; node; node = canonicalDOMParent(node)) if (node === this) return true;
       return false;
     }
   }
@@ -3225,29 +3221,59 @@
   for (const name of ['appendChild', 'insertBefore', 'removeChild', 'parentNode', 'parentElement'])
     delete Element.prototype[name];
   for (const name of ['appendChild', 'removeChild']) delete DocumentFragment.prototype[name];
+  const canonicalDOMParent = (node) => {
+    if (syntheticParents.has(node)) return syntheticParents.get(node);
+    return elementSlot(node) ? cachedDOMParent(node) : null;
+  };
+  const canonicalDOMChildren = (node) => {
+    const state = fragmentSlots.get(node);
+    if (state) return state.children.slice();
+    if (node === document) return host.nodeChildren(realmDocumentRootID).map(wrap);
+    return elementSlot(node) ? cachedDOMChildren(node) : [];
+  };
   def(Node.prototype, 'parentNode', {
     get() {
-      if (syntheticParents.has(this)) return syntheticParents.get(this);
-      const slot = elementSlot(this);
-      return slot ? cachedDOMParent(this) : null;
+      return canonicalDOMParent(this);
     },
   });
   def(Node.prototype, 'parentElement', {
     get() {
-      const parent = this.parentNode;
+      const parent = canonicalDOMParent(this);
       return parent instanceof Element ? parent : null;
     },
   });
+  // DOM algorithms use canonical tree state even when author code shadows
+  // public accessors. Host connectivity alone cannot see synthetic shadow roots.
+  const isNodeConnected = (node) => {
+    while (node) {
+      const parent = syntheticParents.get(node);
+      if (parent) {
+        node = parent;
+        continue;
+      }
+      const shadow = shadowSlots.get(node);
+      if (shadow) {
+        node = shadow.host;
+        continue;
+      }
+      const slot = elementSlot(node);
+      if (!slot) return node instanceof Document;
+      if (host.isConnected(slot.nodeId)) return true;
+      if (!shadowHosts.size) return false;
+      node = cachedDOMParent(node);
+    }
+    return false;
+  };
   const runSyntheticInsertionSteps = (node) => {
-    if (node instanceof HTMLIFrameElement && node.isConnected)
+    if (node instanceof HTMLIFrameElement && isNodeConnected(node))
       host.iframeWindow(elementSlot(node).nodeId, true);
     if (!(node instanceof Element)) return;
     if (!shadowHosts.size) {
       for (const frame of compatibilitySelectors.query(node, 'iframe'))
-        if (frame.isConnected) host.iframeWindow(elementSlot(frame).nodeId, true);
+        if (isNodeConnected(frame)) host.iframeWindow(elementSlot(frame).nodeId, true);
       return;
     }
-    for (const child of Array.from(node.children)) runSyntheticInsertionSteps(child);
+    for (const child of cachedDOMChildren(node)) runSyntheticInsertionSteps(child);
     const shadow = elementShadows.get(node),
       state = shadow && fragmentState(shadow);
     if (state) for (const child of state.children) runSyntheticInsertionSteps(child);
@@ -3413,7 +3439,8 @@
     if (validateTemplateInsertion && !combined) validateTemplateInsertion(parent, node);
   };
   const detachForInsertion = (parent, node) => {
-    const old = syntheticParents.get(node) || (fragmentSlots.has(parent) ? node.parentNode : null);
+    const old =
+      syntheticParents.get(node) || (fragmentSlots.has(parent) ? canonicalDOMParent(node) : null);
     if (old) old.removeChild(node);
   };
   // Drain fragment membership once. Repeated removal from the front shifts
@@ -3809,11 +3836,11 @@
     withStyleReadCache(() => {
       const element = wrap(nodeID);
       if (!element) return [0, 0];
-      if (!element.isConnected) return [0, 0];
+      if (!isNodeConnected(element)) return [0, 0];
       for (let n = element; n instanceof Element; n = geometryParent(n))
         if (
           computedCSSDeclarations(n).some((e) => e.name === 'display' && e.value === 'none') ||
-          n.hasAttribute('hidden')
+          host.getAttribute(elementSlot(n).nodeId, 'hidden') !== null
         )
           return frameViewportSizes.get(element) || [0, 0];
       const entries = computedCSSDeclarations(element),
@@ -3821,7 +3848,7 @@
       const parent = geometryParent(element);
       const dimension = (axis, fallback) => {
         const text = get(axis),
-          attribute = element.getAttribute(axis);
+          attribute = host.getAttribute(elementSlot(element).nodeId, axis);
         let size = geometryPixels(text);
         if (text?.endsWith('%'))
           size =
@@ -4726,11 +4753,11 @@
       this.sandbox.value = String(v);
     }
     get contentWindow() {
-      const id = host.iframeWindow(elementSlot(this).nodeId, this.isConnected);
+      const id = host.iframeWindow(elementSlot(this).nodeId, isNodeConnected(this));
       return id == null ? null : remoteWindow(id);
     }
     get contentDocument() {
-      const id = host.iframeWindow(elementSlot(this).nodeId, this.isConnected);
+      const id = host.iframeWindow(elementSlot(this).nodeId, isNodeConnected(this));
       return id == null ? null : remoteDocument(id, true);
     }
   }

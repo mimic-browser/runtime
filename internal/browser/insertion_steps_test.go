@@ -51,3 +51,91 @@ func TestFrameInsertionAfterInnerHTMLAndFragmentMove(t *testing.T) {
 		})
 	}
 }
+
+// Native insertion/connectivity do not invoke author DOM accessors. The reduced
+// probe also passes in frozen Chrome 152 headless; these DOM semantics do not
+// depend on presentation mode.
+func TestFrameInsertionIgnoresPublicTreeOverrides(t *testing.T) {
+	parallelBrowserTest(t)
+	historyTestPages(t, func(t *testing.T, p *Page) {
+		if err := p.Navigate(context.Background(), "about:blank"); err != nil {
+			t.Fatal(err)
+		}
+		historyEval(t, p, `(() => {
+  const shadowHost = document.createElement('div');
+  document.body.appendChild(shadowHost);
+  const shadow = shadowHost.attachShadow({ mode: 'closed' });
+  const observer = new MutationObserver(() => {});
+  observer.observe(document.body, { childList: true, subtree: true });
+  observer.observe(shadow, { childList: true, subtree: true });
+  const connected = Object.getOwnPropertyDescriptor(Node.prototype, 'isConnected').get;
+  const windowOf = Object.getOwnPropertyDescriptor(
+    HTMLIFrameElement.prototype,
+    'contentWindow',
+  ).get;
+  const documentOf = Object.getOwnPropertyDescriptor(
+    HTMLIFrameElement.prototype,
+    'contentDocument',
+  ).get;
+  let reads = 0;
+  const hideTree = (node) => {
+    for (const key of ['children', 'childNodes', 'parentNode', 'isConnected']) {
+      Object.defineProperty(node, key, {
+        get() {
+          reads++;
+          return undefined;
+        },
+      });
+    }
+  };
+  hideTree(shadowHost);
+  for (const parent of [document.body, shadow]) {
+    for (const method of ['appendChild', 'insertBefore']) {
+      const wrapper = document.createElement('section');
+      const frame = document.createElement('iframe');
+      frame.style.cssText = 'width: 320px; height: 120px; border: 0';
+      wrapper.appendChild(frame);
+      hideTree(wrapper);
+      hideTree(frame);
+      if (connected.call(frame)) return 'connected detached descendant';
+      parent[method](wrapper, null);
+      if (!connected.call(frame)) return 'disconnected descendant';
+      if (!windowOf.call(frame) || !documentOf.call(frame)) return 'missing frame';
+      if (windowOf.call(frame).innerWidth !== 320 || windowOf.call(frame).innerHeight !== 120)
+        return 'incorrect child viewport';
+      parent.removeChild(wrapper);
+      if (connected.call(frame)) return 'connected removed descendant';
+    }
+  }
+  const records = observer.takeRecords();
+  observer.disconnect();
+  if (records.length !== 8) return 'incorrect mutation records: ' + records.length;
+  return reads === 0 ? true : 'public getter reads: ' + reads;
+})();`, true)
+	})
+}
+
+func TestShadowFrameInsertionDispatchesInitialLoad(t *testing.T) {
+	parallelBrowserTest(t)
+	historyTestPages(t, func(t *testing.T, p *Page) {
+		historyEval(t, p, `(() => {
+  const host = document.createElement('div');
+  host.id = 'frame-host';
+  document.body.appendChild(host);
+  const root = host.attachShadow({ mode: 'closed' });
+  const frame = document.createElement('iframe');
+  frame.style.display = 'none';
+  let loaded = 0;
+  frame.onload = () => {
+    if (loaded++) return;
+    frame.contentDocument.open('text/html', 'replace');
+    frame.contentDocument.write('<!doctype html><body>child</body>');
+    frame.contentDocument.close();
+    if (document.getElementById('frame-host') !== host) throw Error('owner document changed');
+    frame.style.display = 'block';
+  };
+  root.appendChild(frame);
+  return loaded > 0 && frame.style.display === 'block' ? true : 'initial load: ' + loaded;
+})();`, true)
+	})
+}

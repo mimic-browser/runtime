@@ -2,9 +2,23 @@ package browser
 
 import (
 	"context"
+	"os"
 	"strings"
 	"testing"
 )
+
+// Fixed pixel viewport and percentage-height cases also measured in frozen
+// Chrome 152 headless. No font, display, or device-dependent sizes are asserted.
+func TestQuirksPercentageHeightThroughAutoBlocks(t *testing.T) {
+	parallelBrowserTest(t)
+	script, err := os.ReadFile("testdata/quirks_percentage_height.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	historyTestPages(t, func(t *testing.T, p *Page) {
+		historyEval(t, p, string(script), `[["quirks-auto","BackCompat",200],["quirks-half","BackCompat",100],["quirks-edges","BackCompat",190],["quirks-definite","BackCompat",40],["quirks-inline-block","BackCompat",200],["quirks-flex","BackCompat",0],["standards-auto","CSS1Compat",0],["standards-definite","CSS1Compat",0]]`)
+	})
+}
 
 func TestHeightDimensionProjectionMatchesFrozenChrome152(t *testing.T) {
 	parallelBrowserTest(t)

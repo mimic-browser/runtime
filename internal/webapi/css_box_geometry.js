@@ -769,6 +769,41 @@ const cssBoxModel = (() => {
       if (state(p).position !== 'static') return p;
     return null;
   };
+  const percentageHeightBasis = (element, own) => {
+    const parent = geometryParent(element);
+    if (
+      !(styleReadCache.quirksMode ??= documentIsQuirks(document)) ||
+      !['static', 'relative', 'sticky'].includes(own.position) ||
+      own.display.startsWith('table-')
+    )
+      return definiteGeometryHeight(parent) ? size(parent).height : null;
+
+    // Quirks percentage heights skip auto-height block containers. Flex/grid
+    // and positioned auto-height containing blocks remain boundaries. Root
+    // and body edges reduce the available initial containing-block height.
+    // https://quirks.spec.whatwg.org/#the-percentage-height-calculation-quirk
+    let inset = 0;
+    for (let node = parent; node; node = geometryParent(node)) {
+      const s = state(node);
+      if (s.display === 'inline' || s.display === 'contents') continue;
+      const height = s.get('height');
+      if (height && height !== 'auto') {
+        const box = size(node),
+          e = box.edges;
+        return Math.max(0, box.height - e.ptop - e.pbottom - e.btop - e.bbottom);
+      }
+      if (
+        ['absolute', 'fixed'].includes(s.position) ||
+        !['block', 'inline-block', 'flow-root', 'list-item'].includes(s.display)
+      )
+        return null;
+      if (tag(node) === 'HTML' || tag(node) === 'BODY') {
+        const e = s.edges(containingWidth(node));
+        inset += e.mtop + e.mbottom + e.ptop + e.pbottom + e.btop + e.bbottom;
+      }
+    }
+    return Math.max(0, host.viewport().height - inset);
+  };
   const size = (element) => {
     const cache = styleReadCache.boxSizes || (styleReadCache.boxSizes = new WeakMap()),
       plans = styleReadCache.sizePlans || (styleReadCache.sizePlans = new WeakMap()),
@@ -831,11 +866,9 @@ const cssBoxModel = (() => {
       plans.set(element, { state: 'ready', value });
       return value;
     }
-    const rawHeight = s.get('height');
-    let height =
-      rawHeight?.endsWith('%') && !definiteGeometryHeight(parent)
-        ? null
-        : s.length(rawHeight, rawHeight?.endsWith('%') && parent ? size(parent).height : 0);
+    const rawHeight = s.get('height'),
+      heightBasis = rawHeight?.endsWith('%') ? percentageHeightBasis(element, s) : 0;
+    let height = heightBasis === null ? null : s.length(rawHeight, heightBasis);
     // Opposing insets stretch an auto-sized non-replaced absolute box in its
     // containing padding box. Querying it first must also complete parent flow.
     if (

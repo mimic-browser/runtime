@@ -4,6 +4,16 @@ const documentWrappers = new Map();
 let registerDocumentGetterBinding;
 const documentImplementations = new WeakMap();
 const fragmentOwnerDocuments = new WeakMap();
+const documentIsQuirks = (value) => {
+  const slot = elementSlot(value);
+  return (
+    (slot?.contentType || 'text/html') === 'text/html' &&
+    (value === document || slot?.parsedDocument) &&
+    !host
+      .nodeChildren(value === document ? realmDocumentRootID : slot.nodeId)
+      .some((node) => node.type === 'doctype')
+  );
+};
 function wrapDocumentNode(data) {
   if (data.nodeId === realmDocumentRootID) return document;
   let value = documentWrappers.get(data.nodeId);
@@ -298,11 +308,7 @@ function wrapDocumentNode(data) {
   });
   accessor(Document.prototype, 'compatMode', function () {
     validDocument(this);
-    return contentType(this) === 'text/html' &&
-      (this === document || elementSlot(this)?.parsedDocument) &&
-      !Array.from(this.childNodes).some((node) => node.nodeType === 10)
-      ? 'BackCompat'
-      : 'CSS1Compat';
+    return documentIsQuirks(this) ? 'BackCompat' : 'CSS1Compat';
   });
   accessor(Document.prototype, 'doctype', function () {
     validDocument(this);

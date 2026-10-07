@@ -109,7 +109,7 @@ const compatibilityElementState = {};
     callback(node);
     const shadow = elementShadows.get(node);
     if (shadow) walk(shadow, callback);
-    for (const child of Array.from(node.childNodes || [])) walk(child, callback);
+    for (const child of canonicalDOMChildren(node)) walk(child, callback);
   };
   const definitionCandidates = (root, definition) => {
     const selector = definition.extendsTag
@@ -745,7 +745,7 @@ const compatibilityElementState = {};
   };
   member(Node.prototype, 'replaceChild', function (node, child) {
     if (!isDOMNode(node) || !isDOMNode(child)) throw new TypeError('Expected Nodes');
-    if (!sameDOMNode(child.parentNode, this))
+    if (!sameDOMNode(canonicalDOMParent(child), this))
       throw platformDOMException('Not a child', 'NotFoundError');
     if (node === child) return child;
     this.insertBefore(node, child);
@@ -755,7 +755,7 @@ const compatibilityElementState = {};
   const removeChildBase = Node.prototype.removeChild;
   member(Node.prototype, 'removeChild', function (node) {
     if (!isDOMNode(node)) throw new TypeError('Expected a Node');
-    if (!sameDOMNode(node.parentNode, this))
+    if (!sameDOMNode(canonicalDOMParent(node), this))
       throw platformDOMException('Not a child', 'NotFoundError');
     return removeChildBase.call(this, node);
   });
@@ -853,10 +853,10 @@ const compatibilityElementState = {};
   );
   const nodeSnapshot = (node) => ({
     node,
-    parent: node.parentNode,
-    previousSibling: node.previousSibling,
-    nextSibling: node.nextSibling,
-    connected: node.isConnected,
+    parent: canonicalDOMParent(node),
+    previousSibling: sibling(node, -1),
+    nextSibling: sibling(node, 1),
+    connected: isNodeConnected(node),
   });
   const detachedReaction = (entry) => {
     if (entry.connected)
@@ -869,7 +869,7 @@ const compatibilityElementState = {};
     if (definitions.size && !customElementCloneInert && !templateTreeIsInert(node))
       walk(node, (n) => {
         if (upgraded.get(n)) {
-          if (n.isConnected) reaction(n, 'connectedCallback');
+          if (isNodeConnected(n)) reaction(n, 'connectedCallback');
         } else upgrade(n);
       });
   };
@@ -897,7 +897,7 @@ const compatibilityElementState = {};
       // any of replaceChild's removal steps. The ordinary insertion path
       // can combine these checks with its canonical mutation in Go.
       if (method === 'removeChild') {
-        if (!sameDOMNode(node.parentNode, this))
+        if (!sameDOMNode(canonicalDOMParent(node), this))
           throw platformDOMException('Not a child', 'NotFoundError');
       } else prepareInsertion(this, node, method === 'appendChild' ? null : reference, true);
       const fragment = node instanceof DocumentFragment,
@@ -913,7 +913,7 @@ const compatibilityElementState = {};
       mutationDepth++;
       reactionDepth++;
       try {
-        if (method === 'replaceChild' && node === reference && node.parentNode === this) {
+        if (method === 'replaceChild' && node === reference && canonicalDOMParent(node) === this) {
           const next = node.nextSibling;
           mutationOriginals.removeChild.call(this, node);
           mutationOriginals.insertBefore.call(this, node, next);
@@ -1685,7 +1685,7 @@ const compatibilityElementState = {};
   Object.defineProperty(Node.prototype, 'getRootNode', {
     value: function (options = {}) {
       let node = this;
-      while (node.parentNode) node = node.parentNode;
+      for (let parent; (parent = canonicalDOMParent(node)); ) node = parent;
       if (options.composed && node instanceof ShadowRoot) return node.host.getRootNode(options);
       return node;
     },

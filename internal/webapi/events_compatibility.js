@@ -234,7 +234,9 @@
     for (
       let current = node;
       isDOMNode(current);
-      current = current.parentNode || (current instanceof ShadowRoot ? current.host : null)
+      current =
+        canonicalDOMParent(current) ||
+        (current instanceof ShadowRoot ? shadowSlots.get(current)?.host || current.host : null)
     )
       if (current === root) return true;
     return false;
@@ -365,7 +367,7 @@
     const path = [target];
     let current = target;
     while (isDOMNode(current)) {
-      let parent = current.parentNode;
+      let parent = canonicalDOMParent(current);
       if (!parent && current instanceof ShadowRoot && state.composed) parent = current.host;
       if (!parent && current instanceof Document && state.type !== 'load')
         parent = current.defaultView;
