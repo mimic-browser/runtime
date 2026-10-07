@@ -198,8 +198,8 @@ func TestDevPreviewDisabledAndDirtyUpdates(t *testing.T) {
 				t.Fatal(e)
 			}
 		}
-		eval(`document.head.innerHTML='<style>body { background: red }</style><noscript><style>body{opacity:0}</style></noscript>';document.body.innerHTML='<h1>Hello preview</h1><input id="field" value="old"><script>globalThis.shouldNotRun=1<\/script><noscript>Enable scripting</noscript>';`)
-		if html := read(); !strings.Contains(html, "Hello preview") || strings.Contains(html, "<script") || strings.Contains(html, "<noscript") || strings.Contains(html, "opacity:0") {
+		eval(`document.head.innerHTML='<style>body { background: red } .scene { height: max(540px, 36.53vw); width: min(calc(100% - 96px), var(--page)); font-size: clamp(48px, 3.8vw, 76px) }</style><noscript><style>body{opacity:0}</style></noscript>';document.body.innerHTML='<h1>Hello preview</h1><input id="field" value="old"><script>globalThis.shouldNotRun=1<\/script><noscript>Enable scripting</noscript>';`)
+		if html := read(); !strings.Contains(html, "Hello preview") || strings.Contains(html, "<script") || strings.Contains(html, "<noscript") || strings.Contains(html, "opacity:0") || !strings.Contains(html, "height: max(540px, 36.53vw)") || !strings.Contains(html, "width: min(calc(100% - 96px),") || !strings.Contains(html, "font-size: clamp(48px, 3.8vw, 76px)") {
 			t.Fatalf("bad preview: %s", html)
 		}
 		eval(`document.getElementById('field').value='live';document.styleSheets[0].cssRules[0].style.backgroundColor='blue'`)

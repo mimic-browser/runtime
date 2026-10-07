@@ -75,6 +75,43 @@ const cssLengthTerm = (value) => {
   return unit === '%' || cssLengthUnits.has(unit) ? { number: Number(match[1]), unit } : null;
 };
 const cssLengthValue = (value) => {
+  const comparison = /^(min|max|clamp)\((.*)\)$/is.exec(value);
+  if (comparison) {
+    // Pending substitution preserves the authored token stream. Validating
+    // dimensions or simplifying calc() before var() resolves would drop valid
+    // responsive declarations and change their CSSOM serialization.
+    const variables = value.match(/\bvar\(/gi);
+    if (variables) {
+      const valid = value.match(/\bvar\(\s*--[\w-]+\s*(?=[,)])/gi);
+      return cssValueTokens(value) && valid?.length === variables.length ? value : null;
+    }
+    const name = comparison[1].toLowerCase();
+    const parts = cssSplitTopLevel(comparison[2], ',');
+    if (!parts || !parts.length || (name === 'clamp' && parts.length !== 3)) return null;
+    const values = parts.map((part) => {
+      // Math arguments can be negative even for a nonnegative property. Its
+      // range restriction applies to the calculated result, not each operand.
+      const term = cssLengthTerm(part);
+      if (cssNumberRegex.test(part)) return null;
+      return term ? cssSerializeNumber(term.number) + term.unit : cssLengthValue(part);
+    });
+    if (values.includes(null)) return null;
+    const argumentsText = values.map((part) =>
+      part.startsWith('calc(') ? part.slice(5, -1) : part,
+    );
+    const terms = argumentsText.map(cssLengthTerm);
+    if (terms.every(Boolean) && terms.every((term) => term.unit === terms[0].unit)) {
+      const numbers = terms.map((term) => term.number);
+      const result =
+        name === 'min'
+          ? Math.min(...numbers)
+          : name === 'max'
+            ? Math.max(...numbers)
+            : Math.max(numbers[0], Math.min(numbers[1], numbers[2]));
+      return 'calc(' + cssSerializeNumber(result) + terms[0].unit + ')';
+    }
+    return name + '(' + argumentsText.join(', ') + ')';
+  }
   if (cssNumberRegex.test(value) && Number(value) === 0) return '0px';
   const term = cssLengthTerm(value);
   if (term) return term.number >= 0 ? cssSerializeNumber(term.number) + term.unit : null;
