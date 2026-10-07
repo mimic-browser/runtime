@@ -1,23 +1,24 @@
-# Mimic v0.2.0
+# Mimic v0.2.1
 
-Changes since v0.1.9:
+Changes since v0.2.0:
 
-## Workload optimization
+## Camera, microphone and WebRTC
 
-- Run `mimic optimize --name shop -- <command>` to learn which network acquisitions an ordinary CDP workload can avoid. The external command and its own assertions define success; no Mimic-specific SDK or assertion API is required.
-- Optimize owns an isolated endpoint supplied through `MIMIC_CDP_URL`, records the browser network environment to disk, validates local replay and searches resource combinations without live-network fallback during trials.
-- Save named or exported workload profiles and apply them with `mimic --profile shop`. Multi-state training checks the same plan against every supplied workload state.
-- Generated resource decisions share the existing ResourcePolicy enforcement. Search can avoid individual requests, acquire headers without unused bodies, and suppress validated external classic-script execution.
-- Live profile admission is scoped to recorded document routes and request inputs, rather than byte-identical HTML. Unknown requests use normal Mimic; changed script sources execute normally. Profiles remain empirical: keep assertions in live workloads and retrain when relevant states change. Profiles are tied to their validating executable.
-- Captures preserve intentionally policy-limited response bodies. Replay requiring missing bytes is unsupported, never a fabricated successful response or a live fetch.
+- Capture real cameras, including OBS Virtual Camera, and native microphone inputs. `enumerateDevices` and `getUserMedia` support device selection, permission redaction, required constraints, shared-source clones and combined audio/video streams.
+- Send and receive H264 video and Opus audio over real ICE/DTLS/SRTP connections. Mixed audio/video tracks share a canonical remote stream; text and binary data channels use SCTP. Camera frames feed video, canvas and bitmap observations, and microphone/received audio feed Web Audio analyser readbacks.
+- Allocate capture and transport on demand, start encoders after connection, and bound frame/audio queues. Navigation and Page teardown release devices, transport and codecs. Capture uses native platform adapters without an FFmpeg process; the selected OpenH264 binary and audio dependencies are bundled, with no runtime download.
+- Project camera and microphone permissions from the existing BrowserContext/origin store through JavaScript and CDP. Automation grants access explicitly; ungranted requests reject immediately without an interactive permission wait. Revocation ends the corresponding local capture tracks.
+- Correct QuickJS error construction so it does not invoke subclass accessors before initialization, and return numeric Window/Worker timer handles across engines.
 
-## Runtime and diagnostics
+## Developer preview
 
-- Preserve parser insertion tails across nested document.write suspension and allow demanded modules after denied speculative preloads.
-- Add resource acquisition and script execution measurements, bounded search, process cleanup, replay diagnostics and color-aware terminal reporting.
+- Add light, dark and system themes, fit/zoom controls, and a passive viewport that preserves target dimensions and keeps viewer input isolated from the automated Page.
+- Show bounded live activity for commands, lifecycle, network, console and exceptions, with filters, search, pause/resume and reconnect support. Slow viewers do not stall Page execution; queue overflow is reported explicitly.
 
-## Evidence and limitations
+## Verification and limits
 
-The unchanged guest GitLab content/menu workload passed three independent live runs with a trained profile, acquiring 10.79% fewer encoded HTTP body bytes than a strong manual policy. Request count, CPU and latency did not improve. This is one workload, not a general performance guarantee. See the [full method and results](https://github.com/mimic-browser/runtime/blob/v0.2.0/docs/performance/workload-optimization-adaptive-live.md).
+Retained frozen Chrome 152 diagnostics verify OBS video and USB microphone audio in both directions, with decoded observations and real packet counts. Focused tests cover capture, permissions, constraints, clones, disabled tracks, mixed audio/video transport and teardown in Goja, V8 and QuickJS. Release packaging verifies extracted Windows/Linux archives, all three engines, public clients and checksums.
 
-Mimic remains a public beta for Windows and Linux amd64. Optimize does not prove future site correctness, provide universal browser replay or roll back skipped effects. Capture artifacts may contain credentials and personal data. See [Optimize](https://mimic.boo/docs/optimize/) and [safety limits](https://mimic.boo/docs/optimize/safety/).
+Video transmission currently supports H264 up to 1280×720 at 30 fps. Microphones deliver 48 kHz mono/stereo PCM and Opus audio. Echo cancellation, noise suppression, automatic gain control, voice isolation, speaker output, simulcast and sender parameter changes remain unsupported. Required unavailable processing constraints reject rather than simulate success. macOS hardware capture has not been tested locally, and no macOS release archive is provided. See the [capture contract and limitations](https://github.com/mimic-browser/runtime/blob/v0.2.1/docs/camera.md).
+
+Mimic remains a renderer-free public beta for Windows and Linux amd64. Full source changes: [v0.2.0...v0.2.1](https://github.com/mimic-browser/runtime/compare/v0.2.0...v0.2.1).
