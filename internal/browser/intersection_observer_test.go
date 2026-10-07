@@ -30,6 +30,9 @@ func TestIntersectionObserverInitialAndChangedObservations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The successor's exact ratio rectangles come from the standards-mode
+	// /plain receipt, rather than an initial quirks-mode about:blank document.
+	navigateCapabilityFixture(t, p)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	got, err := p.Evaluate(ctx, intersectionObserverRegressions)

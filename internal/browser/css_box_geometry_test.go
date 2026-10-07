@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -523,11 +524,55 @@ func TestCSSGeometryAuditRestoredRealms(t *testing.T) {
 				t.Fatal(err)
 			}
 			encoded, _ := json.Marshal(string(source))
-			actual := bootstrapSnapshotEvaluate(t, p, "(()=>{const f=document.createElement('iframe');document.body.append(f);try{return f.contentWindow.eval("+string(encoded)+")}finally{f.remove()}})()")
+			// These receipts were captured on the standards-mode /plain fixture.
+			// An initial about:blank iframe has no doctype and uses quirks mode,
+			// whose percentage-height behavior must not be compared to that receipt.
+			wrapper := `(() => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  try {
+    const doc = frame.contentDocument;
+    doc.open();
+    doc.write('<!doctype html><html><head></head><body></body></html>');
+    doc.close();
+    if (doc.compatMode !== 'CSS1Compat') throw new Error('standards fixture required');
+    return frame.contentWindow.eval(ORACLE_SOURCE);
+  } finally {
+    frame.remove();
+  }
+})()`
+			actual := bootstrapSnapshotEvaluate(t, p, strings.Replace(wrapper, "ORACLE_SOURCE", string(encoded), 1))
 			if !reflect.DeepEqual(actual, oracle.Observation) {
 				t.Fatalf("got %v; want %v", actual, oracle.Observation)
 			}
 			bootstrapSnapshotAssertRestored(t, p, 1)
 		})
 	}
+}
+
+func TestCSSGeometryIntegrationQuirksMode(t *testing.T) {
+	parallelBrowserTest(t)
+	source, err := os.ReadFile("testdata/css_geometry_integration_oracle.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded, _ := json.Marshal(string(source))
+	historyTestPages(t, func(t *testing.T, p *Page) {
+		// The unchanged integration probe also runs in an initial 300x150
+		// about:blank iframe. Its percentage-height wrapper uses the viewport
+		// in quirks mode, while its padding-ratio descendant remains 300px tall.
+		wrapper := `(() => {
+  const frame = document.createElement('iframe');
+  frame.style.cssText = 'width:300px;height:150px;border:0';
+  document.body.append(frame);
+  try {
+    if (frame.contentDocument.compatMode !== 'BackCompat')
+      throw new Error('quirks fixture required');
+    return JSON.stringify(frame.contentWindow.eval(ORACLE_SOURCE).staticPosition);
+  } finally {
+    frame.remove();
+  }
+})()`
+		historyEval(t, p, strings.Replace(wrapper, "ORACLE_SOURCE", string(encoded), 1), `[[0,0,200,150],[0,0,200,150],[0,0,200,150],[0,0,200,300],[0,300,200,300]]`)
+	})
 }
