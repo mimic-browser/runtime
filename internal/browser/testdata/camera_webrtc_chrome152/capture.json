@@ -1,0 +1,270 @@
+{
+  "captureMetadata": {
+    "chrome": {
+      "Browser": "Chrome/152.0.7977.82",
+      "Protocol-Version": "1.3",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+      "V8-Version": "15.2.124.21",
+      "WebKit-Version": "537.36 (@d04cdb24d67b081f6cf80200ffc5233f44b61109)",
+      "webSocketDebuggerUrl": "ws://127.0.0.1:19573/devtools/browser/9a615d17-75bb-47db-be0b-6ce3fdc3af8a"
+    },
+    "mimic": {
+      "Browser": "Mimic/152.0.7977.82",
+      "Protocol-Version": "1.3",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+      "V8-Version": "virtual",
+      "webSocketDebuggerUrl": "ws://127.0.0.1:19574/devtools/browser/a58a128c-6988-4381-9335-45b776c1a8b8"
+    },
+    "chromium": "d04cdb24d67b081f6cf80200ffc5233f44b61109",
+    "browserMode": "headful",
+    "windowHidden": true,
+    "profile": "C:\\Users\\moreveal\\AppData\\Local\\Temp\\mimic-webrtc-chrome152-nnvyodmi",
+    "environmentProfileId": "chrome-152-windows-x64-headful-controlled-v1",
+    "platform": "Windows x64",
+    "origin": "http://127.0.0.1:15926",
+    "identity": {
+      "webdriver": false,
+      "descriptor": "function get webdriver() { [native code] }",
+      "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+      "languages": [
+        "ru-RU"
+      ],
+      "origin": "http://127.0.0.1:15926",
+      "secure": true,
+      "outer": [
+        1280,
+        800
+      ],
+      "inner": [
+        1272,
+        653
+      ],
+      "dpr": 1,
+      "visibility": "visible",
+      "focus": false
+    },
+    "launchArguments": [
+      "E:\\GitHub\\mimic\\compatibility\\.chrome-for-testing\\152.0.7977.82\\chrome-win64\\chrome.exe",
+      "--remote-debugging-port=19573",
+      "--user-data-dir=C:\\Users\\moreveal\\AppData\\Local\\Temp\\mimic-webrtc-chrome152-nnvyodmi",
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--window-size=1280,800",
+      "about:blank"
+    ],
+    "mimicArguments": [
+      "C:\\Users\\moreveal\\AppData\\Local\\Temp\\go-build2425093685\\b001\\exe\\main.exe",
+      "-listen",
+      "127.0.0.1:19574"
+    ],
+    "binarySha256": "ea36dd818a90176f1a70616f0363d9be527229389a6c073a0b1688b9e73f67e9",
+    "mimicBinarySha256": "3f32c9a9912293565e70c9caad7cd0a69fe9f1cc2769a19706092ce1cadea604",
+    "probeSha256": "e8fbcc2225bd9d17b5efdcba7e4857a1ec2f3535b7c20e97b245406bdeec441c",
+    "experiment": "diagnostic: CDP camera grants, actual OBS capture, bilateral WebRTC, no API overrides"
+  },
+  "chrome": {
+    "connection": "connected",
+    "dimensions": [
+      1280,
+      720
+    ],
+    "pixel": [
+      43,
+      43,
+      43,
+      255
+    ],
+    "remoteTrack": {
+      "id": "1baa81c2-ff3b-42f4-a851-722eb6bcf753",
+      "readyState": "live",
+      "muted": false,
+      "settings": {
+        "aspectRatio": 1.7777777777777777,
+        "deviceId": "1baa81c2-ff3b-42f4-a851-722eb6bcf753",
+        "frameRate": 30,
+        "height": 720,
+        "resizeMode": "none",
+        "width": 1280
+      }
+    },
+    "transport": [
+      {
+        "id": "IT01V4038226007",
+        "timestamp": 1791336674233.078,
+        "type": "inbound-rtp",
+        "codecId": "CIT01_102_level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f",
+        "kind": "video",
+        "mediaType": "video",
+        "ssrc": 4038226007,
+        "transportId": "T01",
+        "jitter": 0,
+        "packetsLost": 0,
+        "packetsReceived": 29,
+        "packetsReceivedWithCe": 0,
+        "packetsReceivedWithEct1": 0,
+        "bytesReceived": 33236,
+        "decoderImplementation": "ExternalDecoder (D3D11VideoDecoder)",
+        "firCount": 0,
+        "frameHeight": 720,
+        "frameWidth": 1280,
+        "framesAssembledFromMultiplePackets": 1,
+        "framesDecoded": 1,
+        "framesDropped": 0,
+        "framesReceived": 1,
+        "freezeCount": 0,
+        "headerBytesReceived": 348,
+        "jitterBufferDelay": 0.00045,
+        "jitterBufferEmittedCount": 1,
+        "jitterBufferMinimumDelay": 0.01151,
+        "jitterBufferTargetDelay": 0.01151,
+        "keyFramesDecoded": 1,
+        "lastPacketReceivedTimestamp": 1791336674195.498,
+        "mid": "0",
+        "nackCount": 0,
+        "pauseCount": 0,
+        "pliCount": 0,
+        "powerEfficientDecoder": true,
+        "totalAssemblyTime": 0.000354,
+        "totalDecodeTime": 0.021571999999999997,
+        "totalFreezesDuration": 0,
+        "totalInterFrameDelay": 0,
+        "totalPausesDuration": 0,
+        "totalProcessingDelay": 0.031335,
+        "totalSquaredInterFrameDelay": 0,
+        "trackIdentifier": "1baa81c2-ff3b-42f4-a851-722eb6bcf753"
+      },
+      {
+        "id": "OT01V2493694014",
+        "timestamp": 1791336674233.078,
+        "type": "outbound-rtp",
+        "codecId": "COT01_102_level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f",
+        "kind": "video",
+        "mediaType": "video",
+        "ssrc": 2493694014,
+        "transportId": "T01",
+        "bytesSent": 15285,
+        "packetsSent": 47,
+        "active": true,
+        "encoderImplementation": "OpenH264",
+        "encodingIndex": 0,
+        "firCount": 0,
+        "frameHeight": 360,
+        "frameWidth": 640,
+        "framesEncoded": 3,
+        "framesPerSecond": 18,
+        "framesSent": 3,
+        "headerBytesSent": 9033,
+        "hugeFramesSent": 2,
+        "keyFramesEncoded": 2,
+        "mediaSourceId": "SV1",
+        "mid": "0",
+        "nackCount": 0,
+        "packetsSentWithEct1": 0,
+        "pliCount": 1,
+        "powerEfficientEncoder": false,
+        "psnrMeasurements": 1,
+        "psnrSum": {
+          "u": 41.59636688232422,
+          "v": 43.400474548339844,
+          "y": 37.81450653076172
+        },
+        "qpSum": 101,
+        "qualityLimitationDurations": {
+          "bandwidth": 0,
+          "cpu": 0,
+          "none": 0.515,
+          "other": 0
+        },
+        "qualityLimitationReason": "none",
+        "qualityLimitationResolutionChanges": 0,
+        "retransmittedBytesSent": 0,
+        "retransmittedPacketsSent": 0,
+        "scalabilityMode": "L1T1",
+        "targetBitrate": 805000,
+        "totalEncodeTime": 0.007,
+        "totalEncodedBytesTarget": 0,
+        "totalPacketSendDelay": 0.202233
+      },
+      {
+        "id": "T01",
+        "timestamp": 1791336674233.078,
+        "type": "transport",
+        "bytesReceived": 35031,
+        "bytesSent": 30026,
+        "dtlsCipher": "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+        "dtlsRole": "client",
+        "dtlsState": "connected",
+        "iceLocalUsernameFragment": "MSvl",
+        "iceRole": "controlled",
+        "iceState": "connected",
+        "localCertificateId": "CF2A:C5:7B:A2:FC:93:FB:B3:4F:96:61:EA:5D:07:21:70:F5:A2:9C:D0:3F:E6:87:78:B7:6B:89:94:9D:D9:3B:2B",
+        "packetsReceived": 37,
+        "packetsSent": 54,
+        "remoteCertificateId": "CFD4:E0:8C:E3:5E:A6:6D:3D:0A:1E:1E:60:27:93:E0:74:9A:92:BC:F7:B4:BC:89:EE:D0:32:AD:47:F0:1E:55:2E",
+        "selectedCandidatePairChanges": 1,
+        "selectedCandidatePairId": "CPtrk7N8Jw_niycpfid",
+        "srtpCipher": "SRTP_AEAD_AES_256_GCM",
+        "tlsVersion": "FEFD"
+      }
+    ],
+    "remoteAfterClose": "live"
+  },
+  "mimic": {
+    "connection": "connected",
+    "dimensions": [
+      640,
+      360
+    ],
+    "pixel": [
+      57,
+      57,
+      57,
+      255
+    ],
+    "remoteAfterClose": "live",
+    "remoteTrack": {
+      "id": "573bfeed-692a-40b0-8cb8-3d15fad93546",
+      "muted": false,
+      "readyState": "live",
+      "settings": {}
+    },
+    "transport": [
+      {
+        "bytesReceived": 26971,
+        "id": "inbound-rtp-2493694014",
+        "kind": "video",
+        "packetsReceived": 57,
+        "ssrc": 2493694014,
+        "timestamp": 1791336674256.685,
+        "type": "inbound-rtp"
+      },
+      {
+        "bytesReceived": 34259,
+        "bytesSent": 35031,
+        "dtlsCipher": "",
+        "dtlsState": "unknown",
+        "iceRole": "unknown",
+        "iceState": "unknown",
+        "id": "iceTransport",
+        "localCertificateId": "",
+        "packetsReceived": 0,
+        "packetsSent": 0,
+        "remoteCertificateId": "",
+        "rtcpTransportStatsId": "",
+        "selectedCandidatePairId": "",
+        "srtpCipher": "",
+        "timestamp": 1791336674255,
+        "type": "transport"
+      },
+      {
+        "bytesSent": 33236,
+        "id": "outbound-rtp-4038226007",
+        "kind": "video",
+        "packetsSent": 29,
+        "ssrc": 4038226007,
+        "timestamp": 1791336674256.685,
+        "type": "outbound-rtp"
+      }
+    ]
+  }
+}

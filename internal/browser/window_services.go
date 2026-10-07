@@ -139,6 +139,9 @@ func addWindowServiceHosts(r *Realm, h map[string]any) {
 	addCookieStoreHosts(r, h)
 	addLaunchHosts(r, h)
 	addSpeechHosts(r, h)
+	addCameraHosts(r, h)
+	addMicrophoneHosts(r, h)
+	addRTCMediaHosts(r, h)
 	h["enqueueWebTask"] = r.fn(func(_ engine.Value, a []engine.Value) (engine.Value, error) {
 		fn := a[0]
 		var abort engine.Value

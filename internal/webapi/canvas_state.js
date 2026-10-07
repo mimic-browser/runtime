@@ -888,6 +888,9 @@ const canvasCompatibilityState = (() => {
           unmodeled: ss.unmodeled,
           originClean: ss.originClean,
         };
+      } else if (typeof HTMLVideoElement !== 'undefined' && source instanceof HTMLVideoElement) {
+        image = cameraCaptureModel.frame(source);
+        if (!image) return;
       } else if (typeof HTMLImageElement !== 'undefined' && source instanceof HTMLImageElement) {
         image = sourceImage(source);
         if (!image) {
@@ -1275,6 +1278,10 @@ const canvasCompatibilityState = (() => {
         unmodeled: s.unmodeled,
         originClean: s.originClean,
       };
+    } else if (typeof HTMLVideoElement !== 'undefined' && source instanceof HTMLVideoElement) {
+      b = cameraCaptureModel.frame(source);
+      if (!b) fail('InvalidStateError', 'Video has no current frame');
+      b.closed = false;
     } else if (typeof HTMLImageElement !== 'undefined' && source instanceof HTMLImageElement) {
       b = sourceImage(source);
       if (!b || b.unavailable) fail('InvalidStateError', 'Image is not decoded');

@@ -56,6 +56,10 @@ type Realm struct {
 	worldHasObservers        bool
 	speech                   *speechSynthesisState
 	speechNotifier           engine.Value
+	cameraTracks             map[string]*cameraTrack
+	cameraNotifier           engine.Value
+	rtcMediaPeers            map[string]*rtcMediaPeer
+	rtcMediaNotifier         engine.Value
 	webTaskAbort             engine.Value
 	auxiliaryState           engine.Value
 	auxiliaryStorage         engine.Value
@@ -565,6 +569,8 @@ func (r *Realm) Close() error {
 	r.apiTraceSet = nil
 	r.deactivateMediaSources()
 	r.stopMediaLoads()
+	r.stopCameraTracks()
+	r.closeRTCMedia()
 	r.agent.Page().ctx.network.RevokeBlobsForOwner(r.ID)
 	r.reportBlitzCalls()
 	var nativeCloseErr error
@@ -579,6 +585,8 @@ func (r *Realm) Close() error {
 	r.closeSpeechProvider()
 	r.speech = nil
 	r.speechNotifier = nil
+	r.cameraNotifier = nil
+	r.rtcMediaNotifier = nil
 	r.closeIndexedDatabases()
 	r.files.close()
 	if r.cookieUnsubscribe != nil {
@@ -619,6 +627,9 @@ func (r *Realm) Close() error {
 	r.preparedModules = nil
 	r.imageLoads = nil
 	r.mediaLoads = nil
+	r.cameraTracks = nil
+	r.rtcMediaPeers = nil
+	r.rtcMediaNotifier = nil
 	r.mediaSources = nil
 	r.mediaSourceNotifier = nil
 	r.availableImages = nil

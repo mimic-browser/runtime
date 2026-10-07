@@ -145,6 +145,22 @@ func (c *Context) setPermissionLocked(origin, name, value string) {
 			continue
 		}
 		r.scheduler.Post(scheduler.Control, 0, func(ctx context.Context) error {
+			if (name == "camera" || name == "microphone") && value != "granted" {
+				for _, track := range r.cameraTracks {
+					permission := "camera"
+					if track.kind == "audio" {
+						permission = "microphone"
+					}
+					if name == permission && !track.remote && !track.stopped {
+						r.stopCameraTrack(track)
+						if r.cameraNotifier != nil {
+							if _, err := r.runtime.Call(ctx, r.cameraNotifier, nil, r.val(track.id), r.val("ended")); err != nil {
+								return err
+							}
+						}
+					}
+				}
+			}
 			_, err := r.runtime.Call(ctx, r.permissionNotifier, nil, r.val(name))
 			return err
 		})

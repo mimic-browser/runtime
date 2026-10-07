@@ -103,3 +103,21 @@ func TestMicrotaskCheckpointDrainsJobsQueuedByJobs(t *testing.T) {
 		t.Fatalf("nested Promise jobs were not drained: value=%v err=%v", value.Export(), err)
 	}
 }
+
+func TestErrorConstructionDoesNotReadSubclassAccessors(t *testing.T) {
+	r := Factory{}.New()
+	defer r.Close()
+	r.SetTimeSource(time.Now)
+	v, err := r.Eval(context.Background(), `let nameReads = 0;
+class SubclassError extends Error {
+  get name() {
+    nameReads++;
+    throw new Error('read before initialization');
+  }
+}
+new SubclassError('capture');
+nameReads === 0;`, "error-subclass.js")
+	if err != nil || v.Export() != true {
+		t.Fatalf("constructor invoked name getter: %v %v", v, err)
+	}
+}

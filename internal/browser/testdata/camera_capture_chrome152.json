@@ -1,0 +1,153 @@
+{
+  "captureMetadata": {
+    "chrome": "Chrome/152.0.7977.82",
+    "v8": "15.2.124.21",
+    "chromium": "d04cdb24d67b081f6cf80200ffc5233f44b61109",
+    "browserMode": "headful",
+    "windowHidden": true,
+    "environmentProfileId": "chrome-152-windows-x64-headful-controlled-v1",
+    "platform": "Windows x64",
+    "origin": "http://127.0.0.1:63983",
+    "launchArguments": [
+      "E:\\GitHub\\mimic\\compatibility\\.chrome-for-testing\\152.0.7977.82\\chrome-win64\\chrome.exe",
+      "--remote-debugging-port=19571",
+      "--user-data-dir=C:\\Users\\moreveal\\AppData\\Local\\Temp\\mimic-camera-chrome152-07o1merb",
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--window-size=1280,800",
+      "about:blank"
+    ],
+    "profile": "C:\\Users\\moreveal\\AppData\\Local\\Temp\\mimic-camera-chrome152-07o1merb",
+    "binarySha256": "ea36dd818a90176f1a70616f0363d9be527229389a6c073a0b1688b9e73f67e9",
+    "probeSha256": "1eb40dcd0c5b944111674217c1b027adbb8158e4af645d4f9885e3187644e101",
+    "identity": {
+      "webdriver": false,
+      "descriptor": "function get webdriver() { [native code] }",
+      "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+      "languages": [
+        "ru-RU"
+      ],
+      "origin": "http://127.0.0.1:63983",
+      "secure": true,
+      "outer": [
+        1280,
+        800
+      ],
+      "inner": [
+        1272,
+        653
+      ],
+      "dpr": 1,
+      "visibility": "visible",
+      "focus": false
+    },
+    "experiment": "diagnostic: CDP-granted camera, OBS Virtual Camera; no API overrides"
+  },
+  "raw": {
+    "result": {
+      "type": "object",
+      "value": {
+        "empty": {
+          "tag": "[object MediaStream]",
+          "eventTarget": true,
+          "active": false,
+          "tracks": 0,
+          "id": "string"
+        },
+        "stream": {
+          "tag": "[object MediaStream]",
+          "eventTarget": true,
+          "active": true,
+          "trackIdentity": true,
+          "audioTracks": 0
+        },
+        "track": {
+          "tag": "[object MediaStreamTrack]",
+          "eventTarget": true,
+          "kind": "video",
+          "label": "OBS Virtual Camera",
+          "enabled": true,
+          "muted": false,
+          "readyState": "live",
+          "cloneIndependent": true,
+          "cloneSameDevice": true,
+          "width": 2560,
+          "height": 1440,
+          "frameRate": 60.000240325927734
+        },
+        "video": {
+          "srcObject": true,
+          "width": 2560,
+          "height": 1440,
+          "paused": false,
+          "duration": true
+        },
+        "bitmap": {
+          "width": 2560,
+          "height": 1440
+        },
+        "stopped": {
+          "events": 0,
+          "readyState": "ended",
+          "streamActive": false,
+          "cloneReadyState": "live",
+          "settingsKeys": [
+            "deviceId",
+            "groupId"
+          ]
+        }
+      }
+    }
+  },
+  "observation": {
+    "empty": {
+      "tag": "[object MediaStream]",
+      "eventTarget": true,
+      "active": false,
+      "tracks": 0,
+      "id": "string"
+    },
+    "stream": {
+      "tag": "[object MediaStream]",
+      "eventTarget": true,
+      "active": true,
+      "trackIdentity": true,
+      "audioTracks": 0
+    },
+    "track": {
+      "tag": "[object MediaStreamTrack]",
+      "eventTarget": true,
+      "kind": "video",
+      "label": "OBS Virtual Camera",
+      "enabled": true,
+      "muted": false,
+      "readyState": "live",
+      "cloneIndependent": true,
+      "cloneSameDevice": true,
+      "width": 2560,
+      "height": 1440,
+      "frameRate": 60.000240325927734
+    },
+    "video": {
+      "srcObject": true,
+      "width": 2560,
+      "height": 1440,
+      "paused": false,
+      "duration": true
+    },
+    "bitmap": {
+      "width": 2560,
+      "height": 1440
+    },
+    "stopped": {
+      "events": 0,
+      "readyState": "ended",
+      "streamActive": false,
+      "cloneReadyState": "live",
+      "settingsKeys": [
+        "deviceId",
+        "groupId"
+      ]
+    }
+  }
+}

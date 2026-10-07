@@ -1,0 +1,207 @@
+[
+  {
+    "method": "Network.requestWillBeSent",
+    "params": {
+      "documentURL": "http://127.0.0.1:15926",
+      "frameId": "6b02a96c-29c2-46ec-aba3-c46643165325",
+      "initiator": {
+        "type": "other"
+      },
+      "loaderId": "91182e70-b425-4443-990c-58283bdc6601",
+      "request": {
+        "headers": {
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+          "Accept-Encoding": "gzip, deflate, br, zstd",
+          "Accept-Language": "ru-RU,ru;q=0.9",
+          "Priority": "u=0, i",
+          "Sec-Ch-Ua": "\"Not?A_Brand\";v=\"24\", \"Chromium\";v=\"152\"",
+          "Sec-Ch-Ua-Mobile": "?0",
+          "Sec-Ch-Ua-Platform": "\"Windows\"",
+          "Sec-Fetch-Dest": "document",
+          "Sec-Fetch-Mode": "navigate",
+          "Sec-Fetch-Site": "none",
+          "Sec-Fetch-User": "?1",
+          "Upgrade-Insecure-Requests": "1",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36"
+        },
+        "method": "GET",
+        "postData": "",
+        "url": "http://127.0.0.1:15926"
+      },
+      "requestId": "91182e70-b425-4443-990c-58283bdc6601",
+      "timestamp": 1791336671.889,
+      "type": "Document",
+      "wallTime": 1791336671
+    }
+  },
+  {
+    "method": "Network.responseReceived",
+    "params": {
+      "frameId": "6b02a96c-29c2-46ec-aba3-c46643165325",
+      "loaderId": "91182e70-b425-4443-990c-58283bdc6601",
+      "requestId": "91182e70-b425-4443-990c-58283bdc6601",
+      "response": {
+        "connectionId": "127.0.0.1:9853->127.0.0.1:15926",
+        "connectionReused": false,
+        "encodedDataLength": 55,
+        "headers": {
+          "Content-Type": "text/html",
+          "Date": "Wed, 07 Oct 2026 01:31:11 GMT",
+          "Server": "BaseHTTP/0.6 Python/3.14.2"
+        },
+        "mimeType": "text/html",
+        "protocol": "http/1.0",
+        "securityState": "unknown",
+        "status": 200,
+        "statusText": "",
+        "timing": {
+          "connectEnd": 0.8543,
+          "connectStart": 0.192,
+          "dnsEnd": -1,
+          "dnsStart": -1,
+          "proxyEnd": -1,
+          "proxyStart": -1,
+          "pushEnd": 0,
+          "pushStart": 0,
+          "receiveHeadersEnd": 1.1896,
+          "receiveHeadersStart": 1.1896,
+          "requestTime": 0,
+          "sendEnd": 0.9064,
+          "sendStart": 0.8983,
+          "sslEnd": -1,
+          "sslStart": -1,
+          "workerFetchStart": -1,
+          "workerReady": -1,
+          "workerRespondWithSettled": -1,
+          "workerStart": -1
+        },
+        "url": "http://127.0.0.1:15926"
+      },
+      "timestamp": 1791336671.89,
+      "type": "Document"
+    }
+  },
+  {
+    "method": "Network.loadingFinished",
+    "params": {
+      "encodedDataLength": 55,
+      "requestId": "91182e70-b425-4443-990c-58283bdc6601",
+      "timestamp": 1791336671.89
+    }
+  },
+  {
+    "method": "Page.frameNavigated",
+    "params": {
+      "frame": {
+        "domainAndRegistry": "",
+        "id": "6b02a96c-29c2-46ec-aba3-c46643165325",
+        "loaderId": "91182e70-b425-4443-990c-58283bdc6601",
+        "mimeType": "text/html",
+        "name": "",
+        "securityOrigin": "http://127.0.0.1:15926",
+        "url": "http://127.0.0.1:15926"
+      }
+    }
+  },
+  {
+    "method": "Page.domContentEventFired",
+    "params": {
+      "timestamp": 1791336672.533
+    }
+  },
+  {
+    "method": "Page.loadEventFired",
+    "params": {
+      "timestamp": 1791336672.533
+    }
+  },
+  {
+    "method": "Network.requestWillBeSent",
+    "params": {
+      "documentURL": "http://127.0.0.1:15926/favicon.ico",
+      "frameId": "6b02a96c-29c2-46ec-aba3-c46643165325",
+      "initiator": {
+        "type": "other"
+      },
+      "loaderId": "91182e70-b425-4443-990c-58283bdc6601",
+      "request": {
+        "headers": {
+          "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+          "Accept-Encoding": "gzip, deflate, br, zstd",
+          "Accept-Language": "ru-RU,ru;q=0.9",
+          "Priority": "u=1, i",
+          "Referer": "http://127.0.0.1:15926",
+          "Sec-Ch-Ua": "\"Not?A_Brand\";v=\"24\", \"Chromium\";v=\"152\"",
+          "Sec-Ch-Ua-Mobile": "?0",
+          "Sec-Ch-Ua-Platform": "\"Windows\"",
+          "Sec-Fetch-Dest": "image",
+          "Sec-Fetch-Mode": "no-cors",
+          "Sec-Fetch-Site": "same-origin",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36"
+        },
+        "method": "GET",
+        "postData": "",
+        "url": "http://127.0.0.1:15926/favicon.ico"
+      },
+      "requestId": "d482afae-85ea-4061-9c9f-8e729167ab35",
+      "timestamp": 1791336672.534,
+      "type": "Other",
+      "wallTime": 1791336672
+    }
+  },
+  {
+    "method": "Network.responseReceived",
+    "params": {
+      "frameId": "6b02a96c-29c2-46ec-aba3-c46643165325",
+      "loaderId": "91182e70-b425-4443-990c-58283bdc6601",
+      "requestId": "d482afae-85ea-4061-9c9f-8e729167ab35",
+      "response": {
+        "connectionId": "127.0.0.1:9855->127.0.0.1:15926",
+        "connectionReused": false,
+        "encodedDataLength": 55,
+        "headers": {
+          "Content-Type": "text/html",
+          "Date": "Wed, 07 Oct 2026 01:31:12 GMT",
+          "Server": "BaseHTTP/0.6 Python/3.14.2"
+        },
+        "mimeType": "text/html",
+        "protocol": "http/1.0",
+        "securityState": "unknown",
+        "status": 200,
+        "statusText": "",
+        "timing": {
+          "connectEnd": 0.3927,
+          "connectStart": 0.0328,
+          "dnsEnd": -1,
+          "dnsStart": -1,
+          "proxyEnd": -1,
+          "proxyStart": -1,
+          "pushEnd": 0,
+          "pushStart": 0,
+          "receiveHeadersEnd": 0.7697,
+          "receiveHeadersStart": 0.7697,
+          "requestTime": 0,
+          "sendEnd": 0.4228,
+          "sendStart": 0.4176,
+          "sslEnd": -1,
+          "sslStart": -1,
+          "workerFetchStart": -1,
+          "workerReady": -1,
+          "workerRespondWithSettled": -1,
+          "workerStart": -1
+        },
+        "url": "http://127.0.0.1:15926/favicon.ico"
+      },
+      "timestamp": 1791336672.535,
+      "type": "Other"
+    }
+  },
+  {
+    "method": "Network.loadingFinished",
+    "params": {
+      "encodedDataLength": 55,
+      "requestId": "d482afae-85ea-4061-9c9f-8e729167ab35",
+      "timestamp": 1791336672.535
+    }
+  }
+]

@@ -77,7 +77,9 @@ func (r *Realm) hostTimer(_ engine.Value, args []engine.Value) (engine.Value, er
 	id = r.scheduler.Post(scheduler.Timer, delay, callback)
 	registration.taskID = id
 	r.timers[id] = registration
-	return r.val(id), nil
+	// Window timer handles are Web IDL numbers, including in runtimes whose
+	// uint64 marshaling otherwise produces a JavaScript BigInt.
+	return r.val(float64(id)), nil
 }
 
 func (r *Realm) hostClearTimer(_ engine.Value, args []engine.Value) (engine.Value, error) {

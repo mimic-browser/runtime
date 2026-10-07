@@ -1,0 +1,63 @@
+{
+  "chrome": {
+    "Browser": "Chrome/152.0.7977.82",
+    "Protocol-Version": "1.3",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+    "V8-Version": "15.2.124.21",
+    "WebKit-Version": "537.36 (@d04cdb24d67b081f6cf80200ffc5233f44b61109)",
+    "webSocketDebuggerUrl": "ws://127.0.0.1:19573/devtools/browser/e71cde04-345f-4b4d-8460-73da87b2fc12"
+  },
+  "mimic": {
+    "Browser": "Mimic/152.0.7977.82",
+    "Protocol-Version": "1.3",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+    "V8-Version": "virtual",
+    "webSocketDebuggerUrl": "ws://127.0.0.1:19574/devtools/browser/b8c30c1f-b501-4649-8495-52cda3711bdc"
+  },
+  "chromium": "d04cdb24d67b081f6cf80200ffc5233f44b61109",
+  "browserMode": "headful",
+  "windowHidden": true,
+  "profile": "C:\\Users\\moreveal\\AppData\\Local\\Temp\\mimic-webrtc-chrome152-7pnf_r6d",
+  "environmentProfileId": "chrome-152-windows-x64-headful-controlled-v1",
+  "platform": "Windows x64",
+  "origin": "http://127.0.0.1:12276",
+  "identity": {
+    "webdriver": false,
+    "descriptor": "function get webdriver() { [native code] }",
+    "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+    "languages": [
+      "ru-RU"
+    ],
+    "origin": "http://127.0.0.1:12276",
+    "secure": true,
+    "outer": [
+      1280,
+      800
+    ],
+    "inner": [
+      1272,
+      653
+    ],
+    "dpr": 1,
+    "visibility": "visible",
+    "focus": false
+  },
+  "launchArguments": [
+    "E:\\GitHub\\mimic\\compatibility\\.chrome-for-testing\\152.0.7977.82\\chrome-win64\\chrome.exe",
+    "--remote-debugging-port=19573",
+    "--user-data-dir=C:\\Users\\moreveal\\AppData\\Local\\Temp\\mimic-webrtc-chrome152-7pnf_r6d",
+    "--no-first-run",
+    "--no-default-browser-check",
+    "--window-size=1280,800",
+    "about:blank"
+  ],
+  "mimicArguments": [
+    "C:\\Users\\moreveal\\AppData\\Local\\Temp\\go-build2425093685\\b001\\exe\\main.exe",
+    "-listen",
+    "127.0.0.1:19574"
+  ],
+  "binarySha256": "ea36dd818a90176f1a70616f0363d9be527229389a6c073a0b1688b9e73f67e9",
+  "mimicBinarySha256": "79092a512f766e7cea116cea6882ea33dac817b22ba4814ec601f48b2542f450",
+  "probeSha256": "6b182be53251232da0e2324f29f4dc61eb6e4bf994d83430207f71a1f676009f",
+  "experiment": "diagnostic: CDP microphone grants, native capture, bilateral WebRTC, userGesture evaluations and trusted key input for audio activation, no API overrides"
+}

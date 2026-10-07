@@ -13,6 +13,12 @@
 # Frozen benchmark fingerprints cover exact bytes, including line endings.
 benchmark/** -text
 
+# Camera capture provenance and manifests cover the recorder's exact bytes.
+internal/browser/testdata/camera_capture_chrome152.json -text
+internal/browser/testdata/camera_capture_oracle.js -text
+internal/browser/testdata/camera_webrtc_chrome152/** -text
+internal/browser/testdata/microphone_webrtc_chrome152/** -text
+
 # Retain third-party legal texts, including upstream whitespace.
 tools/release/licenses/*.txt -whitespace
 

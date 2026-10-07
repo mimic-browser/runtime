@@ -1,23 +1,26 @@
 {
   "Browser.grantPermissions": {
     "status": "partial",
-    "notes": "Geolocation allowlists for the selected context and optional HTTP(S) origin; other permission grants explicitly reject. Other permissions are denied by the allowlist.",
+    "notes": "Context/origin allowlists for geolocation, videoCapture (camera), audioCapture (microphone), notifications and clipboard grants; other permissions explicitly reject. Unlisted permissions are denied. Native camera and microphone capture are implemented; native permission UI is unsupported.",
     "tests": [
-      "internal/cdp/geolocation_test.go#TestGeolocationOverrideCommands"
+      "internal/cdp/geolocation_test.go#TestGeolocationOverrideCommands",
+      "internal/cdp/camera_test.go#TestCameraPermissionCommands"
     ]
   },
   "Browser.resetPermissions": {
     "status": "partial",
     "notes": "Restores canonical context permission defaults and notifies live permission observers. Native permission prompts and platform permission stores are not modeled.",
     "tests": [
-      "internal/cdp/geolocation_test.go#TestGeolocationOverrideCommands"
+      "internal/cdp/geolocation_test.go#TestGeolocationOverrideCommands",
+      "internal/cdp/camera_test.go#TestCameraPermissionCommands"
     ]
   },
   "Browser.setPermission": {
     "status": "partial",
-    "notes": "Geolocation granted, denied and prompt settings for the selected context and optional HTTP(S) origin. Other permission descriptors explicitly reject.",
+    "notes": "Context/origin granted, denied and prompt settings for geolocation, camera, microphone, notifications and clipboard. Camera pan/tilt/zoom and other descriptors reject. Requests requiring an ungranted camera or microphone reject immediately for automation; revocation ends the corresponding local capture tracks. No simulated native permission prompt.",
     "tests": [
-      "internal/cdp/geolocation_test.go#TestGeolocationOverrideCommands"
+      "internal/cdp/geolocation_test.go#TestGeolocationOverrideCommands",
+      "internal/cdp/camera_test.go#TestCameraPermissionCommands"
     ]
   },
   "Emulation.setGeolocationOverride": {
@@ -99,7 +102,9 @@
   "Browser.setDownloadBehavior": {
     "status": "partial",
     "notes": "Per-context allow, allowAndName, deny and default policies for attachment navigation responses; completed bytes are written to the configured destination and Browser download events are emitted. Other download initiators and streaming progress are not modeled.",
-    "tests": ["internal/cdp/download_test.go#TestDownloadBehaviorValidatesPolicyAndContext"]
+    "tests": [
+      "internal/cdp/download_test.go#TestDownloadBehaviorValidatesPolicyAndContext"
+    ]
   },
   "DOM.describeNode": {
     "status": "partial",
@@ -294,7 +299,9 @@
   "Emulation.setTimezoneOverride": {
     "status": "partial",
     "notes": "Page-local IANA timezone override and empty reset affect Intl and Date observations in the current top realm and future realms. Existing child realms and workers are not refreshed.",
-    "tests": ["internal/cdp/automation_commands_test.go#TestTimezoneOverrideRefreshesCurrentRealm"]
+    "tests": [
+      "internal/cdp/automation_commands_test.go#TestTimezoneOverrideRefreshesCurrentRealm"
+    ]
   },
   "Emulation.setTouchEmulationEnabled": {
     "status": "partial",

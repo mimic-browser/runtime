@@ -31,6 +31,12 @@ var trustedTypesSurface string
 //go:embed surface.js
 var handwrittenSurface string
 
+//go:embed rtc_media.js
+var rtcMediaSurface string
+
+//go:embed camera_capture.js
+var cameraCaptureSurface string
+
 //go:embed rtc_session.js
 var rtcSessionSurface string
 
@@ -418,7 +424,7 @@ func composeSurface(generated, exposureSource string) string {
 	parts := []string{capabilitySurface, generated, "installLazyShape();", "finalizeBindings();", exposureSource, "installGeneratedLazyOperations();",
 		"installNavigatorCapabilities();installLazySingletonBindings();", mediaSourceSurface, navigatorIdentitySurface, cssSupportsSurface, strings.Replace(domCompatibility, "/* shared_abort_encoding */", abortEncodingSurface, 1),
 		templatesCompatibilitySurface, selectorsVendorSurface, selectorsCompatibilitySurface, xpathCompatibilitySurface, cssomCompatibilitySurface, strings.Replace(strings.Replace(strings.Replace(strings.Replace(svgGeometrySurface, "/* shared_svg_boundaries */", svgBoundariesSurface, 1), "/* shared_svg_text */", svgTextSurface, 1), "/* shared_svg_css_transform */", svgCSSTransformSurface, 1), "/* shared_svg_types */", svgTypesSurface+svgCoordinatesSurface+svgReflectionsSurface+svgPathMetricsSurface+svgUseSurface+svgAttributeDefaultsSurface+svgAttributeSemanticsSurface, 1), streamPrelude,
-		streamsVendorSurface, "}", strings.Replace(fetchCompatibilitySurface, "/* cache_storage */", cacheStorageSurface, 1), strings.Replace(formControlsSurface, "/* constraint_validation */", oneByteSource(constraintValidationSurface), 1), traversalCompatibilitySurface, strings.Replace(documentCompatibilitySurface, "/* shared_document_state */", documentStateSurface, 1), documentAllSurface, attributesCompatibilitySurface, webAnimationsSurface, imageResourcesSurface, screenFocusSurface, eventsCompatibilitySurface, windowErrorsSurface, inputSurface, windowObservationsSurface, windowServicesSurface, speechSynthesisSurface, documentPictureInPictureSurface, navigationSurface, indexedDBSurface, fileSystemSurface, documentStreamSurface, shadowSerializationSurface, canvasObservationsSource(), fontFacesSurface, rtcSessionSurface, trustedTypesSinksSurface, "trustedCaptureEvents();registerBootstrapCallback('installTrustedTypesEnforcer',trustedEnforceString);", "finalizeDocumentGetterBindings();finalizeSingletonGetterBindings();finalizePerformanceBindings();finalizeCallableBindings();finalizeNativeBindings();globalThis.__mimicNativeFunctionSources=nativeFunctionSourceState;", "finalizeFrameIntrinsicBindings();", marker}
+		streamsVendorSurface, "}", strings.Replace(fetchCompatibilitySurface, "/* cache_storage */", cacheStorageSurface, 1), strings.Replace(formControlsSurface, "/* constraint_validation */", oneByteSource(constraintValidationSurface), 1), traversalCompatibilitySurface, strings.Replace(documentCompatibilitySurface, "/* shared_document_state */", documentStateSurface, 1), documentAllSurface, attributesCompatibilitySurface, webAnimationsSurface, imageResourcesSurface, screenFocusSurface, eventsCompatibilitySurface, windowErrorsSurface, inputSurface, windowObservationsSurface, windowServicesSurface, speechSynthesisSurface, documentPictureInPictureSurface, navigationSurface, indexedDBSurface, fileSystemSurface, documentStreamSurface, shadowSerializationSurface, canvasObservationsSource(), fontFacesSurface, rtcSessionSurface, cameraCaptureSurface, rtcMediaSurface, trustedTypesSinksSurface, "trustedCaptureEvents();registerBootstrapCallback('installTrustedTypesEnforcer',trustedEnforceString);", "finalizeDocumentGetterBindings();finalizeSingletonGetterBindings();finalizePerformanceBindings();finalizeCallableBindings();finalizeNativeBindings();globalThis.__mimicNativeFunctionSources=nativeFunctionSourceState;", "finalizeFrameIntrinsicBindings();", marker}
 	base := strings.Replace(oneByteSource(handwrittenSurface), "/* shared_fetch_primitives */", fetchPrimitivesSurface, 1)
 	base = strings.Replace(base, "/* shared_promise_intrinsics */", promiseIntrinsicsSurface, 1)
 	base = strings.Replace(base, "/* profile_locale */", localeSurface, 1)

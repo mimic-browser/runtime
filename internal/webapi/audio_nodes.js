@@ -344,8 +344,20 @@ function MediaStreamAudioSourceNode(context, options = {}) {
   const stream = options.mediaStream;
   if (!audioStreams.has(stream) && !(stream instanceof MediaStream))
     throw new TypeError('Expected MediaStream');
+  const captureTrack = stream
+    .getAudioTracks()
+    .slice()
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))[0];
+  if (!captureTrack) throw exception('InvalidStateError');
+  // Destination catalog streams retain their existing graph boundary. Native
+  // captured streams supply PCM through their canonical capture track.
+  const capture = audioStreams.has(stream) ? null : cameraCaptureModel.audio(captureTrack);
   const object = makeNode(context, 'MediaStreamAudioSourceNode', 0, 1, {
     mediaStream: stream,
+    captureTrack: capture ? captureTrack : null,
+    captureOrigin: capture
+      ? capture.end - capture.blockFrames - contexts.get(context).currentTime * capture.sampleRate
+      : 0,
   });
   Object.setPrototypeOf(object, new.target.prototype);
   return nodeOptions(object, options);

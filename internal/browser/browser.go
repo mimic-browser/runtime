@@ -9,7 +9,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/moreveal/mimic/compatibility"
+	"github.com/moreveal/mimic/internal/camera"
 	"github.com/moreveal/mimic/internal/engine"
+	"github.com/moreveal/mimic/internal/microphone"
 	"github.com/moreveal/mimic/internal/network"
 	"github.com/moreveal/mimic/internal/profile"
 	"github.com/moreveal/mimic/internal/speech"
@@ -27,6 +29,8 @@ type Browser struct {
 	defaultResourcePolicy  *network.ResourcePolicy
 	devPreview             bool
 	speechProvider         speech.Provider
+	cameraProvider         camera.Provider
+	microphoneProvider     microphone.Provider
 	mu                     sync.RWMutex
 	lifetime               context.Context
 	cancel                 context.CancelFunc
@@ -57,6 +61,10 @@ type Options struct {
 	// SpeechProvider is an optional portable synthesis driver. Nil selects the
 	// system provider. It creates document-owned resources only on first use.
 	SpeechProvider speech.Provider
+	// CameraProvider selects document-owned portable capture. Nil uses the bundled system driver.
+	CameraProvider camera.Provider
+	// MicrophoneProvider selects lazy document-owned PCM capture.
+	MicrophoneProvider microphone.Provider
 }
 
 func New(factory engine.Factory, bundle compatibility.Bundle) (*Browser, error) {
@@ -79,6 +87,14 @@ func NewWithOptions(factory engine.Factory, bundle compatibility.Bundle, options
 	textmetrics.WarmSystemCatalog()
 	lifetime, cancel := context.WithCancel(context.Background())
 	b := &Browser{devPreview: options.DevPreview, speechProvider: provider, factory: factory, env: env.Clone(), compat: bundle, contexts: map[string]*Context{}, lifetime: lifetime, cancel: cancel}
+	b.cameraProvider = options.CameraProvider
+	if b.cameraProvider == nil {
+		b.cameraProvider = camera.System()
+	}
+	b.microphoneProvider = options.MicrophoneProvider
+	if b.microphoneProvider == nil {
+		b.microphoneProvider = microphone.System()
+	}
 	b.transportWrapper = options.TransportWrapper
 	if options.ExecutionProfile != nil {
 		if err := options.ExecutionProfile.Validate(); err != nil {

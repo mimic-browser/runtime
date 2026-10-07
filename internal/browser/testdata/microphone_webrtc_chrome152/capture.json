@@ -1,0 +1,342 @@
+{
+  "captureMetadata": {
+    "chrome": {
+      "Browser": "Chrome/152.0.7977.82",
+      "Protocol-Version": "1.3",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+      "V8-Version": "15.2.124.21",
+      "WebKit-Version": "537.36 (@d04cdb24d67b081f6cf80200ffc5233f44b61109)",
+      "webSocketDebuggerUrl": "ws://127.0.0.1:19573/devtools/browser/e71cde04-345f-4b4d-8460-73da87b2fc12"
+    },
+    "mimic": {
+      "Browser": "Mimic/152.0.7977.82",
+      "Protocol-Version": "1.3",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+      "V8-Version": "virtual",
+      "webSocketDebuggerUrl": "ws://127.0.0.1:19574/devtools/browser/b8c30c1f-b501-4649-8495-52cda3711bdc"
+    },
+    "chromium": "d04cdb24d67b081f6cf80200ffc5233f44b61109",
+    "browserMode": "headful",
+    "windowHidden": true,
+    "profile": "C:\\Users\\moreveal\\AppData\\Local\\Temp\\mimic-webrtc-chrome152-7pnf_r6d",
+    "environmentProfileId": "chrome-152-windows-x64-headful-controlled-v1",
+    "platform": "Windows x64",
+    "origin": "http://127.0.0.1:12276",
+    "identity": {
+      "webdriver": false,
+      "descriptor": "function get webdriver() { [native code] }",
+      "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+      "languages": [
+        "ru-RU"
+      ],
+      "origin": "http://127.0.0.1:12276",
+      "secure": true,
+      "outer": [
+        1280,
+        800
+      ],
+      "inner": [
+        1272,
+        653
+      ],
+      "dpr": 1,
+      "visibility": "visible",
+      "focus": false
+    },
+    "launchArguments": [
+      "E:\\GitHub\\mimic\\compatibility\\.chrome-for-testing\\152.0.7977.82\\chrome-win64\\chrome.exe",
+      "--remote-debugging-port=19573",
+      "--user-data-dir=C:\\Users\\moreveal\\AppData\\Local\\Temp\\mimic-webrtc-chrome152-7pnf_r6d",
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--window-size=1280,800",
+      "about:blank"
+    ],
+    "mimicArguments": [
+      "C:\\Users\\moreveal\\AppData\\Local\\Temp\\go-build2425093685\\b001\\exe\\main.exe",
+      "-listen",
+      "127.0.0.1:19574"
+    ],
+    "binarySha256": "ea36dd818a90176f1a70616f0363d9be527229389a6c073a0b1688b9e73f67e9",
+    "mimicBinarySha256": "79092a512f766e7cea116cea6882ea33dac817b22ba4814ec601f48b2542f450",
+    "probeSha256": "6b182be53251232da0e2324f29f4dc61eb6e4bf994d83430207f71a1f676009f",
+    "experiment": "diagnostic: CDP microphone grants, native capture, bilateral WebRTC, userGesture evaluations and trusted key input for audio activation, no API overrides"
+  },
+  "chrome": {
+    "connection": "connected",
+    "local": {
+      "kind": "audio",
+      "label": "\u041f\u043e \u0443\u043c\u043e\u043b\u0447\u0430\u043d\u0438\u044e - \u041c\u0438\u043a\u0440\u043e\u0444\u043e\u043d (2- USB PnP Audio Device) (0c76:161e)",
+      "settings": {
+        "autoGainControl": false,
+        "channelCount": 1,
+        "deviceId": "default",
+        "echoCancellation": false,
+        "groupId": "c3cd13c6a12225cf1427fff79faa64cbb81700aa5fa7b38c844c15f82c00f7b9",
+        "latency": 0.01,
+        "noiseSuppression": false,
+        "sampleRate": 48000,
+        "sampleSize": 16,
+        "voiceIsolation": false
+      },
+      "capabilities": {
+        "autoGainControl": [
+          true,
+          false
+        ],
+        "channelCount": {
+          "max": 1,
+          "min": 1
+        },
+        "deviceId": "default",
+        "echoCancellation": [
+          true,
+          false,
+          "remote-only",
+          "all"
+        ],
+        "groupId": "c3cd13c6a12225cf1427fff79faa64cbb81700aa5fa7b38c844c15f82c00f7b9",
+        "latency": {
+          "max": 0.01,
+          "min": 0.01
+        },
+        "noiseSuppression": [
+          true,
+          false
+        ],
+        "sampleRate": {
+          "max": 48000,
+          "min": 48000
+        },
+        "sampleSize": {
+          "max": 16,
+          "min": 16
+        },
+        "voiceIsolation": [
+          true,
+          false
+        ]
+      },
+      "constraints": {
+        "autoGainControl": false,
+        "echoCancellation": false,
+        "noiseSuppression": false
+      },
+      "stoppedSettings": {
+        "autoGainControl": false,
+        "channelCount": 1,
+        "deviceId": "default",
+        "echoCancellation": false,
+        "groupId": "c3cd13c6a12225cf1427fff79faa64cbb81700aa5fa7b38c844c15f82c00f7b9",
+        "latency": 0.01,
+        "noiseSuppression": false,
+        "sampleRate": 48000,
+        "sampleSize": 16,
+        "voiceIsolation": false
+      }
+    },
+    "peak": 0.060546875,
+    "errors": [],
+    "remoteTrack": {
+      "kind": "audio",
+      "readyState": "live",
+      "muted": false,
+      "settings": {
+        "channelCount": 1,
+        "deviceId": "6df2aff7-5723-45f4-85fa-60790b0586ad",
+        "latency": 0.01,
+        "sampleRate": 48000,
+        "sampleSize": 16
+      },
+      "receiverIdentity": true
+    },
+    "transport": [
+      {
+        "id": "IT01A1512056175",
+        "timestamp": 1791339778048.095,
+        "type": "inbound-rtp",
+        "codecId": "CIT01_111_minptime=10;useinbandfec=1",
+        "kind": "audio",
+        "mediaType": "audio",
+        "ssrc": 1512056175,
+        "transportId": "T01",
+        "jitter": 0,
+        "packetsLost": 0,
+        "packetsReceived": 36,
+        "packetsReceivedWithCe": 0,
+        "packetsReceivedWithEct1": 0,
+        "audioLevel": 0,
+        "bytesReceived": 2880,
+        "concealedSamples": 0,
+        "concealmentEvents": 0,
+        "fecPacketsDiscarded": 0,
+        "fecPacketsReceived": 0,
+        "headerBytesReceived": 432,
+        "insertedSamplesForDeceleration": 2269,
+        "jitterBufferDelay": 912,
+        "jitterBufferEmittedCount": 32640,
+        "jitterBufferMinimumDelay": 2150.4,
+        "jitterBufferTargetDelay": 2150.4,
+        "lastPacketReceivedTimestamp": 1791339778039.986,
+        "mid": "0",
+        "packetsDiscarded": 0,
+        "playoutId": "AP",
+        "removedSamplesForAcceleration": 459,
+        "silentConcealedSamples": 0,
+        "totalAudioEnergy": 0,
+        "totalProcessingDelay": 878.85408,
+        "totalSamplesDuration": 1.0400000000000007,
+        "totalSamplesReceived": 33600,
+        "trackIdentifier": "6df2aff7-5723-45f4-85fa-60790b0586ad"
+      },
+      {
+        "id": "OT01A192634261",
+        "timestamp": 1791339778048.095,
+        "type": "outbound-rtp",
+        "codecId": "COT01_111_minptime=10;useinbandfec=1",
+        "kind": "audio",
+        "mediaType": "audio",
+        "ssrc": 192634261,
+        "transportId": "T01",
+        "bytesSent": 2600,
+        "packetsSent": 35,
+        "active": true,
+        "headerBytesSent": 700,
+        "mediaSourceId": "SA1",
+        "mid": "0",
+        "nackCount": 0,
+        "packetsSentWithEct1": 0,
+        "retransmittedBytesSent": 0,
+        "retransmittedPacketsSent": 0,
+        "targetBitrate": 32000,
+        "totalPacketSendDelay": 0
+      },
+      {
+        "id": "T01",
+        "timestamp": 1791339778048.095,
+        "type": "transport",
+        "bytesReceived": 5065,
+        "bytesSent": 8816,
+        "dtlsCipher": "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+        "dtlsRole": "client",
+        "dtlsState": "connected",
+        "iceLocalUsernameFragment": "kmmc",
+        "iceRole": "controlled",
+        "iceState": "connected",
+        "localCertificateId": "CF5D:3E:3A:B8:4C:54:80:BC:D1:F4:B3:04:FD:0B:92:99:D9:16:D3:7C:88:57:C1:D8:1A:C3:45:24:F8:58:E3:80",
+        "packetsReceived": 48,
+        "packetsSent": 42,
+        "remoteCertificateId": "CFD4:37:FF:92:6C:B9:1C:F6:98:2C:99:CE:E9:A6:10:93:0B:C4:79:7F:C6:8C:60:7A:C3:0C:B1:F3:D7:E8:E3:16",
+        "selectedCandidatePairChanges": 2,
+        "selectedCandidatePairId": "CPeDjsQuqf_TiutU9ft",
+        "srtpCipher": "SRTP_AEAD_AES_256_GCM",
+        "tlsVersion": "FEFD"
+      }
+    ],
+    "remoteAfterClose": "live"
+  },
+  "mimic": {
+    "connection": "connected",
+    "errors": [],
+    "local": {
+      "capabilities": {
+        "autoGainControl": [
+          false
+        ],
+        "channelCount": {
+          "max": 1,
+          "min": 1
+        },
+        "deviceId": "f696bc18039298a8937e0334f396c0300756b8ffaa955e9ce8c08490e2d51fab",
+        "echoCancellation": [
+          false
+        ],
+        "groupId": "9e29fbb62c5ce54d6da1e523e943c4f7b901c6bd4bec47919b332a9ab3802de9",
+        "latency": {
+          "max": 0.02,
+          "min": 0.02
+        },
+        "noiseSuppression": [
+          false
+        ],
+        "sampleRate": {
+          "max": 48000,
+          "min": 48000
+        },
+        "sampleSize": {
+          "max": 16,
+          "min": 16
+        }
+      },
+      "constraints": {
+        "autoGainControl": false,
+        "echoCancellation": false,
+        "noiseSuppression": false
+      },
+      "kind": "audio",
+      "label": "\u041c\u0438\u043a\u0440\u043e\u0444\u043e\u043d (2- USB PnP Audio Device)",
+      "settings": {
+        "autoGainControl": false,
+        "channelCount": 1,
+        "deviceId": "f696bc18039298a8937e0334f396c0300756b8ffaa955e9ce8c08490e2d51fab",
+        "echoCancellation": false,
+        "groupId": "9e29fbb62c5ce54d6da1e523e943c4f7b901c6bd4bec47919b332a9ab3802de9",
+        "latency": 0.02,
+        "noiseSuppression": false,
+        "sampleRate": 48000,
+        "sampleSize": 16
+      },
+      "stoppedSettings": {
+        "deviceId": "f696bc18039298a8937e0334f396c0300756b8ffaa955e9ce8c08490e2d51fab",
+        "groupId": "9e29fbb62c5ce54d6da1e523e943c4f7b901c6bd4bec47919b332a9ab3802de9"
+      }
+    },
+    "peak": 0.06602378934621811,
+    "remoteTrack": {
+      "kind": "audio",
+      "muted": false,
+      "readyState": "live",
+      "receiverIdentity": true,
+      "settings": {}
+    },
+    "transport": [
+      {
+        "bytesSent": 4240,
+        "id": "outbound-rtp-1512056175",
+        "kind": "audio",
+        "packetsSent": 53,
+        "ssrc": 1512056175,
+        "timestamp": 1791339778386.442,
+        "type": "outbound-rtp"
+      },
+      {
+        "bytesReceived": 3827,
+        "id": "inbound-rtp-192634261",
+        "kind": "audio",
+        "packetsReceived": 52,
+        "ssrc": 192634261,
+        "timestamp": 1791339778386.442,
+        "type": "inbound-rtp"
+      },
+      {
+        "bytesReceived": 10655,
+        "bytesSent": 7193,
+        "dtlsCipher": "",
+        "dtlsState": "unknown",
+        "iceRole": "unknown",
+        "iceState": "unknown",
+        "id": "iceTransport",
+        "localCertificateId": "",
+        "packetsReceived": 0,
+        "packetsSent": 0,
+        "remoteCertificateId": "",
+        "rtcpTransportStatsId": "",
+        "selectedCandidatePairId": "",
+        "srtpCipher": "",
+        "timestamp": 1791339778385,
+        "type": "transport"
+      }
+    ],
+    "remoteAfterClose": "live"
+  }
+}

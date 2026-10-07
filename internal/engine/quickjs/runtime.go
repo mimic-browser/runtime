@@ -340,7 +340,84 @@ func (r *runtime) SetTimeSource(now func() time.Time) {
 		return r.context.NewInt64(r.now().UnixMilli())
 	})
 	r.context.Globals().Set("__mimicDateNow", hostNow)
-	v := r.context.Eval(`(()=>{const mimicDateNow=globalThis.__mimicDateNow;delete globalThis.__mimicDateNow;const NativeDate=Date;const MimicDate=new Proxy(NativeDate,{apply(target,thisArg,args){return args.length?Reflect.apply(target,thisArg,args):new NativeDate(mimicDateNow()).toString()},construct(target,args,newTarget){return Reflect.construct(target,args.length?args:[mimicDateNow()],newTarget)}});Object.defineProperty(MimicDate,'now',{value:()=>mimicDateNow(),writable:true,configurable:true});Object.defineProperty(MimicDate.prototype,'constructor',{value:MimicDate,writable:true,configurable:true});globalThis.Date=MimicDate;const NativeError=Error,normalize=error=>{if(typeof error.stack==='string'){let lines=error.stack.split('\n').filter(line=>!/^\s*at (?:construct|apply) (?:\(native\)|\(<input>:)/.test(line));lines=lines.map(line=>line.replace(/^\s*at (?:<anonymous>|<eval>) \((.+)\)$/,'    at $1'));if(!lines[0]||!lines[0].startsWith(error.name+':'))lines.unshift(error.name+(error.message?': '+error.message:''));error.stack=lines.join('\n')}return error};const MimicError=new Proxy(NativeError,{apply(target,self,args){return normalize(Reflect.apply(target,self,args))},construct(target,args,newTarget){return normalize(Reflect.construct(target,args,newTarget))}});Object.defineProperty(MimicError.prototype,'constructor',{value:MimicError,writable:true,configurable:true});Object.defineProperty(MimicError,'captureStackTrace',{value:function captureStackTrace(target){const error=normalize(new NativeError());Object.defineProperty(target,'stack',{value:error.stack,writable:true,configurable:true})},writable:true,configurable:true});globalThis.Error=MimicError})()`)
+	v := r.context.Eval(`(() => {
+  const mimicDateNow = globalThis.__mimicDateNow;
+  delete globalThis.__mimicDateNow;
+  const NativeDate = Date;
+  const MimicDate = new Proxy(NativeDate, {
+    apply(target, thisArg, args) {
+      return args.length
+        ? Reflect.apply(target, thisArg, args)
+        : new NativeDate(mimicDateNow()).toString();
+    },
+    construct(target, args, newTarget) {
+      return Reflect.construct(target, args.length ? args : [mimicDateNow()], newTarget);
+    },
+  });
+  Object.defineProperty(MimicDate, 'now', {
+    value: () => mimicDateNow(),
+    writable: true,
+    configurable: true,
+  });
+  Object.defineProperty(MimicDate.prototype, 'constructor', {
+    value: MimicDate,
+    writable: true,
+    configurable: true,
+  });
+  globalThis.Date = MimicDate;
+  const NativeError = Error;
+  const normalize = (error) => {
+    if (typeof error.stack === 'string') {
+      let lines = error.stack
+        .split('\n')
+        .filter((line) => !/^\s*at (?:construct|apply) (?:\(native\)|\(<input>:)/.test(line));
+      lines = lines.map((line) =>
+        line.replace(/^\s*at (?:<anonymous>|<eval>) \((.+)\)$/, '    at $1'),
+      );
+      // Subclass accessors can depend on state initialized after super().
+      // Error construction must not invoke them while adding a stack prefix.
+      let name = 'Error';
+      for (let prototype = error; prototype; prototype = Object.getPrototypeOf(prototype)) {
+        const descriptor = Object.getOwnPropertyDescriptor(prototype, 'name');
+        if (descriptor) {
+          if (typeof descriptor.value === 'string') name = descriptor.value;
+          break;
+        }
+      }
+      const message = Object.getOwnPropertyDescriptor(error, 'message')?.value;
+      if (!lines[0] || !lines[0].startsWith(name + ':'))
+        lines.unshift(name + (message ? ': ' + message : ''));
+      error.stack = lines.join('\n');
+    }
+    return error;
+  };
+  const MimicError = new Proxy(NativeError, {
+    apply(target, self, args) {
+      return normalize(Reflect.apply(target, self, args));
+    },
+    construct(target, args, newTarget) {
+      return normalize(Reflect.construct(target, args, newTarget));
+    },
+  });
+  Object.defineProperty(MimicError.prototype, 'constructor', {
+    value: MimicError,
+    writable: true,
+    configurable: true,
+  });
+  Object.defineProperty(MimicError, 'captureStackTrace', {
+    value: function captureStackTrace(target) {
+      const error = normalize(new NativeError());
+      Object.defineProperty(target, 'stack', {
+        value: error.stack,
+        writable: true,
+        configurable: true,
+      });
+    },
+    writable: true,
+    configurable: true,
+  });
+  globalThis.Error = MimicError;
+})();`)
 	if v != nil {
 		v.Free()
 	}

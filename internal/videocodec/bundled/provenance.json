@@ -1,0 +1,31 @@
+{
+  "version": "2.6.0",
+  "source": "https://github.com/cisco/openh264/releases/tag/v2.6.0",
+  "artifacts": {
+    "windows_amd64": {
+      "url": "https://ciscobinary.openh264.org/openh264-2.6.0-win64.dll.bz2",
+      "sha256": "dab5f2a872777f9a58b69bfa9fbcf20d9f82f2d6ec91383fd70bff49bd34ac9f",
+      "bytes": 452053
+    },
+    "linux_amd64": {
+      "url": "https://ciscobinary.openh264.org/libopenh264-2.6.0-linux64.8.so.bz2",
+      "sha256": "27ab53323c110b76214c1c72222f459d17febbcd1e252136cadc292b0308d75b",
+      "bytes": 634264
+    },
+    "linux_arm64": {
+      "url": "https://ciscobinary.openh264.org/libopenh264-2.6.0-linux-arm64.8.so.bz2",
+      "sha256": "a78aea7970150f46bcd3bb7994c9e6dd90bd7a9ea785920f5a73f6964e3fcda7",
+      "bytes": 619371
+    },
+    "darwin_amd64": {
+      "url": "https://ciscobinary.openh264.org/libopenh264-2.6.0-mac-x64.dylib.bz2",
+      "sha256": "38b2ed6d1d45b6a3e408c734173f2d67ab44a10d0e154ff3489b89877cd60e7e",
+      "bytes": 529614
+    },
+    "darwin_arm64": {
+      "url": "https://ciscobinary.openh264.org/libopenh264-2.6.0-mac-arm64.dylib.bz2",
+      "sha256": "6db362ee5abdab572311aeadb96d3f44b0617d9a4a4b9f4db4cb5ac4d968da71",
+      "bytes": 482124
+    }
+  }
+}

@@ -1241,9 +1241,10 @@
       "returns": [],
       "support": {
         "status": "partial",
-        "notes": "Geolocation allowlists for the selected context and optional HTTP(S) origin; other permission grants explicitly reject. Other permissions are denied by the allowlist.",
+        "notes": "Context/origin allowlists for geolocation, videoCapture (camera), audioCapture (microphone), notifications and clipboard grants; other permissions explicitly reject. Unlisted permissions are denied. Native camera and microphone capture are implemented; native permission UI is unsupported.",
         "tests": [
-          "internal/cdp/geolocation_test.go#TestGeolocationOverrideCommands"
+          "internal/cdp/geolocation_test.go#TestGeolocationOverrideCommands",
+          "internal/cdp/camera_test.go#TestCameraPermissionCommands"
         ]
       }
     },
@@ -1262,7 +1263,8 @@
         "status": "partial",
         "notes": "Restores canonical context permission defaults and notifies live permission observers. Native permission prompts and platform permission stores are not modeled.",
         "tests": [
-          "internal/cdp/geolocation_test.go#TestGeolocationOverrideCommands"
+          "internal/cdp/geolocation_test.go#TestGeolocationOverrideCommands",
+          "internal/cdp/camera_test.go#TestCameraPermissionCommands"
         ]
       }
     },
@@ -1341,9 +1343,10 @@
       "returns": [],
       "support": {
         "status": "partial",
-        "notes": "Geolocation granted, denied and prompt settings for the selected context and optional HTTP(S) origin. Other permission descriptors explicitly reject.",
+        "notes": "Context/origin granted, denied and prompt settings for geolocation, camera, microphone, notifications and clipboard. Camera pan/tilt/zoom and other descriptors reject. Requests requiring an ungranted camera or microphone reject immediately for automation; revocation ends the corresponding local capture tracks. No simulated native permission prompt.",
         "tests": [
-          "internal/cdp/geolocation_test.go#TestGeolocationOverrideCommands"
+          "internal/cdp/geolocation_test.go#TestGeolocationOverrideCommands",
+          "internal/cdp/camera_test.go#TestCameraPermissionCommands"
         ]
       }
     },

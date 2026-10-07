@@ -1448,6 +1448,18 @@
               result[0][frame - startFrame] = parameterAt(n.offset, frame, c.sampleRate);
           n.ended = Math.ceil(n.stopTime * c.sampleRate) <= endFrame;
         }
+      } else if (n.type === 'MediaStreamAudioSourceNode' && n.captureTrack) {
+        const position = n.captureOrigin + (startFrame / c.sampleRate) * 48000;
+        const capture = cameraCaptureModel.audio(
+          n.captureTrack,
+          position,
+          processedFrames,
+          c.sampleRate,
+        );
+        result = allocate(capture.channels);
+        for (let frame = 0; frame < processedFrames; frame++)
+          for (let channel = 0; channel < capture.channels; channel++)
+            result[channel][frame] = capture.samples[frame * capture.channels + channel];
       } else if (n.type === 'OscillatorNode') {
         result = allocate(1);
         oscillatorOutput(object, result);

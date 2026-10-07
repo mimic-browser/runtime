@@ -480,6 +480,8 @@ func (r *Realm) retryBootstrap(err error) error {
 	r.cookieNotifier = nil
 	r.launchNotifier = nil
 	r.speechNotifier = nil
+	r.cameraNotifier = nil
+	r.rtcMediaNotifier = nil
 	releaseRuntimeValues(r.runtime, r.apiTraceSet)
 	r.apiTraceSet = nil
 	// Admit the bare replacement before releasing a failed restored context.

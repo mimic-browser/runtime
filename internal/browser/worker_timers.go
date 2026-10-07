@@ -73,7 +73,7 @@ func (w *DedicatedWorker) hostTimer(_ engine.Value, args []engine.Value) (engine
 	registration.taskID = id
 	w.timers[id] = registration
 	w.signal()
-	return w.runtime.Value(id), nil
+	return w.runtime.Value(float64(id)), nil
 }
 
 func (w *DedicatedWorker) hostClearTimer(_ engine.Value, args []engine.Value) (engine.Value, error) {

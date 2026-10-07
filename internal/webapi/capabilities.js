@@ -744,7 +744,10 @@ const installNavigatorCapabilities = () => {
     (s) => s.onchange || null,
     (s, v) => (s.onchange = typeof v === 'function' ? v : null),
   );
-  const permissionPrompt = () => new platformPromise(() => {});
+  const permissionPrompt = () =>
+    platformPromiseReject(
+      error('NotAllowedError', 'Permission requires an explicit automation decision'),
+    );
   for (const [name, message] of [
     ['get', 'No credential type was specified in the request.'],
     [
@@ -1148,9 +1151,10 @@ const installNavigatorCapabilities = () => {
     'MediaDevices',
     'enumerateDevices',
     () =>
-      state('media').kinds.map((kind) =>
-        create('MediaDeviceInfo', { deviceId: '', kind, label: '', groupId: '' }),
-      ),
+      host.cameraDevices().then((result) => {
+        if (result.error) throw error(result.error, result.message);
+        return result.devices.map((device) => create('MediaDeviceInfo', device));
+      }),
     true,
   );
   method('MediaDevices', 'getSupportedConstraints', () =>
@@ -1173,18 +1177,14 @@ const installNavigatorCapabilities = () => {
           "Failed to execute 'getUserMedia' on 'MediaDevices': At least one of audio and video must be requested",
         );
       if (
-        state('presentation').mode === 'headful' &&
-        ((constraints.video && permission('camera') === 'prompt') ||
-          (constraints.audio && permission('microphone') === 'prompt'))
-      )
-        return permissionPrompt();
-      if (
         (constraints.video && permission('camera') !== 'granted') ||
         (constraints.audio && permission('microphone') !== 'granted')
-      ) {
-        throw error('NotAllowedError', 'Permission denied');
-      }
-      throw error('NotFoundError', 'Requested device not found');
+      )
+        throw error(
+          'NotAllowedError',
+          'Permission denied; grant access through Browser.setPermission or Browser.grantPermissions',
+        );
+      return cameraCaptureModel.open(constraints);
     },
     true,
   );

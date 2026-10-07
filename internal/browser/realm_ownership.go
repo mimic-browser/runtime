@@ -122,6 +122,8 @@ func (r *Realm) deactivateContext(keepPromiseJobs bool) {
 	r.inactive = true
 	r.deactivateMediaSources()
 	r.stopMediaLoads()
+	r.stopCameraTracks()
+	r.closeRTCMedia()
 	r.agent.Page().ctx.network.RevokeBlobsForOwner(r.ID)
 	r.checkpointClosed = !keepPromiseJobs
 	if !keepPromiseJobs {

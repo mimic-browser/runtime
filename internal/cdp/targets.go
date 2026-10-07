@@ -284,18 +284,26 @@ func (s *session) handleTarget(m message, p map[string]any) (any, bool, error) {
 		}
 		if m.Method == "Browser.setPermission" {
 			descriptor, _ := p["permission"].(map[string]any)
-			if stringValue(descriptor["name"]) != "geolocation" {
-				return nil, true, fmt.Errorf("Only geolocation permission emulation is supported")
+			name := stringValue(descriptor["name"])
+			if name != "geolocation" && name != "camera" && name != "microphone" && name != "notifications" && name != "clipboard-read" && name != "clipboard-write" {
+				return nil, true, fmt.Errorf("Unsupported permission %q", name)
 			}
-			return empty, true, permissionContext.SetPermission(origin, "geolocation", stringValue(p["setting"]))
+			if name == "camera" && descriptor["panTiltZoom"] == true {
+				return nil, true, fmt.Errorf("Camera pan/tilt/zoom permission is unsupported")
+			}
+			return empty, true, permissionContext.SetPermission(origin, name, stringValue(p["setting"]))
 		}
 		permissions, _ := p["permissions"].([]any)
 		grants := []string{}
 		for _, value := range permissions {
-			if stringValue(value) != "geolocation" {
-				return nil, true, fmt.Errorf("Only geolocation permission emulation is supported")
+			name := map[string]string{"geolocation": "geolocation", "videoCapture": "camera", "audioCapture": "microphone", "notifications": "notifications", "clipboardReadWrite": "clipboard-read", "clipboardSanitizedWrite": "clipboard-write"}[stringValue(value)]
+			if name == "" {
+				return nil, true, fmt.Errorf("Unsupported permission %q", stringValue(value))
 			}
-			grants = append(grants, "geolocation")
+			grants = append(grants, name)
+			if stringValue(value) == "clipboardReadWrite" {
+				grants = append(grants, "clipboard-write")
+			}
 		}
 		permissionContext.GrantPermissions(origin, grants)
 		return empty, true, nil

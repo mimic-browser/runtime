@@ -133,6 +133,8 @@ def notices(target):
         for path in files:
             include(f'{name} {version} — {path.relative_to(base).as_posix()}', path)
     extras = {
+        'miniaudio embedded by malgo v0.11.26': ROOT / 'tools/release/licenses/miniaudio.txt',
+        'Cisco OpenH264 2.6.0 binary distribution': ROOT / 'internal/videocodec/bundled/LICENSE',
         'HTML tokenizer': ROOT / 'internal/htmlstream/LICENSE',
         'Web Streams polyfill': ROOT / 'internal/webapi/vendor/web-streams-polyfill/LICENSE',
         'CSS selector dependencies': ROOT / 'internal/webapi/vendor/css-select/THIRD_PARTY_LICENSES.txt',
