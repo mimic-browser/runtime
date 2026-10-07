@@ -1,4 +1,4 @@
-# Windows / Linux validation — September 13, 2026
+# Windows / Linux validation вЂ” September 13, 2026
 
 ## Supported build targets
 
@@ -80,14 +80,29 @@ V8/QuickJS executable scenarios on Linux.
 
 Initial GitHub-hosted Windows runs built the executable but exceeded Go's default
 10-minute aggregate browser-package test budget. The timeout stacks showed
-different recently started tests (0–2 seconds), including stylesheet and graphics
+different recently started tests (0вЂ“2 seconds), including stylesheet and graphics
 oracles, rather than a single test blocked for ten minutes. The workflow now
-discovers every browser root test and divides them into two disjoint Windows
-shards, in batches of at most 100 root tests. Every selected root runs all of its
-subtests. The first shard also runs all other root-module packages. Per-batch Go
-timeouts retain the default 10-minute budget; individual test deadlines and
-reference expectations are unchanged. Each job retains its coverage plan as a
-CI artifact. Unit checks verify that the partition omits and duplicates no tests.
+builds the executable and Browser/CDP test binaries once per Windows run. Three
+workers download those test binaries and split every discovered Browser and CDP
+root into complete, disjoint shards. Package-qualified names prevent collisions;
+every selected root retains all subtests. Browser batches contain at most 25
+roots and CDP batches at most 10. The suspended-navigation gate still runs alone
+in a fresh process. Test executables run from their package directories, through
+`go tool test2json`; the original assertion deadlines and ten-minute process
+budget are unchanged.
+
+The remaining Windows packages, native-binding checks, race check and executable
+scenarios run once in the build job. Linux capture/codec checks run in the existing
+Linux job. Both macOS capture architectures are checked when their implementation,
+dependencies or workflow change. Branch CI runs on main pushes and pull requests;
+release tags no longer repeat the same commit's whole CI. Concurrency cancels
+superseded runs for the same branch or pull request.
+
+All workers retain coverage plans and partial observed timings even on failure.
+The checked-in initial timing history comes from successful run `37564450067`,
+source `07e4b8ec36c9293ec75485fbad06d23c30503ef7`. Newly discovered roots receive
+the heaviest known weight until measured. Unit checks verify complete partitioning,
+package-name collisions, process isolation and the executable working directory.
 Other Windows packages run one at a time so CLI/CDP readiness deadlines do not
 compete with unrelated package initialization on the hosted runner.
 

@@ -1,23 +1,43 @@
-name: Portable camera and bundled codec
-
-on:
+name: Portable capture on macOS
+'on':
   push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/camera-portable.yml
+      - internal/camera/**
+      - internal/microphone/**
+      - internal/videocodec/**
+      - third_party/mediadevices/**
+      - go.mod
+      - go.sum
   pull_request:
-  workflow_dispatch:
-
+    paths:
+      - .github/workflows/camera-portable.yml
+      - internal/camera/**
+      - internal/microphone/**
+      - internal/videocodec/**
+      - third_party/mediadevices/**
+      - go.mod
+      - go.sum
+  workflow_dispatch: null
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
-
 jobs:
   native-components:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, macos-15, macos-15-intel]
+        os:
+          - macos-15
+          - macos-15-intel
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     env:
-      CGO_ENABLED: "1"
+      CGO_ENABLED: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5

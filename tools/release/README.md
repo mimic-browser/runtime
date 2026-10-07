@@ -62,8 +62,9 @@ Outputs are written to `.build/releases/VERSION/`. Reusing an existing
 version/platform output directory is rejected so stale artifacts cannot be
 mistaken for a fresh build.
 
-To reuse unchanged executables from a successful build workflow run, supply its
-run ID and full source SHA to both platform jobs of Package release. The packager
+The hosted Package release workflow requires a successful build workflow run
+ID and its full source SHA for both platform jobs. It reuses the validated
+executables unchanged instead of rebuilding native libraries and Mimic. The packager
 downloads that run's executable artifact, verifies its embedded VCS revision,
 then checks the extracted archive and public examples. The release commit may
 add notes or packaging changes; it must not alter the binary. For a local run:

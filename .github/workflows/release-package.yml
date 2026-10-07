@@ -9,11 +9,11 @@ on:
         type: string
       ci_run:
         description: Successful build workflow run whose binaries will be reused
-        required: false
+        required: true
         type: string
       binary_source_revision:
         description: Full source SHA of the reused CI binaries
-        required: false
+        required: true
         type: string
 
 permissions:
@@ -66,11 +66,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if [[ -n "$BINARY_CI_RUN" ]]; then
-            python tools/release/prepare.py --version "$RELEASE_VERSION" --ci-run "$BINARY_CI_RUN" --binary-source-revision "$BINARY_SOURCE_REVISION"
-          else
-            python tools/release/prepare.py --version "$RELEASE_VERSION"
-          fi
+          python tools/release/prepare.py --version "$RELEASE_VERSION" --ci-run "$BINARY_CI_RUN" --binary-source-revision "$BINARY_SOURCE_REVISION"
         shell: bash
       - name: Upload verified archive and receipt
         uses: actions/upload-artifact@v4

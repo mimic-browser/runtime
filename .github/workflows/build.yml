@@ -1,33 +1,21 @@
 name: Windows and Linux
-
-on:
+'on':
   push:
-  pull_request:
-  workflow_dispatch:
-
+    branches:
+      - main
+  pull_request: null
+  workflow_dispatch: null
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
-
 jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-24.04
-            shard: 0
-          - os: windows-latest
-            shard: 0
-          - os: windows-latest
-            shard: 1
-          - os: windows-latest
-            shard: 2
-          - os: windows-latest
-            shard: 3
-    runs-on: ${{ matrix.os }}
+  build-windows:
+    runs-on: windows-latest
     timeout-minutes: 30
     env:
-      CGO_ENABLED: "1"
+      CGO_ENABLED: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -38,20 +26,15 @@ jobs:
             third_party/gov8/go.sum
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: '3.12'
       - name: Install Windows C compiler
-        if: runner.os == 'Windows'
         uses: msys2/setup-msys2@v2
         with:
           msystem: UCRT64
           install: mingw-w64-ucrt-x86_64-gcc
       - name: Add compiler to Windows PATH
-        if: runner.os == 'Windows'
         shell: msys2 {0}
         run: echo "$(cygpath -w /ucrt64/bin)" >> "$GITHUB_PATH"
-      - name: Install Linux native build dependencies
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
       - name: Cache native style and layout build
         uses: actions/cache@v4
         with:
@@ -59,35 +42,33 @@ jobs:
           key: native-layout-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('internal/layoutblitz/native/**', 'internal/layouttaffy/native/**') }}
       - name: Build native style and layout library if changed
         run: go run ./tools/buildnative
-      - name: Build Linux executable
-        if: runner.os == 'Linux'
-        run: go build -o .build/mimic ./cmd/mimic
       - name: Build Windows executable
-        if: runner.os == 'Windows'
-        run: go build -o .build/mimic.exe ./cmd/mimic
-      - name: Test Windows reference behavior
-        if: runner.os == 'Windows'
-        run: python tools/ci/windows_tests.py --shard ${{ matrix.shard }} --count 4
+        run: go build -trimpath -ldflags="-s -w" -o .build/mimic.exe ./cmd/mimic
+      - name: Compile Windows reference tests once
+        run: |
+          New-Item -ItemType Directory -Force .build/ci/bin | Out-Null
+          go test -c -o .build/ci/bin/browser.test.exe ./internal/browser
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          go test -c -o .build/ci/bin/cdp.test.exe ./internal/cdp
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Upload compiled Windows reference tests
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-reference-tests
+          path: .build/ci/bin/*.test.exe
+          if-no-files-found: error
+          include-hidden-files: true
+      - name: Test remaining Windows packages once
+        run: |
+          $packages = go list ./... | Where-Object { $_ -notin @("github.com/moreveal/mimic/internal/browser", "github.com/moreveal/mimic/internal/cdp") }
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          go test -p 1 $packages
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Test release and CI gates
         run: |
           python -m unittest discover -s tools/ci -p "test_*.py"
           python -m unittest discover -s tools/release -p test_release.py
-      - name: Compile all Linux tests
-        if: runner.os == 'Linux'
-        run: go test -run '^$' ./...
-      - name: Test Linux engines and portable components
-        if: runner.os == 'Linux'
-        run: go test ./chrome/... ./cmd/... ./internal/engine/... ./internal/dom ./internal/network ./internal/profile ./internal/scheduler ./internal/state ./internal/textmetrics
-      - name: Install Linux font resources
-        if: runner.os == 'Linux'
-        run: sudo apt-get install -y fonts-dejavu-core fonts-liberation
-      - name: Verify Linux executable over CDP
-        if: runner.os == 'Linux'
-        run: |
-          go run ./tools/runtimecheck -binary .build/mimic
-          go run ./tools/runtimecheck -binary .build/mimic -engine quickjs
       - name: Verify Windows executable over CDP
-        if: runner.os == 'Windows'
         run: |
           go run ./tools/runtimecheck -binary .build/mimic.exe
           go run ./tools/runtimecheck -binary .build/mimic.exe -engine quickjs
@@ -97,18 +78,96 @@ jobs:
       - name: Race check V8 ownership
         run: go test -race ./internal/engine/v8
       - name: Upload executable
-        if: matrix.shard == 0
         uses: actions/upload-artifact@v4
         with:
           name: mimic-${{ runner.os }}-amd64
           path: .build/mimic*
           if-no-files-found: error
           include-hidden-files: true
-      - name: Upload Windows test coverage plan
-        if: always() && runner.os == 'Windows'
+  build-linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CGO_ENABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: |
+            go.sum
+            third_party/gov8/go.sum
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Linux native build dependencies
+        run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
+      - name: Cache native style and layout build
+        uses: actions/cache@v4
+        with:
+          path: internal/layoutblitz/native/target
+          key: native-layout-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('internal/layoutblitz/native/**', 'internal/layouttaffy/native/**') }}
+      - name: Build native style and layout library if changed
+        run: go run ./tools/buildnative
+      - name: Build Linux executable
+        run: go build -trimpath -ldflags="-s -w" -o .build/mimic ./cmd/mimic
+      - name: Test release and CI gates
+        run: |
+          python -m unittest discover -s tools/ci -p "test_*.py"
+          python -m unittest discover -s tools/release -p test_release.py
+      - name: Compile all Linux tests
+        run: go test -run '^$' ./...
+      - name: Test Linux engines and portable components
+        run: go test ./chrome/... ./cmd/... ./internal/engine/... ./internal/dom ./internal/network ./internal/profile ./internal/scheduler ./internal/state ./internal/textmetrics ./internal/camera ./internal/microphone ./internal/videocodec
+      - name: Install Linux font resources
+        run: sudo apt-get install -y fonts-dejavu-core fonts-liberation
+      - name: Verify Linux executable over CDP
+        run: |
+          go run ./tools/runtimecheck -binary .build/mimic
+          go run ./tools/runtimecheck -binary .build/mimic -engine quickjs
+      - name: Test native binding and packaged library
+        working-directory: third_party/gov8
+        run: go test ./...
+      - name: Race check V8 ownership
+        run: go test -race ./internal/engine/v8
+      - name: Upload executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: mimic-${{ runner.os }}-amd64
+          path: .build/mimic*
+          if-no-files-found: error
+          include-hidden-files: true
+  windows-reference:
+    needs: build-windows
+    strategy:
+      fail-fast: false
+      matrix:
+        shard:
+          - 0
+          - 1
+          - 2
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-reference-tests
+          path: .build/ci/bin
+      - name: Run precompiled Browser and CDP tests
+        run: python tools/ci/windows_tests.py --shard ${{ matrix.shard }} --count 3 --binary-dir .build/ci/bin
+      - name: Upload coverage and timing evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: windows-test-plan-${{ matrix.shard }}
-          path: .build/ci/windows-tests-*.json
+          path: .build/ci/windows-*.json
           if-no-files-found: warn
           include-hidden-files: true
