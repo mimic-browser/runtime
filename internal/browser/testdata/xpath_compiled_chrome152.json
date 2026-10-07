@@ -1,0 +1,97 @@
+{
+  "captureMetadata": {
+    "chromeVersion": "152.0.7977.82",
+    "chromiumRevision": 1669021,
+    "v8Version": "15.2.124.21",
+    "platform": "Win32",
+    "browserMode": "headful",
+    "commandLineFeatureOverrides": [],
+    "viewport": {
+      "width": 1272,
+      "height": 709,
+      "deviceScaleFactor": 1
+    },
+    "window": {
+      "x": 0,
+      "y": 0,
+      "outerWidth": 0,
+      "outerHeight": 0
+    },
+    "secureContextState": true,
+    "isolationState": false,
+    "environmentProfileId": "chrome-152-windows-x64-headful-controlled-v1",
+    "profileFreshness": "fresh-controlled",
+    "identityObservation": "about:blank before navigation; no overrides",
+    "contextObservation": "Final document after the outcome window; initial identity is retained separately"
+  },
+  "provenance": {
+    "capturedUTC": "2026-10-07T06:13:48.758351+00:00",
+    "chromeBinarySha256": "ea36dd818a90176f1a70616f0363d9be527229389a6c073a0b1688b9e73f67e9",
+    "arguments": [
+      "E:\\GitHub\\mimic\\compatibility\\.chrome-for-testing\\152.0.7977.82\\chrome-win64\\chrome.exe",
+      "--remote-debugging-port=19841",
+      "--user-data-dir=C:\\Users\\moreveal\\AppData\\Local\\Temp\\mimic-doctor-chrome-butzu8cp",
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--window-size=1280,800",
+      "about:blank"
+    ],
+    "webdriver": false,
+    "referenceInventorySha256": "7ecb5a5e914c465e6573d5472e2de0d4d92ece33411926eb204ea8bf5b92e822",
+    "probeSha256": "8f7f4897af6ab577ffca281204f98e45475f19ea8edd46d17a9c3d40419ec3c8",
+    "authority": "Non-presentation XPath semantics; exact probe also agrees in frozen headless Chrome. Headful capture retains a presentation-state gap; no window/visibility expectations are promoted.",
+    "headlessInventorySha256": "03304ab69596084689e56ef6a0e815fdec6b7e97ecbd6a11c31cf88ef3bf1167"
+  },
+  "observations": {
+    "constructor": [
+      true,
+      true,
+      "[object XPathEvaluator]"
+    ],
+    "compiled": [
+      true,
+      true,
+      4,
+      "first",
+      "second",
+      null
+    ],
+    "documentCompiled": [
+      2,
+      true,
+      true
+    ],
+    "documentEvaluate": [
+      2,
+      "first",
+      "second"
+    ],
+    "emptyRootValidation": {
+      "name": "SyntaxError",
+      "message": "Failed to execute 'createExpression' on 'XPathEvaluator': The string '//*[' is not a valid XPath expression."
+    },
+    "illegalExpressionConstructor": {
+      "name": "TypeError",
+      "message": "Failed to construct 'XPathExpression': Illegal constructor"
+    },
+    "constructorCall": {
+      "name": "TypeError",
+      "message": "Failed to construct 'XPathEvaluator': Please use the 'new' operator, this DOM object constructor cannot be called as a function."
+    },
+    "illegalReceiver": {
+      "name": "TypeError",
+      "message": "Illegal invocation"
+    },
+    "missingExpression": {
+      "name": "TypeError",
+      "message": "Failed to execute 'createExpression' on 'XPathEvaluator': 1 argument required, but only 0 present."
+    },
+    "metadata": [
+      0,
+      1,
+      2,
+      1,
+      1
+    ]
+  }
+}
