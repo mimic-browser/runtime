@@ -238,6 +238,22 @@ def types_go(source: dict) -> str:
     return "".join(chunks)
 
 
+def validate_implementation(key: str, implementation: dict):
+    if implementation.get("status") not in SUPPORT_STATUSES:
+        raise ValueError(f"invalid support status: {key}")
+    if set(implementation) - {"status", "notes", "tests"}:
+        raise ValueError(f"unknown support manifest fields: {key}")
+    if "notes" in implementation and not isinstance(implementation["notes"], str):
+        raise ValueError(f"support notes must be a string: {key}")
+    if "tests" in implementation and (not isinstance(implementation["tests"], list)
+                                       or not all(isinstance(t, str) for t in implementation["tests"])):
+        raise ValueError(f"support tests must be a string list: {key}")
+    if implementation["status"] != "unsupported" and not implementation.get("notes", "").strip():
+        raise ValueError(f"supported behavior requires scope/limitations: {key}")
+    if implementation["status"] == "implemented" and not implementation.get("tests"):
+        raise ValueError(f"implemented behavior requires regression evidence: {key}")
+
+
 def inventory(source: dict, provenance: dict, support: dict) -> dict:
     rows = []
     seen = set()
@@ -248,19 +264,7 @@ def inventory(source: dict, provenance: dict, support: dict) -> dict:
                 key = dn + "." + item["name"]
                 seen.add(key)
                 implementation = support.get(key, {"status": "unsupported"})
-                if implementation.get("status") not in SUPPORT_STATUSES:
-                    raise ValueError(f"invalid support status: {key}")
-                if set(implementation) - {"status", "notes", "tests"}:
-                    raise ValueError(f"unknown support manifest fields: {key}")
-                if "notes" in implementation and not isinstance(implementation["notes"], str):
-                    raise ValueError(f"support notes must be a string: {key}")
-                if "tests" in implementation and (not isinstance(implementation["tests"], list)
-                                                   or not all(isinstance(t, str) for t in implementation["tests"])):
-                    raise ValueError(f"support tests must be a string list: {key}")
-                if implementation["status"] != "unsupported" and not implementation.get("notes", "").strip():
-                    raise ValueError(f"supported behavior requires scope/limitations: {key}")
-                if implementation["status"] == "implemented" and not implementation.get("tests"):
-                    raise ValueError(f"implemented behavior requires regression evidence: {key}")
+                validate_implementation(key, implementation)
                 rows.append({
                     "name": key, "kind": kind,
                     "experimental": bool(domain.get("experimental") or item.get("experimental")),
@@ -271,8 +275,13 @@ def inventory(source: dict, provenance: dict, support: dict) -> dict:
                     "returns": [r["name"] for r in item.get("returns", [])],
                     "support": implementation,
                 })
-    if set(support) - seen:
-        raise ValueError(f"support manifest names absent from pinned CDP: {sorted(set(support)-seen)}")
+    extensions = []
+    for key in sorted(set(support) - seen):
+        if not re.fullmatch(r"Mimic\.[A-Za-z][A-Za-z0-9]*", key):
+            raise ValueError(f"support manifest name absent from pinned CDP: {key}")
+        implementation = support[key]
+        validate_implementation(key, implementation)
+        extensions.append({"name": key, "kind": "extension", "wireSchemaGenerated": False, "support": implementation})
     rows.sort(key=lambda r: (r["name"], r["kind"]))
     return {
         "schemaVersion": 1,
@@ -291,6 +300,7 @@ def inventory(source: dict, provenance: dict, support: dict) -> dict:
             "events": dict(sorted(Counter(row["support"]["status"] for row in rows if row["kind"] == "event").items())),
         },
         "entries": rows,
+        "extensions": extensions,
     }
 
 
@@ -332,6 +342,15 @@ def coverage_markdown(output: dict) -> str:
             lines.append("| `" + row["name"] + "` | " + support["status"] + " | "
                          + support["notes"].replace("|", "\\|").replace("\n", " ") + " | "
                          + ("; ".join(links) or "No focused evidence recorded") + " |")
+    if output.get("extensions"):
+        lines += ["", "## Mimic extensions", "", "These automation extensions are separate from the pinned Chrome wire schema and its coverage counts.", "", "| Name | Status | Scope and limitations | Regression evidence |", "|---|---|---|---|"]
+        for row in output["extensions"]:
+            support = row["support"]
+            links = []
+            for test in support.get("tests", []):
+                path, _, label = test.partition("#")
+                links.append("[" + (label or path) + "](../" + path + ")")
+            lines.append("| `" + row["name"] + "` | " + support["status"] + " | " + support.get("notes", "").replace("|", "\\|").replace("\n", " ") + " | " + "; ".join(links) + " |")
     return "\n".join(lines) + "\n"
 
 

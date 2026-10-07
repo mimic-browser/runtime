@@ -40,6 +40,7 @@ type cameraSource struct {
 	cancel              context.CancelFunc
 	format              camera.Format
 	device              camera.Device
+	mediaDevice         *MediaDeviceProfile
 	notificationPending atomic.Bool
 }
 type cameraTrack struct {
@@ -50,10 +51,12 @@ type cameraTrack struct {
 	stopped           bool
 	width, height     int
 	frameRate         float64
+	resizeMode        string
 	deviceID, groupID string
 	constraints       map[string]any
 	remote            bool
 	publicID          string
+	output            *cameraOutput
 }
 
 func (r *Realm) cameraDeviceID(raw string) string {
@@ -85,6 +88,9 @@ func (r *Realm) capturePermission(name string) string {
 func (r *Realm) stopCameraTracks() {
 	seen := map[*cameraSource]bool{}
 	for _, t := range r.cameraTracks {
+		if t.output != nil {
+			t.output.close()
+		}
 		t.source.mu.Lock()
 		t.stopped = true
 		t.source.mu.Unlock()
@@ -95,6 +101,9 @@ func (r *Realm) stopCameraTracks() {
 	}
 }
 func (r *Realm) stopCameraTrack(t *cameraTrack) {
+	if t.output != nil {
+		t.output.close()
+	}
 	t.source.mu.Lock()
 	t.stopped = true
 	t.source.mu.Unlock()
@@ -157,7 +166,11 @@ func (t *cameraTrack) settings() map[string]any {
 	if t.stopped {
 		return map[string]any{"deviceId": t.deviceID, "groupId": t.groupID}
 	}
-	return map[string]any{"deviceId": t.deviceID, "groupId": t.groupID, "width": t.width, "height": t.height, "aspectRatio": float64(t.width) / float64(t.height), "frameRate": t.frameRate, "resizeMode": "none"}
+	resizeMode := t.resizeMode
+	if resizeMode == "" {
+		resizeMode = "none"
+	}
+	return map[string]any{"deviceId": t.deviceID, "groupId": t.groupID, "width": t.width, "height": t.height, "aspectRatio": float64(t.width) / float64(t.height), "frameRate": t.frameRate, "resizeMode": resizeMode}
 }
 func (t *cameraTrack) snapshot() map[string]any {
 	ready := "live"
@@ -202,27 +215,30 @@ func (r *Realm) queueCameraFrame(s *cameraSource) {
 }
 
 func (r *Realm) openCamera(constraints map[string]any, promise engine.Promise) {
+	releaseCapture := r.agent.Page().ctx.reserveMediaCapture()
 	loadContext, cancel := context.WithTimeout(r.resourceContext, 10*time.Second)
 	sourceContext, stop := context.WithCancel(r.resourceContext)
 	r.resourceWG.Add(1)
 	go func() {
 		defer r.resourceWG.Done()
+		defer releaseCapture()
 		defer cancel()
 		defer stop()
 		runtime.LockOSThread()
 		defer runtime.UnlockOSThread()
 		provider := r.agent.Page().ctx.browser.cameraProvider
-		devices, err := provider.Devices(loadContext)
+		nativeDevices, err := provider.Devices(loadContext)
+		devices, _ := projectMediaCatalog(r.agent.Page().ctx.currentMediaProfile(), nativeDevices, nil)
 		result := cameraFailure("NotFoundError", "Requested device not found", "")
-		var chosen *camera.Device
+		var chosen *profileCameraDevice
 		exact, ideal := cameraDeviceConstraint(constraints["deviceId"])
 		groupExact, groupIdeal := cameraDeviceConstraint(constraints["groupId"])
 		for i := range devices {
-			id := r.cameraDeviceID(devices[i].ID)
+			id := r.mediaDeviceID("videoinput", devices[i].ID, devices[i].media)
 			if len(exact) > 0 && !containsString(exact, id) {
 				continue
 			}
-			group := r.cameraDeviceID("group:" + devices[i].ID)
+			group := r.mediaGroupID("videoinput", devices[i].ID, devices[i].media)
 			if len(groupExact) > 0 && !containsString(groupExact, group) {
 				continue
 			}
@@ -240,14 +256,35 @@ func (r *Realm) openCamera(constraints map[string]any, promise engine.Promise) {
 			result = cameraFailure("OverconstrainedError", "No matching camera group", "groupId")
 		}
 		if err != nil {
-			result = cameraFailure("NotReadableError", err.Error(), "")
+			result = cameraFailure("NotReadableError", r.mediaBackendFailure("videoinput", err), "")
 		}
 		var capture camera.Capture
 		var format camera.Format
 		if err == nil && chosen != nil {
-			capture, format, err = provider.Open(sourceContext, chosen.ID, func(formats []camera.Format) (camera.Format, error) { return selectCameraFormat(formats, constraints) })
+			nativeID := chosen.ID
+			if chosen.media != nil {
+				nativeID = chosen.media.nativeID
+			}
+			capture, format, err = provider.Open(sourceContext, nativeID, func(formats []camera.Format) (camera.Format, error) {
+				if chosen.media == nil {
+					return selectCameraFormat(formats, constraints)
+				}
+				output, err := selectMediaCameraFormat(chosen.media, constraints)
+				if err != nil {
+					return camera.Format{}, err
+				}
+				if chosen.media.Processing.Resize != "crop-and-scale" {
+					return selectCameraFormat(formats, map[string]any{"width": map[string]any{"exact": float64(output.Width)}, "height": map[string]any{"exact": float64(output.Height)}, "frameRate": map[string]any{"min": output.FrameRate}})
+				}
+				_, _, requiredFPS := mediaCameraLimits(chosen.media)
+				// The source mode belongs to the device recipe, independently of
+				// the first track's requested crop/scale. Clones and later changes
+				// must adapt one stable native input rather than renegotiate it.
+				input := chosen.media.DefaultMode
+				return selectCameraFormat(formats, map[string]any{"width": float64(input.Width), "height": float64(input.Height), "frameRate": map[string]any{"min": requiredFPS, "ideal": requiredFPS}})
+			})
 			if err != nil {
-				result = cameraFailure("NotReadableError", err.Error(), "")
+				result = cameraFailure("NotReadableError", r.mediaBackendFailure("videoinput", err), "")
 				var constraint *cameraConstraintError
 				if errors.As(err, &constraint) {
 					result = cameraFailure("OverconstrainedError", err.Error(), constraint.name)
@@ -278,14 +315,14 @@ func (r *Realm) openCamera(constraints map[string]any, promise engine.Promise) {
 			}
 			result = cameraFailure("NotReadableError", "Camera did not deliver a frame", "")
 			if err != nil {
-				result["message"] = err.Error()
+				result["message"] = r.mediaBackendFailure("videoinput", err)
 			}
 			r.scheduler.Post(scheduler.DOM, 0, func(context.Context) error { return promise.Resolve(result) })
 			return
 		}
 		// Replace only the startup deadline; capture lifetime follows the document.
 		cancel()
-		s := &cameraSource{context: sourceContext, cancel: stop, format: format, device: *chosen}
+		s := &cameraSource{context: sourceContext, cancel: stop, format: format, device: chosen.Device, mediaDevice: chosen.media}
 		defer stop()
 		storeFrame := func(img image.Image) {
 			rgba := image.NewRGBA(image.Rect(0, 0, img.Bounds().Dx(), img.Bounds().Dy()))
@@ -312,7 +349,11 @@ func (r *Realm) openCamera(constraints map[string]any, promise engine.Promise) {
 				accepted <- false
 				return promise.Resolve(cameraFailure("NotAllowedError", "Permission denied", ""))
 			}
-			t := &cameraTrack{id: uuid.NewString(), source: s, enabled: true, width: format.Width, height: format.Height, frameRate: format.FrameRate, deviceID: r.cameraDeviceID(chosen.ID), groupID: r.cameraDeviceID("group:" + chosen.ID), constraints: constraints}
+			output := mediaCameraSelection{format, "none"}
+			if chosen.media != nil {
+				output, _ = selectMediaCameraFormat(chosen.media, constraints)
+			}
+			t := &cameraTrack{id: uuid.NewString(), source: s, enabled: true, width: output.Width, height: output.Height, frameRate: output.FrameRate, resizeMode: output.ResizeMode, deviceID: r.mediaDeviceID("videoinput", chosen.ID, chosen.media), groupID: r.mediaGroupID("videoinput", chosen.ID, chosen.media), constraints: constraints, output: &cameraOutput{}}
 			if r.cameraTracks == nil {
 				r.cameraTracks = map[string]*cameraTrack{}
 			}
@@ -335,6 +376,7 @@ func (r *Realm) openCamera(constraints map[string]any, promise engine.Promise) {
 				if errors.Is(readErr, camera.ErrFrameTimeout) {
 					continue
 				}
+				r.mediaBackendFailure("videoinput", readErr)
 				r.scheduler.Post(scheduler.DOM, 0, func(ctx context.Context) error {
 					for _, t := range r.cameraTracks {
 						if t.source == s && !t.stopped {
@@ -354,7 +396,7 @@ func (r *Realm) openCamera(constraints map[string]any, promise engine.Promise) {
 			release()
 			// At most one notification per frame period; retained frames remain coherent
 			// across consumers even when events are throttled by a busy event loop.
-			if time.Since(lastEvent) >= time.Second/30 {
+			if time.Since(lastEvent) >= time.Duration(float64(time.Second)/max(1.0, format.FrameRate)) {
 				lastEvent = time.Now()
 				r.queueCameraFrame(s)
 			}
@@ -373,14 +415,15 @@ func addCameraHosts(r *Realm, h map[string]any) {
 			microphones, audioErr := r.agent.Page().ctx.browser.microphoneProvider.Devices(r.resourceContext)
 			r.scheduler.Post(scheduler.DOM, 0, func(context.Context) error {
 				rows := []map[string]any{}
+				videoDevices, audioDevices := projectMediaCatalog(r.agent.Page().ctx.currentMediaProfile(), devices, microphones)
 				// The retained Chrome 152 enumeration groups audio inputs before video
 				// inputs. Native backend availability still determines membership.
 				audioAllowed := r.capturePermission("microphone") == "granted"
-				for _, d := range microphones {
+				for _, d := range audioDevices {
 					row := map[string]any{"deviceId": "", "groupId": "", "label": "", "kind": "audioinput"}
 					if audioAllowed {
-						row["deviceId"] = r.cameraDeviceID("audio:" + d.ID)
-						row["groupId"] = r.cameraDeviceID("audio-group:" + d.ID)
+						row["deviceId"] = r.mediaDeviceID("audioinput", d.ID, d.media)
+						row["groupId"] = r.mediaGroupID("audioinput", d.ID, d.media)
 						row["label"] = d.Label
 					}
 					rows = append(rows, row)
@@ -389,17 +432,17 @@ func addCameraHosts(r *Realm, h map[string]any) {
 					}
 				}
 				allowed := r.cameraPermission() == "granted"
-				for _, d := range devices {
+				for _, d := range videoDevices {
 					if !allowed {
 						rows = append(rows, map[string]any{"deviceId": "", "groupId": "", "label": "", "kind": "videoinput"})
 						break
 					}
-					rows = append(rows, map[string]any{"deviceId": r.cameraDeviceID(d.ID), "groupId": r.cameraDeviceID("group:" + d.ID), "label": d.Label, "kind": "videoinput"})
+					rows = append(rows, map[string]any{"deviceId": r.mediaDeviceID("videoinput", d.ID, d.media), "groupId": r.mediaGroupID("videoinput", d.ID, d.media), "label": d.Label, "kind": "videoinput"})
 				}
 				// An unavailable native backend contributes no devices of its kind;
 				// a capture request still reports the concrete backend failure.
 				if err != nil && audioErr != nil {
-					return promise.Resolve(cameraFailure("NotReadableError", fmt.Sprintf("camera: %v; microphone: %v", err, audioErr), ""))
+					return promise.Resolve(cameraFailure("NotReadableError", fmt.Sprintf("camera: %s; microphone: %s", r.mediaBackendFailure("videoinput", err), r.mediaBackendFailure("audioinput", audioErr)), ""))
 				}
 				return promise.Resolve(map[string]any{"devices": rows})
 			})
@@ -428,13 +471,18 @@ func addCameraHosts(r *Realm, h map[string]any) {
 		case "stop":
 			r.stopCameraTrack(t)
 		case "enabled":
+			changed := t.enabled != (a[2].Export() == true)
 			t.source.mu.Lock()
 			t.enabled = a[2].Export() == true
 			t.source.mu.Unlock()
+			if changed && t.output != nil {
+				t.output.invalidate()
+			}
 		case "clone":
 			clone := *t
 			clone.id = uuid.NewString()
 			clone.publicID = ""
+			clone.output = &cameraOutput{}
 			r.cameraTracks[clone.id] = &clone
 			return r.val(clone.snapshot()), nil
 		case "apply":
@@ -456,7 +504,16 @@ func addCameraHosts(r *Realm, h map[string]any) {
 				if exact, _ := cameraDeviceConstraint(constraints["groupId"]); len(exact) > 0 && !containsString(exact, t.groupID) {
 					return r.val(cameraFailure("OverconstrainedError", "Device group cannot be changed", "groupId")), nil
 				}
-				f, err := selectCameraFormat([]camera.Format{t.source.format}, constraints)
+				var f camera.Format
+				resizeMode := "none"
+				var err error
+				if t.source.mediaDevice != nil {
+					var selected mediaCameraSelection
+					selected, err = selectMediaCameraFormat(t.source.mediaDevice, constraints)
+					f, resizeMode = selected.Format, selected.ResizeMode
+				} else {
+					f, err = selectCameraFormat([]camera.Format{t.source.format}, constraints)
+				}
 				if err != nil {
 					var ce *cameraConstraintError
 					errors.As(err, &ce)
@@ -466,7 +523,11 @@ func addCameraHosts(r *Realm, h map[string]any) {
 					}
 					return r.val(cameraFailure("OverconstrainedError", err.Error(), name)), nil
 				}
+				if (t.width != f.Width || t.height != f.Height || t.frameRate != f.FrameRate) && t.output != nil {
+					t.output.invalidate()
+				}
 				t.width, t.height, t.frameRate = f.Width, f.Height, f.FrameRate
+				t.resizeMode = resizeMode
 				t.constraints = constraints
 			}
 		case "capabilities":
@@ -475,6 +536,9 @@ func addCameraHosts(r *Realm, h map[string]any) {
 			}
 			if t.kind == "audio" {
 				return r.val(microphoneCapabilities(t)), nil
+			}
+			if t.source.mediaDevice != nil {
+				return r.val(mediaCameraCapabilities(t)), nil
 			}
 			f := t.source.format
 			return r.val(map[string]any{"deviceId": t.deviceID, "groupId": t.groupID, "width": map[string]any{"min": f.Width, "max": f.Width}, "height": map[string]any{"min": f.Height, "max": f.Height}, "frameRate": map[string]any{"min": f.FrameRate, "max": f.FrameRate}, "aspectRatio": map[string]any{"min": float64(f.Width) / float64(f.Height), "max": float64(f.Width) / float64(f.Height)}, "resizeMode": []string{"none"}}), nil
@@ -515,32 +579,26 @@ func addCameraHosts(r *Realm, h map[string]any) {
 			}
 			return r.val(map[string]any{"pcm": engine.BinaryBuffer(data), "channels": channels, "sampleRate": s.audioFormat.SampleRate, "end": float64(s.pcmSamples), "blockFrames": len(s.pcm) / channels}), nil
 		case "frame", "info":
-			s := t.source
-			s.mu.RLock()
-			defer s.mu.RUnlock()
 			if t.kind == "audio" {
-				if s.pcm == nil || t.stopped {
-					return r.val(nil), nil
-				}
-				if strarg(a, 1) == "frame" {
+				s := t.source
+				s.mu.RLock()
+				defer s.mu.RUnlock()
+				if s.pcm == nil || t.stopped || strarg(a, 1) == "frame" {
 					return r.val(nil), nil
 				}
 				return r.val(map[string]any{"width": 0, "height": 0, "sequence": s.sequence, "time": float64(s.stamp.UnixNano()) / 1e9}), nil
 			}
-			if s.frame == nil || t.stopped {
+			observation := t.observation()
+			if observation.image == nil {
 				return r.val(nil), nil
 			}
-			if strarg(a, 1) == "info" {
-				return r.val(map[string]any{"width": s.frame.Bounds().Dx(), "height": s.frame.Bounds().Dy(), "sequence": s.sequence, "time": float64(s.stamp.UnixNano()) / 1e9}), nil
+			row := map[string]any{"width": observation.image.Bounds().Dx(), "height": observation.image.Bounds().Dy(), "sequence": observation.sequence, "time": float64(observation.stamp.UnixNano()) / 1e9}
+			if strarg(a, 1) == "frame" {
+				row["pixels"] = base64.StdEncoding.EncodeToString(observation.image.Pix)
+				row["originClean"] = true
+				row["colorSpace"] = "srgb"
 			}
-			pixels := s.frame.Pix
-			if !t.enabled {
-				pixels = make([]byte, len(pixels))
-				for i := 3; i < len(pixels); i += 4 {
-					pixels[i] = 255
-				}
-			}
-			return r.val(map[string]any{"width": s.frame.Bounds().Dx(), "height": s.frame.Bounds().Dy(), "pixels": base64.StdEncoding.EncodeToString(pixels), "sequence": s.sequence, "time": float64(s.stamp.UnixNano()) / 1e9, "originClean": true, "colorSpace": "srgb"}), nil
+			return r.val(row), nil
 		}
 		return r.val(t.snapshot()), nil
 	})

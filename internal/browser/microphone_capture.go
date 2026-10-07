@@ -106,29 +106,38 @@ func (r *Realm) openMicrophone(constraints map[string]any, promise engine.Promis
 		promise.Resolve(cameraFailure("OverconstrainedError", err.Error(), err.(*cameraConstraintError).name))
 		return
 	}
+	releaseCapture := r.agent.Page().ctx.reserveMediaCapture()
 	ctx, stop := context.WithCancel(r.resourceContext)
 	loadContext, cancel := context.WithTimeout(ctx, 10*time.Second)
 	r.resourceWG.Add(1)
 	go func() {
 		defer r.resourceWG.Done()
+		defer releaseCapture()
 		defer stop()
 		defer cancel()
 		resolveFailure := func(err error, name, constraint string) {
-			r.scheduler.Post(scheduler.DOM, 0, func(context.Context) error { return promise.Resolve(cameraFailure(name, err.Error(), constraint)) })
+			message := err.Error()
+			if name == "NotReadableError" {
+				message = r.mediaBackendFailure("audioinput", err)
+			}
+			r.scheduler.Post(scheduler.DOM, 0, func(context.Context) error {
+				return promise.Resolve(cameraFailure(name, message, constraint))
+			})
 		}
 		provider := r.agent.Page().ctx.browser.microphoneProvider
-		devices, err := provider.Devices(loadContext)
+		nativeDevices, err := provider.Devices(loadContext)
+		_, devices := projectMediaCatalog(r.agent.Page().ctx.currentMediaProfile(), nil, nativeDevices)
 		if err != nil {
 			resolveFailure(err, "NotReadableError", "")
 			return
 		}
 		exact, ideal := cameraDeviceConstraint(constraints["deviceId"])
 		groupExact, groupIdeal := cameraDeviceConstraint(constraints["groupId"])
-		var chosen *microphone.Device
+		var chosen *profileMicrophoneDevice
 		for i := range devices {
 			d := &devices[i]
-			id := r.cameraDeviceID("audio:" + d.ID)
-			group := r.cameraDeviceID("audio-group:" + d.ID)
+			id := r.mediaDeviceID("audioinput", d.ID, d.media)
+			group := r.mediaGroupID("audioinput", d.ID, d.media)
 			if len(exact) > 0 && !containsString(exact, id) || len(groupExact) > 0 && !containsString(groupExact, group) {
 				continue
 			}
@@ -150,7 +159,11 @@ func (r *Realm) openMicrophone(constraints map[string]any, promise engine.Promis
 			resolveFailure(fmt.Errorf("requested microphone not found"), name, constraint)
 			return
 		}
-		capture, err := provider.Open(loadContext, chosen.ID, format)
+		nativeID := chosen.ID
+		if chosen.media != nil {
+			nativeID = chosen.media.nativeID
+		}
+		capture, err := provider.Open(loadContext, nativeID, format)
 		if err != nil {
 			resolveFailure(err, "NotReadableError", "")
 			return
@@ -166,7 +179,7 @@ func (r *Realm) openMicrophone(constraints map[string]any, promise engine.Promis
 			return
 		}
 		cancel()
-		source := &cameraSource{context: ctx, cancel: stop, device: camera.Device{ID: chosen.ID, Label: chosen.Label}, audioFormat: format}
+		source := &cameraSource{context: ctx, cancel: stop, device: camera.Device{ID: chosen.ID, Label: chosen.Label}, audioFormat: format, mediaDevice: chosen.media}
 		r.publishMicrophonePCM(source, pcm)
 		accepted := make(chan bool, 1)
 		r.scheduler.Post(scheduler.DOM, 0, func(context.Context) error {
@@ -178,7 +191,7 @@ func (r *Realm) openMicrophone(constraints map[string]any, promise engine.Promis
 				accepted <- false
 				return promise.Resolve(cameraFailure("NotAllowedError", "Permission denied", ""))
 			}
-			track := &cameraTrack{kind: "audio", id: uuid.NewString(), source: source, enabled: true, deviceID: r.cameraDeviceID("audio:" + chosen.ID), groupID: r.cameraDeviceID("audio-group:" + chosen.ID), constraints: constraints}
+			track := &cameraTrack{kind: "audio", id: uuid.NewString(), source: source, enabled: true, deviceID: r.mediaDeviceID("audioinput", chosen.ID, chosen.media), groupID: r.mediaGroupID("audioinput", chosen.ID, chosen.media), constraints: constraints}
 			if r.cameraTracks == nil {
 				r.cameraTracks = map[string]*cameraTrack{}
 			}
@@ -196,6 +209,7 @@ func (r *Realm) openMicrophone(constraints map[string]any, promise engine.Promis
 		}
 		lastEvent := time.Time{}
 		endCapture := func(failure error) {
+			r.mediaBackendFailure("audioinput", failure)
 			r.agent.Page().Trace().Add(trace.Error, "microphoneCapture", map[string]any{"error": failure.Error()})
 			r.scheduler.Post(scheduler.DOM, 0, func(taskContext context.Context) error {
 				for _, track := range r.cameraTracks {

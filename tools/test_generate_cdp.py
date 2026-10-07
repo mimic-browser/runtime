@@ -55,6 +55,16 @@ class CDPGenerationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "regression evidence"):
             generator.inventory(self.source, self.provenance, {"Runtime.evaluate": {"status": "implemented", "notes": "Declared scope"}})
 
+    def test_mimic_extensions_do_not_modify_frozen_wire_counts(self):
+        manifest = {"Mimic.setMediaProfile": {"status": "partial", "notes": "Context-owned media catalog", "tests": ["TestMediaProfile"]}}
+        output = generator.inventory(self.source, self.provenance, manifest)
+        self.assertEqual(len(output["entries"]), 899)
+        self.assertEqual(sum(output["summary"]["methods"].values()), 665)
+        self.assertEqual(output["extensions"][0]["support"], manifest["Mimic.setMediaProfile"])
+        self.assertFalse(output["extensions"][0]["wireSchemaGenerated"])
+        with self.assertRaises(ValueError):
+            generator.inventory(self.source, self.provenance, {"Mimic.bad-name": manifest["Mimic.setMediaProfile"]})
+
     def test_offline_check_is_deterministic_and_detects_drift(self):
         # Running twice in fresh output directories catches ordering instability;
         # no network modules or browsers participate in either projection.

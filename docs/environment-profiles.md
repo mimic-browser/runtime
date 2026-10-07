@@ -21,6 +21,10 @@ const { browserContextId, profile, warnings } = await cdp.send("Mimic.createCont
 `profile` parameter of another createContext call. It contains no proxy credentials,
 context ID, cookies or storage. No server-side profile registry is created.
 Treat it as opaque; use export/import to inspect or store JSON.
+`media` is an optional, separate createContext setting for native capture bindings
+and web-visible camera recipes. It is installed before any Page exists and is
+not stored in the portable Environment token. Its default generation seed follows
+the Environment descriptor seed. See the [media profile contract](media-device-profiles-design.md).
 Omitting profile means random generation. Omitting seed uses 256 random bits;
 explicit empty seeds, unknown selectors/fields, null and wrong types fail.
 Version/platform filter the installed bundle; they do not install a browser.

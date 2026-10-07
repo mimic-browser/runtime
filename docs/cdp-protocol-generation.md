@@ -56,7 +56,7 @@ does not rewrite source hashes or implementation claims during verification.
 ```
 
 Permitted statuses are `unsupported`, `partial`, and `implemented`. Entries absent
-from the manifest remain unsupported. Unknown command/event names fail generation.
+from the manifest remain unsupported. Unknown Chrome command/event names fail generation.
 `implemented` is an explicit maintainer claim; recorded tests provide evidence
 but are not a claim of complete Chrome equivalence. Regenerate the inventory after
 editing the manifest. Adding a command handler also requires adding its manifest
@@ -79,6 +79,18 @@ changes:
 The registry is intentionally reviewed rather than inferred from dispatch code:
 the presence of a handler establishes reachability, not semantic compatibility.
 Keep implementation claims here instead of adding parallel handwritten lists.
+
+### Mimic extensions
+
+The same support manifest can declare `Mimic.<command>` extensions with explicit
+scope, limitations and focused test evidence. They appear in the inventory's
+separate `extensions` array and in their own generated coverage section.
+`Mimic.getCompatibilityMatrix` returns these rows as `extensions`, with
+`kind: "extension"` and `wireSchemaGenerated: false`. Extension names must use
+the validated Mimic namespace; they do not alter the frozen Chrome schema,
+wire descriptors or Chrome command/event counts. Their handlers validate their
+own public parameters. Adding an extension still requires a manifest entry,
+regeneration and the focused coverage checks above.
 
 ## Parameter boundary
 

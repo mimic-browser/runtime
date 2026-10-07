@@ -21,7 +21,7 @@ func (s *session) handlePortableProfile(m message) (any, bool, error) {
 	case "Mimic.exportProfile":
 		allowed["profile"] = true
 	case "Mimic.createContext":
-		for _, key := range []string{"profile", "proxy", "resourcePolicy", "disposeOnDetach"} {
+		for _, key := range []string{"profile", "proxy", "resourcePolicy", "disposeOnDetach", "media"} {
 			allowed[key] = true
 		}
 	default:
@@ -141,6 +141,23 @@ func (s *session) handlePortableProfile(m message) (any, bool, error) {
 	c, err := s.server.Browser.NewResolvedProfileContext(resolved, proxyJSON, policy)
 	if err != nil {
 		return nil, true, err
+	}
+	if value, exists := params["media"]; exists {
+		media, ok := value.(map[string]any)
+		if !ok {
+			_ = c.Close()
+			return bad("media", "expected media configuration object")
+		}
+		if _, exists := media["seed"]; !exists && descriptor.Seed != "" {
+			media["seed"] = descriptor.Seed
+		}
+		raw, _ := json.Marshal(media)
+		configured, configureErr := c.SetMediaProfileJSON(raw)
+		if configureErr != nil {
+			_ = c.Close()
+			return bad("media", configureErr.Error())
+		}
+		result["media"] = configured
 	}
 	s.transport.mu.Lock()
 	s.transport.contexts[c.ID] = dispose

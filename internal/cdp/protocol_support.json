@@ -1192,5 +1192,55 @@
     "tests": [
       "compatibility/cdp_automation.mjs#browser.connect"
     ]
+  },
+  "Mimic.getMediaSources": {
+    "status": "implemented",
+    "notes": "Private Context-scoped camera and microphone source discovery with opaque binding IDs and native backend diagnostics; enumeration does not open capture or grant web permissions.",
+    "tests": [
+      "internal/cdp/media_profile_test.go#TestMimicMediaProfileCommands"
+    ]
+  },
+  "Mimic.getMediaPresets": {
+    "status": "implemented",
+    "notes": "Bundled physical-camera class catalog. Virtual inputs are capture sources only; named model equivalence is not claimed.",
+    "tests": [
+      "internal/cdp/media_profile_test.go#TestMimicMediaProfileCommands"
+    ]
+  },
+  "Mimic.validateMediaProfile": {
+    "status": "partial",
+    "notes": "Compiles deterministic complete physical-class or custom device catalogs and rejects incoherent modes/defaults, unknown controls and conflicting overrides. Native format availability is checked at capture startup, not metadata validation.",
+    "tests": [
+      "internal/cdp/media_profile_test.go#TestMimicMediaProfileCommands"
+    ]
+  },
+  "Mimic.setMediaProfile": {
+    "status": "partial",
+    "notes": "Atomic Context-owned catalog replacement; stable seeded auto selection, source/identity isolation and optional microphone grouping. Live or starting capture rejects replacement. CPU crop/scale, frame-rate reduction and optional coherent output noise; advanced native camera controls are unsupported.",
+    "tests": [
+      "internal/cdp/media_profile_test.go#TestMimicMediaProfileCommands"
+    ]
+  },
+  "Mimic.getMediaProfile": {
+    "status": "implemented",
+    "notes": "Read-only resolved catalog snapshots and private backend failure diagnostics; native bindings never become web device identity.",
+    "tests": [
+      "internal/cdp/media_profile_test.go#TestMimicMediaProfileCommands"
+    ]
+  },
+  "Mimic.createContext": {
+    "status": "partial",
+    "notes": "Creates validated generated/imported environment contexts with optional canonical media configuration installed before creating Pages. Failed media configuration disposes the new Context. Existing profile token, proxy, resource policy and disposeOnDetach behavior are preserved.",
+    "tests": [
+      "internal/cdp/media_profile_test.go#TestMimicMediaProfileCommands"
+    ]
+  },
+  "Mimic.getCompatibilityMatrix": {
+    "status": "partial",
+    "notes": "Returns the complete pinned Chrome wire inventory and separately declared Mimic automation extensions from the authoritative support registry. Generated shapes and partial scopes are never promoted to Chrome implementation or verified parity. Older unrelated Mimic extensions without registry entries are not inventoried.",
+    "tests": [
+      "internal/cdp/coverage_test.go#TestProtocolCoverageUsesCompleteGeneratedInventory",
+      "internal/cdp/coverage_test.go#TestProtocolSupportManifestHasLiveEvidenceAndNoLostHandlers"
+    ]
   }
 }

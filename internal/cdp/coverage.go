@@ -3,6 +3,7 @@ package cdp
 import (
 	"encoding/json"
 	"sort"
+	"strings"
 	"sync"
 )
 
@@ -27,11 +28,13 @@ type protocolSupport struct {
 // Ordinary commands only need wire descriptors. Load support lazily from the
 // generated projection of protocol_support.json, without a second claim list.
 var protocolSupportByName = sync.OnceValue(func() map[string]protocolSupport {
+	type entry struct {
+		Name    string          `json:"name"`
+		Support protocolSupport `json:"support"`
+	}
 	var inventory struct {
-		Entries []struct {
-			Name    string          `json:"name"`
-			Support protocolSupport `json:"support"`
-		} `json:"entries"`
+		Entries    []entry `json:"entries"`
+		Extensions []entry `json:"extensions"`
 	}
 	if err := json.Unmarshal(protocolInventoryJSON, &inventory); err != nil {
 		panic("invalid generated CDP inventory: " + err.Error())
@@ -40,8 +43,26 @@ var protocolSupportByName = sync.OnceValue(func() map[string]protocolSupport {
 	for _, row := range inventory.Entries {
 		result[row.Name] = row.Support
 	}
+	for _, row := range inventory.Extensions {
+		result[row.Name] = row.Support
+	}
 	return result
 })
+
+func protocolExtensionMatrix() []protocolCoverage {
+	names := map[string]struct{}{}
+	for name := range protocolSupportByName() {
+		if strings.HasPrefix(name, "Mimic.") {
+			names[name] = struct{}{}
+		}
+	}
+	rows := protocolMatrix(names, nil)
+	for i := range rows {
+		rows[i].Kind = "extension"
+		rows[i].WireSchemaGenerated = false
+	}
+	return rows
+}
 
 func protocolMatrix(methods, events map[string]struct{}) []protocolCoverage {
 	manifest := protocolSupportByName()

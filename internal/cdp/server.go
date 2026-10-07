@@ -542,6 +542,10 @@ func (s *session) handle(m message) {
 // A command may defer its reply until browser work completes. That wait stays
 // in the original transport worker, after the session and Page locks unwind.
 func (s *session) handleCommand(m message) (afterUnlock func()) {
+	if value, handled, err := s.handleMediaProfile(m); handled {
+		s.reply(m.ID, value, err)
+		return
+	}
 	if value, handled, err := s.handleResourcePolicy(m); handled {
 		s.reply(m.ID, value, err)
 		return
@@ -916,7 +920,7 @@ func (s *session) handleCommand(m message) (afterUnlock func()) {
 	case "Mimic.clearTrace":
 		s.page.Trace().Clear()
 	case "Mimic.getCompatibilityMatrix":
-		result = map[string]any{"chromeVersion": s.page.Environment().Product.FullVersion, "protocol": protocolMatrix(protocolCommandNames(), protocolEventNames())}
+		result = map[string]any{"chromeVersion": s.page.Environment().Product.FullVersion, "protocol": protocolMatrix(protocolCommandNames(), protocolEventNames()), "extensions": protocolExtensionMatrix()}
 	case "Mimic.setViewport":
 		err = s.page.SetViewport(intValue(p["width"], 0), intValue(p["height"], 0))
 	case "Mimic.pause":

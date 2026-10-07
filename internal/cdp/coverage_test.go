@@ -84,8 +84,14 @@ func TestProtocolSupportManifestHasLiveEvidenceAndNoLostHandlers(t *testing.T) {
 				t.Errorf("%s evidence no longer exists: %s (%v)", name, evidence, err)
 			}
 		}
-		if _, command := protocolCommands[name]; command && support.Status != "unsupported" && !strings.Contains(sources.String(), `"`+name+`"`) {
+		_, command := protocolCommands[name]
+		if (command || strings.HasPrefix(name, "Mimic.")) && support.Status != "unsupported" && !strings.Contains(sources.String(), `"`+name+`"`) {
 			t.Errorf("declared command no longer has a handler: %s", name)
+		}
+	}
+	for _, row := range protocolExtensionMatrix() {
+		if row.WireSchemaGenerated || !strings.HasPrefix(row.Name, "Mimic.") || row.Kind != "extension" {
+			t.Fatalf("extension incorrectly promoted to Chrome wire schema: %+v", row)
 		}
 	}
 	// Dispatch currently names each supported method explicitly. A new handler

@@ -273,6 +273,7 @@ func (r *Realm) receiveRTCMedia(peer *rtcMediaPeer, remote *webrtc.TrackRemote, 
 				for sample := builder.Pop(); sample != nil; sample = builder.Pop() {
 					frame, decodeErr := decoder.Decode(sample.Data)
 					if decodeErr != nil {
+						peer.stats.decodedFrame(uint32(remote.SSRC()), 0, 0, true, time.Now())
 						_ = peer.pc.WriteRTCP([]rtcp.Packet{&rtcp.PictureLossIndication{MediaSSRC: uint32(remote.SSRC())}})
 						continue
 					}
@@ -286,6 +287,7 @@ func (r *Realm) receiveRTCMedia(peer *rtcMediaPeer, remote *webrtc.TrackRemote, 
 					}
 					first := s.frame == nil
 					s.frame = frame
+					peer.stats.decodedFrame(uint32(remote.SSRC()), frame.Bounds().Dx(), frame.Bounds().Dy(), false, time.Now())
 					s.sequence++
 					s.stamp = time.Now()
 					if sample.Duration > 0 {
@@ -321,10 +323,15 @@ func rtcMediaState(peer *rtcMediaPeer) map[string]any {
 }
 
 type rtcCameraFrame struct {
-	image    *image.RGBA
-	enabled  bool
-	stopped  bool
-	sequence uint64
+	image         *image.RGBA
+	enabled       bool
+	stopped       bool
+	sequence      uint64
+	stamp         time.Time
+	width, height int
+	fps, noise    float64
+	output        *cameraOutput
+	generation    uint64
 }
 
 func (r *Realm) startRTCMediaSender(peer *rtcMediaPeer, sender *rtcMediaSender, track *cameraTrack) error {
@@ -350,11 +357,14 @@ func (r *Realm) startRTCMediaSender(peer *rtcMediaPeer, sender *rtcMediaSender, 
 			return
 		case <-peer.connected:
 		}
-		ticker := time.NewTicker(time.Second / 30)
+		period := time.Second / 30
+		ticker := time.NewTicker(period)
 		defer ticker.Stop()
 		frameChannel := make(chan rtcCameraFrame, 1)
 		var sequence uint64
 		var scaled *image.RGBA
+		var encoderFPS float64
+		var lastStamp time.Time
 		for {
 			select {
 			case <-ctx.Done():
@@ -365,10 +375,25 @@ func (r *Realm) startRTCMediaSender(peer *rtcMediaPeer, sender *rtcMediaSender, 
 				continue
 			}
 			r.scheduler.Post(scheduler.DOM, 0, func(context.Context) error {
-				frame := rtcCameraFrame{enabled: track.enabled, stopped: track.stopped}
+				frame := rtcCameraFrame{enabled: track.enabled, stopped: track.stopped, width: track.width, height: track.height, fps: track.frameRate}
+				if track.output == nil {
+					track.output = &cameraOutput{}
+				}
+				frame.output = track.output
+				frame.generation = track.output.currentGeneration()
+				if track.source.mediaDevice != nil {
+					frame.noise = track.source.mediaDevice.Processing.Noise
+				}
 				track.source.mu.RLock()
 				frame.image = track.source.frame
 				frame.sequence = track.source.sequence
+				frame.stamp = track.source.stamp
+				if frame.fps <= 0 {
+					frame.fps = max(1.0, track.source.format.FrameRate)
+				}
+				if track.source.mediaDevice == nil && frame.image != nil {
+					frame.width, frame.height = frame.image.Bounds().Dx(), frame.image.Bounds().Dy()
+				}
 				track.source.mu.RUnlock()
 				select {
 				case frameChannel <- frame:
@@ -385,7 +410,17 @@ func (r *Realm) startRTCMediaSender(peer *rtcMediaPeer, sender *rtcMediaSender, 
 			if frame.stopped {
 				return
 			}
-			if frame.image == nil || (frame.sequence == sequence && frame.enabled) {
+			if frame.image == nil {
+				continue
+			}
+			nextPeriod := time.Duration(float64(time.Second) / frame.fps)
+			if nextPeriod != period {
+				period = nextPeriod
+				ticker.Reset(period)
+			}
+			observation := frame.output.observeAt(frame.generation, frame.image, frame.stamp, frame.sequence, frame.width, frame.height, frame.fps, frame.noise, frame.enabled)
+			frame.image, frame.sequence, frame.stamp = observation.image, observation.sequence, observation.stamp
+			if frame.image == nil || frame.sequence == sequence {
 				continue
 			}
 			sequence = frame.sequence
@@ -394,18 +429,19 @@ func (r *Realm) startRTCMediaSender(peer *rtcMediaPeer, sender *rtcMediaSender, 
 			w, h := frame.image.Bounds().Dx(), frame.image.Bounds().Dy()
 			scale := min(1.0, min(1280.0/float64(w), 720.0/float64(h)))
 			width, height := max(16, int(float64(w)*scale)/2*2), max(16, int(float64(h)*scale)/2*2)
-			if scaled == nil || scaled.Bounds().Dx() != width || scaled.Bounds().Dy() != height {
+			if scaled == nil || scaled.Bounds().Dx() != width || scaled.Bounds().Dy() != height || encoderFPS != frame.fps {
 				if encoder != nil {
 					encoder.Close()
 					encoder = nil
 				}
 				var err error
-				encoder, err = videocodec.New(width, height, 30)
+				encoder, err = videocodec.New(width, height, frame.fps)
 				if err != nil {
 					r.emitRTCMedia(peer.id, "error", err.Error())
 					return
 				}
 				scaled = image.NewRGBA(image.Rect(0, 0, width, height))
+				encoderFPS = frame.fps
 				sender.keyFrame.Store(true)
 			}
 			if frame.enabled {
@@ -419,9 +455,18 @@ func (r *Realm) startRTCMediaSender(peer *rtcMediaPeer, sender *rtcMediaSender, 
 				return
 			}
 			if len(data) > 0 {
-				if err := sender.local.WriteSample(media.Sample{Data: data, Duration: time.Second / 30}); err != nil {
+				duration := period
+				if !lastStamp.IsZero() && frame.stamp.After(lastStamp) {
+					duration = frame.stamp.Sub(lastStamp)
+				}
+				if err := sender.local.WriteSample(media.Sample{Data: data, Duration: duration}); err != nil {
 					r.emitRTCMedia(peer.id, "error", err.Error())
 					return
+				}
+				lastStamp = frame.stamp
+				parameters := sender.native.GetParameters()
+				if len(parameters.Encodings) > 0 {
+					peer.stats.encodedFrame(uint32(parameters.Encodings[0].SSRC), width, height, time.Now())
 				}
 			}
 		}
@@ -697,9 +742,7 @@ func addRTCMediaHosts(r *Realm, h map[string]any) {
 				encoded, _ := json.Marshal(peer.pc.GetStats())
 				rows := map[string]any{}
 				json.Unmarshal(encoded, &rows)
-				for id, row := range peer.stats.snapshot() {
-					rows[id] = row
-				}
+				peer.stats.mergeInto(rows)
 				result = rows
 			default:
 				err = fmt.Errorf("unsupported RTC operation %s", operation)

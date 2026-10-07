@@ -144,6 +144,7 @@ func (b *Browser) newConfiguredContext(d *profile.Document, policy *network.Reso
 	}
 	if d != nil {
 		c.env = d.ApplyOwned(b.env)
+		c.mediaSeed = c.env.ProfileID
 		c.proxy = d.Network.Proxy
 	} else {
 		c.env = b.env.Clone()
@@ -185,6 +186,10 @@ type Context struct {
 
 	permissionDefaults        map[string]string // Context-wide CDP overrides; protected by mu.
 	permissionDefaultFallback string
+	mediaSeed                 string
+	mediaProfile              *MediaProfile
+	mediaCaptures             int
+	mediaDiagnostics          map[string]string
 }
 
 func (c *Context) NewPage() (*Page, error) {

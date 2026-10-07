@@ -11,6 +11,31 @@ audio inputs exposed by these backends are selectable like physical inputs.
 Native enumeration and capture start only when requested. No extra audio DLL,
 FFmpeg executable, or runtime dependency download is required.
 
+## Web-visible camera profiles
+
+Bind a native input to a complete physical-class identity before capture:
+
+```js
+await cdp.send("Mimic.setMediaProfile", {
+  seed: "account-1842",
+  camera: { source: "obs", profile: "auto" },
+  microphone: { source: "default" },
+});
+```
+
+The microphone option is optional and binds a real audio source. It shares a
+logical group with the camera; its alias follows the chosen camera label.
+`auto` deterministically selects a complete HD/FHD integrated or USB webcam
+recipe. Explicit class and variant presets, label/mode overrides and multiple
+custom devices use the same validated Context catalog. Source labels and paths
+remain private to automation. Native capture is deferred to `getUserMedia`.
+
+Profiles also install through `Mimic.createContext.media`, before any Page exists.
+Supply `browserContextId` to target a Context other than the server default.
+Configuration never grants camera or microphone permission. Read the
+[media profile contract](media-device-profiles-design.md) for discovery, seed
+semantics, recipes, grouping, executable processing and validation limits.
+
 ## Permissions and device selection
 
 Live permission decisions belong to the BrowserContext's origin capability
@@ -68,10 +93,13 @@ still apply to the Mimic executable.
 width, height, frame rate, aspect ratio, device and group constraints select a supported
 capture mode. Required constraints which cannot be satisfied reject with
 `OverconstrainedError`. `getSettings`, `getConstraints`, and `getCapabilities`
-project the source and track state. Capabilities currently describe the selected
-native mode; `applyConstraints` validates against that mode without reopening a
-shared source. Cropping, software resizing of capture observations, camera
-controls, and pan/tilt/zoom are unsupported. Desktop adapters do not infer facing
+project the source and track state. Unconfigured native capture describes the
+selected native mode and validates `applyConstraints` against that mode without
+reopening a shared source. Configured profiles derive capabilities from their
+compiled recipes and apply actual CPU center-crop/scale and FPS reduction.
+Clones independently select output recipes while sharing native input. Failed
+constraint changes retain previous settings, constraints and output selection.
+Camera controls and pan/tilt/zoom are unsupported. Desktop adapters do not infer facing
 direction; an exact `facingMode` requirement rejects. Advanced dictionaries
 currently filter native numeric modes; advanced device/group selection is not
 implemented. The separate `ImageCapture` photo/control API is not implemented.
@@ -133,8 +161,13 @@ offline session into a live transport rejects with `NotSupportedError` because
 its session certificate and transport state cannot be reused.
 
 Connected video negotiates H264 with packetization mode 1 and constrained
-baseline compatibility. Transmission is capped at 1280×720 and 30 fps; local
-capture observations retain their native dimensions. Audio negotiates Opus at
+baseline compatibility. Transmission adapts dimensions to at most 1280×720;
+sender pacing follows the track's selected FPS and actual output timestamps.
+Local observations retain the selected capture/profile dimensions. Encoded and
+decoded dimensions, frame counts and recent FPS are measured rather than copied
+from track settings. Packet and byte counters use actual RTP boundaries. Decode
+failures are counted; incomplete frames lost before decoding are not fully
+accounted by frame-drop statistics. Audio negotiates Opus at
 48 kHz with mono/stereo microphone encoding and remote audio decoding. Each
 audio sender has a bounded two-block queue; encoding starts after connection,
 and decoding starts on incoming RTP. Pion Opus is pure Go and allocates no native

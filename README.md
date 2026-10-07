@@ -47,6 +47,8 @@ MIMIC stands for “Mimic Implements Modern Internet Compatibility.”
 - Run independent Pages concurrently with one event loop per Page.
 - Observe canonical DOM, navigation, CSSOM and geometry state.
 - Use native HTTP, HTTPS and SOCKS5 proxy profiles.
+- Capture camera/microphone streams and transport H264/Opus through WebRTC.
+- Bind private capture sources to [coherent camera profiles](docs/media-device-profiles-design.md), including seeded physical-class presets.
 - Ship one standalone executable; users do not need Chrome, Go or Rust.
 
 Mimic targets observable Chrome 152 behavior. It is a public beta: compatibility
