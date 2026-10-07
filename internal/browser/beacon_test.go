@@ -10,7 +10,45 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	chrome152 "github.com/moreveal/mimic/chrome/152"
+	quickjsengine "github.com/moreveal/mimic/internal/engine/quickjs"
 )
+
+func TestBeaconQuickJSBinarySnapshot(t *testing.T) {
+	parallelBrowserTest(t)
+	uploads := make(chan string, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" {
+			body, _ := io.ReadAll(r.Body)
+			uploads <- string(body)
+		}
+		w.WriteHeader(204)
+	}))
+	defer server.Close()
+	b, err := New(quickjsengine.Factory{}, chrome152.New())
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := b.NewContext()
+	defer c.Close()
+	p, err := c.NewPage()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := p.Navigate(context.Background(), server.URL); err != nil {
+		t.Fatal(err)
+	}
+	historyEval(t, p, `(()=>{const bytes=new Uint8Array([9,0,255,128,9]);const accepted=navigator.sendBeacon('/upload',new DataView(bytes.buffer,1,3));bytes.fill(1);return accepted})()`, true)
+	select {
+	case got := <-uploads:
+		if got != string([]byte{0, 255, 128}) {
+			t.Fatalf("binary snapshot=%q", got)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("beacon upload did not arrive")
+	}
+}
 
 func TestBeaconExtractedBodiesAndBindings(t *testing.T) {
 	parallelBrowserTest(t)

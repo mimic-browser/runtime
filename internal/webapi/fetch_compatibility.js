@@ -173,10 +173,7 @@
         return url.href;
       },
       sendBeacon(url, body, type) {
-        // Same-realm byte views use the existing binary host projection. Only
-        // borrowed operations need to copy a foreign array proxy's numeric
-        // observations into an ordinary owner-realm host argument.
-        return host.sendBeacon(url, ArrayBuffer.isView(body) ? body : Array.from(body), type);
+        return host.sendBeacon(url, Array.from(body), type);
       },
     };
     const sendBeacon = {
@@ -194,7 +191,7 @@
         const body = extract(data, false);
         return callRealmBinding(this, binding, 'sendBeacon', [
           resolved,
-          bindingGet(this) === binding ? body.bytes : Array.from(body.bytes),
+          Array.from(body.bytes),
           body.type,
         ]);
       },
