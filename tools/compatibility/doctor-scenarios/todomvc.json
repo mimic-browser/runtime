@@ -1,0 +1,17 @@
+{
+  "name": "Public TodoMVC React: add a task",
+  "url": "https://todomvc.com/examples/react/dist/",
+  "settleSeconds": 3,
+  "loadTimeoutSeconds": 30,
+  "actions": [
+    {"type": "click", "selector": ".new-todo"},
+    {"type": "type", "text": "Compatibility Doctor task"},
+    {"type": "press", "key": "Enter"},
+    {"type": "wait", "seconds": 1}
+  ],
+  "checks": [
+    {"name": "Application rendered", "selector": "h1", "property": "textContent", "equals": "todos"},
+    {"name": "Task created", "selector": ".todo-list li", "property": "count", "equals": 1},
+    {"name": "Task title", "selector": ".todo-list li label", "property": "textContent", "equals": "Compatibility Doctor task"}
+  ]
+}

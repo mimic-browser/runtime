@@ -1,5 +1,21 @@
 # Private native captures
 
+The [Compatibility Doctor](../../docs/compatibility-doctor.md) is contributor
+tooling for evidence-backed runtime fixes. It launches an ordinary
+headful frozen Chrome and a dedicated Mimic process, records an explicit scenario,
+and creates an HTML/JSON report with evidence gaps. Its local demo reproduces a
+documented DOMException difference. Saved Chrome captures can be reused without
+launching Chrome again. It does not claim full execution tracing or zero false negatives.
+Separate commands provide intercepted HTTP archive replay and bounded action
+reduction, with exact failure-pair checks and preserved evidence for every attempt.
+Agents use `--json`, `inspect`, paginated `events`, and JSON-pointer `evidence`
+reads; HTML is optional. `replay --diagnostic` also retains Chrome script sources
+and Mimic's bounded native runtime trace.
+Use `run --headless` or `replay --headless` for explicitly labelled diagnostics
+without visible browser windows. `run --pause-children` captures early child
+traffic by waiting for recording setup; replay enables child interception before
+resuming execution. Both modes retain their instrumentation and authority scope.
+
 The [Blazor Server Interactive probe](blazor_server_probe/README.md) runs a
 local .NET app through frozen Chrome 152 and Mimic. Its Playwright journey
 covers SignalR circuit startup, server DOM patches, forms, JS interop, and

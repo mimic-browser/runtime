@@ -1,0 +1,35 @@
+name: Compatibility Doctor
+
+on:
+  pull_request:
+    paths:
+      - 'tools/compatibility/*doctor*.py'
+      - 'tools/compatibility/doctor-requirements.txt'
+      - 'tools/compatibility/doctor-scenarios/**'
+      - 'tools/compatibility/doctor-fixtures/**'
+      - '.github/workflows/compatibility-doctor.yml'
+  push:
+    paths:
+      - 'tools/compatibility/*doctor*.py'
+      - 'tools/compatibility/doctor-requirements.txt'
+      - 'tools/compatibility/doctor-scenarios/**'
+      - 'tools/compatibility/doctor-fixtures/**'
+      - '.github/workflows/compatibility-doctor.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  evidence-and-workflows:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r tools/compatibility/doctor-requirements.txt
+      - run: python -m unittest discover -s tools/compatibility -p "test_*doctor*.py" -v
