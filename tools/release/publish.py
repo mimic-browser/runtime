@@ -8,7 +8,7 @@ import re
 import subprocess
 import tempfile
 
-from prepare import ROOT, clean_revision, digest, run
+from prepare import ROOT, clean_revision, digest, run, verify_release_source
 
 REPO = 'mimic-browser/runtime'
 CHECKS = {'runtimecheck:v8', 'runtimecheck:quickjs', 'runtimecheck:goja',
@@ -18,6 +18,7 @@ CHECKS = {'runtimecheck:v8', 'runtimecheck:quickjs', 'runtimecheck:goja',
 def verified_archive(output, version, host, source_revision):
     receipt = json.loads((output / f'{host}-amd64.receipt.json').read_text())
     if (receipt['version'] != version or receipt['platform'] != f'{host}-amd64'
+            or receipt.get('binaryVersion') != version
             or receipt.get('packagingRevision', receipt['sourceRevision']) != source_revision
             or receipt['verified'] is not True or set(receipt['checks']) != CHECKS):
         raise RuntimeError(f'Stale or unverified {host} receipt')
@@ -31,9 +32,18 @@ def verified_archive(output, version, host, source_revision):
     return archive, receipt
 
 
+def verify_replacement(current, replace_existing, assets):
+    if not replace_existing:
+        raise RuntimeError('Release already exists; use --replace-existing to replace its assets')
+    if {asset['name'] for asset in current['assets']} != {path.name for path in assets}:
+        raise RuntimeError('Existing release has unexpected assets; refusing to replace them')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--version', required=True)
+    parser.add_argument('--replace-existing', action='store_true',
+                        help='Replace all assets and notes of an existing release after verification')
     args = parser.parse_args()
     if not re.fullmatch(r'v\d+\.\d+\.\d+(?:-beta\.\d+)?', args.version):
         parser.error('Expected vMAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCH-beta.NUMBER')
@@ -48,7 +58,8 @@ def main():
         archive, receipt = verified_archive(output, args.version, host, source_revision)
         assets.append(archive)
         public_assets.append({key: receipt[key] for key in
-                              ('platform', 'archive', 'sha256', 'size', 'binarySha256', 'checks')})
+                              ('platform', 'archive', 'sha256', 'size', 'binarySha256',
+                               'binaryVersion', 'checks')})
     receipts = [json.loads((output / f'{host}-amd64.receipt.json').read_text())
                 for host in ('windows', 'linux')]
     binary_revisions = {receipt['sourceRevision'] for receipt in receipts}
@@ -57,6 +68,11 @@ def main():
     if len(binary_revisions) != 1 or len(ci_runs) != 1 or len(reused) != 1:
         raise RuntimeError('Platform receipts disagree on binary provenance')
     binary_revision = binary_revisions.pop()
+    verify_release_source(args.version, binary_revision)
+    remote_tag_revision = run('gh', 'api', f'repos/{REPO}/commits/{args.version}',
+                              '--jq', '.sha', capture=True).strip()
+    if remote_tag_revision != binary_revision:
+        raise RuntimeError('Push the exact release tag before publishing')
     ci_run = ci_runs.pop()
     binaries_reused = reused.pop()
     if binaries_reused:
@@ -93,14 +109,23 @@ def main():
     notes = output / 'release-body.md'
     notes.write_text(body, encoding='utf-8')
     existing = subprocess.run(['gh', 'release', 'view', args.version, '--repo', REPO,
-                               '--json', 'isDraft,targetCommitish'], capture_output=True, text=True)
+                               '--json', 'isDraft,targetCommitish,assets'], capture_output=True,
+                              text=True, encoding='utf-8')
     if existing.returncode == 0:
         current = json.loads(existing.stdout)
-        raise RuntimeError('Release already exists; delete it before publishing its replacement')
+        verify_replacement(current, args.replace_existing, assets)
+        # Preserve the old downloadable bytes before replacing any public asset.
+        previous = output / 'previous-release'
+        previous.mkdir(exist_ok=False)
+        (previous / 'release.json').write_text(json.dumps(current, indent=2) + '\n', encoding='utf-8')
+        run('gh', 'release', 'download', args.version, '--repo', REPO, '--dir', str(previous))
     else:
+        if args.replace_existing:
+            raise RuntimeError('Existing release was not found; refusing replacement')
         # Verify repository access independently; do not hide an authentication failure.
         run('gh', 'repo', 'view', REPO, '--json', 'name', capture=True)
         create_args = ['gh', 'release', 'create', args.version, '--repo', REPO, '--draft',
+                       '--verify-tag',
                        '--target', source_revision, '--title', f'Mimic {args.version} — Public Beta',
                        '--notes-file', str(notes)]
         if is_prerelease:
@@ -117,7 +142,8 @@ def main():
             if digest(Path(temp) / path.name) != digest(path):
                 raise RuntimeError(f'GitHub download verification failed: {path.name}')
     run('gh', 'release', 'edit', args.version, '--repo', REPO,
-        '--draft=false', f'--prerelease={str(is_prerelease).lower()}', '--notes-file', str(notes))
+        '--draft=false', f'--prerelease={str(is_prerelease).lower()}',
+        '--target', binary_revision, '--notes-file', str(notes))
     print(f'Published and download-verified: https://github.com/{REPO}/releases/tag/{args.version}')
 
 

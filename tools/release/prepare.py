@@ -28,7 +28,25 @@ def digest(path):
         return hashlib.file_digest(stream, 'sha256').hexdigest()
 
 
-def verified_ci_binary(run_id, revision, host, destination):
+def verify_release_source(version, revision):
+    tag_revision = run('git', 'rev-parse', '--verify',
+                       f'refs/tags/{version}^{{commit}}', capture=True).strip()
+    if tag_revision != revision:
+        raise RuntimeError('Release tag does not match the binary source revision')
+
+
+def verify_binary_version(binary, version, revision):
+    info = json.loads(run('go', 'version', '-m', '-json', str(binary), capture=True))
+    settings = {entry['Key']: entry['Value'] for entry in info.get('Settings', [])}
+    if (info.get('Path') != 'github.com/moreveal/mimic/cmd/mimic'
+            or info.get('Main', {}).get('Version') != version):
+        raise RuntimeError(f'Binary does not embed the release version {version}')
+    if (settings.get('vcs.revision') != revision
+            or settings.get('vcs.modified') != 'false'):
+        raise RuntimeError('Binary build information does not match the clean source revision')
+
+
+def verified_ci_binary(run_id, revision, host, destination, version):
     """Copy the successful CI job's executable without rebuilding or altering it."""
     run_data = json.loads(run('gh', 'run', 'view', str(run_id), '--repo', 'mimic-browser/runtime',
                               '--json', 'headSha,status,conclusion', capture=True))
@@ -41,10 +59,7 @@ def verified_ci_binary(run_id, revision, host, destination):
         source = Path(temp) / destination.name
         if not source.is_file():
             raise RuntimeError(f'CI binary missing from artifact: {source.name}')
-        build_info = run('go', 'version', '-m', str(source), capture=True)
-        if (f'vcs.revision={revision}' not in build_info
-                or 'vcs.modified=false' not in build_info):
-            raise RuntimeError('CI binary build information does not match the source revision')
+        verify_binary_version(source, version, revision)
         shutil.copyfile(source, destination)
     return digest(destination)
 
@@ -166,12 +181,13 @@ def main():
     source_revision = args.binary_source_revision or packaging_revision
     if not re.fullmatch(r'[0-9a-f]{40}', source_revision):
         parser.error('Expected a full lowercase binary source SHA')
+    verify_release_source(args.version, source_revision)
     output = ROOT / '.build/releases' / args.version
     stage = output / f'mimic-{args.version}-{host}-amd64'
     stage.mkdir(parents=True, exist_ok=False)
     binary = stage / ('mimic.exe' if host == 'windows' else 'mimic')
     if args.ci_run:
-        binary_sha256 = verified_ci_binary(args.ci_run, source_revision, host, binary)
+        binary_sha256 = verified_ci_binary(args.ci_run, source_revision, host, binary, args.version)
     else:
         env = os.environ.copy()
         env['CGO_ENABLED'] = '1'
@@ -182,6 +198,7 @@ def main():
         subprocess.run(['go', 'build', '-trimpath', '-ldflags=-s -w', '-o', str(binary), './cmd/mimic'],
                        cwd=ROOT, env=env, check=True)
         binary_sha256 = digest(binary)
+    verify_binary_version(binary, args.version, source_revision)
     for name in ('LICENSE', 'RELEASE_NOTES.md'):
         shutil.copyfile(ROOT / name, stage / name)
     for name in run('git', 'ls-files', '-z', '--', 'examples', cwd=ROOT, capture=True).split('\0'):
@@ -245,6 +262,7 @@ def main():
             with tarfile.open(archive) as tar:
                 tar.extractall(extracted, filter='data')
         ready = extracted / stage.name / binary.name
+        verify_binary_version(ready, args.version, source_revision)
         for engine in ('v8', 'quickjs', 'goja'):
             run('go', 'run', './tools/runtimecheck', '-binary', str(ready), '-engine', engine)
         examples = ready.parent / 'examples'
@@ -253,8 +271,10 @@ def main():
         run('node', 'verify.mjs', str(ready), cwd=examples)
     if clean_revision(ROOT) != packaging_revision:
         raise RuntimeError('Checkout changed during preparation')
+    verify_release_source(args.version, source_revision)
     receipt = {
         'version': args.version, 'platform': f'{host}-amd64',
+        'binaryVersion': args.version,
         'sourceRevision': source_revision,
         'packagingRevision': packaging_revision,
         'ciRun': f'https://github.com/mimic-browser/runtime/actions/runs/{args.ci_run}' if args.ci_run else None,

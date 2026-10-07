@@ -3,8 +3,9 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
-from prepare import digest, resolve_unbundled_links, run, validate_document_links
-from publish import CHECKS, verified_archive
+from prepare import (digest, resolve_unbundled_links, run, validate_document_links,
+                     verify_binary_version, verify_release_source)
+from publish import CHECKS, verified_archive, verify_replacement
 
 
 class PublicationGateTests(unittest.TestCase):
@@ -22,6 +23,7 @@ class PublicationGateTests(unittest.TestCase):
         self.archive.write_bytes(b'checked archive bytes')
         self.receipt = {
             'version': 'v0.1.0-beta.1', 'platform': 'windows-amd64',
+            'binaryVersion': 'v0.1.0-beta.1',
             'sourceRevision': 'source',
             'verified': True, 'checks': list(CHECKS), 'archive': self.archive.name,
             'sha256': digest(self.archive), 'size': self.archive.stat().st_size,
@@ -47,6 +49,49 @@ class PublicationGateTests(unittest.TestCase):
         self.archive.write_bytes(b'changed archive bytes')
         with self.assertRaisesRegex(RuntimeError, 'Archive changed'):
             self.check()
+
+    def test_missing_or_wrong_embedded_version_receipt_rejected(self):
+        for version in (None, 'dev+17f508b8', 'v0.1.0'):
+            with self.subTest(version=version):
+                self.receipt['binaryVersion'] = version
+                with self.assertRaisesRegex(RuntimeError, 'Stale or unverified'):
+                    self.check()
+
+    def test_replacement_requires_explicit_flag_and_exact_asset_set(self):
+        current = {'assets': [{'name': self.archive.name}]}
+        verify_replacement(current, True, [self.archive])
+        with self.assertRaisesRegex(RuntimeError, '--replace-existing'):
+            verify_replacement(current, False, [self.archive])
+        current['assets'].append({'name': 'unexpected.zip'})
+        with self.assertRaisesRegex(RuntimeError, 'unexpected assets'):
+            verify_replacement(current, True, [self.archive])
+
+    def test_release_source_must_match_existing_tag(self):
+        with patch('prepare.run', return_value='tagged-source\n'):
+            verify_release_source('v0.1.0-beta.1', 'tagged-source')
+            with self.assertRaisesRegex(RuntimeError, 'Release tag'):
+                verify_release_source('v0.1.0-beta.1', 'other-source')
+
+    def test_embedded_binary_version_and_provenance_are_checked(self):
+        info = {
+            'Path': 'github.com/moreveal/mimic/cmd/mimic',
+            'Main': {'Version': 'v0.1.0-beta.1'},
+            'Settings': [{'Key': 'vcs.revision', 'Value': 'source'},
+                         {'Key': 'vcs.modified', 'Value': 'false'}],
+        }
+        with patch('prepare.run', side_effect=lambda *args, **kwargs: json.dumps(info)):
+            verify_binary_version(self.archive, 'v0.1.0-beta.1', 'source')
+            for version in ('(devel)', 'v0.0.0-20260920165425-17f508b820af', 'v0.0.9'):
+                with self.subTest(version=version):
+                    info['Main']['Version'] = version
+                    with self.assertRaisesRegex(RuntimeError, 'release version'):
+                        verify_binary_version(self.archive, 'v0.1.0-beta.1', 'source')
+            info['Main']['Version'] = 'v0.1.0-beta.1'
+            with self.assertRaisesRegex(RuntimeError, 'clean source revision'):
+                verify_binary_version(self.archive, 'v0.1.0-beta.1', 'other-source')
+            info['Settings'][1]['Value'] = 'true'
+            with self.assertRaisesRegex(RuntimeError, 'clean source revision'):
+                verify_binary_version(self.archive, 'v0.1.0-beta.1', 'source')
 
     def test_stale_source_or_examples_and_missing_checks_rejected(self):
         for key, value in [('sourceRevision', 'old'), ('verified', False),

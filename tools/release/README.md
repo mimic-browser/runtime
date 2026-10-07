@@ -13,6 +13,7 @@ the Linux fonts documented in [getting started](../../docs/getting-started.md).
 Rust/Cargo is a build-time requirement for the native Blitz producer.
 
 ```powershell
+git tag v0.1.6
 python tools/release/prepare.py --version v0.1.6
 ```
 
@@ -54,28 +55,35 @@ files for a release, or inject a display version with `-ldflags -X`.
   development build and is normalized to `dev+17f508b8`; it must never be shown
   as the Mimic release version.
 
-The `--version` passed to `prepare.py` names and validates release artifacts; it
-does not create another runtime version source. Before publishing, build from
-the intended clean commit and verify the banner provenance against that commit.
+Create the release tag on the intended clean binary source commit **before
+building**. Go derives the semantic module version from that existing tag;
+creating a GitHub Release afterward cannot change an already-built executable.
+The `--version` passed to `prepare.py` selects and validates that tag and names
+the artifacts; it does not create another runtime version source. The packager
+rejects binaries whose embedded module version, VCS revision, or clean status
+does not match the release. It repeats the check on the extracted executable.
 
 Outputs are written to `.build/releases/VERSION/`. Reusing an existing
 version/platform output directory is rejected so stale artifacts cannot be
 mistaken for a fresh build.
 
-The hosted Package release workflow requires a successful build workflow run
-ID and its full source SHA for both platform jobs. It reuses the validated
+Push the commit and release tag together. The Windows and Linux build workflow
+runs on release tags and fetches full history, including tags, before compiling.
+Use its successful **tag build**, not an earlier main-branch artifact. The hosted
+Package release workflow checks out the requested tag and requires a successful
+build workflow run ID and its full source SHA for both platform jobs. It reuses the validated
 executables unchanged instead of rebuilding native libraries and Mimic. The packager
 downloads that run's executable artifact, verifies its embedded VCS revision,
 then checks the extracted archive and public examples. The release commit may
 add notes or packaging changes; it must not alter the binary. For a local run:
 
 ```powershell
-python tools/release/prepare.py --version v0.1.9 --ci-run 36577485575 --binary-source-revision 6224fecf2444c6b9ba58043f97782e2ec007d350
+python tools/release/prepare.py --version v0.1.9 --ci-run TAG_BUILD_RUN_ID --binary-source-revision TAG_COMMIT_SHA
 ```
 
 ## Publish
 
-Push the exact release commit to `mimic-browser/runtime`, then run:
+Push the exact release commit and its tag to `mimic-browser/runtime`, then run:
 
 ```powershell
 python tools/release/publish.py --version v0.1.6
@@ -88,6 +96,20 @@ It creates a draft release, uploads the archives, manifest, and checksums,
 downloads every asset to verify its hash, and only then publishes the release.
 The receipts and archive hashes are authoritative; the publisher does not wait
 for CI. Use only artifacts from the successful run named in both receipts.
+
+To replace an existing release deliberately, rebuild both platform packages
+from the corrected release tag and run:
+
+```powershell
+python tools/release/publish.py --version VERSION --replace-existing
+```
+
+The publisher verifies both receipts, the local and remote
+tag, and the exact asset set before replacing anything. It preserves the previous
+release's assets under `previous-release/`, replaces every archive, the manifest,
+and checksums, then downloads and verifies all published bytes. It keeps the
+existing release rather than deleting it. Update the website's release notes and
+cached asset metadata after replacement as well.
 
 ## Publish the website
 

@@ -3,6 +3,8 @@ name: Windows and Linux
   push:
     branches:
       - main
+    tags:
+      - 'v*'
   pull_request: null
   workflow_dispatch: null
 concurrency:
@@ -18,6 +20,8 @@ jobs:
       CGO_ENABLED: '1'
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -91,6 +95,8 @@ jobs:
       CGO_ENABLED: '1'
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
