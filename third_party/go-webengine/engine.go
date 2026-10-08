@@ -84,6 +84,10 @@ type Engine struct {
 	// DisableJS turns off the JavaScript pass. Offline fixture tests that must
 	// stay byte-deterministic set this; the default (false) runs page scripts.
 	DisableJS bool
+	// TextPseudoElements enables literal text from ::before/::after for the
+	// approximate screenshot pass. It is off by default and requires DisableJS,
+	// so synthetic nodes never enter a live script-visible document.
+	TextPseudoElements bool
 	// JSTimeout bounds the total script + timer budget per render. Zero selects
 	// js.DefaultTimeout.
 	JSTimeout time.Duration
@@ -442,6 +446,13 @@ func (e *Engine) renderCoreStaged(ctx context.Context, doc *Document, vpW, vpH i
 	// A script may have set document.title; re-derive it so RenderInfo reports the
 	// post-script title (matching what a browser tab would show).
 	doc.Title = dom.Title(doc.Root)
+
+	// Generated content is a paint-only enhancement: scripts and any live
+	// session above have already observed the unmodified document.
+	if e.TextPseudoElements && e.DisableJS {
+		css.AddGeneratedText(doc.Root, rp.sm, rp.sheets, css.Media{Width: float64(vpW)})
+		rp.box, rp.height = layout.LayoutDocumentViewport(doc.Root, rp.sm, float64(vpW), float64(vpH), fonts, rp.imgSize)
+	}
 
 	// Last-resort meta/OG fallback: an un-hydratable SPA lays out to nothing
 	// (no visible text or images). Rather than return a blank page, synthesise a

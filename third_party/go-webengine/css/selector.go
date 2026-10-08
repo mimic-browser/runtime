@@ -191,12 +191,16 @@ type compound struct {
 	// ::after, ::first-line, ::marker, ::placeholder, …). Unlike a pseudo-CLASS —
 	// which only constrains WHICH real element matches, so an unmodelled one may
 	// safely degrade to "no constraint" — a pseudo-element targets a GENERATED box
-	// that is not the originating element. The engine does not synthesise those
-	// boxes, so such a compound must match NOTHING. Degrading it to its base (as
+	// that is not the originating element. Ordinary selector matching must
+	// match NOTHING; the optional screenshot pass matches text pseudo-elements
+	// through MatchesTextPseudo instead. Degrading this to its base (as
 	// the generic "reduce, don't drop" path does) would wrongly apply the
 	// pseudo-element's declarations to the real element — e.g. a clearfix
 	// `.wrap::after{height:0;overflow:hidden}` would collapse the actual `.wrap`.
 	PseudoElement bool
+	// TextPseudo identifies the two generated text boxes this renderer can
+	// synthesize. Other pseudo-elements remain deliberately unmatched.
+	TextPseudo TextPseudoKind
 	// Attrs holds every "[attr]"/"[attr=value]"/… constraint attached to this
 	// compound. ALL must match. These used to be dropped entirely ("the
 	// constraint is not modelled, the compound reduces to its tag/class/id
@@ -333,8 +337,8 @@ func (c compound) matches(n *dom.Node) bool {
 	if c.Dynamic {
 		return false
 	}
-	// A pseudo-element targets a generated box, not this element; since the engine
-	// does not synthesise pseudo-element boxes, such a compound matches nothing.
+	// A pseudo-element targets a generated box, not this element. The optional
+	// text-pseudo pass has its own matcher; ordinary matching remains false.
 	if c.PseudoElement {
 		return false
 	}
@@ -577,6 +581,24 @@ func (c compound) specificity() (idCount, classCount, tagCount int) {
 type Selector struct {
 	parts []compound
 	combs []combinator
+}
+
+type TextPseudoKind uint8
+
+const (
+	TextPseudoBefore TextPseudoKind = iota + 1
+	TextPseudoAfter
+)
+
+// MatchesTextPseudo matches the originating element while keeping ordinary
+// selector matching unable to apply pseudo-element rules to real elements.
+func (s Selector) MatchesTextPseudo(n *dom.Node, kind TextPseudoKind) bool {
+	if len(s.parts) == 0 || s.parts[len(s.parts)-1].TextPseudo != kind {
+		return false
+	}
+	copy := Selector{parts: append([]compound(nil), s.parts...), combs: s.combs}
+	copy.parts[len(copy.parts)-1].PseudoElement = false
+	return copy.Matches(n)
 }
 
 // Specificity returns the (a, b, c) specificity packed into a single int, with
@@ -1364,6 +1386,12 @@ func parseSimple(s string) (compound, bool) {
 				// A pseudo-element styles a generated box, not the real element, so
 				// the compound must match nothing (see compound.PseudoElement).
 				c.PseudoElement = true
+				switch name {
+				case "before":
+					c.TextPseudo = TextPseudoBefore
+				case "after":
+					c.TextPseudo = TextPseudoAfter
+				}
 			}
 			// Any other pseudo (e.g. :nth-child, :host-context) is unmodelled and
 			// intentionally ignored — the compound degrades to matching its base.

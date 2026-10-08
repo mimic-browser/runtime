@@ -74,6 +74,7 @@ func Render(ctx context.Context, files map[string][]byte, width, height int) (re
 	}
 	engine := webengine.New()
 	engine.DisableJS = true
+	engine.TextPseudoElements = true
 	engine.Client = &http.Client{Transport: snapshotTransport{files: files}}
 	result, _, err = engine.RenderHTML(ctx, string(html), snapshotOrigin+"/index.html", image.Rect(0, 0, width, height))
 	if err != nil {

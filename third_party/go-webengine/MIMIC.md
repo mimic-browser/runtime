@@ -23,8 +23,10 @@ Wikipedia page:
 - Absolute CSS font-size keywords resolve independently of the parent size,
   and inline margins survive nested inline-block and inline-flex layout.
 
-CSS generated content from `::before` and `::after` remains unsupported, so
-decorative text supplied only by those pseudo-elements is omitted.
+The screenshot adapter opts into literal text from CSS `::before` and `::after`
+after script execution. These generated boxes participate in the final layout
+and paint without entering the script-visible DOM. CSS counters, `attr()`, URLs,
+and other nonliteral `content` values remain unsupported.
 
 The screenshot adapter in `internal/renderer` also resolves asset URLs from
 snapshot stylesheets against their `assets/` directory. The fork remains an

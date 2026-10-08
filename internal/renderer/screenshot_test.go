@@ -72,3 +72,28 @@ func TestRenderKeepsSupportedGridSidebars(t *testing.T) {
 		}
 	}
 }
+
+func TestRenderPaintsLiteralPseudoTextBoxes(t *testing.T) {
+	files := map[string][]byte{
+		"index.html": []byte(`<!doctype html><html><head><style>
+		body{margin:0;background:white}
+		.label::before{content:"[";display:inline-block;width:10px;height:10px;background:red}
+		.label::after{content:"]";display:inline-block;width:10px;height:10px;background:blue}
+		</style></head><body><span class="label">edit</span></body></html>`),
+	}
+	img, err := Render(context.Background(), files, 100, 40)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var red, blue bool
+	for y := 0; y < 40; y++ {
+		for x := 0; x < 100; x++ {
+			c := color.RGBAModel.Convert(img.At(x, y)).(color.RGBA)
+			red = red || c.R > 200 && c.G < 50 && c.B < 50
+			blue = blue || c.B > 200 && c.R < 50 && c.G < 50
+		}
+	}
+	if !red || !blue {
+		t.Fatalf("literal ::before/::after boxes did not paint: red=%v blue=%v", red, blue)
+	}
+}
