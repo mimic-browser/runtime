@@ -195,8 +195,11 @@ func (b *Browser) PrepareBootstrap(ctx context.Context, dir string) error {
 	if os.Getenv("MIMIC_DISABLE_BOOTSTRAP_SNAPSHOT") == "1" {
 		return nil
 	}
-	c := b.NewContext()
-	defer c.Close()
+	c, err := b.newPrivateContext()
+	if err != nil {
+		return err
+	}
+	defer c.finishPrivateWork()
 	for i := 0; i < 2; i++ {
 		p, err := c.NewPage()
 		if err != nil {

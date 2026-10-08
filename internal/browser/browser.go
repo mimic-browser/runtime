@@ -124,10 +124,36 @@ func (b *Browser) newContext(d *profile.Document) *Context {
 }
 
 func (b *Browser) newConfiguredContext(d *profile.Document, policy *network.ResourcePolicy, locked bool) *Context {
+	return b.newOwnedContext(d, policy, locked, false)
+}
+
+// A private Context is owned by Browser.Close from construction onward, but is
+// never addressable through the public Context registry. Its caller must defer
+// finishPrivateWork so shutdown joins the complete preparation operation before
+// disposing its Pages, including work between individual Page commands.
+func (b *Browser) newPrivateContext() (*Context, error) {
+	c := b.newOwnedContext(nil, nil, false, true)
+	if c == nil {
+		return nil, context.Canceled
+	}
+	return c, nil
+}
+
+func (b *Browser) newOwnedContext(d *profile.Document, policy *network.ResourcePolicy, locked, private bool) *Context {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	lifetime, cancel := context.WithCancel(context.Background())
+	if private && b.closed {
+		return nil
+	}
+	parent := context.Background()
+	if private {
+		parent = b.lifetime
+	}
+	lifetime, cancel := context.WithCancel(parent)
 	c := &Context{lifetime: lifetime, cancel: cancel, ID: uuid.NewString(), browser: b, cookies: network.NewCookieStore(), network: network.NewSessionState(), storage: map[string]map[string]string{}, pages: map[string]*Page{}}
+	if private {
+		c.privateWorkDone = make(chan struct{})
+	}
 	c.resourcePolicy = &network.ResourcePolicyState{}
 	c.profileLocked = locked
 	if b.defaultResourcePolicy != nil {
@@ -161,6 +187,10 @@ func (b *Browser) Environment() state.Environment {
 func (b *Browser) Compatibility() compatibility.Bundle { return b.compat }
 
 type Context struct {
+	// Non-nil only for private Browser-owned work; immutable after construction.
+	// Closing this channel completes that work without publishing the Context.
+	privateWorkDone      chan struct{}
+	closeDone            chan struct{}
 	bootstrapPreparation bool // Private seed capture, never a user Context mode.
 	profileLocked        bool
 	resourcePolicy       *network.ResourcePolicyState
@@ -392,7 +422,18 @@ func (b *Browser) String() string { return fmt.Sprintf("Mimic/%s", b.env.Product
 
 // Close releases all pages before their shared transport pool.
 func (c *Context) Close() error {
+	c.mu.Lock()
+	if done := c.closeDone; done != nil {
+		c.mu.Unlock()
+		<-done
+		return nil
+	}
+	c.closeDone = make(chan struct{})
+	c.mu.Unlock()
 	c.Cancel()
+	if c.privateWorkDone != nil {
+		<-c.privateWorkDone
+	}
 	c.keepaliveWG.Wait()
 	for _, p := range c.Pages() {
 		c.ClosePage(p.ID)
@@ -409,7 +450,15 @@ func (c *Context) Close() error {
 	c.browser.mu.Lock()
 	delete(c.browser.contexts, c.ID)
 	c.browser.mu.Unlock()
+	close(c.closeDone)
 	return nil
+}
+
+func (c *Context) finishPrivateWork() {
+	// Release the preparation owner before joining a concurrent Browser.Close;
+	// waiting in Context.Close while still holding this barrier would deadlock.
+	close(c.privateWorkDone)
+	_ = c.Close()
 }
 
 // Cancel stops external work without touching realm-owned JavaScript state.

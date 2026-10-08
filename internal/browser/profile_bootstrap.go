@@ -69,9 +69,12 @@ func (b *Browser) buildProfileBootstrap(ctx context.Context, key [32]byte, secur
 	if err != nil {
 		return err
 	}
-	c := b.NewContext()
+	c, err := b.newPrivateContext()
+	if err != nil {
+		return err
+	}
 	c.bootstrapPreparation = true
-	defer c.Close()
+	defer c.finishPrivateWork()
 	p, err := c.NewPage()
 	if err != nil {
 		return err
