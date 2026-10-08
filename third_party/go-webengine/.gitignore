@@ -1,8 +1,0 @@
-# Build output
-/render
-/out.png
-*.test
-*.out
-
-# Editor/OS cruft
-.DS_Store

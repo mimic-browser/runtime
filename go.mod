@@ -22,9 +22,8 @@ replace github.com/go-text/typesetting => ./third_party/go-text-typesetting
 // Bundle only the platform camera drivers; no external capture process or codecs.
 replace github.com/pion/mediadevices => ./third_party/mediadevices
 
-// Keep the screenshot renderer on the repository's Go version and maintain
-// focused paint fixes locally until they are available upstream on that floor.
-replace github.com/go-webengine/engine => ./third_party/go-webengine
+// Keep the approximate screenshot renderer on the maintained Go 1.26 fork.
+replace github.com/go-webengine/engine => github.com/mimic-browser/renderer v0.4.4-0.20261008162703-cefb708fdec5
 
 require (
 	github.com/andybalholm/brotli v1.2.5

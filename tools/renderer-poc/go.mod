@@ -2,7 +2,7 @@ module github.com/moreveal/mimic/tools/renderer-poc
 
 go 1.26.4
 
-replace github.com/go-webengine/engine => ../../third_party/go-webengine
+replace github.com/go-webengine/engine => github.com/mimic-browser/renderer v0.4.4-0.20261008162703-cefb708fdec5
 
 require github.com/go-webengine/engine v0.4.3
 

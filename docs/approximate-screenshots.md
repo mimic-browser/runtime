@@ -30,6 +30,6 @@ reports. For a browser-rendered reference, use Chrome directly or the
 [dev preview](dev-preview.md), which displays a DOM mirror in the viewer's own
 browser and has its own documented limitations.
 
-The painter is a local fork of `go-webengine` v0.4.3 under
-`third_party/go-webengine`, retained on Go 1.26.4 with selected fixes. Its
-visual rules are independent of Mimic's Page semantics.
+The painter uses the maintained [renderer fork](https://github.com/mimic-browser/renderer)
+of `go-webengine`, based on v0.4.3 and retained on Go 1.26.4 with selected
+fixes. Its visual rules are independent of Mimic's Page semantics.
