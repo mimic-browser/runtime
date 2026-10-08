@@ -1,0 +1,16 @@
+<!-- A content-sized flex ROW (itself a flex item, so sized to its max-content)
+     holding several nowrap items, with intervening whitespace and a display:none
+     item (both must be ignored when summing). Its max-content main size must be
+     the SUM of the real items, not the widest one; otherwise the row is
+     under-sized and the items are shrunk on top of each other (the GitHub
+     repo-nav overlap). -->
+<html><body style="margin:0">
+<div style="display:flex">
+  <div style="display:flex" id="nav">
+    <span>Code</span>
+    <span style="display:none">HIDDENITEM</span>
+    <span>Issues</span>
+    <span>Actions</span>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,48 @@
+<!-- Copyright (c) the go-webengine/engine authors. SPDX-License-Identifier: BSD-3-Clause -->
+<!--
+  CSS checkbox-hack fixture (the mechanism MediaWiki's Vector-2022 uses to keep a
+  collapsed dropdown hidden until its toggle is clicked). Solid-colour blocks
+  only, so the render is font-independent and byte-golden-stable.
+
+  Two selector forms are exercised, each with a default-unchecked and a
+  checked-by-attribute toggle:
+
+    reveal-on-checked:      .tog:checked ~ .menu     { display: block }
+    hide-while-unchecked:   .tog:not(:checked) ~ .inv { display: none  }
+
+  With no user interaction, an <input> is checked iff it carries the default
+  `checked` attribute, so:
+    Row A (unchecked)  -> red   .menu stays hidden
+    Row B (checked)    -> red   .menu shows
+    Row C (unchecked)  -> blue  .inv  stays hidden (:not(:checked) matches)
+-->
+<html>
+<head>
+<style>
+  body { margin: 0; background: rgb(255 255 255); }
+  .tog  { display: none; }               /* toggle itself never paints         */
+  .hdr  { height: 20px; }                /* always-visible header per row       */
+  .menu { display: none; height: 30px; background: rgb(220 40 40); } /* red     */
+  .tog:checked ~ .menu { display: block; }         /* reveal only when checked  */
+  .inv  { height: 30px; background: rgb(40 40 220); }                /* blue    */
+  .tog:not(:checked) ~ .inv { display: none; }     /* hide while NOT checked    */
+</style>
+</head>
+<body>
+  <div class="row">
+    <input class="tog" type="checkbox">
+    <div class="hdr" style="background: rgb(0 150 0)"></div>
+    <div class="menu"></div>
+  </div>
+  <div class="row">
+    <input class="tog" type="checkbox" checked>
+    <div class="hdr" style="background: rgb(150 150 0)"></div>
+    <div class="menu"></div>
+  </div>
+  <div class="row">
+    <input class="tog" type="checkbox">
+    <div class="hdr" style="background: rgb(0 150 150)"></div>
+    <div class="inv"></div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,13 @@
+<!-- The HTML `hidden` attribute must map to display:none (UA origin): the
+     hidden block and its subtree produce no boxes and paint nothing, while an
+     author `display` on a hidden element still wins (shown). -->
+<html><head><style>
+  body { margin: 0; }
+  p { margin: 0; font-size: 20px; }
+  .shown { display: block; }
+</style></head>
+<body>
+  <div hidden><p>HIDDENTEXT</p></div>
+  <p class="shown" hidden>SHOWNTEXT</p>
+  <p>VISIBLETEXT</p>
+</body></html>

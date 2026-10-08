@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<!--
+  Copyright (c) the go-webengine/engine authors.
+  SPDX-License-Identifier: BSD-3-Clause
+
+  Offline fixture exercising Phase 1.7 CSS grid:
+  grid-template-columns with fr / repeat() / minmax(), gap, explicit
+  placement with span, row-major auto-flow, and grid-template-areas.
+-->
+<html>
+<head>
+<style>
+  body { margin: 0; font-family: sans-serif; color: #1f2933; background: #f5f7fa; }
+  section { padding: 24px; }
+  h2 { font-size: 18px; margin: 0 0 16px 0; }
+  .cell { background: #ffffff; border: 1px solid #dbe1e8; padding: 14px; color: #1864ab; font-weight: bold; }
+
+  /* repeat() + fr equal columns with a gap. */
+  .cols { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+  /* minmax + fr + a spanning feature cell. */
+  .mix { display: grid; grid-template-columns: minmax(160px, 1fr) 2fr 1fr; gap: 12px; }
+  .mix .feature { grid-column: 1 / 3; background: #d3f9d8; color: #2b8a3e; }
+
+  /* Named-area application layout: header / sidebar / main / footer. */
+  .app {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    grid-template-rows: 60px 200px 50px;
+    grid-template-areas:
+      "header header"
+      "side   main"
+      "footer footer";
+    gap: 12px;
+    height: 322px;
+  }
+  .app .h { grid-area: header; background: #0b7285; color: #fff; }
+  .app .s { grid-area: side;   background: #495057; color: #fff; }
+  .app .m { grid-area: main;   background: #ffffff; border: 1px solid #dbe1e8; }
+  .app .f { grid-area: footer; background: #adb5bd; color: #1f2933; }
+
+  /* auto-flow row: seven cells flow across three columns onto three rows. */
+  .flow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .flow .wide { grid-column: span 2; background: #ffe8cc; color: #d9480f; }
+</style>
+</head>
+<body>
+  <section>
+    <h2>repeat(4, 1fr) + gap</h2>
+    <div class="cols">
+      <div class="cell">1fr</div><div class="cell">1fr</div>
+      <div class="cell">1fr</div><div class="cell">1fr</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>minmax + fr + column span</h2>
+    <div class="mix">
+      <div class="cell feature">grid-column: 1 / 3 (spans two tracks)</div>
+      <div class="cell">1fr</div>
+      <div class="cell">minmax(160,1fr)</div>
+      <div class="cell">2fr</div>
+      <div class="cell">1fr</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>grid-template-areas</h2>
+    <div class="app">
+      <div class="cell h">header</div>
+      <div class="cell s">sidebar</div>
+      <div class="cell m">main</div>
+      <div class="cell f">footer</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>auto-flow (row-major) with a spanning cell</h2>
+    <div class="flow">
+      <div class="cell wide">span 2</div>
+      <div class="cell">B</div>
+      <div class="cell">C</div>
+      <div class="cell">D</div>
+      <div class="cell">E</div>
+      <div class="cell">F</div>
+    </div>
+  </section>
+</body>
+</html>

@@ -1,0 +1,11 @@
+<!-- The legacy clip:rect() sr-only idiom (predates the width:1px/height:1px
+     variant covered by overflow_sronly.html): position:absolute plus
+     clip:rect(0 0 0 0) hides an element's real content while it keeps its
+     normal auto-sized layout box. Confirmed load-bearing live on
+     pkg.go.dev's own "skip to main content" link. A spacer pushes it to
+     y=100 so its (would-be) visible text sits in an otherwise-empty band
+     the test can assert stays blank. -->
+<html><body style="margin:0;font-size:20px;color:#000">
+<div style="height:100px"></div>
+<a style="position:absolute;clip:rect(0 0 0 0)" href="#">HIDDENWORDXYZ</a>
+</body></html>

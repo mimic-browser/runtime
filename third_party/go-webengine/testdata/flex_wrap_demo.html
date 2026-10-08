@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<!--
+  Copyright (c) the go-webengine/engine authors.
+  SPDX-License-Identifier: BSD-3-Clause
+
+  Offline fixture exercising Phase 1.7 flexbox completeness:
+  flex-wrap onto multiple lines, gap (row/column), justify-content,
+  align-items, align-self, order, and a nested flex container.
+-->
+<html>
+<head>
+<style>
+  body { margin: 0; font-family: sans-serif; color: #1f2933; background: #f5f7fa; }
+  .bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #0b7285;
+    color: #ffffff;
+    padding: 14px 24px;
+  }
+  .bar .brand { font-size: 20px; font-weight: bold; }
+  .bar .links { display: flex; gap: 24px; align-items: center; }
+  .bar .cta {
+    background: #ffd43b; color: #1f2933; font-weight: bold;
+    padding: 8px 16px; border-radius: 6px;
+  }
+  section { padding: 24px; }
+  h2 { font-size: 18px; margin: 0 0 16px 0; }
+
+  /* Wrapping card gallery: 4 fixed-width cards + gap wrap to two rows. */
+  .gallery { display: flex; flex-wrap: wrap; gap: 16px; }
+  .card {
+    width: 260px; height: 90px;
+    background: #ffffff; border: 1px solid #dbe1e8;
+    padding: 12px;
+  }
+  .card .tag { color: #0b7285; font-weight: bold; }
+
+  /* order + align-self demo: a row where items are reordered and aligned. */
+  .toolbar {
+    display: flex; align-items: flex-start; gap: 12px;
+    background: #e9ecef; padding: 12px; height: 80px;
+  }
+  .toolbar .a { order: 3; background: #ff8787; width: 120px; height: 24px; }
+  .toolbar .b { order: 1; background: #69db7c; width: 120px; height: 40px; }
+  .toolbar .c { order: 2; background: #4dabf7; width: 120px; height: 24px; align-self: flex-end; }
+
+  /* Nested flex: a grow sidebar+main split, main holds a centred column. */
+  .split { display: flex; gap: 16px; height: 140px; }
+  .sidebar { flex: 0 0 200px; background: #495057; color: #fff; padding: 12px; }
+  .main {
+    flex: 1 1 0; background: #ffffff; border: 1px solid #dbe1e8;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  }
+  .pill { background: #d0ebff; color: #1864ab; padding: 6px 14px; border-radius: 12px; }
+</style>
+</head>
+<body>
+  <div class="bar">
+    <div class="brand">FlexKit</div>
+    <div class="links">
+      <span>Docs</span><span>API</span><span>Blog</span>
+      <span class="cta">Get started</span>
+    </div>
+  </div>
+
+  <section>
+    <h2>Wrapping gallery (flex-wrap + gap)</h2>
+    <div class="gallery">
+      <div class="card"><div class="tag">One</div>Wraps at the container edge.</div>
+      <div class="card"><div class="tag">Two</div>16px gap between cards.</div>
+      <div class="card"><div class="tag">Three</div>Row and column gaps.</div>
+      <div class="card"><div class="tag">Four</div>Flows onto a new line.</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>order + align-self</h2>
+    <div class="toolbar">
+      <div class="a">A (order 3)</div>
+      <div class="b">B (order 1)</div>
+      <div class="c">C (order 2, self-end)</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Nested flex (grow split + centred column)</h2>
+    <div class="split">
+      <div class="sidebar">flex: 0 0 200px</div>
+      <div class="main">
+        <div class="pill">centred</div>
+        <div class="pill">column</div>
+      </div>
+    </div>
+  </section>
+</body>
+</html>

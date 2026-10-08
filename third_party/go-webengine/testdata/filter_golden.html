@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+<head>
+<style>
+  html, body { margin: 0; padding: 0; background: #ffffff; }
+  .tile {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+  }
+  /* Reference and component-transfer filters on rgb(200,100,50). */
+  #ref       { left: 10px;  top: 10px;  background: rgb(200,100,50); }
+  #bright    { left: 60px;  top: 10px;  background: rgb(200,100,50); filter: brightness(0.5); }
+  #gray      { left: 110px; top: 10px;  background: rgb(200,100,50); filter: grayscale(1); }
+  #inv       { left: 160px; top: 10px;  background: rgb(200,100,50); filter: invert(1); }
+  #contrast  { left: 210px; top: 10px;  background: rgb(200,100,50); filter: contrast(2); }
+  #sepia     { left: 260px; top: 10px;  background: rgb(100,100,100); filter: sepia(1); }
+  /* Drop-shadow: opaque black square, hard (no-blur) red shadow offset (12,12). */
+  #shadow    { left: 40px;  top: 90px;  background: #000000; filter: drop-shadow(12px 12px 0 #ff0000); }
+</style>
+</head>
+<body>
+  <div id="ref" class="tile"></div>
+  <div id="bright" class="tile"></div>
+  <div id="gray" class="tile"></div>
+  <div id="inv" class="tile"></div>
+  <div id="contrast" class="tile"></div>
+  <div id="sepia" class="tile"></div>
+  <div id="shadow" class="tile"></div>
+</body>
+</html>

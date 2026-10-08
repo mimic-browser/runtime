@@ -1,0 +1,8 @@
+<!-- Regression guard: overflow:hidden on an AUTO-height container whose only
+     child is floated. The engine (lacking BFC float-containment) computes the
+     container height as ~0, but because the height is not author-set the clip is
+     deliberately NOT applied — clipping to a wrongly-collapsed box would hide
+     real body text. The floated text must still paint. -->
+<html><body style="margin:0;font-size:20px;color:#000">
+<div style="overflow:hidden"><div style="float:left">FLOATEDTEXT</div></div>
+</body></html>

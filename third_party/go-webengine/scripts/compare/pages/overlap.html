@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  body { margin: 0; padding: 12px; font-family: sans-serif; font-size: 16px; }
+  h1 { font-size: 30px; margin: 0 0 8px 0; }
+  h2 { font-size: 22px; margin: 12px 0 6px 0; }
+  p  { margin: 0 0 10px 0; line-height: 1.5; }
+  .tight { line-height: 1.0; }
+  .big { font-size: 28px; }
+  .small { font-size: 11px; }
+  a { color: #06c; }
+</style>
+</head>
+<body>
+  <h1>The quick brown fox jumps over the lazy dog repeatedly</h1>
+  <p>This is a long body paragraph that will certainly wrap across several
+     lines at a narrow preview width, exercising the greedy line breaker and the
+     per-line vertical advance so we can see whether successive wrapped lines
+     overlap one another vertically or stack cleanly.</p>
+  <h2>A second heading of medium size</h2>
+  <p>Here we mix inline sizes: normal text with a <span class="big">BIG span</span>
+     inline in the middle and a <span class="small">tiny span</span> too, plus a
+     <a href="#">hyperlink</a> and some <b>bold</b> and <i>italic</i> words to
+     see how mixed-metric lines advance.</p>
+  <p class="tight">A paragraph with a deliberately tight line-height of 1.0 that
+     wraps several times to check that a sub-natural leading still does not let
+     glyphs from one line crash into the next in an unreadable way here we go.</p>
+  <p>Line one before break.<br>Line two after a forced break.<br>Line three.</p>
+  <p>Short trailing paragraph.</p>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!-- Copyright (c) the go-webengine/engine authors. SPDX-License-Identifier: BSD-3-Clause -->
+<!-- A self-contained fixture exercising float:left/right, clear, borders, margin
+     collapsing, max-width centring and box-sizing. Rendered offline via
+     `render -file`. -->
+<html>
+<head>
+<title>Floats &amp; Box Model Demo</title>
+<style>
+  body { background: #f4f4f6; margin: 0; font-family: sans-serif; color: #1a1a2e; }
+  .page { max-width: 820px; margin: 0 auto; padding: 24px; background: #ffffff;
+          box-sizing: border-box; border-left: 1px solid #ddd; border-right: 1px solid #ddd; }
+  h1 { font-size: 30px; margin: 0 0 4px 0; }
+  h2 { font-size: 21px; border-bottom: 2px solid #4c6ef5; padding-bottom: 4px; }
+  p { line-height: 1.5; margin: 12px 0; }
+  .infobox { float: right; width: 240px; margin: 6px 0 12px 18px; padding: 12px;
+             background: #eef2ff; border: 1px solid #4c6ef5; box-sizing: border-box; }
+  .infobox h3 { margin: 0 0 6px 0; font-size: 16px; color: #3b4fb8; }
+  .thumb { float: left; width: 120px; height: 90px; margin: 4px 16px 8px 0;
+           background: #4c6ef5; border: 3px solid #1a1a2e; box-sizing: border-box; }
+  .footer { clear: both; margin-top: 16px; padding-top: 10px; border-top: 1px solid #ccc;
+            color: #666; font-size: 13px; }
+  code { background: #f0f0f4; padding: 1px 4px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Rivers of the North</h1>
+  <p>A field report on braided channels and the sediment they carry.</p>
+
+  <h2>Overview</h2>
+  <div class="infobox">
+    <h3>At a glance</h3>
+    <p>Length: 1,240 km</p>
+    <p>Basin: 84,000 km&sup2;</p>
+    <p>Mean flow: 610 m&sup3;/s</p>
+    <p>Source: glacial melt in the eastern highlands, fed by seasonal snowpack.</p>
+  </div>
+  <p>The northern river systems braid across wide gravel plains, splitting and
+     rejoining around shifting bars. This floated info panel sits to the right
+     while the descriptive prose flows down its left side, wrapping naturally to
+     fill the remaining column width rather than stacking above or below the box.</p>
+  <p>Because the panel is a right float, each successive line of this paragraph is
+     shortened on its right edge to make room, and the text you are reading keeps
+     to the left. Vertical margins between these paragraphs collapse to a single
+     gap rather than summing, matching browser behaviour.</p>
+
+  <h2>Sediment transport</h2>
+  <div class="thumb"></div>
+  <p>The blue block to the left is a left-floated figure; this paragraph wraps
+     around its right side. Suspended load dominates in spring, when meltwater
+     lifts fine silt; bedload creeps along the channel floor as the discharge
+     falls through summer. The <code>d50</code> grain size drops downstream as the
+     current loses competence.</p>
+  <p>Once the floated figure ends, later lines reclaim the full column width and
+     run edge to edge again, exactly as a browser reflows text past a cleared
+     float.</p>
+
+  <div class="footer">Cleared footer &mdash; sits below both floats regardless of
+     their heights. Field notes, revision 3.</div>
+</div>
+</body>
+</html>

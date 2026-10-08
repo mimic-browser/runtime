@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<!--
+  Copyright (c) the go-webengine/engine authors.
+  SPDX-License-Identifier: BSD-3-Clause
+
+  Tailwind-style fixture mirroring a react.dev-like hero/nav layout, built from
+  the same utility-class flex/grid primitives real Tailwind sites emit
+  (flex, items-center, justify-between, gap-*, grid, grid-cols-3). It exercises
+  exactly the layout the bench found react.dev needs: a flex nav bar, a centred
+  flex-column hero, and a three-column feature grid.
+-->
+<html>
+<head>
+<style>
+  /* A small slice of Tailwind's utility layer, as real sites ship it. */
+  body { margin: 0; font-family: sans-serif; color: #23272f; background: #ffffff; }
+  .bg-slate      { background: #f6f7f9; }
+  .bg-brand      { background: #087ea4; }
+  .bg-card       { background: #ffffff; border: 1px solid #e5e7eb; }
+  .text-white    { color: #ffffff; }
+  .text-brand    { color: #087ea4; }
+  .font-bold     { font-weight: bold; }
+  .rounded       { border-radius: 8px; }
+
+  .flex          { display: flex; }
+  .flex-col      { display: flex; flex-direction: column; }
+  .items-center  { align-items: center; }
+  .justify-between { justify-content: space-between; }
+  .justify-center  { justify-content: center; }
+  .gap-4         { gap: 16px; }
+  .gap-6         { gap: 24px; }
+  .gap-8         { gap: 32px; }
+
+  .grid          { display: grid; }
+  .grid-cols-3   { grid-template-columns: repeat(3, 1fr); }
+
+  .p-4  { padding: 16px; }
+  .p-6  { padding: 24px; }
+  .px-6 { padding-left: 24px; padding-right: 24px; }
+  .py-3 { padding-top: 12px; padding-bottom: 12px; }
+  .py-12 { padding-top: 48px; padding-bottom: 48px; }
+  .mx-auto { margin-left: auto; margin-right: auto; }
+  .max-w { max-width: 880px; }
+
+  .nav-link { color: #404756; }
+  .btn { background: #087ea4; color: #ffffff; font-weight: bold; padding: 10px 18px; border-radius: 8px; }
+  .h1 { font-size: 34px; font-weight: bold; }
+  .lead { font-size: 18px; color: #404756; }
+  .feature-title { font-size: 16px; font-weight: bold; }
+  .feature-body { color: #575d68; }
+</style>
+</head>
+<body>
+  <!-- Nav: brand on the left, links + CTA on the right (flex justify-between). -->
+  <div class="bg-slate">
+    <div class="flex justify-between items-center px-6 py-3 mx-auto max-w">
+      <div class="flex items-center gap-4">
+        <span class="text-brand font-bold">◆ react.demo</span>
+        <span class="nav-link">Learn</span>
+        <span class="nav-link">Reference</span>
+        <span class="nav-link">Community</span>
+      </div>
+      <div class="flex items-center gap-4">
+        <span class="nav-link">Blog</span>
+        <span class="btn">Get started</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hero: a centred flex column with a heading, lead and CTA row. -->
+  <div class="flex flex-col items-center justify-center gap-6 py-12 px-6">
+    <div class="h1">The library for web and native UIs</div>
+    <div class="lead">Create user interfaces from components. Build fast, layout-driven pages.</div>
+    <div class="flex gap-4">
+      <span class="btn">Learn React</span>
+      <span class="btn bg-card text-brand">API Reference</span>
+    </div>
+  </div>
+
+  <!-- Feature grid: three equal columns (grid-cols-3 + gap). -->
+  <div class="bg-slate py-12 px-6">
+    <div class="grid grid-cols-3 gap-8 mx-auto max-w">
+      <div class="bg-card rounded p-6 flex flex-col gap-4">
+        <div class="feature-title text-brand">Components</div>
+        <div class="feature-body">Compose UIs from small, isolated pieces of code.</div>
+      </div>
+      <div class="bg-card rounded p-6 flex flex-col gap-4">
+        <div class="feature-title text-brand">Declarative</div>
+        <div class="feature-body">Describe the UI for each state and let it update.</div>
+      </div>
+      <div class="bg-card rounded p-6 flex flex-col gap-4">
+        <div class="feature-title text-brand">Layout-driven</div>
+        <div class="feature-body">Flexbox and grid place every element precisely.</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

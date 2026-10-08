@@ -22,6 +22,10 @@ replace github.com/go-text/typesetting => ./third_party/go-text-typesetting
 // Bundle only the platform camera drivers; no external capture process or codecs.
 replace github.com/pion/mediadevices => ./third_party/mediadevices
 
+// Keep the screenshot renderer on the repository's Go version and maintain
+// focused paint fixes locally until they are available upstream on that floor.
+replace github.com/go-webengine/engine => ./third_party/go-webengine
+
 require (
 	github.com/andybalholm/brotli v1.2.5
 	github.com/bogdanfinn/fhttp v0.6.9

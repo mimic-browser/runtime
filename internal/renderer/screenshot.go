@@ -31,6 +31,12 @@ func (t snapshotTransport) RoundTrip(request *http.Request) (*http.Response, err
 		return nil, fmt.Errorf("invalid snapshot resource %q", name)
 	}
 	body, ok := t.files[name]
+	if !ok && !strings.Contains(name, "/") {
+		// Snapshot CSS lives under assets/, and its relative url() entries
+		// resolve there. The renderer currently resolves them against the
+		// document URL, so serve the same immutable asset at that alias.
+		body, ok = t.files["assets/"+name]
+	}
 	if !ok {
 		return nil, fmt.Errorf("snapshot resource unavailable: %s", name)
 	}
@@ -51,8 +57,8 @@ func (t snapshotTransport) RoundTrip(request *http.Request) (*http.Response, err
 // Render uses the third-party CSS/layout/paint pipeline only after the Page has
 // exported an immutable snapshot. Its independent layout can disagree with Mimic.
 func Render(ctx context.Context, files map[string][]byte, width, height int) (result *image.RGBA, err error) {
-	// v0.4.3 can panic while painting some rotated descendants. Keep a
-	// screenshot failure local to this command instead of terminating Mimic.
+	// Keep an unexpected third-party paint failure local to this CDP command
+	// and report it explicitly instead of terminating the Page process.
 	defer func() {
 		if failure := recover(); failure != nil {
 			result = nil

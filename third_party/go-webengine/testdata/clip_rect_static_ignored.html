@@ -1,0 +1,9 @@
+<!-- clip:rect() only applies to position:absolute/fixed per spec; on a
+     statically-positioned element it must have NO effect, matching a real
+     browser exactly (as opposed to this engine simply not understanding the
+     property at all, which would look identical for this one fixture — see
+     the paint-level test that checks the OTHER direction too). -->
+<html><body style="margin:0;font-size:20px;color:#000">
+<div style="height:100px"></div>
+<a style="clip:rect(0 0 0 0)" href="#">VISIBLEWORDXYZ</a>
+</body></html>

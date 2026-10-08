@@ -1,0 +1,14 @@
+<!-- Regression guard, round 87: caniuse.com's own `.news` ticker
+     (overflow:hidden;white-space:nowrap;text-overflow:ellipsis, sized only by
+     its real page's CSS Grid column, no explicit height at all). Unlike
+     overflow_autoheight_guard.html's floated-content case, a nowrap box's
+     auto height is a simple one-line computation, never a collapsed
+     float/flex row — so it IS trustworthy, and this long single line must
+     clip at the narrow box's own right edge instead of overflowing into the
+     sibling "NEXT" box beside it. -->
+<html><body style="margin:0;font-size:20px;color:#000">
+<div style="display:flex">
+<div style="width:150px;overflow:hidden;white-space:nowrap">THISISAVERYLONGSINGLELINETHATMUSTCLIP</div>
+<div style="margin-left:40px">NEXT</div>
+</div>
+</body></html>

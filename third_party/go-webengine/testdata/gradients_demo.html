@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  body { margin: 0; font-family: sans-serif; background: #ffffff; }
+  .row { display: flex; gap: 16px; padding: 16px; }
+  .panel {
+    width: 220px; height: 140px; border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+    color: white; padding: 12px; box-sizing: border-box;
+  }
+  .g1 { background: linear-gradient(to right, #ff5f6d, #ffc371); }
+  .g2 { background: linear-gradient(135deg, #12c2e9, #c471ed 50%, #f64f59); }
+  .g3 { background: radial-gradient(circle at 30% 30%, #43cea2, #185a9d); }
+  .g4 { background: linear-gradient(to bottom, rgba(0,128,255,1), rgba(0,128,255,0)); background-color: #222; }
+  .fade { opacity: 0.4; }
+  .vert { background: linear-gradient(0deg, #000000, #00c853); }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="panel g1">to right pink→orange</div>
+    <div class="panel g2">135deg 3-stop</div>
+    <div class="panel g3">radial circle</div>
+  </div>
+  <div class="row">
+    <div class="panel g4">transparency</div>
+    <div class="panel g1 fade">opacity 0.4</div>
+    <div class="panel vert">0deg up</div>
+  </div>
+</body>
+</html>

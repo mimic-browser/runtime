@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html class="client-nojs">
+<head>
+<meta charset="utf-8">
+<title>Interface constructors</title>
+<style>
+  body { margin: 0; background: #ffffff; }
+  #out { width: 200px; height: 80px; background: rgb(30, 160, 90); }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+  // A custom element class subclasses HTMLElement (the core-js / React-DOM
+  // pattern) and, when its checks pass, mutates the real DOM with a visible box.
+  class Panel extends HTMLElement {
+    constructor() { super(); this.ok = true; }
+    mount(host) {
+      var box = document.createElement('div');
+      box.id = 'out';
+      box.textContent = 'RENDERED_BY_SUBCLASS';
+      host.appendChild(box);
+    }
+  }
+
+  // Gate the mutation on the interface guarantees actually holding.
+  var probe = document.createElement('div');
+  var checks =
+    (probe instanceof HTMLElement) &&
+    (probe instanceof Node) &&
+    (new Event('x') instanceof Event) &&
+    (function () {
+      var e = new DOMException('m', 'NotFoundError');
+      return e.name === 'NotFoundError' && e.code === 8;
+    })();
+
+  if (checks) {
+    var p = new Panel();
+    if (p instanceof Panel && p instanceof HTMLElement && p.ok) {
+      p.mount(document.getElementById('app'));
+    }
+  }
+</script>
+</body>
+</html>

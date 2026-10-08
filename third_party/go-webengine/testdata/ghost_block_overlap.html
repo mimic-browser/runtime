@@ -1,0 +1,67 @@
+<!--
+  Trimmed offline reproduction of the go-news-reader "Ghost blog" block-overlap
+  bug (originally seen on troyhunt.com). Two independent bugs conspire to pile
+  the article body, author bio, subscribe box and footer into one collapsed
+  band:
+
+    1. A clearfix idiom sets height:0 on ::before/::after pseudo-ELEMENTS
+       (.container / .wrap / .post). A selector engine that mis-applies a
+       pseudo-element rule to the real element forces height:0 on the article
+       containers, collapsing them so everything stacks at the same Y.
+
+    2. The mobile layout makes .wrap a full-width `float:left`. Two such
+       full-width floats must STACK vertically; a float placer that instead
+       drops a too-wide float at the blocked (right) edge pushes the body
+       column off-screen to x = viewport width.
+
+  The layout regression test asserts the blocks stack (no vertical overlap) and
+  that all text stays on-screen.
+-->
+<html>
+<head>
+<style>
+  body { margin: 0; }
+  /* Clearfix on pseudo-elements — must NOT apply height:0 to the real element. */
+  .container:after, .container:before,
+  .wrap:after, .wrap:before,
+  .post:after, .post:before { content: ""; display: block; height: 0; overflow: hidden; }
+  /* Mobile layout: full-width stacked floats. */
+  .wrap { float: left; width: 100%; }
+  h1 { font-size: 40px; margin: 0; }
+  p  { margin: 0; }
+</style>
+</head>
+<body>
+  <div class="content-wrapper">
+    <div class="article-open container">
+      <article class="article-open_item wrap">
+        <header class="post_head">
+          <h1>Welcoming the Nepalese Government</h1>
+        </header>
+      </article>
+    </div>
+    <main class="article-open_content container">
+      <article class="wrap">
+        <section class="article_text post">
+          <p>Today we welcome the government onboarded to the free service.</p>
+          <p>This is precisely what the service was built for helping teams.</p>
+          <p>The list of governments using it continues to grow steadily now.</p>
+        </section>
+        <footer class="post">
+          <p>Troy Hunt: Hi, I write this blog and speak at events worldwide.</p>
+        </footer>
+      </article>
+    </main>
+  </div>
+  <div class="subscribe container">
+    <div class="wrap">
+      <p>Subscribe Now! Send new blog posts daily or weekly to your inbox.</p>
+    </div>
+  </div>
+  <footer class="footer container">
+    <div class="footer_info wrap">
+      <p>Copyright 2026. Published with Ghost. Licensed under Creative Commons.</p>
+    </div>
+  </footer>
+</body>
+</html>

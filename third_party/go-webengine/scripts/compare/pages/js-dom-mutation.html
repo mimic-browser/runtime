@@ -1,0 +1,50 @@
+<!doctype html><html><head><meta charset="utf-8"><title>placeholder</title><style>
+  body{margin:0;padding:24px;background:#fff;color:#1a1a1a;font-family:sans-serif;font-size:16px;line-height:1.5;width:600px}
+  h1{font-size:30px;font-weight:700;margin:0 0 8px}
+  h2{font-size:22px;font-weight:600;margin:20px 0 6px}
+  p{margin:0 0 12px}
+  .box{padding:12px;background:#eef3fb;border:1px solid #b7c9e6;margin:0 0 12px}
+  .tag{color:#0067c0;font-weight:700}
+  li{margin:0 0 4px}
+</style></head><body>
+  <h1>JS DOM mutation</h1>
+  <!-- Everything below is built by the script at parse time; with no JS the page
+       is empty apart from the heading above. This exercises createElement,
+       createTextNode, textContent, innerHTML, setAttribute, appendChild, style,
+       getElementById and querySelector so the rendered output matches a browser. -->
+  <div id="app"></div>
+  <script>
+    document.title = 'DOM mutated by JS';
+
+    var app = document.getElementById('app');
+
+    // createElement + textContent + inline style.
+    var intro = document.createElement('p');
+    intro.textContent = 'This paragraph was created with document.createElement and textContent.';
+    intro.style.color = '#333';
+    app.appendChild(intro);
+
+    // A styled box built with setAttribute(class) + createTextNode + appendChild.
+    var box = document.createElement('div');
+    box.setAttribute('class', 'box');
+    var label = document.createElement('span');
+    label.setAttribute('class', 'tag');
+    label.appendChild(document.createTextNode('setAttribute + appendChild: '));
+    box.appendChild(label);
+    box.appendChild(document.createTextNode('this box uses the .box class from CSS.'));
+    app.appendChild(box);
+
+    // innerHTML builds a list in one shot.
+    var list = document.createElement('ul');
+    var html = '';
+    for (var i = 1; i <= 4; i++) {
+      html += '<li>innerHTML list item number ' + i + '</li>';
+    }
+    list.innerHTML = html;
+    app.appendChild(list);
+
+    // querySelector reads back an injected node and mutates it further.
+    var first = app.querySelector('li');
+    first.textContent = first.textContent + ' (edited via querySelector)';
+  </script>
+</body></html>

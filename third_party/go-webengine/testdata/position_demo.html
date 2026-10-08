@@ -1,0 +1,49 @@
+<!-- Copyright (c) the go-webengine/engine authors. SPDX-License-Identifier: BSD-3-Clause -->
+<!-- A self-contained fixture exercising CSS position: relative (painted shifted
+     but reserving flow space), absolute (against a positioned ancestor's padding
+     box, out of flow), fixed (against the viewport / document origin, out of
+     flow), and z-index stacking of two overlapping absolute boxes. Rendered
+     offline via `render -file`. -->
+<html>
+<head>
+<title>CSS Position Demo</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #ffffff; font-family: sans-serif; }
+
+  /* Fixed bar anchored to the document origin; it must NOT reserve flow space,
+     so the flow content below still starts at the very top-left region. */
+  #fixedbar { position: fixed; top: 0; left: 0; width: 300px; height: 24px;
+              background: #1f6feb; }
+
+  /* A positioned ancestor: its padding box is the containing block for #abs. */
+  #anchor { position: relative; margin: 60px 0 0 40px; padding: 20px;
+            width: 240px; height: 160px; background: #e6edf3; }
+
+  /* Absolute box placed against #anchor's padding box (top:10 left:10 from the
+     inner padding edge), out of normal flow. */
+  #abs { position: absolute; top: 10px; left: 10px; width: 120px; height: 60px;
+         background: #2da44e; }
+
+  /* Relative box: painted shifted down/right but still reserving its flow slot
+     inside #anchor's content (so nothing collapses onto it). */
+  #rel { position: relative; top: 90px; left: 20px; width: 100px; height: 40px;
+         background: #bf3989; }
+
+  /* z-index overlap: #low and #high share the same rectangle; #high (higher
+     z-index) must paint on top even though it appears first in source order. */
+  #high { position: absolute; top: 300px; left: 40px; width: 120px; height: 120px;
+          background: #e3b341; z-index: 5; }
+  #low  { position: absolute; top: 300px; left: 40px; width: 120px; height: 120px;
+          background: #cf222e; z-index: 1; }
+</style>
+</head>
+<body>
+  <div id="fixedbar"></div>
+  <div id="anchor">
+    <div id="abs"></div>
+    <div id="rel"></div>
+  </div>
+  <div id="high"></div>
+  <div id="low"></div>
+</body>
+</html>

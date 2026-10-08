@@ -1,0 +1,8 @@
+<!-- The universal sr-only / visually-hidden pattern: a 1x1 overflow:hidden box
+     whose text is kept in the DOM for screen readers but must not paint at full
+     size. A spacer pushes it to y=100 so its (would-be) overflowing text sits in
+     an otherwise-empty band the test can assert stays blank. -->
+<html><body style="margin:0;font-size:20px;color:#000">
+<div style="height:100px"></div>
+<div style="width:1px;height:1px;overflow:hidden"><span>HIDDENWORDXYZ</span></div>
+</body></html>

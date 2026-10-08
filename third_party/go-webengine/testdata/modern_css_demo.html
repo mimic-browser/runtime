@@ -1,0 +1,43 @@
+<!--
+  Offline fixture for the modern-CSS features: space-separated rgb()/hsl()
+  colours, border-radius, and Tailwind-style dark-mode (an :is(.dark …) rule
+  with an escaped-colon variant class on a <html class="dark"> document).
+  Solid-colour blocks only, so the render is font-independent and byte-golden
+  stable.
+-->
+<html class="dark">
+<head>
+<style>
+  html, body { margin: 0; padding: 0; }
+  /* Page backdrop: light in light mode, dark navy in dark mode. The dark rule
+     is emitted exactly as Tailwind does — wrapped in :is() with an escaped
+     colon variant class. Colours use the modern space+slash rgb() syntax. */
+  body { background-color: rgb(255 255 255 / 1); }
+  :is(.dark .dark\:bg-wash-dark) { --o: 1; background-color: rgb(35 39 47 / var(--o)); }
+
+  /* A rounded card, placed absolutely for deterministic geometry. */
+  .card {
+    position: absolute; left: 40px; top: 40px; width: 320px; height: 120px;
+    background-color: rgb(8 126 164 / 1);
+    border-radius: 24px;
+  }
+  /* A pill (border-radius clamps to a half-height capsule). */
+  .pill {
+    position: absolute; left: 40px; top: 200px; width: 200px; height: 48px;
+    background-color: hsl(140 60% 45%);
+    border-radius: 9999px;
+  }
+  /* A bordered rounded box with a uniform border. */
+  .outline {
+    position: absolute; left: 270px; top: 200px; width: 90px; height: 60px;
+    border: 2px solid rgb(230 120 40 / 1);
+    border-radius: 12px;
+  }
+</style>
+</head>
+<body class="dark:bg-wash-dark">
+  <div class="card"></div>
+  <div class="pill"></div>
+  <div class="outline"></div>
+</body>
+</html>

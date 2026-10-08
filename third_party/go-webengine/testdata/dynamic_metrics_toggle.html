@@ -1,0 +1,22 @@
+<!doctype html>
+<html class="client-nojs">
+<head>
+<title>dynamic metrics toggle</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #fff; }
+  #box { width: 200px; height: 20px; background: rgb(10, 20, 30); }
+  .wide #box { height: 120px; background: rgb(200, 100, 50); }
+</style>
+</head>
+<body>
+  <div id="wrap"><div id="box"></div></div>
+  <script>
+    // Read a REAL laid-out metric and change layout from it: only when the box's
+    // measured border-box width is exactly 200 do we widen it (taller + recoloured).
+    var box = document.getElementById('box');
+    if (box.offsetWidth === 200) {
+      document.getElementById('wrap').className = 'wide';
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>inline box decoration</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #ffffff; }
+  body { font-size: 16px; line-height: 60px; }
+  #wrap { width: 320px; padding-top: 12px; }
+  /* A styled inline element: background, padding and a border, wrapping across
+     two line boxes. Its vertical border deliberately overflows the line box —
+     CSS does not grow a line for an inline box's vertical padding/border. */
+  .pill {
+    background: #0000ff;
+    border: 6px solid #ff0000;
+    padding: 0 20px;
+  }
+  /* A decorated inline NESTED inside it: its background must paint OVER the
+     enclosing one, not under it. */
+  .pill b { background: #00cc00; padding: 0 8px; }
+  /* An undecorated inline element generates no box: it paints nothing and
+     reserves no space. */
+  .plain { font-weight: bold; }
+</style>
+</head>
+<body>
+<div id="wrap"><span class="pill">Wrapping decorated inline spanning two lines with a <b>nested</b> bold</span></div>
+<div id="tail"><span class="plain">plain span, no decoration at all</span></div>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!-- Copyright (c) the go-webengine/engine authors. SPDX-License-Identifier: BSD-3-Clause -->
+<!-- A self-contained fixture reproducing the go.dev-class nav pattern that
+     motivated Phase 1.8: a top nav whose dropdown submenu is display:none until
+     :hover, and whose article content follows. In a static screenshot nothing is
+     hovered, so the submenu MUST render hidden (exactly as Chrome's default
+     shot), and the article must start right under the 40px nav bar — not pushed
+     down by an expanded submenu. Rendered offline via `render -file`. -->
+<html>
+<head>
+<title>Dropdown Hover Demo</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #ffffff; color: #111111;
+               font-family: sans-serif; }
+
+  #nav { height: 40px; background: #0b3d2e; }
+  .menu { color: #ffffff; }
+
+  /* The submenu is hidden by default and only revealed on hover. A static
+     render has nothing hovered, so it must stay display:none and reserve no
+     space — the article below is not pushed down. */
+  .submenu { display: none; background: #d0f0e0; color: #063; }
+  .menu:hover .submenu { display: block; }
+
+  /* An :focus-within variant that must likewise stay hidden statically. */
+  .panel { display: none; background: #ffd0d0; }
+  .menu:focus-within .panel { display: block; }
+
+  #article { background: #f6f8fa; padding: 16px; }
+</style>
+</head>
+<body>
+  <div id="nav">
+    <div class="menu">
+      Products
+      <div class="submenu">
+        <p>Hidden Item One</p>
+        <p>Hidden Item Two</p>
+        <p>Hidden Item Three</p>
+      </div>
+      <div class="panel">
+        <p>Focus Panel That Stays Hidden</p>
+      </div>
+    </div>
+  </div>
+  <div id="article">
+    <h1>Article Title Near The Top</h1>
+    <p>This article body starts directly beneath the 40px nav bar because the
+       hover/focus dropdowns are out of the static render and reserve no space.</p>
+  </div>
+</body>
+</html>

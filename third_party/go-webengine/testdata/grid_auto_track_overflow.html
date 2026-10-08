@@ -1,0 +1,22 @@
+<!--
+  Trimmed offline reproduction of the CSS-Grid auto-track blowout seen on
+  grid-based article layouts in the go-news-reader preview (sciencealert.com,
+  makeuseof.com, …).
+
+  A `display:grid` with a single implicit `auto` column holds a long run of
+  wrappable text. `auto` tracks are sized to their max-content — the WHOLE
+  unwrapped run — which is far wider than the grid's definite width. Without a
+  step that shrinks the auto track back to the available space, the track (and
+  the paragraph in it) overflows the grid to the right and paints off-screen; a
+  browser instead shrinks the track so the text wraps.
+
+  The regression test asserts the grid item is no wider than the grid and that
+  all its text stays within the grid's content box.
+-->
+<html>
+<body style="margin:0">
+  <div class="grid" style="display:grid; width:400px">
+    <p style="margin:0">This paragraph is deliberately far wider than four hundred pixels when placed on a single unwrapped line so its grid auto track must shrink to the grid width and let the text wrap instead of overflowing off the right edge of the viewport entirely</p>
+  </div>
+</body>
+</html>

@@ -1,0 +1,20 @@
+<!doctype html>
+<html>
+<head>
+<title>dynamic style inject</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #fff; }
+  #t { width: 150px; height: 20px; background: rgb(1, 1, 1); }
+</style>
+</head>
+<body>
+  <div id="t"></div>
+  <script>
+    // Create a <style> at runtime and inject a rule; the next cascade must
+    // re-collect it and re-lay-out (taller + recoloured element).
+    var s = document.createElement('style');
+    s.textContent = '#t { height: 80px; background: rgb(9, 8, 7); }';
+    document.head.appendChild(s);
+  </script>
+</body>
+</html>

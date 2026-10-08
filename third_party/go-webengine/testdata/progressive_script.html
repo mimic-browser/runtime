@@ -1,0 +1,19 @@
+<!-- Progressive-render fixture: an inline stylesheet (fully styled from the
+     first paint) plus a script that appends several block elements, growing the
+     document geometry so the settle loop re-flows and emits an intermediate
+     frame taller than the initial one. -->
+<html><head><style>
+  body { margin: 0; }
+  p, .added { margin: 0; font-size: 20px; color: #000; }
+</style></head>
+<body>
+  <p>INITIAL PARAGRAPH</p>
+  <script>
+    for (var i = 0; i < 8; i++) {
+      var d = document.createElement('div');
+      d.className = 'added';
+      d.textContent = 'ADDED LINE ' + i;
+      document.body.appendChild(d);
+    }
+  </script>
+</body></html>

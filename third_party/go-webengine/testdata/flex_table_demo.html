@@ -1,0 +1,61 @@
+<!-- Copyright (c) the go-webengine/engine authors. SPDX-License-Identifier: BSD-3-Clause -->
+<!-- A self-contained fixture exercising display:flex (navbar with
+     justify-content, a sidebar+main two-column layout with flex-grow, and
+     align-items) and display:table (a data table with auto column widths).
+     Rendered offline via `render -file`. -->
+<html>
+<head>
+<title>Flex &amp; Table Demo</title>
+<style>
+  body { background: #0f1424; margin: 0; font-family: sans-serif; color: #e8eaf0; }
+  .nav { display: flex; justify-content: space-between; align-items: center;
+         background: #1b2440; padding: 12px 20px; border-bottom: 2px solid #4c6ef5; }
+  .brand { font-size: 20px; font-weight: bold; color: #8ab4ff; }
+  .links { display: flex; }
+  .links a { color: #cdd6f4; margin: 0 12px; }
+  .cta { background: #4c6ef5; color: #ffffff; padding: 8px 16px; }
+  .shell { display: flex; padding: 20px; }
+  .side { width: 200px; flex-shrink: 0; background: #1b2440; padding: 16px; margin-right: 20px;
+          border: 1px solid #2c3760; box-sizing: border-box; }
+  .side h3 { margin: 0 0 8px 0; color: #8ab4ff; }
+  .side p { margin: 6px 0; color: #b8c0e0; }
+  .main { flex-grow: 1; background: #151b30; padding: 16px; border: 1px solid #2c3760; box-sizing: border-box; }
+  h1 { margin: 0 0 12px 0; font-size: 24px; }
+  table { display: table; width: 100%; background: #0f1424; margin-top: 12px; }
+  tr { display: table-row; }
+  th, td { display: table-cell; padding: 8px 10px; border: 1px solid #2c3760; }
+  th { background: #23305a; color: #cdd6f4; text-align: left; }
+  .num { text-align: right; }
+</style>
+</head>
+<body>
+  <div class="nav">
+    <div class="brand">Fluxboard</div>
+    <div class="links"><a>Home</a><a>Docs</a><a>Pricing</a><a>Blog</a></div>
+    <div class="cta">Sign up</div>
+  </div>
+
+  <div class="shell">
+    <div class="side">
+      <h3>Navigation</h3>
+      <p>Dashboard</p>
+      <p>Reports</p>
+      <p>Billing</p>
+      <p>Settings</p>
+    </div>
+    <div class="main">
+      <h1>Regional throughput</h1>
+      <p>The bar to the left is a fixed-width flex sidebar; this main panel uses
+         flex-grow to absorb the remaining width. Below, a table lays its columns
+         out from content with header and body rows.</p>
+      <table>
+        <tr><th>Region</th><th>Nodes</th><th class="num">Requests</th><th class="num">Uptime</th></tr>
+        <tr><td>North America</td><td>128</td><td class="num">4,201,880</td><td class="num">99.98%</td></tr>
+        <tr><td>Europe</td><td>96</td><td class="num">3,114,502</td><td class="num">99.95%</td></tr>
+        <tr><td>Asia Pacific</td><td>74</td><td class="num">2,660,140</td><td class="num">99.90%</td></tr>
+        <tr><td>South America</td><td>22</td><td class="num">612,338</td><td class="num">99.87%</td></tr>
+      </table>
+    </div>
+  </div>
+</body>
+</html>
