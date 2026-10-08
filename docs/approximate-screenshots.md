@@ -6,7 +6,8 @@ and resource snapshot. Ordinary CDP and Playwright clients can call it without
 a Mimic-specific command or response parser. The renderer never runs page
 scripts or fetches outside the snapshot bundle. No GPU is required.
 
-**This is a visual preview, not a browser screenshot.** Mimic does not maintain
+**This is a visual preview, not a browser screenshot. Visual accuracy is not
+guaranteed.** Mimic does not maintain
 painted pixels. The independent renderer recalculates CSS and layout, so the
 image can disagree with `getBoundingClientRect()`, computed styles, hit testing,
 and Chrome 152. Text, fonts, Grid/Flex layout, iframe content, canvas/video

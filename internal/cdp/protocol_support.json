@@ -648,7 +648,7 @@
   },
   "Page.captureScreenshot": {
     "status": "partial",
-    "notes": "Returns standard CDP PNG data painted approximately from an immutable Page DOM/resource snapshot by an independent CPU renderer. The image is visual context, not Chrome pixels or Mimic's modeled layout. PNG, viewport and unscaled document-coordinate clips are supported; JPEG/WebP, quality, scaled clips and view-surface capture are unsupported. Styles, font metrics, frames, canvas/video pixels and CSS effects can differ. Resource loads are restricted to the snapshot bundle.",
+    "notes": "Returns standard CDP PNG data painted approximately from an immutable Page DOM/resource snapshot by an independent CPU renderer. Visual accuracy is not guaranteed; the image is visual context, not Chrome pixels or Mimic's modeled layout. PNG, viewport and unscaled document-coordinate clips are supported; JPEG/WebP, quality, scaled clips and view-surface capture are unsupported. Styles, font metrics, frames, canvas/video pixels and CSS effects can differ. Resource loads are restricted to the snapshot bundle.",
     "tests": [
       "internal/cdp/screenshot_test.go#TestCaptureScreenshotUsesStandardCDPResult",
       "internal/renderer/screenshot_test.go#TestRenderUsesOnlySnapshotResources"
