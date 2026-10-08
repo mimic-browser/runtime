@@ -872,7 +872,8 @@ func paintItem(dst *image.RGBA, pp *painter.PixelPainter, it *layout.InlineItem,
 	// minimal `<h1>text<a><svg style="visibility:hidden">…</a></h1>` repro
 	// confirms this is a real, independent defect on its own: any inline
 	// image/icon with an explicit `visibility:hidden` painted anyway.
-	if it.Style != nil && it.Style.Visibility != css.VisibilityVisible {
+	if it.Style != nil && (it.Style.Visibility != css.VisibilityVisible ||
+		(it.Style.HasOpacity && it.Style.Opacity <= 0)) {
 		return
 	}
 	if it.Image != nil {

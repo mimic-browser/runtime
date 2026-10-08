@@ -830,7 +830,9 @@ func (l *layouter) appendElementInline(el *dom.Node, cs *css.Style, items *[]*In
 			// them, or a real leading space here was silently lost whenever
 			// el's own content ended in a state that reset them.
 			wasWsEmitted, wasWsPending := l.wsEmitted, l.wsPending
+			outerMargin := l.pendingMargin
 			box := l.layoutNestedInlineFlex(el, es)
+			l.pendingMargin = outerMargin
 			sb := 0.0
 			if wasWsEmitted && wasWsPending {
 				sb = l.m.Measure(" ", cs.FontFamily, cs.FontSize, cs.FontWeight, cs.Italic)
@@ -854,7 +856,9 @@ func (l *layouter) appendElementInline(el *dom.Node, cs *css.Style, items *[]*In
 		// never gave a plain display:inline-block element at all).
 		if es := l.sm[el]; es != nil && es.Display == css.DisplayInlineBlock {
 			wasWsEmitted, wasWsPending := l.wsEmitted, l.wsPending
+			outerMargin := l.pendingMargin
 			box := l.layoutNestedInlineBlock(el, es)
+			l.pendingMargin = outerMargin
 			sb := 0.0
 			if wasWsEmitted && wasWsPending {
 				sb = l.m.Measure(" ", cs.FontFamily, cs.FontSize, cs.FontWeight, cs.Italic)

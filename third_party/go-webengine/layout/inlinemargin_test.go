@@ -62,6 +62,18 @@ func TestAdjacentInlineMarginsAdd(t *testing.T) {
 	assertF(t, "CD.X", items[1].X, 28)
 }
 
+func TestInlineMarginBeforeNestedInlineBlock(t *testing.T) {
+	src := `<html><body style="margin:0"><span>` +
+		`AB<span style="margin-left:12px"><a style="display:inline-block">CD</a></span>` +
+		`</span></body></html>`
+	items := firstLineItems(findBox(layoutHTML(t, src, 300), "body"))
+	if len(items) != 2 {
+		t.Fatalf("items = %d, want 2", len(items))
+	}
+	assertF(t, "inline-block.SpaceBefore", items[1].SpaceBefore, 12)
+	assertF(t, "inline-block.X", items[1].X, 32)
+}
+
 // TestBlockBreakDropsPendingMargin covers the boundary case explicitly: a
 // pending margin-right with nothing left on the same line to apply to (a
 // promoted block, see BlockBreak, immediately follows) is dropped rather than

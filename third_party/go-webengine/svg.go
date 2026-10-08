@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"image"
+	"image/color"
 	"regexp"
 	"sort"
 	"strconv"
@@ -14,6 +15,9 @@ import (
 
 	"github.com/srwiley/oksvg"
 	"github.com/srwiley/rasterx"
+	"golang.org/x/image/draw"
+
+	gfxsvg "github.com/go-gfx/gfx/svg"
 
 	"github.com/go-webengine/engine/css"
 	"github.com/go-webengine/engine/dom"
@@ -107,8 +111,25 @@ func (e *Engine) svgToBitmap(data []byte, st *css.Style, attrW, attrH, viewportW
 	}
 	// The scanner samples in the viewBox coordinate system; SetTarget scales it
 	// onto the w×h output.
+	// gfx's path rasterizer preserves compound contours that rasterx can
+	// incorrectly bridge with a filled shape. Keep oksvg for intrinsic sizing
+	// and as a fallback for SVG constructs gfx cannot parse.
+	if currentColor != "" {
+		data = bytes.ReplaceAll(data, []byte("currentColor"), []byte(currentColor))
+	}
+	if rendered, err := gfxSVGRasterizer(string(data), gfxsvg.Options{Scale: min(float64(w)/vbW, float64(h)/vbH), Ink: color.RGBA{A: 255}}); err == nil {
+		src := rendered.Image.ToNRGBA()
+		if src.Bounds().Dx() == w && src.Bounds().Dy() == h {
+			return src, w, h, true
+		}
+		out := image.NewNRGBA(image.Rect(0, 0, w, h))
+		draw.ApproxBiLinear.Scale(out, out.Bounds(), src, src.Bounds(), draw.Src, nil)
+		return out, w, h, true
+	}
 	return svgRasterizer(icon, w, h, iround(vbW), iround(vbH)), w, h, true
 }
+
+var gfxSVGRasterizer = gfxsvg.Rasterize
 
 var (
 	svgRootRe    = regexp.MustCompile(`(?is)<svg\b[^>]*>`)

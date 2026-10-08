@@ -29,6 +29,17 @@ func controlStyle() *css.Style {
 	}
 }
 
+func TestTransparentRadioInputDoesNotPaintNativeControl(t *testing.T) {
+	n := &dom.Node{Type: dom.Element, Tag: "input", Attr: map[string]string{"type": "radio", "checked": ""}}
+	st := controlStyle()
+	st.HasOpacity = true
+	st.Opacity = 0
+	img := paintControlStyled(t, n, 20, 20, st)
+	if got := img.RGBAAt(10, 10); got != (color.RGBA{R: 255, G: 255, B: 255, A: 255}) {
+		t.Fatalf("opacity:0 radio painted native control: %v", got)
+	}
+}
+
 // paintControl lays out a single form-control InlineItem at (0,0) sized
 // w×h and paints it onto a fresh white dst, mirroring how background_paint_
 // test.go hand-builds a Box rather than going through the full HTML

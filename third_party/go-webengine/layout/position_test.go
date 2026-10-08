@@ -227,6 +227,14 @@ func TestAbsoluteBorderBoxWidth(t *testing.T) {
 	assertF(t, "abs.W", abs.W, 60)
 }
 
+func TestAbsoluteBorderBoxHeightIncludesBorderOnce(t *testing.T) {
+	src := `<html><body style="margin:0"><div id="abs" style="position:absolute;box-sizing:border-box;width:18px;height:18px;border:6px solid blue"></div></body></html>`
+	root := layoutHTML(t, src, 300)
+	abs := findBoxByID(root, "abs")
+	assertF(t, "abs.W", abs.W, 18)
+	assertF(t, "abs.H", abs.H, 18)
+}
+
 // TestAbsoluteShrinkToFit covers the shrink-to-fit width branch (auto width, no
 // left/right pair) and the static-position x/y fallback.
 func TestAbsoluteShrinkToFit(t *testing.T) {

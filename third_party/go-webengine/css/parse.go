@@ -9,6 +9,31 @@ import (
 	"strings"
 )
 
+// CSS absolute font-size keywords use the browser's medium size as their
+// reference, rather than the parent element's computed font size.
+func absoluteFontSizeKeyword(v string) (float64, bool) {
+	switch v {
+	case "xx-small":
+		return 9, true
+	case "x-small":
+		return 10, true
+	case "small":
+		return 13.333333333, true
+	case "medium":
+		return 16, true
+	case "large":
+		return 18, true
+	case "x-large":
+		return 24, true
+	case "xx-large":
+		return 32, true
+	case "xxx-large":
+		return 48, true
+	default:
+		return 0, false
+	}
+}
+
 // mediaWidthRe captures min-width/max-width features in a media query, in
 // either px or rem — Tailwind v4's default breakpoints (sm/md/lg/xl/2xl) are
 // all expressed in rem ("min-width:80rem"), not px, and rejecting the unit
@@ -693,7 +718,9 @@ func (s *Style) apply(d Declaration, emRef float64, parent *Style) {
 			s.BackdropFilters = fs
 		}
 	case "font-size":
-		if l, ok := parseLength(v, emRef); ok && !l.Auto {
+		if size, ok := absoluteFontSizeKeyword(lv); ok {
+			s.FontSize = size
+		} else if l, ok := parseLength(v, emRef); ok && !l.Auto {
 			if l.IsPercent {
 				s.FontSize = l.Percent * emRef
 			} else {

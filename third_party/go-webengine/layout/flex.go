@@ -567,6 +567,13 @@ func (l *layouter) layoutIsolated(node *dom.Node, st *css.Style, contentW float6
 	}
 	clone.MinWidth = css.Length{Auto: true}
 	clone.MaxWidth = css.Length{Auto: true}
+	// layoutIsolated supplies an already-resolved content width, so it resets
+	// box-sizing below. Preserve an explicit border-box height in the same
+	// content-box terms; otherwise vertical borders get added a second time.
+	if st.BoxSizing == css.BorderBox && !st.Height.Auto && !st.Height.IsPercent {
+		bw := st.Border.Widths()
+		clone.Height.Px = math.Max(st.Height.Px-bw.Top-bw.Bottom-st.Padding.Top-st.Padding.Bottom, 0)
+	}
 	clone.BoxSizing = css.ContentBox
 	clone.Float = css.FloatNone
 	clone.Margin = css.Edges{}

@@ -17,6 +17,14 @@ func applyOn(s *Style, prop, val string, em float64) {
 	s.apply(Declaration{Property: prop, Value: val}, em, nil)
 }
 
+func TestAbsoluteFontSizeKeywordIgnoresParentSize(t *testing.T) {
+	s := newStyle()
+	applyOn(s, "font-size", "small", 32)
+	if math.Abs(s.FontSize-13.333333333) > 0.001 {
+		t.Fatalf("font-size:small with 32px parent = %g, want 13.333px", s.FontSize)
+	}
+}
+
 func TestApplyDisplayValues(t *testing.T) {
 	cases := map[string]Display{
 		"block": DisplayBlock, "flow-root": DisplayBlock, "list-item": DisplayBlock,

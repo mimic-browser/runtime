@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/srwiley/oksvg"
+	gfxsvg "github.com/go-gfx/gfx/svg"
 
 	"github.com/go-webengine/engine/css"
 	"github.com/go-webengine/engine/dom"
@@ -302,9 +302,9 @@ func TestSVGToBitmapErrors(t *testing.T) {
 
 	// The recover guard turns a panic from the raster step (rasterx panics on
 	// some degenerate geometries) into a clean false, never crashing the render.
-	orig := svgRasterizer
-	svgRasterizer = func(_ *oksvg.SvgIcon, _, _, _, _ int) image.Image { panic("boom") }
-	defer func() { svgRasterizer = orig }()
+	orig := gfxSVGRasterizer
+	gfxSVGRasterizer = func(string, gfxsvg.Options) (*gfxsvg.Result, error) { panic("boom") }
+	defer func() { gfxSVGRasterizer = orig }()
 	good := `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10"/></svg>`
 	if img, _, _, ok := e.svgToBitmap([]byte(good), nil, 0, 0, 1024, ""); ok || img != nil {
 		t.Errorf("recover guard failed: ok=%v img=%v", ok, img != nil)
@@ -322,6 +322,24 @@ func TestSVGToBitmapCurrentColor(t *testing.T) {
 	r, g, b, a := img.At(5, 5).RGBA()
 	if r>>8 != 0x0a || g>>8 != 0x7e || b>>8 != 0xa4 || a>>8 != 0xff {
 		t.Errorf("currentColor not applied: got R%d G%d B%d A%d", r>>8, g>>8, b>>8, a>>8)
+	}
+}
+
+func TestSVGToBitmapCompoundPathKeepsContoursSeparate(t *testing.T) {
+	svg := `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 12">` +
+		`<path d="M2 2h8v8H2z M20 2h8v8h-8z" fill="black"/></svg>`
+	img, _, _, ok := New().svgToBitmap([]byte(svg), nil, 0, 0, 30, "")
+	if !ok {
+		t.Fatal("compound SVG path did not rasterize")
+	}
+	if _, _, _, a := img.At(15, 6).RGBA(); a != 0 {
+		t.Fatalf("separate contours were bridged: gap alpha=%d", a)
+	}
+	if _, _, _, a := img.At(5, 6).RGBA(); a == 0 {
+		t.Fatal("first contour disappeared")
+	}
+	if _, _, _, a := img.At(24, 6).RGBA(); a == 0 {
+		t.Fatal("second contour disappeared")
 	}
 }
 

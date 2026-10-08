@@ -15,6 +15,16 @@ Wikipedia page:
 - `@supports` evaluates the grid and URL mask capabilities the engine actually
   implements, including `not`, `and` and `or` conditions. Unknown capabilities
   remain false.
+- SVG images use the existing gfx rasterizer for compound paths, retaining the
+  previous rasterizer as a fallback when gfx cannot parse a document.
+- Isolated absolute elements retain their border-box height when layout changes
+  their sizing mode internally. Fully transparent inline controls do not paint
+  their native control underneath a styled replacement.
+- Absolute CSS font-size keywords resolve independently of the parent size,
+  and inline margins survive nested inline-block and inline-flex layout.
+
+CSS generated content from `::before` and `::after` remains unsupported, so
+decorative text supplied only by those pseudo-elements is omitted.
 
 The screenshot adapter in `internal/renderer` also resolves asset URLs from
 snapshot stylesheets against their `assets/` directory. The fork remains an
