@@ -108,6 +108,10 @@ func (p *Page) SetScreenOrientation(kind string, angle int) error {
 }
 func (p *Page) SetMediaPreferences(scheme string, reducedMotion *bool) error {
 	if err := p.CheckProfileMutation(); err != nil {
+		current := p.Environment().Preferences
+		if (scheme == "" || scheme == current.ColorScheme) && (reducedMotion == nil || *reducedMotion == current.ReducedMotion) {
+			return nil
+		}
 		return err
 	}
 	p.viewportObservationChange(true)

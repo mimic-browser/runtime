@@ -28,10 +28,12 @@ func (c *Context) beginKeepalive(group *keepaliveBudget, size int) (func(), bool
 	}
 	group.bytes += size
 	c.keepaliveWG.Add(1)
+	c.activeKeepalives.Add(1)
 	return func() {
 		group.mu.Lock()
 		group.bytes -= size
 		group.mu.Unlock()
+		c.activeKeepalives.Add(-1)
 		c.keepaliveWG.Done()
 	}, true
 }

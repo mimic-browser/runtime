@@ -30,6 +30,11 @@ import (
 type Server struct {
 	connectionOpened  func()
 	certificateMu     sync.Mutex
+	networkIDMu       sync.Mutex
+	networkIDs        map[string]uint64
+	windowMu          sync.Mutex
+	windowIDs         map[string]int
+	nextWindowID      int
 	lifecycleMu       sync.Mutex
 	connections       map[*websocket.Conn]context.CancelFunc
 	clients           map[*connection]struct{}
@@ -155,12 +160,14 @@ type message struct {
 	Params    json.RawMessage `json:"params"`
 	SessionID string          `json:"sessionId,omitempty"`
 	timing    *commandTiming
+	order     *commandOrder
 }
 type session struct {
 	commandTimings          sync.Map   // diagnostic only: command id -> *commandTiming
 	commandMu               sync.Mutex // protects binding changes against commands and asynchronous navigation
-	inputOrderMu            sync.Mutex
-	inputTail               <-chan struct{}
+	orderMu                 sync.Mutex
+	orderTail               <-chan struct{}
+	activeOrder             *commandOrder // guarded by commandMu; released before debugger waits
 	ctx                     context.Context
 	server                  *Server
 	transport               *connection
@@ -456,6 +463,8 @@ func (s *session) traceEvent(e trace.Event) {
 		}
 		timestamp := float64(e.Time.UnixMilli()) / 1000
 		switch e.Name {
+		case "frameStartedLoading", "frameStoppedLoading":
+			s.event("Page."+e.Name, map[string]any{"frameId": frameID})
 		case "isolatedWorldCreated":
 			s.event("Runtime.executionContextCreated", map[string]any{"context": s.ensureRuntimeWorldContext(frameID, stringValue(e.Data["realm"]), stringValue(e.Data["mainRealm"]), stringValue(e.Data["worldName"]), stringValue(e.Data["url"]))})
 		case "navigatedWithinDocument":
@@ -487,6 +496,9 @@ func (s *session) traceEvent(e trace.Event) {
 			s.destroyFrameContext(frameID)
 		case "DOMContentLoaded", "load":
 			if frameID == s.page.Top.ID && e.Name == "DOMContentLoaded" {
+				// Frozen Blink re-pushes the inspected root document after parsing.
+				// Child-frame commits do not invalidate the entire frontend tree.
+				s.event("DOM.documentUpdated", map[string]any{})
 				s.event("Page.domContentEventFired", map[string]any{"timestamp": timestamp})
 			}
 			if frameID == s.page.Top.ID && e.Name == "load" {
@@ -515,7 +527,7 @@ func (s *session) traceEvent(e trace.Event) {
 			}
 			s.event("Network.requestWillBeSent", map[string]any{"requestId": e.Data["id"], "loaderId": loaderID, "documentURL": e.Data["url"], "request": request, "timestamp": float64(e.Time.UnixMilli()) / 1000, "wallTime": float64(e.Time.Unix()), "initiator": map[string]any{"type": "other"}, "type": resourceTypeFromTrace(e.Data["initiator"]), "frameId": frameID})
 		} else if e.Name == "response" {
-			s.event("Network.responseReceived", map[string]any{"requestId": e.Data["id"], "loaderId": loaderID, "timestamp": float64(e.Time.UnixMilli()) / 1000, "type": resourceTypeFromTrace(e.Data["initiator"]), "response": map[string]any{"url": e.Data["url"], "status": e.Data["status"], "statusText": "", "headers": e.Data["headers"], "mimeType": e.Data["mimeType"], "connectionReused": e.Data["connectionReused"], "connectionId": e.Data["connectionId"], "protocol": cdpProtocol(e.Data["protocol"]), "timing": cdpResourceTiming(e.Data["transportTiming"]), "encodedDataLength": e.Data["encodedDataLength"], "securityState": "unknown"}, "frameId": frameID})
+			s.event("Network.responseReceived", map[string]any{"requestId": e.Data["id"], "loaderId": loaderID, "timestamp": float64(e.Time.UnixMilli()) / 1000, "type": resourceTypeFromTrace(e.Data["initiator"]), "response": map[string]any{"url": e.Data["url"], "status": e.Data["status"], "statusText": "", "headers": e.Data["headers"], "mimeType": e.Data["mimeType"], "connectionReused": e.Data["connectionReused"], "connectionId": s.server.networkConnectionID(stringValue(e.Data["connectionId"])), "protocol": cdpProtocol(e.Data["protocol"]), "timing": cdpResourceTiming(e.Data["transportTiming"]), "encodedDataLength": e.Data["encodedDataLength"], "securityState": "unknown"}, "frameId": frameID})
 			if partial, _ := e.Data["partial"].(bool); !partial {
 				s.event("Network.loadingFinished", map[string]any{"requestId": e.Data["id"], "timestamp": float64(e.Time.UnixMilli()) / 1000, "encodedDataLength": e.Data["encodedDataLength"]})
 			}
@@ -534,7 +546,12 @@ func (s *session) handle(m message) {
 		m.timing.started = time.Now()
 		defer s.finishCommandTiming(m)
 	}
-	if afterUnlock := s.handleCommand(m); afterUnlock != nil {
+	defer m.order.release()
+	afterUnlock := s.handleCommand(m)
+	// Navigation starts in arrival order, but its asynchronous commit reply must
+	// not block later page commands, interception or replacement navigation.
+	m.order.release()
+	if afterUnlock != nil {
 		afterUnlock()
 	}
 }
@@ -586,7 +603,7 @@ func (s *session) handleCommand(m message) (afterUnlock func()) {
 		s.reply(m.ID, value, cookieErr)
 		return
 	}
-	control := m.Method == "Fetch.disable" || m.Method == "Fetch.getResponseBody" || m.Method == "Network.setRequestInterception" || m.Method == "Fetch.continueRequest" || m.Method == "Fetch.continueResponse" || m.Method == "Fetch.failRequest" || m.Method == "Fetch.fulfillRequest" || m.Method == "Network.continueInterceptedRequest" || m.Method == "Mimic.startTrace" || m.Method == "Mimic.stopTrace" || m.Method == "Mimic.getTrace" || m.Method == "Mimic.getStatus" || m.Method == "Mimic.getDiagnostics" || m.Method == "Mimic.cancelExecution" || m.Method == "Page.stopLoading" || m.Method == "Target.closeTarget"
+	control := independentControlCommand(m.Method)
 	if !control {
 		var waitStarted time.Time
 		if m.timing != nil {
@@ -596,7 +613,11 @@ func (s *session) handleCommand(m message) (afterUnlock func()) {
 		if m.timing != nil {
 			m.timing.sessionWait = time.Since(waitStarted)
 		}
-		defer s.commandMu.Unlock()
+		s.activeOrder = m.order
+		defer func() {
+			s.activeOrder = nil
+			s.commandMu.Unlock()
+		}()
 		// Target commands operate on the registry or explicitly lock their target.
 		// Never hold the control Page while bootstrapping an independent Page.
 		if !strings.HasPrefix(m.Method, "Target.") {
@@ -651,6 +672,10 @@ func (s *session) handleCommand(m message) (afterUnlock func()) {
 	}
 	if value, handled, domErr := s.handleDOM(s.ctx, m.Method, p); handled {
 		s.reply(m.ID, value, domErr)
+		return
+	}
+	if value, handled, cssErr := s.handleCSS(s.ctx, m.Method, p); handled {
+		s.reply(m.ID, value, cssErr)
 		return
 	}
 	if value, handled, pageErr := s.handlePage(s.ctx, m.Method, p); handled {
@@ -780,6 +805,13 @@ func (s *session) handleCommand(m message) (afterUnlock func()) {
 		var ids []int64
 		ids, err = s.page.QueryDOM(s.ctx, int64(intValue(p["nodeId"], 0)), stringValue(p["selector"]), m.Method == "DOM.querySelectorAll")
 		if err == nil {
+			// Like DOM.requestNode, selector results bind their ancestor path
+			// before returning IDs so a shallow frontend tree can resolve them.
+			if d, ok := s.page.Document(); ok {
+				for _, id := range ids {
+					s.emitDOMAncestors(d, id)
+				}
+			}
 			if m.Method == "DOM.querySelectorAll" {
 				result = map[string]any{"nodeIds": ids}
 			} else {
@@ -933,7 +965,7 @@ func (s *session) handleCommand(m message) (afterUnlock func()) {
 			err = fmt.Errorf("method %s is registered for the pinned CDP schema but its semantics are not implemented", m.Method)
 		} else {
 			s.page.Trace().Add(trace.SurfaceMissing, "CDP."+m.Method, map[string]any{"sessionId": s.id})
-			err = fmt.Errorf("method %s is absent from the pinned CDP schema", m.Method)
+			err = &protocolError{Code: -32601, Message: "'" + m.Method + "' wasn't found"}
 		}
 	}
 	s.reply(m.ID, result, err)
@@ -984,6 +1016,10 @@ func (s *session) framePayloadByID(frameID, rawURL, loaderID, parentID string) m
 	payload := map[string]any{"id": frameID, "loaderId": loaderID, "url": rawURL, "domainAndRegistry": "", "securityOrigin": securityOrigin, "mimeType": "text/html"}
 	if frame, ok := s.page.Frame(frameID); ok {
 		payload["name"] = frame.Name()
+		secure, isolated, features := frame.ProtocolSecurityState()
+		payload["secureContextType"] = secure
+		payload["crossOriginIsolatedContextType"] = isolated
+		payload["gatedAPIFeatures"] = features
 	}
 	if parentID != "" {
 		payload["parentId"] = parentID

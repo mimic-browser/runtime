@@ -183,6 +183,7 @@ func (r *Realm) scheduleChildNavigationContent(frame *Frame, target *url.URL, re
 	frame.navigationSequence++
 	sequence := frame.navigationSequence
 	loaderID := uuid.NewString()
+	r.agent.Page().beginFrameLoading(frame, loaderID)
 	blockerReason := fmt.Sprintf("iframe:%s:%d", frame.ID, sequence)
 	blocksLoad := r.beginLoadBlocker(blockerReason)
 	if blocksLoad {
@@ -278,6 +279,9 @@ func (r *Realm) childNavigationCurrent(navigation *childNavigation) bool {
 }
 
 func (r *Realm) finishChildNavigation(navigation *childNavigation) {
+	if navigation != nil && navigation.frame != nil {
+		r.agent.Page().endFrameLoading(navigation.frame, navigation.loaderID)
+	}
 	if navigation != nil && navigation.blocksLoad {
 		navigation.blocksLoad = false
 		frame := navigation.frame
@@ -337,7 +341,10 @@ func (r *Realm) startChildFrameNavigation(frame *Frame, target *url.URL, sequenc
 	}
 	eventLoop := r.browserEventLoop()
 	loadContext, cancel := context.WithCancel(r.resourceContext)
-	frame.navigationCancel = cancel
+	frame.navigationCancel = func() {
+		cancel()
+		p.endFrameLoading(frame, loaderID)
+	}
 	request.ID, request.ContextID, request.URL, request.Initiator = loaderID, frame.ID, target, network.Iframe
 	r.resourceWG.Add(1)
 	go func() {

@@ -89,14 +89,87 @@ func (b *Browser) NewContextWithProfile(raw []byte) (*Context, error) {
 	}
 	return b.newContext(&d), nil
 }
-func (c *Context) Environment() state.Environment  { return c.env.Clone() }
+func (c *Context) Environment() state.Environment {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.env.Clone()
+}
 func (p *Page) BaseEnvironment() state.Environment { return p.ctx.Environment() }
 
 // Internal projections only read this snapshot. Mutable subobjects are replaced,
 // never edited in place; public consumers use Environment's defensive copy.
 func (p *Page) environmentView() state.Environment { p.mu.RLock(); defer p.mu.RUnlock(); return p.env }
 func (c *Context) Profile() profile.Document {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	return profile.FromEnvironment(c.env, c.browser.env.ProfileID, c.proxy)
+}
+
+// ConfigureProfile installs a managed identity into an empty ordinary Context.
+// Framework adapters can close their owned about:blank identity probe and call
+// this before exposing the Context to user code. No live or initializing Page
+// can observe a partially replaced environment. A managed Context stays immutable.
+func (c *Context) ConfigureProfile(d profile.Document, proxyJSON []byte, policy *network.ResourcePolicy, mediaJSON []byte) (*MediaProfile, error) {
+	if len(proxyJSON) != 0 {
+		proxy, err := profile.ParseProxy(proxyJSON)
+		if err != nil {
+			return nil, err
+		}
+		d.Network.Proxy = proxy
+	}
+	if err := c.browser.ValidateResolvedProfile(d); err != nil {
+		return nil, err
+	}
+	if d.Network.Proxy.Server != "" && c.browser.compat.Environment().NewProxyTransport == nil {
+		return nil, &profile.Error{Path: "proxy", Reason: "unsupported", Message: "bundle has no proxy transport"}
+	}
+	if policy != nil {
+		if err := policy.Validate(); err != nil {
+			return nil, err
+		}
+	}
+	var media *MediaProfile
+	if len(mediaJSON) != 0 {
+		validated, err := c.ValidateMediaProfileJSON(mediaJSON)
+		if err != nil {
+			return nil, err
+		}
+		media = &validated
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if err := c.lifetime.Err(); err != nil {
+		return nil, err
+	}
+	if c.profileLocked {
+		return nil, &profile.Error{Path: "browserContextId", Reason: "profileLocked", Message: "managed Context profiles are immutable"}
+	}
+	if len(c.pages) != 0 || c.creatingPages != 0 || c.closingPages != 0 || c.activeKeepalives.Load() != 0 || c.mediaCaptures != 0 {
+		return nil, &profile.Error{Path: "browserContextId", Reason: "contextInUse", Message: "configure requires an empty Context with no live Page, upload or capture workers"}
+	}
+	// Policy validation above and serialization here happen before any identity
+	// mutation. Existing loaders cannot exist because the Context has no Pages.
+	if policy != nil {
+		if _, err := c.resourcePolicy.Update(*policy); err != nil {
+			return nil, err
+		}
+	}
+	if closer, ok := c.transport.(interface{ CloseIdleConnections() }); ok {
+		closer.CloseIdleConnections()
+	}
+	c.transport = nil
+	c.env = d.ApplyOwned(c.browser.env)
+	c.proxy = d.Network.Proxy
+	c.profileLocked = true
+	c.mediaSeed = c.env.ProfileID
+	if media != nil {
+		c.mediaProfile, c.mediaSeed = media, media.Seed
+	}
+	if media != nil {
+		snapshot := cloneMediaProfile(*media)
+		return &snapshot, nil
+	}
+	return nil, nil
 }
 func (p *Page) Profile() profile.Document {
 	return profile.FromEnvironment(p.Environment(), p.ctx.browser.env.ProfileID, p.ctx.proxy)

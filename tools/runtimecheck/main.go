@@ -100,7 +100,7 @@ func check(binary, engine string) error {
 	defer os.RemoveAll(dir)
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, binary, "-listen", "127.0.0.1:0", "-engine", engine)
+	cmd := exec.CommandContext(ctx, binary, "--browser-mode", "headless", "-listen", "127.0.0.1:0", "-engine", engine)
 	cmd.Dir = dir
 	// No repository-relative engine paths or previously extracted native asset.
 	cmd.Env = append(os.Environ(), "XDG_CACHE_HOME="+dir, "LOCALAPPDATA="+dir, "GOV8_SHIM_LIBRARY=", "GOV8_SHIM_DLL=")

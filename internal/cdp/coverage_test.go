@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -90,8 +91,33 @@ func TestProtocolSupportManifestHasLiveEvidenceAndNoLostHandlers(t *testing.T) {
 		}
 	}
 	for _, row := range protocolExtensionMatrix() {
-		if row.WireSchemaGenerated || !strings.HasPrefix(row.Name, "Mimic.") || row.Kind != "extension" {
+		_, chromeCommand := protocolCommands[row.Name]
+		if (!row.WireSchemaGenerated && !manifest[row.Name].Experimental) || chromeCommand || !strings.HasPrefix(row.Name, "Mimic.") || row.Kind != "extension" {
 			t.Fatalf("extension incorrectly promoted to Chrome wire schema: %+v", row)
+		}
+	}
+	var contract struct {
+		Commands []struct {
+			Name string `json:"name"`
+		} `json:"commands"`
+	}
+	contractRaw, err := os.ReadFile("protocol/mimic.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(contractRaw, &contract); err != nil {
+		t.Fatal(err)
+	}
+	declared := map[string]bool{}
+	for _, command := range contract.Commands {
+		declared[command.Name] = true
+	}
+	for _, match := range regexp.MustCompile(`"(Mimic\.[A-Za-z][A-Za-z0-9]*)"`).FindAllStringSubmatch(sources.String(), -1) {
+		if !declared[match[1]] && !manifest[match[1]].Experimental {
+			t.Errorf("Mimic handler absent from pinned SDK schema: %s", match[1])
+		}
+		if _, ok := manifest[match[1]]; !ok {
+			t.Errorf("Mimic handler missing support declaration: %s", match[1])
 		}
 	}
 	// Dispatch currently names each supported method explicitly. A new handler

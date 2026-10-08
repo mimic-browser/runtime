@@ -15,7 +15,7 @@ let runtime;
 let exited;
 let log = '';
 try {
-  runtime = spawn(resolve(binary), ['--listen', '127.0.0.1:0'], {
+  runtime = spawn(resolve(binary), ['--browser-mode', 'headless', '--listen', '127.0.0.1:0'], {
     cwd: cache,
     env: {
       ...process.env,

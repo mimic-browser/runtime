@@ -20,17 +20,20 @@ type protocolCoverage struct {
 }
 
 type protocolSupport struct {
-	Status string   `json:"status"`
-	Notes  string   `json:"notes"`
-	Tests  []string `json:"tests"`
+	Status              string   `json:"status"`
+	Notes               string   `json:"notes"`
+	Tests               []string `json:"tests"`
+	Experimental        bool     `json:"experimental,omitempty"`
+	wireSchemaGenerated bool
 }
 
 // Ordinary commands only need wire descriptors. Load support lazily from the
 // generated projection of protocol_support.json, without a second claim list.
 var protocolSupportByName = sync.OnceValue(func() map[string]protocolSupport {
 	type entry struct {
-		Name    string          `json:"name"`
-		Support protocolSupport `json:"support"`
+		Name                string          `json:"name"`
+		Support             protocolSupport `json:"support"`
+		WireSchemaGenerated bool            `json:"wireSchemaGenerated"`
 	}
 	var inventory struct {
 		Entries    []entry `json:"entries"`
@@ -41,9 +44,11 @@ var protocolSupportByName = sync.OnceValue(func() map[string]protocolSupport {
 	}
 	result := make(map[string]protocolSupport, len(inventory.Entries))
 	for _, row := range inventory.Entries {
+		row.Support.wireSchemaGenerated = row.WireSchemaGenerated
 		result[row.Name] = row.Support
 	}
 	for _, row := range inventory.Extensions {
+		row.Support.wireSchemaGenerated = row.WireSchemaGenerated
 		result[row.Name] = row.Support
 	}
 	return result
@@ -59,7 +64,6 @@ func protocolExtensionMatrix() []protocolCoverage {
 	rows := protocolMatrix(names, nil)
 	for i := range rows {
 		rows[i].Kind = "extension"
-		rows[i].WireSchemaGenerated = false
 	}
 	return rows
 }
@@ -74,7 +78,7 @@ func protocolMatrix(methods, events map[string]struct{}) []protocolCoverage {
 		}
 		implemented := support.Status == "implemented"
 		out = append(out, protocolCoverage{
-			Name: name, Kind: kind, SurfaceRegistered: ok, WireSchemaGenerated: ok,
+			Name: name, Kind: kind, SurfaceRegistered: ok, WireSchemaGenerated: support.wireSchemaGenerated,
 			Status: support.Status, Notes: support.Notes, Tests: append([]string(nil), support.Tests...),
 			// Legacy booleans stay conservative: partial is false. Evidence describes
 			// specific regressions, never exhaustive Chrome parity.

@@ -12,7 +12,14 @@ func (s *session) runtimeDebugger() *browser.Debugger {
 	if s.debugger == nil {
 		s.debugger = browser.NewDebugger(s.page)
 		s.debugger.ConsoleEnabled = func() bool { return s.domainEnabled("Runtime") }
-		s.debugger.BeforeWait = func() { s.page.UnlockCommands(); s.commandMu.Unlock() }
+		s.debugger.BeforeWait = func() {
+			// Awaiting a Promise yields this command's turn. The next queued
+			// Runtime call may be the resolver, on the very same session.
+			s.activeOrder.release()
+			s.activeOrder = nil
+			s.page.UnlockCommands()
+			s.commandMu.Unlock()
+		}
 		s.debugger.AfterWait = func() { s.commandMu.Lock(); s.page.LockExternalCommand() }
 		s.debugger.Console = func(realmID, name string, args []any) {
 			contextID, ok := s.contextForRealm(realmID)

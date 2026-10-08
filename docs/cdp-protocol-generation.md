@@ -134,10 +134,10 @@ the resulting schema and observation differences before accepting a refresh.
 The canonical extension contract lives in the SDK repository at
 `schema/mimic/protocol.json`. The runtime consumes the exact reviewed bytes in
 `internal/cdp/protocol/mimic.json` and verifies their SHA-256 against
-`mimic.source.json` during ordinary offline generation. The current local
-snapshot is explicitly marked unreleased; its content hash is the pin until an
-SDK source revision is published. No generation step fetches a repository or
-chooses a runtime API compatibility mode.
+`mimic.source.json` during ordinary offline generation. Its immutable SDK
+commit identifies the canonical source, and its content hash pins the exact
+snapshot bytes. No generation step fetches a repository or chooses a runtime
+API compatibility mode.
 
 Mimic extensions have their own parameter/result projections in the generated
 inventory. They never change the frozen Chrome counts or source bytes.

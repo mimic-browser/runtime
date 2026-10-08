@@ -113,17 +113,38 @@ cached asset metadata after replacement as well.
 
 ## Publish the website
 
-Updating the separate `moreveal/mimic-overview` website is a required part of
+Updating the separate `mimic-browser/website` repository is a required part of
 every release. After publishing the GitHub Release:
 
-1. Update every displayed version and version-specific download link in the
-   website repository.
-2. Copy the release's `RELEASE_NOTES.md` to the website repository unchanged.
-   The website changelog and the GitHub Release body must have exactly the same
-   source text; do not maintain a shortened or rewritten website variant.
+1. Run `npm run release:sync -- --version VERSION` in the website repository,
+   replacing `VERSION` with the exact published tag. The command verifies the
+   release manifest and checksums before atomically updating
+   `public/release-cache.json`.
+2. The shared release snapshot supplies the current version, download links,
+   documentation links and release body. Do not edit those projections separately
+   or rewrite the release notes for the website.
 3. Run `npm run build` and `npm run test:links` in `mimic-overview`.
 4. Commit and push `main`, then verify that the GitHub Pages deployment succeeds
    and that the live changelog shows the new release.
 
 A release is not complete until both the GitHub Release and the public website
 are published and verified.
+
+## SDK compatibility evidence
+
+`.github/workflows/qualify-sdk.yml` listens for a published runtime release. It
+verifies the public manifest, checksum list, Linux archive and archived executable
+before requesting `runtime-released` qualification in `mimic-browser/sdk`. This
+only refreshes compatibility evidence; SDK versions, default pins and package
+publication remain independent explicit decisions.
+
+Configure the runtime repository's `SDK_QUALIFICATION_TOKEN` with a GitHub App
+installation token or fine-grained token that has Contents write permission only
+on `mimic-browser/sdk`, as required by GitHub's repository dispatch API. The SDK
+listener must exist on its default branch. Without this secret the workflow
+retains a verified `not-configured` receipt and emits a warning; automation is
+not active until repository setup is complete. A manual dispatch with an exact
+published tag can retry qualification without replacing any release.
+
+The helper is read-only unless `--execute` is explicitly supplied in official
+runtime CI.

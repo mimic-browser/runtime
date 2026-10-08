@@ -231,9 +231,14 @@ func (p *Page) fetchNavigationResponse(ctx context.Context, u *url.URL, loaderID
 	}
 	var commitOnce sync.Once
 	finishCommit := func(err error) {
-		if committed != nil {
-			commitOnce.Do(func() { committed(err) })
-		}
+		commitOnce.Do(func() {
+			if err != nil {
+				p.endFrameLoading(p.Top, loaderID)
+			}
+			if committed != nil {
+				committed(err)
+			}
+		})
 	}
 	if committed != nil {
 		// stopLoading, replacement and teardown must release a pending reply
@@ -252,6 +257,9 @@ func (p *Page) fetchNavigationResponse(ctx context.Context, u *url.URL, loaderID
 		cancel()
 		return errors.New("page has no realm for navigation")
 	}
+	// Publish loading only after stopLoading can cancel its ownership handle,
+	// but before the resource request starts.
+	p.beginFrameLoading(p.Top, loaderID)
 	owner.resourceWG.Add(1)
 	go func() {
 		defer owner.resourceWG.Done()
@@ -283,6 +291,7 @@ func (p *Page) fetchNavigationResponse(ctx context.Context, u *url.URL, loaderID
 			}
 			if err == nil {
 				if p.captureDownload(response) {
+					p.endFrameLoading(p.Top, loaderID)
 					finishCommit(nil)
 					return nil
 				}

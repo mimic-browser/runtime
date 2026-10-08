@@ -171,18 +171,21 @@ func (c *connection) detach(ss *session, notify bool) {
 	}
 	delete(c.sessions, ss.id)
 	c.mu.Unlock()
+	for _, child := range c.snapshot() {
+		if child.parent == ss {
+			// Clients retain nested targets independently of their parent. Deliver
+			// each child's detach while the parent session still exists remotely;
+			// otherwise a tab close leaves a stale Page in the client's catalog.
+			c.detach(child, notify)
+		}
+	}
 	ss.cancel()
 	ss.interceptor.Close()
 	c.server.refreshCertificatePolicies()
-	// Cancellation precedes waiting for a running browser turn.
+	// Cancellation precedes waiting for this session's running browser turn.
 	ss.commandMu.Lock()
 	ss.unbindPage()
 	ss.commandMu.Unlock()
-	for _, child := range c.snapshot() {
-		if child.parent == ss {
-			c.detach(child, false)
-		}
-	}
 	if notify && ss.parent != nil {
 		ss.parent.event("Target.detachedFromTarget", map[string]any{"sessionId": ss.id, "targetId": ss.targetID})
 	}
@@ -327,7 +330,11 @@ func (s *session) handleTarget(m message, p map[string]any) (any, bool, error) {
 		return map[string]any{"browserContextIds": ids}, true, nil
 	case "Target.createBrowserContext":
 		for _, key := range []string{"proxyServer", "proxyBypassList", "originsWithUniversalNetworkAccess"} {
-			if _, ok := p[key]; ok {
+			if value, ok := p[key]; ok {
+				// Explicitly empty bypass rules have the same meaning as omission.
+				if text, isString := value.(string); key == "proxyBypassList" && isString && text == "" {
+					continue
+				}
 				return nil, true, fmt.Errorf("%s is not supported", key)
 			}
 		}

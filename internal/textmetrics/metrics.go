@@ -160,6 +160,24 @@ func (e *Engine) SetGenericFamily(generic, family string) {
 	e.clearResourceSelections()
 }
 
+// DefaultGenericFamily is the fallback resource mapping used when an environment
+// does not override a generic family. Inspector initialization compares against
+// this same mapping instead of treating an omitted override as an empty font.
+func DefaultGenericFamily(generic string) string {
+	switch generic {
+	case "serif":
+		return "times new roman"
+	case "sans-serif":
+		return "arial"
+	case "monospace":
+		return "consolas"
+	case "system-ui":
+		return "segoe ui"
+	default:
+		return generic
+	}
+}
+
 // SetFallbackFamilies selects an ordered resource policy for this engine.
 func (e *Engine) SetFallbackFamilies(families []string) {
 	e.fallbackFamilies = append([]string(nil), families...)
@@ -340,16 +358,7 @@ func (e *Engine) selectResource(families string, weight float64, italic bool, ch
 				configuredGeneric = true
 				name = family
 			} else {
-				switch name {
-				case "serif":
-					name = "times new roman"
-				case "sans-serif":
-					name = "arial"
-				case "monospace":
-					name = "consolas"
-				case "system-ui":
-					name = "segoe ui"
-				}
+				name = DefaultGenericFamily(name)
 			}
 		}
 		candidates := []string{name}

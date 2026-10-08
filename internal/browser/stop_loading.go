@@ -37,6 +37,9 @@ func (p *Page) StopLoading() {
 			r.loadCallback = nil
 			r.SetReadyState("complete")
 			for _, child := range r.childFrames {
+				if child.navigationCancel != nil {
+					child.navigationCancel()
+				}
 				stop(child.Realm)
 			}
 		}

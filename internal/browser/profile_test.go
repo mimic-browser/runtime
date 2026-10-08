@@ -6,12 +6,75 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 
 	chrome152 "github.com/moreveal/mimic/chrome/152"
 	v8engine "github.com/moreveal/mimic/internal/engine/v8"
 )
+
+func TestConfigureProfileWaitsForRetainedUploads(t *testing.T) {
+	serialBrowserTest(t)
+	b, err := New(v8engine.Factory{}, chrome152.New())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Close()
+	c := b.NewContext()
+	document := c.Profile()
+	p, err := c.NewPage()
+	if err != nil {
+		t.Fatal(err)
+	}
+	entered, release := make(chan struct{}), make(chan struct{})
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		close(entered)
+		<-release
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer server.Close()
+	released := false
+	defer func() {
+		if !released {
+			close(release)
+		}
+	}()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	accepted, err := p.Evaluate(ctx, fmt.Sprintf(`navigator.sendBeacon(%q, "retained")`, server.URL))
+	if err != nil || accepted != true {
+		t.Fatalf("beacon acceptance: %v, %v", accepted, err)
+	}
+	select {
+	case <-entered:
+	case <-ctx.Done():
+		t.Fatal(ctx.Err())
+	}
+	c.ClosePage(p.ID)
+	before := c.Environment()
+	if _, err = c.ConfigureProfile(document, nil, nil, nil); err == nil {
+		t.Fatal("reconfigured a transport with an active retained upload")
+	}
+	if !reflect.DeepEqual(before, c.Environment()) {
+		t.Fatal("rejected configuration changed the environment")
+	}
+	close(release)
+	released = true
+	for c.activeKeepalives.Load() != 0 {
+		select {
+		case <-ctx.Done():
+			t.Fatal(ctx.Err())
+		case <-time.After(time.Millisecond):
+		}
+	}
+	if _, err = c.ConfigureProfile(document, nil, nil, nil); err != nil {
+		t.Fatalf("idle empty Context cannot be configured: %v", err)
+	}
+	if !c.profileLocked {
+		t.Fatal("managed identity was not locked")
+	}
+}
 
 func TestProfileInheritanceWorkersAndSnapshots(t *testing.T) {
 	serialBrowserTest(t)

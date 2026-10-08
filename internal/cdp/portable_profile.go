@@ -24,6 +24,10 @@ func (s *session) handlePortableProfile(m message) (any, bool, error) {
 		for _, key := range []string{"profile", "proxy", "resourcePolicy", "disposeOnDetach", "media"} {
 			allowed[key] = true
 		}
+	case "Mimic.configureContext":
+		for _, key := range []string{"browserContextId", "profile", "proxy", "resourcePolicy", "media"} {
+			allowed[key] = true
+		}
 	default:
 		return nil, false, nil
 	}
@@ -76,7 +80,7 @@ func (s *session) handlePortableProfile(m message) (any, bool, error) {
 		} else {
 			resolved, descriptor, err = profile.Restore(encoded, base)
 		}
-	case "Mimic.createContext":
+	case "Mimic.createContext", "Mimic.configureContext":
 		value, exists := params["profile"]
 		if !exists {
 			value = map[string]any{"generate": map[string]any{}}
@@ -108,7 +112,7 @@ func (s *session) handlePortableProfile(m message) (any, bool, error) {
 		}
 	}
 	result := map[string]any{"profile": token, "profileId": descriptor.ProfileID, "mode": descriptor.Mode, "warnings": profile.Warnings(descriptor.Mode)}
-	if m.Method != "Mimic.createContext" {
+	if m.Method != "Mimic.createContext" && m.Method != "Mimic.configureContext" {
 		return result, true, nil
 	}
 	var proxyJSON []byte
@@ -137,6 +141,38 @@ func (s *session) handlePortableProfile(m message) (any, bool, error) {
 		if !ok {
 			return bad("disposeOnDetach", "expected boolean")
 		}
+	}
+	if m.Method == "Mimic.configureContext" {
+		id, ok := params["browserContextId"].(string)
+		if !ok || id == "" {
+			return bad("browserContextId", "required nonempty Context ID")
+		}
+		var mediaJSON []byte
+		if value, exists := params["media"]; exists {
+			media, ok := value.(map[string]any)
+			if !ok {
+				return bad("media", "expected media configuration object")
+			}
+			if _, exists := media["seed"]; !exists && descriptor.Seed != "" {
+				media["seed"] = descriptor.Seed
+			}
+			mediaJSON, _ = json.Marshal(media)
+		}
+		for _, c := range s.server.Browser.Contexts() {
+			if c.ID != id {
+				continue
+			}
+			media, err := c.ConfigureProfile(resolved, proxyJSON, policy, mediaJSON)
+			if err != nil {
+				return nil, true, err
+			}
+			result["browserContextId"] = id
+			if media != nil {
+				result["media"] = media
+			}
+			return result, true, nil
+		}
+		return bad("browserContextId", "context not found")
 	}
 	c, err := s.server.Browser.NewResolvedProfileContext(resolved, proxyJSON, policy)
 	if err != nil {

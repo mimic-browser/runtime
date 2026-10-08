@@ -124,7 +124,11 @@ func (s *session) handleEmulation(method string, p map[string]any) (any, bool, e
 						scheme = s.page.BaseEnvironment().Preferences.ColorScheme
 					}
 				case "prefers-reduced-motion":
-					v := stringValue(f["value"]) == "reduce"
+					value := stringValue(f["value"])
+					v := base.ReducedMotion
+					if value != "" {
+						v = value == "reduce"
+					}
 					reduced = &v
 				case "forced-colors", "prefers-contrast":
 				default:

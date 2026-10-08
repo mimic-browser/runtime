@@ -80,23 +80,26 @@
   },
   "Browser.getWindowBounds": {
     "status": "partial",
-    "notes": "Canonical bounds for Mimic's single modeled browser window. Multiple native windows, minimized/maximized/fullscreen transitions and display placement are unsupported.",
+    "notes": "Resolves stable window IDs to canonical Page bounds within the owning BrowserContext. One modeled window per Context; new Pages begin with that Context's profile bounds. Multiple windows within a Context, minimized/maximized/fullscreen transitions and display placement are unsupported.",
     "tests": [
-      "internal/cdp/automation_commands_test.go#TestBrowserWindowCommandsShareCanonicalBounds"
+      "internal/cdp/automation_commands_test.go#TestBrowserWindowCommandsShareCanonicalBounds",
+      "internal/cdp/browser_window_isolation_test.go#TestBrowserWindowBoundsStayWithinOwningContext"
     ]
   },
   "Browser.getWindowForTarget": {
     "status": "partial",
-    "notes": "Resolves page and tab targets to Mimic's single modeled browser window and returns its canonical bounds. Multiple native windows are unsupported.",
+    "notes": "Resolves page and tab targets to a stable modeled window per BrowserContext. Default and isolated Contexts never share window IDs. Multiple windows within a Context are unsupported.",
     "tests": [
-      "internal/cdp/automation_commands_test.go#TestBrowserWindowCommandsShareCanonicalBounds"
+      "internal/cdp/automation_commands_test.go#TestBrowserWindowCommandsShareCanonicalBounds",
+      "internal/cdp/browser_window_isolation_test.go#TestBrowserWindowBoundsStayWithinOwningContext"
     ]
   },
   "Browser.setWindowBounds": {
     "status": "partial",
-    "notes": "Updates canonical position and outer dimensions across pages in Mimic's single modeled browser window. Non-normal window states and multiple native windows are unsupported.",
+    "notes": "Updates position and outer dimensions only on existing Pages in the selected window's BrowserContext, preserving independent and managed Contexts. New Pages begin with the Context's profile bounds. Non-normal states and multiple windows within one Context are unsupported.",
     "tests": [
-      "internal/cdp/automation_commands_test.go#TestBrowserWindowCommandsShareCanonicalBounds"
+      "internal/cdp/automation_commands_test.go#TestBrowserWindowCommandsShareCanonicalBounds",
+      "internal/cdp/browser_window_isolation_test.go#TestBrowserWindowBoundsStayWithinOwningContext"
     ]
   },
   "Browser.setDownloadBehavior": {
@@ -126,6 +129,13 @@
     "notes": "Subscription state; includeWhitespace and complete incremental mutation tracking are not implemented.",
     "tests": [
       "internal/cdp/dom_query_test.go#TestDOMQueriesShareRealmSelectorEngine"
+    ]
+  },
+  "DOM.documentUpdated": {
+    "status": "partial",
+    "notes": "DOM-enabled sessions receive the inspected top document invalidation after canonical DOMContentLoaded; child-frame parsing does not invalidate the entire frontend tree. A refreshed getDocument projects the new canonical tree. Full frontend node remapping (document-local IDs may be reused), BFCache restoration and zero-document transitions are not modeled.",
+    "tests": [
+      "internal/cdp/document_projection_test.go#TestDocumentUpdatedAndFrameSecurityProjection"
     ]
   },
   "DOM.focus": {
@@ -184,16 +194,18 @@
   },
   "DOM.querySelector": {
     "status": "partial",
-    "notes": "Uses canonical page JavaScript selector engine; selector completeness follows that engine.",
+    "notes": "Uses canonical page JavaScript selector engine and publishes matched ancestor paths before returning IDs to shallow frontend trees. Selector completeness follows that engine; full frontend node bookkeeping remains incomplete.",
     "tests": [
-      "internal/cdp/dom_query_test.go#TestDOMQueriesShareRealmSelectorEngine"
+      "internal/cdp/dom_query_test.go#TestDOMQueriesShareRealmSelectorEngine",
+      "internal/cdp/dom_query_projection_test.go#TestDOMQueriesPublishAncestorPathBeforeReply"
     ]
   },
   "DOM.querySelectorAll": {
     "status": "partial",
-    "notes": "Uses canonical page JavaScript selector engine; selector completeness follows that engine.",
+    "notes": "Uses canonical page JavaScript selector engine and publishes matched ancestor paths before returning IDs to shallow frontend trees. Selector completeness follows that engine; full frontend node bookkeeping remains incomplete.",
     "tests": [
-      "internal/cdp/dom_query_test.go#TestDOMQueriesShareRealmSelectorEngine"
+      "internal/cdp/dom_query_test.go#TestDOMQueriesShareRealmSelectorEngine",
+      "internal/cdp/dom_query_projection_test.go#TestDOMQueriesPublishAncestorPathBeforeReply"
     ]
   },
   "DOM.removeAttribute": {
@@ -279,9 +291,10 @@
   },
   "Emulation.setEmulatedMedia": {
     "status": "partial",
-    "notes": "Screen media and canonical prefers-color-scheme/reduced-motion. forced-colors and prefers-contrast are accepted without applying an override; other media/features reject. Complete dynamic cascade/query-change events are not verified.",
+    "notes": "Screen media and canonical prefers-color-scheme/reduced-motion. forced-colors and prefers-contrast are accepted without applying an override; other media/features reject. Complete dynamic cascade/query-change events are not verified. Generated/imported profile Contexts accept a proven no-op assignment but reject identity-changing emulation.",
     "tests": [
-      "internal/browser/page_test.go#TestMatchMediaDerivesFromCanonicalPreferences"
+      "internal/browser/page_test.go#TestMatchMediaDerivesFromCanonicalPreferences",
+      "internal/cdp/configure_context_test.go#TestConfigureEmptyFrameworkContext"
     ]
   },
   "Emulation.setFocusEmulationEnabled": {
@@ -561,8 +574,9 @@
   },
   "Network.responseReceived": {
     "status": "partial",
-    "notes": "Canonical request/response/failure, frame/loader identity and transport protocol. Initiator stacks, redirect-ID reuse, extra-info and complete timing/security/error details are incomplete.",
+    "notes": "Canonical request/response/failure, frame/loader identity and transport protocol. Canonical transport connection identity projects to stable server-scoped numeric connectionId values required by the pinned wire schema. Initiator stacks, redirect-ID reuse, extra-info and complete timing/security/error details are incomplete. Numeric connection IDs project the transport connection identity; historical IDs remain allocated for the CDP server lifetime.",
     "tests": [
+      "internal/cdp/network_identity_test.go#TestNetworkConnectionNumericIdentity",
       "internal/cdp/server_test.go#TestCDPProtocolProjectsActualTransportProtocol",
       "internal/cdp/server_test.go#TestCDPProjectsChildFrameTreeLifecycleAndExecutionContext",
       "compatibility/cdp_automation.py#network.response_body_extra_headers"
@@ -684,16 +698,40 @@
   },
   "Page.frameNavigated": {
     "status": "partial",
-    "notes": "Canonical frame attach/commit/removal; OOPIF and every transient/error-frame state are not modeled.",
+    "notes": "Canonical frame attach/commit/removal including secure-context, isolation and gated-feature projections from the realm security owner. OOPIF and every transient/error-frame state are not modeled.",
     "tests": [
+      "internal/cdp/document_projection_test.go#TestDocumentUpdatedAndFrameSecurityProjection",
       "internal/cdp/server_test.go#TestCDPProjectsChildFrameTreeLifecycleAndExecutionContext",
       "compatibility/cdp_automation.py#page.child_frame_events_evaluation"
     ]
   },
+  "Page.frameStartedLoading": {
+    "status": "partial",
+    "notes": "Session-gated projection of canonical frame navigation loading intervals, beginning before main/child resource fetch or blank-document commit. OOPIF, prerender and every UI-driven transient frame state remain outside the modeled scope.",
+    "tests": [
+      "internal/cdp/frame_loading_test.go#TestFrameLoadingEventsFollowCanonicalNavigation",
+      "internal/cdp/frame_loading_test.go#TestFrameStoppedLoadingOnExplicitStopWithoutSyntheticLoad",
+      "internal/cdp/frame_loading_test.go#TestFailedNavigationStopsFrameLoading",
+      "docs/compatibility/cdp-automation-20260912/final.json#eventGating"
+    ]
+  },
+  "Page.frameStoppedLoading": {
+    "status": "partial",
+    "notes": "Canonical frame loading completion after document load, cancellation or navigation failure; loader ownership prevents a replaced navigation from stopping its successor. Explicit stop does not fabricate DOMContentLoaded/load. OOPIF, prerender and every UI-driven transient frame state remain outside the modeled scope.",
+    "tests": [
+      "internal/cdp/frame_loading_test.go#TestFrameLoadingEventsFollowCanonicalNavigation",
+      "internal/cdp/frame_loading_test.go#TestFrameStoppedLoadingOnExplicitStopWithoutSyntheticLoad",
+      "internal/cdp/frame_loading_test.go#TestFailedNavigationStopsFrameLoading",
+      "docs/compatibility/cdp-automation-20260912/final.json#eventGating"
+    ]
+  },
   "Page.getFrameTree": {
     "status": "partial",
-    "notes": "Canonical top/child frame hierarchy and loader/realm identity; no OOPIF target graph.",
+    "notes": "Canonical top/child frame hierarchy, loader/realm identity and required secureContextType/crossOriginIsolatedContextType/gatedAPIFeatures fields from the same realm security state as JavaScript. No OOPIF target graph; security policy limitations follow the canonical realm implementation.",
     "tests": [
+      "internal/cdp/command_order_test.go#TestPipelinedPageCommandsPreserveFrameContextOrder",
+      "internal/cdp/command_order_test.go#TestQueuedPageCommandsDoNotBlockIndependentSessions",
+      "internal/cdp/document_projection_test.go#TestDocumentUpdatedAndFrameSecurityProjection",
       "internal/cdp/server_test.go#TestCDPProjectsChildFrameTreeLifecycleAndExecutionContext",
       "compatibility/cdp_automation.py#page.child_frame_events_evaluation"
     ]
@@ -786,9 +824,10 @@
   },
   "Page.setFontFamilies": {
     "status": "partial",
-    "notes": "Updates the Page generic font defaults used by the modeled environment; per-script family overrides and complete font selection behavior are not implemented.",
+    "notes": "Updates the Page generic font defaults used by the modeled environment; per-script family overrides and complete font selection behavior are not implemented. Generated/imported profile Contexts accept a proven no-op assignment but reject identity-changing emulation.",
     "tests": [
-      "internal/cdp/page_font_families_test.go#TestPageSetFontFamiliesUpdatesGenericDefaults"
+      "internal/cdp/page_font_families_test.go#TestPageSetFontFamiliesUpdatesGenericDefaults",
+      "internal/cdp/configure_context_test.go#TestConfigureEmptyFrameworkContext"
     ]
   },
   "Page.setLifecycleEventsEnabled": {
@@ -886,8 +925,10 @@
   },
   "Runtime.enable": {
     "status": "partial",
-    "notes": "Live context/event subscription across default/isolated worlds; no historical console replay.",
+    "notes": "Live context/event subscription across default/isolated worlds. Page-session initial command turns preserve arrival order; asynchronous commit/Promise waits yield rather than blocking later commands or independent sessions. No historical console replay.",
     "tests": [
+      "internal/cdp/command_order_test.go#TestPipelinedPageCommandsPreserveFrameContextOrder",
+      "internal/cdp/command_order_test.go#TestQueuedPageCommandsDoNotBlockIndependentSessions",
       "internal/cdp/server_test.go#TestCDPProjectsChildFrameTreeLifecycleAndExecutionContext",
       "compatibility/cdp_automation.py#page.child_frame_events_evaluation"
     ]
@@ -1054,18 +1095,20 @@
   },
   "Target.closeTarget": {
     "status": "implemented",
-    "notes": "Closes a live target and cancels its tasks including synchronous JavaScript.",
+    "notes": "Closes a live target and cancels its tasks including synchronous JavaScript. Nested sessions emit leaf-before-parent detach notifications so clients release closed child Pages.",
     "tests": [
       "internal/cdp/snapshot_boundary_test.go#TestCloseTargetCancelsBusyPumpBeforeLock",
-      "internal/cdp/snapshot_boundary_test.go#TestCloseTargetCancelsUnboundedParserScript"
+      "internal/cdp/snapshot_boundary_test.go#TestCloseTargetCancelsUnboundedParserScript",
+      "internal/cdp/target_detach_order_test.go#TestDetachNotifiesNestedSessionsBeforeParent"
     ]
   },
   "Target.createBrowserContext": {
     "status": "partial",
-    "notes": "Independent storage/cookies/Pages and disposeOnDetach. Proxy settings and universal-network-access origins reject.",
+    "notes": "Independent storage/cookies/Pages and disposeOnDetach. Proxy settings and universal-network-access origins reject. An empty proxyBypassList without proxyServer is accepted as a no-op, matching framework Context construction.",
     "tests": [
       "internal/cdp/transport_test.go#TestBrowserContextsOwnPagesAndAreDisposed",
-      "compatibility/cdp_automation.py#target.browser_context_storage_isolation"
+      "compatibility/cdp_automation.py#target.browser_context_storage_isolation",
+      "internal/cdp/configure_context_test.go#TestBrowserContextEmptyProxyBypass"
     ]
   },
   "Target.createTarget": {
@@ -1087,10 +1130,11 @@
   },
   "Target.detachedFromTarget": {
     "status": "partial",
-    "notes": "Flattened/nested transport lifecycle and messages with independent IDs; no worker/OOPIF graph.",
+    "notes": "Flattened/nested transport lifecycle and messages with independent IDs; no worker/OOPIF graph. Nested sessions emit leaf-before-parent detach notifications so clients release closed child Pages.",
     "tests": [
       "internal/cdp/transport_test.go#TestFlattenedSessionsKeepIndependentPagesAndDuplicateCommandIDs",
-      "internal/cdp/server_test.go#TestPyppeteerBrowserAndSessionHandshake"
+      "internal/cdp/server_test.go#TestPyppeteerBrowserAndSessionHandshake",
+      "internal/cdp/target_detach_order_test.go#TestDetachNotifiesNestedSessionsBeforeParent"
     ]
   },
   "Target.disposeBrowserContext": {
@@ -1237,10 +1281,198 @@
   },
   "Mimic.getCompatibilityMatrix": {
     "status": "partial",
-    "notes": "Returns the complete pinned Chrome wire inventory and separately declared Mimic automation extensions from the authoritative support registry. Generated shapes and partial scopes are never promoted to Chrome implementation or verified parity. Older unrelated Mimic extensions without registry entries are not inventoried.",
+    "notes": "Returns the complete pinned Chrome wire inventory and separately pinned SDK-owned Mimic extension shapes with authoritative semantic support declarations. Generated shapes and partial scopes never imply Chrome parity or complete semantic implementation.",
     "tests": [
       "internal/cdp/coverage_test.go#TestProtocolCoverageUsesCompleteGeneratedInventory",
       "internal/cdp/coverage_test.go#TestProtocolSupportManifestHasLiveEvidenceAndNoLostHandlers"
+    ]
+  },
+  "CSS.enable": {
+    "status": "partial",
+    "notes": "Session-owned read-only CSS activation, requiring DOM.enable as in frozen Chrome 152. Enables canonical computed-style reads. Stylesheet inventory, font/stylesheet notifications, rule editing and matched-rule inspection are not implemented.",
+    "tests": [
+      "internal/cdp/css_test.go#TestCSSReadOnlyDomainUsesCanonicalStyle"
+    ]
+  },
+  "CSS.disable": {
+    "status": "partial",
+    "notes": "Idempotently disables the session-owned read-only CSS domain and rejects subsequent computed-style reads. No stylesheet or font observer is installed; their notifications remain unsupported.",
+    "tests": [
+      "internal/cdp/css_test.go#TestCSSReadOnlyDomainUsesCanonicalStyle"
+    ]
+  },
+  "CSS.getComputedStyleForNode": {
+    "status": "partial",
+    "notes": "Reads modeled standard properties and inherited custom properties through the canonical document-owner CSSOM, with CSS enable prerequisite, live mutation visibility and no author getter invocation. Existing CSSOM value boundaries apply; exact Blink property inventory/order and unsupported styling remain unverified.",
+    "tests": [
+      "internal/cdp/css_test.go#TestCSSReadOnlyDomainUsesCanonicalStyle"
+    ]
+  },
+  "Mimic.configureContext": {
+    "status": "partial",
+    "notes": "Atomically configures an existing empty framework-owned Context before Pages are created, preserving the real client Context object. Rejects live/initializing/closing Pages, retained uploads and capture workers; profile/proxy/resource/media validation failures leave the Context unchanged.",
+    "tests": [
+      "internal/cdp/configure_context_test.go#TestConfigureEmptyFrameworkContext",
+      "internal/browser/profile_test.go#TestConfigureProfileWaitsForRetainedUploads"
+    ]
+  },
+  "Mimic.cancelExecution": {
+    "status": "partial",
+    "notes": "Session command; current runtime behavior only. Exact lifecycle and diagnostic payload coverage is incomplete.",
+    "tests": []
+  },
+  "Mimic.captureSnapshot": {
+    "status": "partial",
+    "notes": "Static portable DOM/assets snapshot with base64 file bodies and capture timings. Snapshot errors and supported resource limitations remain visible; no rendering backend is implied.",
+    "tests": [
+      "internal/cdp/snapshot_test.go#TestCaptureSnapshotCDP",
+      "internal/cdp/snapshot_boundary_test.go#TestSnapshotInterruptReservesTaskBoundary"
+    ]
+  },
+  "Mimic.clearTrace": {
+    "status": "partial",
+    "notes": "Session command; current runtime behavior only. Exact lifecycle and diagnostic payload coverage is incomplete.",
+    "tests": []
+  },
+  "Mimic.exportProfile": {
+    "status": "partial",
+    "notes": "Current portable profile and runtime identity contract. Generation is limited to the installed Chrome 152 Windows behavior bundle; coherence and recipe validation remain authoritative.",
+    "tests": [
+      "internal/cdp/portable_profile_test.go#TestPortableProfilesCDP"
+    ]
+  },
+  "Mimic.generateProfile": {
+    "status": "partial",
+    "notes": "Current portable profile and runtime identity contract. Generation is limited to the installed Chrome 152 Windows behavior bundle; coherence and recipe validation remain authoritative.",
+    "tests": [
+      "internal/cdp/portable_profile_test.go#TestPortableProfilesCDP"
+    ]
+  },
+  "Mimic.getDiagnostics": {
+    "status": "partial",
+    "notes": "Session command; current runtime behavior only. Exact lifecycle and diagnostic payload coverage is incomplete.",
+    "tests": []
+  },
+  "Mimic.getProfile": {
+    "status": "partial",
+    "notes": "Canonical Context/Page environment profile projection and ordinary Page overrides. Generated/imported profile invariants and explicit mutability boundaries are enforced; no arbitrary profile override mechanism.",
+    "tests": [
+      "internal/cdp/profile_test.go#TestMimicProfileContextsAndAtomicUpdates"
+    ]
+  },
+  "Mimic.getProfileSchema": {
+    "status": "partial",
+    "notes": "Canonical Context/Page environment profile projection and ordinary Page overrides. Generated/imported profile invariants and explicit mutability boundaries are enforced; no arbitrary profile override mechanism.",
+    "tests": [
+      "internal/cdp/profile_test.go#TestMimicProfileContextsAndAtomicUpdates"
+    ]
+  },
+  "Mimic.getResourcePolicy": {
+    "status": "partial",
+    "notes": "Context-owned resource policy command. First-match rules, supported presets and budget statistics share the loader state. Nonzero wire-byte budgets and unmodeled loader work remain unsupported.",
+    "tests": [
+      "internal/cdp/resource_policy_test.go#TestMimicResourcePolicyCommands"
+    ]
+  },
+  "Mimic.getResourcePolicySchema": {
+    "status": "partial",
+    "notes": "Context-owned resource policy command. First-match rules, supported presets and budget statistics share the loader state. Nonzero wire-byte budgets and unmodeled loader work remain unsupported.",
+    "tests": [
+      "internal/cdp/resource_policy_test.go#TestMimicResourcePolicyCommands"
+    ]
+  },
+  "Mimic.getResourcePolicyStats": {
+    "status": "partial",
+    "notes": "Context-owned resource policy command. First-match rules, supported presets and budget statistics share the loader state. Nonzero wire-byte budgets and unmodeled loader work remain unsupported.",
+    "tests": [
+      "internal/cdp/resource_policy_test.go#TestMimicResourcePolicyCommands"
+    ]
+  },
+  "Mimic.getStatus": {
+    "status": "partial",
+    "notes": "Session Page trace/status observation; trace collection starts only after explicit activation. Payloads expose recorded runtime events and current execution state, not a full Chrome tracing engine.",
+    "tests": [
+      "internal/cdp/trace_control_test.go#TestTraceCaptureRequiresExplicitStart"
+    ]
+  },
+  "Mimic.getTrace": {
+    "status": "partial",
+    "notes": "Session Page trace/status observation; trace collection starts only after explicit activation. Payloads expose recorded runtime events and current execution state, not a full Chrome tracing engine.",
+    "tests": [
+      "internal/cdp/trace_control_test.go#TestTraceCaptureRequiresExplicitStart"
+    ]
+  },
+  "Mimic.getVersion": {
+    "status": "partial",
+    "notes": "Current portable profile and runtime identity contract. Generation is limited to the installed Chrome 152 Windows behavior bundle; coherence and recipe validation remain authoritative.",
+    "tests": [
+      "internal/cdp/portable_profile_test.go#TestPortableProfilesCDP"
+    ]
+  },
+  "Mimic.importProfile": {
+    "status": "partial",
+    "notes": "Current portable profile and runtime identity contract. Generation is limited to the installed Chrome 152 Windows behavior bundle; coherence and recipe validation remain authoritative.",
+    "tests": [
+      "internal/cdp/portable_profile_test.go#TestPortableProfilesCDP"
+    ]
+  },
+  "Mimic.pause": {
+    "status": "partial",
+    "notes": "Session command; current runtime behavior only. Exact lifecycle and diagnostic payload coverage is incomplete.",
+    "tests": []
+  },
+  "Mimic.resetProfileOverrides": {
+    "status": "partial",
+    "notes": "Canonical Context/Page environment profile projection and ordinary Page overrides. Generated/imported profile invariants and explicit mutability boundaries are enforced; no arbitrary profile override mechanism.",
+    "tests": [
+      "internal/cdp/profile_test.go#TestMimicProfileContextsAndAtomicUpdates"
+    ]
+  },
+  "Mimic.resume": {
+    "status": "partial",
+    "notes": "Session command; current runtime behavior only. Exact lifecycle and diagnostic payload coverage is incomplete.",
+    "tests": []
+  },
+  "Mimic.setViewport": {
+    "status": "partial",
+    "notes": "Updates ordinary Page viewport through canonical environment validation. Generated/imported profile Contexts reject identity-changing overrides.",
+    "tests": [
+      "internal/cdp/portable_profile_test.go#TestPortableProfilesCDP"
+    ]
+  },
+  "Mimic.startTrace": {
+    "status": "partial",
+    "notes": "Session Page trace/status observation; trace collection starts only after explicit activation. Payloads expose recorded runtime events and current execution state, not a full Chrome tracing engine.",
+    "tests": [
+      "internal/cdp/trace_control_test.go#TestTraceCaptureRequiresExplicitStart"
+    ]
+  },
+  "Mimic.stopTrace": {
+    "status": "partial",
+    "notes": "Session Page trace/status observation; trace collection starts only after explicit activation. Payloads expose recorded runtime events and current execution state, not a full Chrome tracing engine.",
+    "tests": [
+      "internal/cdp/trace_control_test.go#TestTraceCaptureRequiresExplicitStart"
+    ]
+  },
+  "Mimic.updateProfile": {
+    "status": "partial",
+    "notes": "Canonical Context/Page environment profile projection and ordinary Page overrides. Generated/imported profile invariants and explicit mutability boundaries are enforced; no arbitrary profile override mechanism.",
+    "tests": [
+      "internal/cdp/profile_test.go#TestMimicProfileContextsAndAtomicUpdates"
+    ]
+  },
+  "Mimic.updateResourcePolicy": {
+    "status": "partial",
+    "notes": "Context-owned resource policy command. First-match rules, supported presets and budget statistics share the loader state. Nonzero wire-byte budgets and unmodeled loader work remain unsupported.",
+    "tests": [
+      "internal/cdp/resource_policy_test.go#TestMimicResourcePolicyCommands"
+    ]
+  },
+  "Mimic.validateResourcePolicy": {
+    "status": "partial",
+    "notes": "Context-owned resource policy command. First-match rules, supported presets and budget statistics share the loader state. Nonzero wire-byte budgets and unmodeled loader work remain unsupported.",
+    "tests": [
+      "internal/cdp/resource_policy_test.go#TestMimicResourcePolicyCommands"
     ]
   }
 }

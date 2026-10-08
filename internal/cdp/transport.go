@@ -140,30 +140,64 @@ func (c *connection) snapshot() []*session {
 	return out
 }
 
+type commandOrder struct {
+	finished chan struct{}
+	once     sync.Once
+}
+
+func (o *commandOrder) release() {
+	if o != nil {
+		o.once.Do(func() { close(o.finished) })
+	}
+}
+
+// Controls must remain callable while application work or interception waits.
+// Target/Browser and custom Context commands have their own explicit ownership
+// boundaries rather than running under the connection's incidental Page.
+func independentControlCommand(method string) bool {
+	switch method {
+	case "Fetch.disable", "Fetch.getResponseBody", "Network.setRequestInterception",
+		"Fetch.continueRequest", "Fetch.continueResponse", "Fetch.failRequest", "Fetch.fulfillRequest",
+		"Network.continueInterceptedRequest", "Mimic.startTrace", "Mimic.stopTrace", "Mimic.getTrace",
+		"Mimic.getStatus", "Mimic.getDiagnostics", "Mimic.cancelExecution", "Page.stopLoading", "Target.closeTarget":
+		return true
+	default:
+		return false
+	}
+}
+
+func orderedPageCommand(method string) bool {
+	if method == "Target.sendMessageToTarget" {
+		// Reserve legacy inner-message arrival order before dispatching them.
+		return true
+	}
+	return !independentControlCommand(method) && !strings.HasPrefix(method, "Target.") &&
+		!strings.HasPrefix(method, "Browser.") && !strings.HasPrefix(method, "Mimic.")
+}
+
 func (c *connection) dispatch(s *session, m message) {
 	if c.profileCommands {
 		m.timing = &commandTiming{queued: time.Now()}
 		s.commandTimings.Store(m.ID, m.timing)
 	}
 	// A mutex inside the worker excludes concurrent execution but does not
-	// preserve arrival order. Reserve input order on the reader before starting
-	// workers: Playwright pipelines move/down/up and key sequences. Other commands
-	// (including cancellation/interception) and other sessions remain independent.
-	// Legacy envelopes must enqueue their inner messages in wire order too.
+	// preserve arrival order. Reserve each Page command on the reader before
+	// starting its worker, including frame/context initialization and input.
+	// Asynchronous navigation and debugger Promise waits explicitly release their
+	// turn; cancellation/interception and other Page sessions remain independent.
 	var previous <-chan struct{}
-	var finished chan struct{}
-	if strings.HasPrefix(m.Method, "Input.") || m.Method == "Target.sendMessageToTarget" {
-		s.inputOrderMu.Lock()
-		previous = s.inputTail
-		finished = make(chan struct{})
-		s.inputTail = finished
-		s.inputOrderMu.Unlock()
+	if orderedPageCommand(m.Method) {
+		s.orderMu.Lock()
+		previous = s.orderTail
+		m.order = &commandOrder{finished: make(chan struct{})}
+		s.orderTail = m.order.finished
+		s.orderMu.Unlock()
 	}
 	c.work.Add(1)
 	go func() {
 		defer c.work.Done()
-		if finished != nil {
-			defer close(finished)
+		if m.order != nil {
+			defer m.order.release()
 			if previous != nil {
 				select {
 				case <-previous:

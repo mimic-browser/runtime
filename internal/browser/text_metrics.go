@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"math"
 	"os"
+	"strings"
 
 	"github.com/moreveal/mimic/internal/engine"
 	"github.com/moreveal/mimic/internal/state"
@@ -93,6 +94,19 @@ func (p *Page) textMetricsEngine() *textmetrics.Engine {
 // can observe or cache text metrics.
 func (p *Page) SetGenericFontFamilies(serif, sansSerif, monospace string) error {
 	if err := p.CheckProfileMutation(); err != nil {
+		current := p.Environment().Fonts
+		equal := func(requested, configured, generic string) bool {
+			if requested == "" {
+				return true
+			}
+			if configured == "" {
+				configured = textmetrics.DefaultGenericFamily(generic)
+			}
+			return strings.EqualFold(requested, configured)
+		}
+		if equal(serif, current.Serif, "serif") && equal(sansSerif, current.SansSerif, "sans-serif") && equal(monospace, current.Monospace, "monospace") {
+			return nil
+		}
 		return err
 	}
 	p.mu.Lock()

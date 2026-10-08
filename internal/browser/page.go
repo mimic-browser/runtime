@@ -445,10 +445,12 @@ func (p *Page) Navigate(ctx context.Context, raw string) error {
 func (p *Page) CancelNavigation() bool {
 	p.mu.Lock()
 	cancel := p.navigationCancel
+	loadingLoaderID := p.Top.loadingLoaderID
 	p.navigationCancel = nil
 	p.mu.Unlock()
 	if cancel != nil {
 		cancel()
+		p.endFrameLoading(p.Top, loadingLoaderID)
 		return true
 	}
 	return false
@@ -498,7 +500,7 @@ func (p *Page) beginNavigationRequest(ctx context.Context, raw, loaderID string,
 	return p.beginNavigationRequestWithCommit(ctx, raw, loaderID, request, historyTarget, asynchronous, nil, replace...)
 }
 
-func (p *Page) beginNavigationRequestWithCommit(ctx context.Context, raw, loaderID string, request network.Request, historyTarget int, asynchronous bool, committed func(error), replace ...bool) error {
+func (p *Page) beginNavigationRequestWithCommit(ctx context.Context, raw, loaderID string, request network.Request, historyTarget int, asynchronous bool, committed func(error), replace ...bool) (resultErr error) {
 	u, err := url.Parse(raw)
 	if err != nil {
 		return err
@@ -508,6 +510,12 @@ func (p *Page) beginNavigationRequestWithCommit(ctx context.Context, raw, loader
 		return fmt.Errorf("unsupported navigation scheme %q", u.Scheme)
 	}
 	p.CancelNavigation()
+	asynchronousFetch := asynchronous && p.directEvaluationDepth == 0 && !blank
+	defer func() {
+		if resultErr != nil {
+			p.endFrameLoading(p.Top, loaderID)
+		}
+	}()
 	performanceOrigin := p.ClockNow()
 	// A controllable CDP process runs against the real wall clock by default.
 	// Network operations may hold the browser state-machine lock while Go's
@@ -522,6 +530,9 @@ func (p *Page) beginNavigationRequestWithCommit(ctx context.Context, raw, loader
 	p.performanceOrigin = performanceOrigin
 	p.loadEventEnded = false
 	p.mu.Unlock()
+	if !asynchronousFetch {
+		p.beginFrameLoading(p.Top, loaderID)
+	}
 	if blank {
 		// about:blank is a document navigation, but has no network request or
 		// response. Commit through the ordinary document/lifecycle pipeline.
@@ -536,7 +547,7 @@ func (p *Page) beginNavigationRequestWithCommit(ctx context.Context, raw, loader
 	if request.Method == "" {
 		request.Method = http.MethodGet
 	}
-	if asynchronous && p.directEvaluationDepth == 0 {
+	if asynchronousFetch {
 		return p.fetchNavigationResponse(ctx, u, loaderID, performanceOrigin, request, historyTarget, committed, replace...)
 	}
 	res, err := p.loader.Load(ctx, request)
@@ -544,6 +555,7 @@ func (p *Page) beginNavigationRequestWithCommit(ctx context.Context, raw, loader
 		return err
 	}
 	if p.captureDownload(res) {
+		p.endFrameLoading(p.Top, loaderID)
 		return nil
 	}
 	return p.commitNavigationResponse(ctx, ctx, u, loaderID, performanceOrigin, res, historyTarget, false, committed, replace...)
@@ -674,6 +686,7 @@ func (p *Page) commitNavigationResponse(ctx, taskContext context.Context, u *url
 		})
 		streamState.cancel = func() { deadlineCancel(); streamCancel() }
 	}
+	context.AfterFunc(streamState.ctx, func() { p.endFrameLoading(p.Top, loaderID) })
 	p.mu.Lock()
 	// CancelNavigation clears the canonical handle before invoking it outside
 	// p.mu. A suspended main response must not overwrite that cleared handle
@@ -907,6 +920,7 @@ func (p *Page) commitNavigationResponse(ctx, taskContext context.Context, u *url
 			// delivers it to observers again when loadEventEnd finalizes duration;
 			// resource-only notifications cannot represent that transition.
 			realm.notifyPerformanceObservers(taskContext)
+			p.endFrameLoading(p.Top, loaderID)
 		})
 		return nil
 	}

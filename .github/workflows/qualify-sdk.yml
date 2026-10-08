@@ -1,0 +1,30 @@
+name: Qualify SDK against published runtime
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version: {description: Exact published runtime tag to requalify, required: true, type: string}
+permissions:
+  contents: read
+jobs:
+  dispatch:
+    if: github.repository == 'mimic-browser/runtime'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: main, persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Verify released artifact and request compatibility evidence
+        env:
+          RELEASE_TAG: ${{ inputs.version || github.event.release.tag_name }}
+          SDK_QUALIFICATION_TOKEN: ${{ secrets.SDK_QUALIFICATION_TOKEN }}
+        run: python tools/release/qualify_sdk.py --version "$RELEASE_TAG" --output .build/sdk-qualification-dispatch.json --execute
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sdk-qualification-dispatch
+          path: .build/sdk-qualification-dispatch.json
+      # Cross-repository token is explicitly configured; absent token reports a warning.
+      # The SDK listener only builds/tests and stores evidence, never bumps or publishes.

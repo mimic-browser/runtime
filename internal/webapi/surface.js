@@ -3892,6 +3892,33 @@
   registerBootstrapCallback('installFrameViewport', readFrameViewport, frameHasLayout);
   registerBootstrapCallback('installComputedStyleFlatTree', (nodeID, kind, name) => {
     const element = wrap(nodeID);
+    if (kind === 'protocolComputedStyle')
+      return withStyleReadCache(() => {
+        let target = element;
+        if (elementSlot(target)?.type !== 'element') {
+          if (elementSlot(target)?.type === 'fragment')
+            throw new Error('Node is not an element and does not have a parent element');
+          target = cssFontParent(target);
+        }
+        if (elementSlot(target)?.type !== 'element')
+          throw new Error('Node is not an element and does not have a parent element');
+        const names = new Set(cssComputedNames);
+        for (
+          let ancestor = target;
+          elementSlot(ancestor)?.type === 'element';
+          ancestor = cssFontParent(ancestor)
+        )
+          for (const entry of computedCSSDeclarations(ancestor))
+            if (entry.name.startsWith('--')) names.add(entry.name);
+        const appearance = cssComputedValue(target, 'appearance');
+        return JSON.stringify({
+          computedStyle: Array.from(names, (property) => ({
+            name: property,
+            value: cssComputedValue(target, property),
+          })),
+          extraFields: { isAppearanceBase: appearance === 'base' || appearance === 'base-select' },
+        });
+      });
     if (kind === 'imageResources')
       return withStyleReadCache(() => {
         const sources = constructedStyleSheets.resourceSources(document);

@@ -25,6 +25,14 @@ func TestPortableProfilesCDP(t *testing.T) {
 	target := wireCall(t, c, 5, "Target.createTarget", map[string]any{"browserContextId": created["browserContextId"], "url": "about:blank"})["targetId"].(string)
 	sid := wireCall(t, c, 6, "Target.attachToTarget", map[string]any{"targetId": target, "flatten": true})["sessionId"].(string)
 	before := wireCall(t, c, 7, "Mimic.getProfile", map[string]any{"targetId": target})
+	page, _, ok := s.target(target)
+	if !ok {
+		t.Fatal("created target disappeared")
+	}
+	differentScheme := "dark"
+	if page.Environment().Preferences.ColorScheme == "dark" {
+		differentScheme = "light"
+	}
 	commands := []struct {
 		method string
 		params map[string]any
@@ -34,8 +42,8 @@ func TestPortableProfilesCDP(t *testing.T) {
 		{"Emulation.setDeviceMetricsOverride", map[string]any{"width": 800, "height": 600, "deviceScaleFactor": 1, "mobile": false}},
 		{"Emulation.setLocaleOverride", map[string]any{"locale": "fr-FR"}},
 		{"Emulation.setTimezoneOverride", map[string]any{"timezoneId": "Europe/Paris"}},
-		{"Emulation.setEmulatedMedia", map[string]any{"features": []any{map[string]any{"name": "prefers-color-scheme", "value": "dark"}}}},
-		{"Page.setFontFamilies", map[string]any{"fontFamilies": map[string]any{"sansSerif": "Arial"}}},
+		{"Emulation.setEmulatedMedia", map[string]any{"features": []any{map[string]any{"name": "prefers-color-scheme", "value": differentScheme}}}},
+		{"Page.setFontFamilies", map[string]any{"fontFamilies": map[string]any{"sansSerif": "Mimic Changed Family"}}},
 		{"Mimic.setViewport", map[string]any{"width": 800, "height": 600}},
 		{"Mimic.updateProfile", map[string]any{"targetId": target, "patch": map[string]any{"window": map[string]any{"viewportWidth": 800}}}},
 	}

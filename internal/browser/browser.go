@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"sort"
 	"sync"
+	"sync/atomic"
 
 	"github.com/google/uuid"
 	"github.com/moreveal/mimic/compatibility"
@@ -175,6 +176,7 @@ type Context struct {
 	lifetime             context.Context
 	keepaliveMu          sync.Mutex
 	keepaliveWG          sync.WaitGroup
+	activeKeepalives     atomic.Int64
 	cancel               context.CancelFunc
 	mu                   sync.RWMutex
 	ID                   string
@@ -185,6 +187,8 @@ type Context struct {
 	storage              map[string]map[string]string
 	capabilities         map[string]*originCapabilities
 	pages                map[string]*Page
+	creatingPages        int // Includes blank-realm initialization before publication.
+	closingPages         int // Removed from pages but still releasing realm-owned work.
 
 	permissionDefaults        map[string]string // Context-wide CDP overrides; protected by mu.
 	permissionDefaultFallback string
@@ -228,15 +232,24 @@ func (c *Context) NewPage() (*Page, error) {
 			return nil, fmt.Errorf("workload experiment requires an explicit Context transport")
 		}
 	}
+	c.creatingPages++
 	p, err := newPage(c)
+	if err != nil {
+		c.creatingPages--
+	}
 	c.mu.Unlock()
 	if err != nil {
 		return nil, err
 	}
 	if err := p.initBlank(); err != nil {
+		_ = p.Close()
+		c.mu.Lock()
+		c.creatingPages--
+		c.mu.Unlock()
 		return nil, err
 	}
 	c.mu.Lock()
+	c.creatingPages--
 	if err := c.lifetime.Err(); err != nil {
 		c.mu.Unlock()
 		_ = p.Close()
@@ -266,10 +279,14 @@ func (c *Context) ClosePage(id string) bool {
 	p, ok := c.pages[id]
 	if ok {
 		delete(c.pages, id)
+		c.closingPages++
 	}
 	c.mu.Unlock()
 	if ok {
 		_ = p.Close()
+		c.mu.Lock()
+		c.closingPages--
+		c.mu.Unlock()
 	}
 	return ok
 }
@@ -304,6 +321,10 @@ type Frame struct {
 	navigationCancel   context.CancelFunc
 	navigationSequence uint64
 	loaderID           string
+	loadingLoaderID    string // Canonical frame loading interval, protected by Page.mu.
+	loadingMu          sync.Mutex
+	loadingEvents      []frameLoadingEvent
+	loadingPublishing  bool
 	pendingMessages    []frameMessage
 	loadBlockers       map[uint64]string
 }

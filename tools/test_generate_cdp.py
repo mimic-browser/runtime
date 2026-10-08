@@ -3,6 +3,7 @@
 from pathlib import Path
 import tempfile
 import unittest
+import json
 
 import generate_cdp as generator
 
@@ -70,7 +71,7 @@ class CDPGenerationTests(unittest.TestCase):
         # no network modules or browsers participate in either projection.
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            for relative in (generator.SOURCE, generator.SOURCE.with_suffix(".source.json"), Path("chrome/152/target.json")):
+            for relative in (generator.SOURCE, generator.SOURCE.with_suffix(".source.json"), generator.MIMIC_SOURCE, generator.MIMIC_SOURCE.with_suffix(".source.json"), Path("chrome/152/target.json")):
                 path = root / relative
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes((generator.ROOT / relative).read_bytes())
@@ -93,6 +94,19 @@ class CDPGenerationTests(unittest.TestCase):
             retained.write_bytes(retained.read_bytes() + b"\n")
             with self.assertRaisesRegex(ValueError, "source hash mismatch"):
                 generator.read_source(root)
+
+    def test_sdk_snapshot_projects_all_shapes_without_promoting_semantics(self):
+        mimic, provenance = generator.read_mimic_source()
+        output = generator.inventory(self.source, self.provenance, {}, mimic, provenance)
+        self.assertEqual(len(output["entries"]), 899)
+        self.assertEqual(len(output["extensions"]), len(mimic["commands"]))
+        for row in output["extensions"]:
+            self.assertTrue(row["wireSchemaGenerated"])
+            self.assertEqual(row["support"]["status"], "unsupported")
+            self.assertEqual(row["schemaSHA256"], provenance["sha256"])
+        command = next(row for row in output["extensions"] if row["name"] == "Mimic.configureContext")
+        self.assertEqual(command["requiredParameters"], ["browserContextId"])
+        self.assertNotIn("disposeOnDetach", command["optionalParameters"])
 
 
 if __name__ == "__main__":

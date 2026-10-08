@@ -1,0 +1,3297 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mimic-browser.dev/schema/mimic/protocol.json",
+  "title": "Current Mimic extension contract",
+  "description": "SDK-owned wire shapes audited against real runtime handlers. Semantic support remains owned by runtime protocol_support.json. This document is not a runtime compatibility mode.",
+  "commands": [
+    {
+      "name": "Mimic.cancelExecution",
+      "scope": "session",
+      "description": "",
+      "params": {
+        "$ref": "#/$defs/CancelExecutionParams"
+      },
+      "result": {
+        "$ref": "#/$defs/CancelExecutionResult"
+      }
+    },
+    {
+      "name": "Mimic.captureSnapshot",
+      "scope": "session",
+      "description": "",
+      "params": {
+        "$ref": "#/$defs/CaptureSnapshotParams"
+      },
+      "result": {
+        "$ref": "#/$defs/CaptureSnapshotResult"
+      }
+    },
+    {
+      "name": "Mimic.clearTrace",
+      "scope": "session",
+      "description": "",
+      "params": {
+        "$ref": "#/$defs/ClearTraceParams"
+      },
+      "result": {
+        "$ref": "#/$defs/ClearTraceResult"
+      }
+    },
+    {
+      "name": "Mimic.configureContext",
+      "scope": "context",
+      "description": "Configure an existing empty automation-framework-owned Context atomically before creating user Pages. Rejects live Pages, active capture and concurrent Page creation.",
+      "params": {
+        "$ref": "#/$defs/ConfigureContextParams"
+      },
+      "result": {
+        "$ref": "#/$defs/ConfigureContextResult"
+      }
+    },
+    {
+      "name": "Mimic.createContext",
+      "scope": "browser",
+      "description": "",
+      "params": {
+        "$ref": "#/$defs/CreateContextParams"
+      },
+      "result": {
+        "$ref": "#/$defs/CreateContextResult"
+      }
+    },
+    {
+      "name": "Mimic.exportProfile",
+      "scope": "browser",
+      "description": "",
+      "params": {
+        "$ref": "#/$defs/ExportProfileParams"
+      },
+      "result": {
+        "$ref": "#/$defs/ExportProfileResult"
+      }
+    },
+    {
+      "name": "Mimic.generateProfile",
+      "scope": "browser",
+      "description": "",
+      "params": {
+        "$ref": "#/$defs/GenerateProfileParams"
+      },
+      "result": {
+        "$ref": "#/$defs/GenerateProfileResult"
+      }
+    },
+    {
+      "name": "Mimic.getCompatibilityMatrix",
+      "scope": "session",
+      "description": "",
+      "params": {
+        "$ref": "#/$defs/GetCompatibilityMatrixParams"
+      },
+      "result": {
+        "$ref": "#/$defs/GetCompatibilityMatrixResult"
+      }
+    },
+    {
+      "name": "Mimic.getDiagnostics",
+      "scope": "session",
+      "description": "",
+      "params": {
+        "$ref": "#/$defs/GetDiagnosticsParams"
+      },
+      "result": {
+        "$ref": "#/$defs/GetDiagnosticsResult"
+      }
+    },
+    {
+      "name": "Mimic.getMediaPresets",
+      "scope": "context",
+      "description": "",
+      "params": {
+        "$ref": "#/$defs/GetMediaPresetsParams"
+      },
+      "result": {
+        "$ref": "#/$defs/GetMediaPresetsResult"
+      }
+    },
+    {
+      "name": "Mimic.getMediaProfile",
+      "scope": "context",
+      "description": "",
+      "params": {
+        "$ref": "#/$defs/GetMediaProfileParams"
+      },
+      "result": {
+        "$ref": "#/$defs/GetMediaProfileResult"
+      }
+    },
+    {
+      "name": "Mimic.getMediaSources",
+      "scope": "context",
+      "description": "",
+      "params": {
+        "$ref": "#/$defs/GetMediaSourcesParams"
+      },
+      "result": {
+        "$ref": "#/$defs/GetMediaSourcesResult"
+      }
+    },
+    {
+      "name": "Mimic.getProfile",
+      "scope": "browser",
+      "description": "",
+      "params": {
+        "$ref": "#/$defs/GetProfileParams"
+      },
+      "result": {
+        "$ref": "#/$defs/GetProfileResult"
+      }
+    },
+    {
+      "name": "Mimic.getProfileSchema",
+      "scope": "browser",
+      "description": "",
+      "params": {
+        "$ref": "#/$defs/GetProfileSchemaParams"
+      },
+      "result": {
+        "$ref": "#/$defs/GetProfileSchemaResult"
+      }
+    },
+    {
+      "name": "Mimic.getResourcePolicy",
+      "scope": "context",
+      "description": "",
+      "params": {
+        "$ref": "#/$defs/GetResourcePolicyParams"
+      },
+      "result": {
+        "$ref": "#/$defs/GetResourcePolicyResult"
+      }
+    },
+    {
+      "name": "Mimic.getResourcePolicySchema",
+      "scope": "browser",
+      "description": "",
+      "params": {
+        "$ref": "#/$defs/GetResourcePolicySchemaParams"
+      },
+      "result": {
+        "$ref": "#/$defs/GetResourcePolicySchemaResult"
+      }
+    },
+    {
+      "name": "Mimic.getResourcePolicyStats",
+      "scope": "context",
+      "description": "",
+      "params": {
+        "$ref": "#/$defs/GetResourcePolicyStatsParams"
+      },
+      "result": {
+        "$ref": "#/$defs/GetResourcePolicyStatsResult"
+      }
+    },
+    {
+      "name": "Mimic.getStatus",
+      "scope": "session",
+      "description": "",
+      "params": {
+        "$ref": "#/$defs/GetStatusParams"
+      },
+      "result": {
+        "$ref": "#/$defs/GetStatusResult"
+      }
+    },
+    {
+      "name": "Mimic.getTrace",
+      "scope": "session",
+      "description": "",
+      "params": {
+        "$ref": "#/$defs/GetTraceParams"
+      },
+      "result": {
+        "$ref": "#/$defs/GetTraceResult"
+      }
+    },
+    {
+      "name": "Mimic.getVersion",
+      "scope": "browser",
+      "description": "",
+      "params": {
+        "$ref": "#/$defs/GetVersionParams"
+      },
+      "result": {
+        "$ref": "#/$defs/GetVersionResult"
+      }
+    },
+    {
+      "name": "Mimic.importProfile",
+      "scope": "browser",
+      "description": "",
+      "params": {
+        "$ref": "#/$defs/ImportProfileParams"
+      },
+      "result": {
+        "$ref": "#/$defs/ImportProfileResult"
+      }
+    },
+    {
+      "name": "Mimic.pause",
+      "scope": "session",
+      "description": "",
+      "params": {
+        "$ref": "#/$defs/PauseParams"
+      },
+      "result": {
+        "$ref": "#/$defs/PauseResult"
+      }
+    },
+    {
+      "name": "Mimic.resetProfileOverrides",
+      "scope": "browser",
+      "description": "",
+      "params": {
+        "$ref": "#/$defs/ResetProfileOverridesParams"
+      },
+      "result": {
+        "$ref": "#/$defs/ResetProfileOverridesResult"
+      }
+    },
+    {
+      "name": "Mimic.resume",
+      "scope": "session",
+      "description": "",
+      "params": {
+        "$ref": "#/$defs/ResumeParams"
+      },
+      "result": {
+        "$ref": "#/$defs/ResumeResult"
+      }
+    },
+    {
+      "name": "Mimic.setMediaProfile",
+      "scope": "context",
+      "description": "",
+      "params": {
+        "$ref": "#/$defs/SetMediaProfileParams"
+      },
+      "result": {
+        "$ref": "#/$defs/SetMediaProfileResult"
+      }
+    },
+    {
+      "name": "Mimic.setViewport",
+      "scope": "session",
+      "description": "",
+      "params": {
+        "$ref": "#/$defs/SetViewportParams"
+      },
+      "result": {
+        "$ref": "#/$defs/SetViewportResult"
+      }
+    },
+    {
+      "name": "Mimic.startTrace",
+      "scope": "session",
+      "description": "",
+      "params": {
+        "$ref": "#/$defs/StartTraceParams"
+      },
+      "result": {
+        "$ref": "#/$defs/StartTraceResult"
+      }
+    },
+    {
+      "name": "Mimic.stopTrace",
+      "scope": "session",
+      "description": "",
+      "params": {
+        "$ref": "#/$defs/StopTraceParams"
+      },
+      "result": {
+        "$ref": "#/$defs/StopTraceResult"
+      }
+    },
+    {
+      "name": "Mimic.updateProfile",
+      "scope": "browser",
+      "description": "",
+      "params": {
+        "$ref": "#/$defs/UpdateProfileParams"
+      },
+      "result": {
+        "$ref": "#/$defs/UpdateProfileResult"
+      }
+    },
+    {
+      "name": "Mimic.updateResourcePolicy",
+      "scope": "context",
+      "description": "",
+      "params": {
+        "$ref": "#/$defs/UpdateResourcePolicyParams"
+      },
+      "result": {
+        "$ref": "#/$defs/UpdateResourcePolicyResult"
+      }
+    },
+    {
+      "name": "Mimic.validateMediaProfile",
+      "scope": "context",
+      "description": "",
+      "params": {
+        "$ref": "#/$defs/ValidateMediaProfileParams"
+      },
+      "result": {
+        "$ref": "#/$defs/ValidateMediaProfileResult"
+      }
+    },
+    {
+      "name": "Mimic.validateResourcePolicy",
+      "scope": "browser",
+      "description": "",
+      "params": {
+        "$ref": "#/$defs/ValidateResourcePolicyParams"
+      },
+      "result": {
+        "$ref": "#/$defs/ValidateResourcePolicyResult"
+      }
+    }
+  ],
+  "events": [],
+  "$defs": {
+    "CameraFormat": {
+      "type": "object",
+      "properties": {
+        "width": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8192
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8192
+        },
+        "frameRate": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 120
+        }
+      },
+      "required": [
+        "width",
+        "height",
+        "frameRate"
+      ],
+      "additionalProperties": false
+    },
+    "CancelExecutionParams": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "CancelExecutionResult": {
+      "type": "object",
+      "properties": {
+        "cancelled": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "cancelled"
+      ],
+      "additionalProperties": false
+    },
+    "CaptureSnapshotParams": {
+      "type": "object",
+      "properties": {
+        "interrupt": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "CaptureSnapshotResult": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "files": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "contentEncoding": "base64"
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "timingsMs": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+          }
+        }
+      },
+      "required": [
+        "url",
+        "files",
+        "warnings",
+        "timingsMs"
+      ],
+      "additionalProperties": false
+    },
+    "ClearTraceParams": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "ClearTraceResult": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "ConfigureContextParams": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "$ref": "#/$defs/ProfileSelection"
+        },
+        "proxy": {
+          "$ref": "#/$defs/Proxy"
+        },
+        "resourcePolicy": {
+          "$ref": "#/$defs/ResourcePolicy"
+        },
+        "media": {
+          "$ref": "#/$defs/MediaConfiguration"
+        },
+        "browserContextId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "browserContextId"
+      ],
+      "additionalProperties": false
+    },
+    "ConfigureContextResult": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "type": "string"
+        },
+        "profileId": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "generated",
+            "manual"
+          ]
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "browserContextId": {
+          "type": "string"
+        },
+        "media": {
+          "$ref": "#/$defs/MediaProfile"
+        }
+      },
+      "required": [
+        "profile",
+        "profileId",
+        "mode",
+        "warnings",
+        "browserContextId"
+      ],
+      "additionalProperties": false
+    },
+    "CreateContextParams": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "$ref": "#/$defs/ProfileSelection"
+        },
+        "proxy": {
+          "$ref": "#/$defs/Proxy"
+        },
+        "resourcePolicy": {
+          "$ref": "#/$defs/ResourcePolicy"
+        },
+        "disposeOnDetach": {
+          "type": "boolean"
+        },
+        "media": {
+          "$ref": "#/$defs/MediaConfiguration"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "CreateContextResult": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "type": "string"
+        },
+        "profileId": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "generated",
+            "manual"
+          ]
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "browserContextId": {
+          "type": "string"
+        },
+        "media": {
+          "$ref": "#/$defs/MediaProfile"
+        }
+      },
+      "required": [
+        "profile",
+        "profileId",
+        "mode",
+        "warnings",
+        "browserContextId"
+      ],
+      "additionalProperties": false
+    },
+    "DiagnosticCost": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+        },
+        "ns": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+        }
+      },
+      "required": [
+        "count",
+        "ns"
+      ],
+      "additionalProperties": false
+    },
+    "Diagnostics": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "hostOnly": {
+          "type": "boolean"
+        },
+        "costs": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/DiagnosticCost"
+          }
+        },
+        "cpu_profiles": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "realms": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RealmDiagnostics"
+          }
+        }
+      },
+      "required": [
+        "enabled"
+      ],
+      "additionalProperties": false
+    },
+    "Empty": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "EnvironmentAudio": {
+      "type": "object",
+      "properties": {
+        "sampleRate": {
+          "type": "number"
+        },
+        "channels": {
+          "type": "integer"
+        },
+        "bufferDuration": {
+          "type": "number"
+        },
+        "maxBufferFrames": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "EnvironmentCapabilities": {
+      "type": "object",
+      "properties": {
+        "storageQuotaBytes": {
+          "type": "integer"
+        },
+        "devices": {
+          "$ref": "#/$defs/EnvironmentDeviceCapabilities"
+        },
+        "media": {
+          "$ref": "#/$defs/EnvironmentMediaCapabilities"
+        },
+        "keyboardLayout": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "EnvironmentDeviceCapabilities": {
+      "type": "object",
+      "properties": {
+        "bluetoothAvailable": {
+          "type": "boolean"
+        },
+        "posture": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "EnvironmentDisplay": {
+      "type": "object",
+      "properties": {
+        "width": {
+          "type": "integer"
+        },
+        "height": {
+          "type": "integer"
+        },
+        "availableWidth": {
+          "type": "integer"
+        },
+        "availableHeight": {
+          "type": "integer"
+        },
+        "deviceScaleFactor": {
+          "type": "number"
+        },
+        "colorDepth": {
+          "type": "integer"
+        },
+        "orientation": {
+          "$ref": "#/$defs/EnvironmentScreenOrientation"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "EnvironmentFonts": {
+      "type": "object",
+      "properties": {
+        "serif": {
+          "type": "string"
+        },
+        "sansSerif": {
+          "type": "string"
+        },
+        "monospace": {
+          "type": "string"
+        },
+        "systemUI": {
+          "type": "string"
+        },
+        "system": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "fallback": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "EnvironmentGPUAdapter": {
+      "type": "object",
+      "properties": {
+        "vendor": {
+          "type": "string"
+        },
+        "architecture": {
+          "type": "string"
+        },
+        "device": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "subgroupMinSize": {
+          "type": "integer"
+        },
+        "subgroupMaxSize": {
+          "type": "integer"
+        },
+        "isFallbackAdapter": {
+          "type": "boolean"
+        },
+        "features": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "limits": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          }
+        },
+        "wgslLanguageFeatures": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "initializationDelayMillis": {
+          "type": "number"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "EnvironmentGraphics": {
+      "type": "object",
+      "properties": {
+        "vendor": {
+          "type": "string"
+        },
+        "renderer": {
+          "type": "string"
+        },
+        "maxTextureSize": {
+          "type": "integer"
+        },
+        "webGLCapabilitiesJSON": {
+          "type": "string"
+        },
+        "webGPU": {
+          "$ref": "#/$defs/EnvironmentGPUAdapter"
+        },
+        "webGPUAdapters": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/EnvironmentGPUAdapter"
+          }
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "EnvironmentHardware": {
+      "type": "object",
+      "properties": {
+        "cpuPerformance": {
+          "type": "integer"
+        },
+        "cpuPerformanceKnown": {
+          "type": "boolean"
+        },
+        "logicalProcessors": {
+          "type": "integer"
+        },
+        "deviceMemoryGB": {
+          "type": "number"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "EnvironmentICEProfile": {
+      "type": "object",
+      "properties": {
+        "hostCandidateCount": {
+          "type": "integer"
+        },
+        "reflexiveCandidateCount": {
+          "type": "integer"
+        },
+        "portOffsets": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "reflexivePortOffsets": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "publicAddress": {
+          "type": "string"
+        },
+        "networkCost": {
+          "type": "integer"
+        },
+        "hostDelayMillis": {
+          "type": "number"
+        },
+        "reflexiveDelayMillis": {
+          "type": "number"
+        },
+        "endDelayMillis": {
+          "type": "number"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "EnvironmentIdentity": {
+      "type": "object",
+      "properties": {
+        "userAgent": {
+          "type": "string"
+        },
+        "platform": {
+          "type": "string"
+        },
+        "metadata": {
+          "$ref": "#/$defs/EnvironmentUserAgentMetadata"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "EnvironmentLocale": {
+      "type": "object",
+      "properties": {
+        "reduceAcceptLanguage": {
+          "type": "boolean"
+        },
+        "languages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "intlLocale": {
+          "type": "string"
+        },
+        "timezone": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "EnvironmentMediaCapabilities": {
+      "type": "object",
+      "properties": {
+        "rtp": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/EnvironmentRTPMediaCatalog"
+          }
+        },
+        "formats": {
+          "$ref": "#/$defs/EnvironmentMediaFormatCatalog"
+        },
+        "kinds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "supportedConstraints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "EnvironmentMediaContainerPolicy": {
+      "type": "object",
+      "properties": {
+        "codecs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "defaultCodec": {
+          "type": "string"
+        },
+        "mediaSource": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "EnvironmentMediaFormatCatalog": {
+      "type": "object",
+      "properties": {
+        "containers": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/EnvironmentMediaContainerPolicy"
+          }
+        },
+        "efficientVideo": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "EnvironmentNetwork": {
+      "type": "object",
+      "properties": {
+        "saveData": {
+          "type": "boolean"
+        },
+        "online": {
+          "type": "boolean"
+        },
+        "effectiveType": {
+          "type": "string"
+        },
+        "downlinkMbps": {
+          "type": "number"
+        },
+        "rttMillis": {
+          "type": "number"
+        },
+        "cookiesEnabled": {
+          "type": "boolean"
+        },
+        "wireProfile": {
+          "type": "string"
+        },
+        "ice": {
+          "$ref": "#/$defs/EnvironmentICEProfile"
+        },
+        "proxy": {
+          "$ref": "#/$defs/EnvironmentProxy"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "EnvironmentPreferences": {
+      "type": "object",
+      "properties": {
+        "colorScheme": {
+          "type": "string"
+        },
+        "systemColors": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "reducedMotion": {
+          "type": "boolean"
+        },
+        "doNotTrack": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "EnvironmentProfile": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "type": "integer"
+        },
+        "baseProfile": {
+          "type": "string"
+        },
+        "identity": {
+          "$ref": "#/$defs/EnvironmentIdentity"
+        },
+        "display": {
+          "$ref": "#/$defs/EnvironmentDisplay"
+        },
+        "window": {
+          "$ref": "#/$defs/EnvironmentWindow"
+        },
+        "hardware": {
+          "$ref": "#/$defs/EnvironmentHardware"
+        },
+        "locale": {
+          "$ref": "#/$defs/EnvironmentLocale"
+        },
+        "graphics": {
+          "$ref": "#/$defs/EnvironmentGraphics"
+        },
+        "audio": {
+          "$ref": "#/$defs/EnvironmentAudio"
+        },
+        "fonts": {
+          "$ref": "#/$defs/EnvironmentFonts"
+        },
+        "preferences": {
+          "$ref": "#/$defs/EnvironmentPreferences"
+        },
+        "network": {
+          "$ref": "#/$defs/EnvironmentNetwork"
+        },
+        "permissions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "capabilities": {
+          "$ref": "#/$defs/EnvironmentCapabilities"
+        },
+        "features": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "boolean"
+          }
+        },
+        "timing": {
+          "$ref": "#/$defs/EnvironmentTiming"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "EnvironmentProxy": {
+      "type": "object",
+      "properties": {
+        "server": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "EnvironmentRTPCodec": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "clockRate": {
+          "type": "integer"
+        },
+        "channels": {
+          "type": "integer"
+        },
+        "parameters": {
+          "type": "string"
+        },
+        "senderParameters": {
+          "type": "string"
+        },
+        "feedback": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "payload": {
+          "type": "integer"
+        },
+        "rtxPayload": {
+          "type": "integer"
+        },
+        "redundant": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "EnvironmentRTPMediaCatalog": {
+      "type": "object",
+      "properties": {
+        "codecs": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/EnvironmentRTPCodec"
+          }
+        },
+        "senderOrder": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "receiverOrder": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "offerOrder": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "headerExtensions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "receiverRTT": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "EnvironmentScreenOrientation": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "angle": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "EnvironmentTiming": {
+      "type": "object",
+      "properties": {
+        "executionScale": {
+          "type": "number"
+        },
+        "navigationScale": {
+          "type": "number"
+        },
+        "networkScale": {
+          "type": "number"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "EnvironmentUserAgentBrand": {
+      "type": "object",
+      "properties": {
+        "brand": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "fullVersion": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "EnvironmentUserAgentMetadata": {
+      "type": "object",
+      "properties": {
+        "brands": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EnvironmentUserAgentBrand"
+          }
+        },
+        "fullVersionList": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EnvironmentUserAgentBrand"
+          }
+        },
+        "formFactors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "fullVersion": {
+          "type": "string"
+        },
+        "platform": {
+          "type": "string"
+        },
+        "platformVersion": {
+          "type": "string"
+        },
+        "architecture": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "bitness": {
+          "type": "string"
+        },
+        "mobile": {
+          "type": "boolean"
+        },
+        "wow64": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "EnvironmentWindow": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "integer"
+        },
+        "y": {
+          "type": "integer"
+        },
+        "outerWidth": {
+          "type": "integer"
+        },
+        "outerHeight": {
+          "type": "integer"
+        },
+        "viewportWidth": {
+          "type": "integer"
+        },
+        "viewportHeight": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "ExecutionStatus": {
+      "type": "object",
+      "properties": {
+        "running": {
+          "type": "boolean"
+        },
+        "taskId": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+        },
+        "source": {
+          "type": "string"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "elapsedMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+        }
+      },
+      "required": [
+        "running",
+        "taskId",
+        "source",
+        "phase",
+        "elapsedMs"
+      ],
+      "additionalProperties": false
+    },
+    "ExportProfileParams": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "profile"
+      ],
+      "additionalProperties": false
+    },
+    "ExportProfileResult": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "$ref": "#/$defs/ProfileDescriptor"
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "profile",
+        "warnings"
+      ],
+      "additionalProperties": false
+    },
+    "GenerateProfileOptions": {
+      "type": "object",
+      "properties": {
+        "browser": {
+          "type": "string",
+          "enum": [
+            "chrome"
+          ]
+        },
+        "version": {
+          "type": "integer",
+          "const": 152
+        },
+        "platform": {
+          "type": "string",
+          "enum": [
+            "windows"
+          ]
+        },
+        "seed": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "GenerateProfileParams": {
+      "type": "object",
+      "properties": {
+        "browser": {
+          "type": "string",
+          "enum": [
+            "chrome"
+          ]
+        },
+        "version": {
+          "type": "integer",
+          "const": 152
+        },
+        "platform": {
+          "type": "string",
+          "enum": [
+            "windows"
+          ]
+        },
+        "seed": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "GenerateProfileResult": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "type": "string"
+        },
+        "profileId": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "generated",
+            "manual"
+          ]
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "profile",
+        "profileId",
+        "mode",
+        "warnings"
+      ],
+      "additionalProperties": false
+    },
+    "GenerateProfileSelection": {
+      "type": "object",
+      "properties": {
+        "generate": {
+          "$ref": "#/$defs/GenerateProfileOptions"
+        }
+      },
+      "required": [
+        "generate"
+      ],
+      "additionalProperties": false
+    },
+    "GetCompatibilityMatrixParams": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "GetCompatibilityMatrixResult": {
+      "type": "object",
+      "properties": {
+        "chromeVersion": {
+          "type": "string"
+        },
+        "protocol": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ProtocolCoverage"
+          }
+        },
+        "extensions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ProtocolCoverage"
+          }
+        }
+      },
+      "required": [
+        "chromeVersion",
+        "protocol",
+        "extensions"
+      ],
+      "additionalProperties": false
+    },
+    "GetDiagnosticsParams": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "GetDiagnosticsResult": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "hostOnly": {
+          "type": "boolean"
+        },
+        "costs": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/DiagnosticCost"
+          }
+        },
+        "cpu_profiles": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "realms": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RealmDiagnostics"
+          }
+        }
+      },
+      "required": [
+        "enabled"
+      ],
+      "additionalProperties": false
+    },
+    "GetMediaPresetsParams": {
+      "type": "object",
+      "properties": {
+        "browserContextId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "GetMediaPresetsResult": {
+      "type": "object",
+      "properties": {
+        "presets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/MediaPreset"
+          }
+        }
+      },
+      "required": [
+        "presets"
+      ],
+      "additionalProperties": false
+    },
+    "GetMediaProfileParams": {
+      "type": "object",
+      "properties": {
+        "browserContextId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "GetMediaProfileResult": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/MediaProfile"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "diagnostics": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "profile",
+        "diagnostics"
+      ],
+      "additionalProperties": false
+    },
+    "GetMediaSourcesParams": {
+      "type": "object",
+      "properties": {
+        "browserContextId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "GetMediaSourcesResult": {
+      "type": "object",
+      "properties": {
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/MediaSource"
+          }
+        },
+        "diagnostics": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "sources",
+        "diagnostics"
+      ],
+      "additionalProperties": false
+    },
+    "GetProfileParams": {
+      "type": "object",
+      "properties": {
+        "browserContextId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "targetId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "browserContextId"
+          ],
+          "not": {
+            "required": [
+              "targetId"
+            ]
+          }
+        },
+        {
+          "required": [
+            "targetId"
+          ],
+          "not": {
+            "required": [
+              "browserContextId"
+            ]
+          }
+        }
+      ]
+    },
+    "GetProfileResult": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "$ref": "#/$defs/EnvironmentProfile"
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "profile",
+        "limitations"
+      ],
+      "additionalProperties": false
+    },
+    "GetProfileSchemaParams": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "GetProfileSchemaResult": {
+      "type": "object",
+      "properties": {
+        "schema": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "baseProfiles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "schema",
+        "baseProfiles",
+        "limitations"
+      ],
+      "additionalProperties": false
+    },
+    "GetResourcePolicyParams": {
+      "type": "object",
+      "properties": {
+        "browserContextId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "browserContextId"
+      ],
+      "additionalProperties": false
+    },
+    "GetResourcePolicyResult": {
+      "type": "object",
+      "properties": {
+        "policy": {
+          "$ref": "#/$defs/ResourcePolicy"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "generation": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+        }
+      },
+      "required": [
+        "policy",
+        "enabled",
+        "generation"
+      ],
+      "additionalProperties": false
+    },
+    "GetResourcePolicySchemaParams": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "GetResourcePolicySchemaResult": {
+      "type": "object",
+      "properties": {
+        "schema": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "schema"
+      ],
+      "additionalProperties": false
+    },
+    "GetResourcePolicyStatsParams": {
+      "type": "object",
+      "properties": {
+        "browserContextId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "browserContextId"
+      ],
+      "additionalProperties": false
+    },
+    "GetResourcePolicyStatsResult": {
+      "type": "object",
+      "properties": {
+        "stats": {
+          "$ref": "#/$defs/ResourcePolicyStats"
+        }
+      },
+      "required": [
+        "stats"
+      ],
+      "additionalProperties": false
+    },
+    "GetStatusParams": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "GetStatusResult": {
+      "type": "object",
+      "properties": {
+        "execution": {
+          "$ref": "#/$defs/ExecutionStatus"
+        }
+      },
+      "required": [
+        "execution"
+      ],
+      "additionalProperties": false
+    },
+    "GetTraceParams": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "GetTraceResult": {
+      "type": "object",
+      "properties": {
+        "events": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/TraceEvent"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "crashReports": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "events",
+        "crashReports"
+      ],
+      "additionalProperties": false
+    },
+    "GetVersionParams": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "GetVersionResult": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "chromeVersion": {
+          "type": "string"
+        },
+        "baseProfile": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "chromeVersion",
+        "baseProfile"
+      ],
+      "additionalProperties": false
+    },
+    "ImportProfileParams": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ProfileDescriptor"
+            },
+            {
+              "$ref": "#/$defs/ManualProfile"
+            }
+          ]
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "manual"
+          ]
+        }
+      },
+      "required": [
+        "profile"
+      ],
+      "additionalProperties": false
+    },
+    "ImportProfileResult": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "type": "string"
+        },
+        "profileId": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "generated",
+            "manual"
+          ]
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "profile",
+        "profileId",
+        "mode",
+        "warnings"
+      ],
+      "additionalProperties": false
+    },
+    "ManualNetwork": {
+      "type": "object",
+      "properties": {
+        "saveData": {
+          "type": "boolean"
+        },
+        "online": {
+          "type": "boolean"
+        },
+        "effectiveType": {
+          "type": "string"
+        },
+        "downlinkMbps": {
+          "type": "number"
+        },
+        "rttMillis": {
+          "type": "number"
+        },
+        "cookiesEnabled": {
+          "type": "boolean"
+        },
+        "wireProfile": {
+          "type": "string"
+        },
+        "ice": {
+          "$ref": "#/$defs/EnvironmentICEProfile"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "ManualProfile": {
+      "type": "object",
+      "properties": {
+        "identity": {
+          "$ref": "#/$defs/EnvironmentIdentity"
+        },
+        "display": {
+          "$ref": "#/$defs/EnvironmentDisplay"
+        },
+        "window": {
+          "$ref": "#/$defs/EnvironmentWindow"
+        },
+        "hardware": {
+          "$ref": "#/$defs/EnvironmentHardware"
+        },
+        "locale": {
+          "$ref": "#/$defs/EnvironmentLocale"
+        },
+        "graphics": {
+          "$ref": "#/$defs/EnvironmentGraphics"
+        },
+        "audio": {
+          "$ref": "#/$defs/EnvironmentAudio"
+        },
+        "fonts": {
+          "$ref": "#/$defs/EnvironmentFonts"
+        },
+        "preferences": {
+          "$ref": "#/$defs/EnvironmentPreferences"
+        },
+        "network": {
+          "$ref": "#/$defs/ManualNetwork"
+        },
+        "permissions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "capabilities": {
+          "$ref": "#/$defs/EnvironmentCapabilities"
+        },
+        "features": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "boolean"
+          }
+        },
+        "timing": {
+          "$ref": "#/$defs/EnvironmentTiming"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "MediaCameraRequest": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "$ref": "#/$defs/MediaSourceSelector"
+        },
+        "profile": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "integrated-webcam",
+            "usb-webcam",
+            "integrated-webcam-hd",
+            "integrated-webcam-fhd",
+            "usb-webcam-hd",
+            "usb-webcam-fhd"
+          ]
+        },
+        "overrides": {
+          "$ref": "#/$defs/MediaDeviceOverride"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "MediaConfiguration": {
+      "type": "object",
+      "properties": {
+        "seed": {
+          "type": "string",
+          "maxLength": 1024
+        },
+        "camera": {
+          "$ref": "#/$defs/MediaCameraRequest"
+        },
+        "microphone": {
+          "$ref": "#/$defs/MediaMicrophoneRequest"
+        },
+        "devices": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/MediaDeviceProfile"
+          }
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "description": "Choose devices (including an explicit empty list) or camera/microphone shorthand. Source matching, device uniqueness and mode coherence are validated by the runtime.",
+      "oneOf": [
+        {
+          "required": [
+            "devices"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "camera"
+                ]
+              },
+              {
+                "required": [
+                  "microphone"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "anyOf": [
+            {
+              "required": [
+                "camera"
+              ]
+            },
+            {
+              "required": [
+                "microphone"
+              ]
+            }
+          ],
+          "not": {
+            "required": [
+              "devices"
+            ]
+          }
+        }
+      ]
+    },
+    "MediaDeviceOverride": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "modes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CameraFormat"
+          }
+        },
+        "defaultMode": {
+          "$ref": "#/$defs/CameraFormat"
+        },
+        "processing": {
+          "$ref": "#/$defs/MediaProcessing"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "MediaDeviceProfile": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "videoinput",
+            "audioinput"
+          ]
+        },
+        "source": {
+          "$ref": "#/$defs/MediaSourceSelector"
+        },
+        "profile": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "group": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "modes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/CameraFormat"
+          }
+        },
+        "defaultMode": {
+          "$ref": "#/$defs/CameraFormat"
+        },
+        "processing": {
+          "$ref": "#/$defs/MediaProcessing"
+        }
+      },
+      "required": [
+        "key",
+        "kind",
+        "source",
+        "label"
+      ],
+      "additionalProperties": false
+    },
+    "MediaMicrophoneRequest": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "$ref": "#/$defs/MediaSourceSelector"
+        },
+        "profile": {
+          "type": "string",
+          "enum": [
+            "webcam"
+          ]
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "MediaPreset": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "class": {
+          "type": "string"
+        },
+        "variants": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "class",
+        "variants"
+      ],
+      "additionalProperties": false
+    },
+    "MediaProcessing": {
+      "type": "object",
+      "properties": {
+        "resize": {
+          "type": "string",
+          "enum": [
+            "none",
+            "crop-and-scale"
+          ]
+        },
+        "noise": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 8
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "MediaProfile": {
+      "type": "object",
+      "properties": {
+        "seed": {
+          "type": "string"
+        },
+        "devices": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/MediaDeviceProfile"
+          }
+        }
+      },
+      "required": [
+        "seed",
+        "devices"
+      ],
+      "additionalProperties": false
+    },
+    "MediaSource": {
+      "type": "object",
+      "properties": {
+        "sourceId": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "videoinput",
+            "audioinput"
+          ]
+        },
+        "label": {
+          "type": "string"
+        },
+        "default": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "sourceId",
+        "kind",
+        "label",
+        "default"
+      ],
+      "additionalProperties": false
+    },
+    "MediaSourceSelector": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "default",
+            "obs"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "sourceId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "sourceId"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "label": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "label"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "PauseParams": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "PauseResult": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "ProfileDescriptor": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "generated",
+            "manual"
+          ]
+        },
+        "baseProfile": {
+          "type": "string"
+        },
+        "seed": {
+          "type": "string"
+        },
+        "profileId": {
+          "type": "string"
+        },
+        "environment": {
+          "$ref": "#/$defs/ManualProfile"
+        }
+      },
+      "required": [
+        "mode",
+        "baseProfile",
+        "profileId"
+      ],
+      "additionalProperties": false
+    },
+    "ProfileErrorData": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "reason",
+        "message"
+      ],
+      "additionalProperties": false
+    },
+    "ProfilePatch": {
+      "type": "object",
+      "properties": {
+        "identity": {
+          "$ref": "#/$defs/EnvironmentIdentity"
+        },
+        "display": {
+          "$ref": "#/$defs/EnvironmentDisplay"
+        },
+        "window": {
+          "$ref": "#/$defs/EnvironmentWindow"
+        },
+        "hardware": {
+          "$ref": "#/$defs/EnvironmentHardware"
+        },
+        "locale": {
+          "$ref": "#/$defs/EnvironmentLocale"
+        },
+        "graphics": {
+          "$ref": "#/$defs/EnvironmentGraphics"
+        },
+        "audio": {
+          "$ref": "#/$defs/EnvironmentAudio"
+        },
+        "fonts": {
+          "$ref": "#/$defs/EnvironmentFonts"
+        },
+        "preferences": {
+          "$ref": "#/$defs/EnvironmentPreferences"
+        },
+        "network": {
+          "$ref": "#/$defs/ManualNetwork"
+        },
+        "permissions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "capabilities": {
+          "$ref": "#/$defs/EnvironmentCapabilities"
+        },
+        "features": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "boolean"
+          }
+        },
+        "timing": {
+          "$ref": "#/$defs/EnvironmentTiming"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "ProfileSelection": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "$ref": "#/$defs/GenerateProfileSelection"
+        }
+      ]
+    },
+    "ProtocolCoverage": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "surfaceRegistered": {
+          "type": "boolean"
+        },
+        "wireSchemaGenerated": {
+          "type": "boolean"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "unsupported",
+            "partial",
+            "implemented"
+          ]
+        },
+        "notes": {
+          "type": "string"
+        },
+        "tests": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "semanticsImplemented": {
+          "type": "boolean"
+        },
+        "semanticsVerified": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "kind",
+        "surfaceRegistered",
+        "wireSchemaGenerated",
+        "status",
+        "semanticsImplemented",
+        "semanticsVerified"
+      ],
+      "additionalProperties": false
+    },
+    "ProtocolError": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer"
+        },
+        "message": {
+          "type": "string"
+        },
+        "data": {}
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "additionalProperties": false,
+      "description": "Protocol error payload; preserve code, message and arbitrary data unchanged."
+    },
+    "Proxy": {
+      "type": "object",
+      "properties": {
+        "server": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "RealmDiagnostics": {
+      "type": "object",
+      "properties": {
+        "realm": {
+          "type": "string"
+        },
+        "diagnostics": {
+          "$ref": "#/$defs/Diagnostics"
+        }
+      },
+      "required": [
+        "realm",
+        "diagnostics"
+      ],
+      "additionalProperties": false
+    },
+    "ResetProfileOverridesParams": {
+      "type": "object",
+      "properties": {
+        "targetId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "targetId"
+      ],
+      "additionalProperties": false
+    },
+    "ResetProfileOverridesResult": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "$ref": "#/$defs/EnvironmentProfile"
+        }
+      },
+      "required": [
+        "profile"
+      ],
+      "additionalProperties": false
+    },
+    "ResourceBudgets": {
+      "type": "object",
+      "properties": {
+        "maxRequests": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+        },
+        "maxConcurrent": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+        },
+        "maxWireBytes": {
+          "type": "integer",
+          "const": 0,
+          "description": "Nonzero wire budgets are not implemented by the runtime."
+        },
+        "maxBodyBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+        },
+        "maxResponseBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+        },
+        "maxDecodedBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+        },
+        "maxRetainedBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "ResourceMatch": {
+      "type": "object",
+      "properties": {
+        "kinds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "document",
+              "iframe",
+              "script",
+              "stylesheet",
+              "image",
+              "font",
+              "media",
+              "favicon",
+              "preload",
+              "fetch",
+              "xhr",
+              "worker",
+              "websocket",
+              "other"
+            ]
+          }
+        },
+        "hosts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "origins": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "urlGlob": {
+          "type": "string"
+        },
+        "owners": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "mechanisms": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "topLevelSite": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "ResourcePolicy": {
+      "type": "object",
+      "properties": {
+        "reportOnly": {
+          "type": "boolean"
+        },
+        "presets": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "noVisualAssets",
+              "headersOnly",
+              "dataExtraction",
+              "noSpeculativeLoads"
+            ]
+          }
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ResourceRule"
+          }
+        },
+        "budgets": {
+          "$ref": "#/$defs/ResourceBudgets"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "ResourcePolicyStats": {
+      "type": "object",
+      "properties": {
+        "generation": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+        },
+        "requests": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+        },
+        "networkAcquisitions": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+        },
+        "cacheHits": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+        },
+        "blocked": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+        },
+        "headerOnly": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+        },
+        "prefixes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+        },
+        "wireBytesKnown": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+        },
+        "encodedNetworkBodyBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+        },
+        "bodyBytesConsumed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+        },
+        "retainedBodyBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+        },
+        "decodedPixelWorkBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+        },
+        "knownAvoidedBodyReadBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+        },
+        "unknownAvoidedBodyRequests": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+        },
+        "wouldBlock": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+        },
+        "wouldBypassCache": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+        },
+        "budgetDenied": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+        },
+        "byRule": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+          }
+        }
+      },
+      "required": [
+        "generation",
+        "requests",
+        "networkAcquisitions",
+        "cacheHits",
+        "blocked",
+        "headerOnly",
+        "prefixes",
+        "wireBytesKnown",
+        "encodedNetworkBodyBytes",
+        "bodyBytesConsumed",
+        "retainedBodyBytes",
+        "decodedPixelWorkBytes",
+        "knownAvoidedBodyReadBytes",
+        "unknownAvoidedBodyRequests",
+        "wouldBlock",
+        "wouldBypassCache",
+        "budgetDenied",
+        "byRule"
+      ],
+      "additionalProperties": false
+    },
+    "ResourceRule": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "match": {
+          "$ref": "#/$defs/ResourceMatch"
+        },
+        "work": {
+          "$ref": "#/$defs/ResourceWork"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "ResourceWork": {
+      "type": "object",
+      "properties": {
+        "cacheRead": {
+          "type": "boolean"
+        },
+        "network": {
+          "type": "boolean"
+        },
+        "body": {
+          "type": "string",
+          "enum": [
+            "full",
+            "none",
+            "prefix"
+          ]
+        },
+        "prefixBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "decode": {
+          "type": "boolean"
+        },
+        "cacheRetain": {
+          "type": "boolean"
+        },
+        "debugRetain": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "ResumeParams": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "ResumeResult": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "SetMediaProfileParams": {
+      "type": "object",
+      "properties": {
+        "seed": {
+          "type": "string",
+          "maxLength": 1024
+        },
+        "camera": {
+          "$ref": "#/$defs/MediaCameraRequest"
+        },
+        "microphone": {
+          "$ref": "#/$defs/MediaMicrophoneRequest"
+        },
+        "devices": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/MediaDeviceProfile"
+          }
+        },
+        "browserContextId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "description": "Choose devices (including an explicit empty list) or camera/microphone shorthand. Source matching, device uniqueness and mode coherence are validated by the runtime.",
+      "oneOf": [
+        {
+          "required": [
+            "devices"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "camera"
+                ]
+              },
+              {
+                "required": [
+                  "microphone"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "anyOf": [
+            {
+              "required": [
+                "camera"
+              ]
+            },
+            {
+              "required": [
+                "microphone"
+              ]
+            }
+          ],
+          "not": {
+            "required": [
+              "devices"
+            ]
+          }
+        }
+      ]
+    },
+    "SetMediaProfileResult": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "$ref": "#/$defs/MediaProfile"
+        },
+        "nativeModesVerified": {
+          "type": "boolean",
+          "const": false
+        }
+      },
+      "required": [
+        "profile",
+        "nativeModesVerified"
+      ],
+      "additionalProperties": false
+    },
+    "SetViewportParams": {
+      "type": "object",
+      "properties": {
+        "width": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "width",
+        "height"
+      ],
+      "additionalProperties": false
+    },
+    "SetViewportResult": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "StartTraceParams": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "StartTraceResult": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "StopTraceParams": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "StopTraceResult": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "TraceEvent": {
+      "type": "object",
+      "properties": {
+        "sequence": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+        },
+        "time": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "sequence",
+        "time",
+        "kind",
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "UpdateProfileParams": {
+      "type": "object",
+      "properties": {
+        "targetId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "patch": {
+          "$ref": "#/$defs/ProfilePatch"
+        }
+      },
+      "required": [
+        "targetId",
+        "patch"
+      ],
+      "additionalProperties": false
+    },
+    "UpdateProfileResult": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "$ref": "#/$defs/EnvironmentProfile"
+        }
+      },
+      "required": [
+        "profile"
+      ],
+      "additionalProperties": false
+    },
+    "UpdateResourcePolicyParams": {
+      "type": "object",
+      "properties": {
+        "browserContextId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policy": {
+          "$ref": "#/$defs/ResourcePolicy"
+        }
+      },
+      "required": [
+        "browserContextId",
+        "policy"
+      ],
+      "additionalProperties": false
+    },
+    "UpdateResourcePolicyResult": {
+      "type": "object",
+      "properties": {
+        "generation": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Exact interoperable JSON integer. Runtime counters may eventually exceed the portable range; raw calls retain original JSON."
+        }
+      },
+      "required": [
+        "generation"
+      ],
+      "additionalProperties": false
+    },
+    "ValidateMediaProfileParams": {
+      "type": "object",
+      "properties": {
+        "seed": {
+          "type": "string",
+          "maxLength": 1024
+        },
+        "camera": {
+          "$ref": "#/$defs/MediaCameraRequest"
+        },
+        "microphone": {
+          "$ref": "#/$defs/MediaMicrophoneRequest"
+        },
+        "devices": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/MediaDeviceProfile"
+          }
+        },
+        "browserContextId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "description": "Choose devices (including an explicit empty list) or camera/microphone shorthand. Source matching, device uniqueness and mode coherence are validated by the runtime.",
+      "oneOf": [
+        {
+          "required": [
+            "devices"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "camera"
+                ]
+              },
+              {
+                "required": [
+                  "microphone"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "anyOf": [
+            {
+              "required": [
+                "camera"
+              ]
+            },
+            {
+              "required": [
+                "microphone"
+              ]
+            }
+          ],
+          "not": {
+            "required": [
+              "devices"
+            ]
+          }
+        }
+      ]
+    },
+    "ValidateMediaProfileResult": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "$ref": "#/$defs/MediaProfile"
+        },
+        "nativeModesVerified": {
+          "type": "boolean",
+          "const": false
+        }
+      },
+      "required": [
+        "profile",
+        "nativeModesVerified"
+      ],
+      "additionalProperties": false
+    },
+    "ValidateResourcePolicyParams": {
+      "type": "object",
+      "properties": {
+        "policy": {
+          "$ref": "#/$defs/ResourcePolicy"
+        }
+      },
+      "required": [
+        "policy"
+      ],
+      "additionalProperties": false
+    },
+    "ValidateResourcePolicyResult": {
+      "type": "object",
+      "properties": {
+        "policy": {
+          "$ref": "#/$defs/ResourcePolicy"
+        }
+      },
+      "required": [
+        "policy"
+      ],
+      "additionalProperties": false
+    }
+  }
+}
