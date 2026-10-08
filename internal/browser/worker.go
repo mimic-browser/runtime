@@ -408,7 +408,7 @@ func (w *DedicatedWorker) run(ctx context.Context, source string) {
 			}
 			entry := performanceResourceEntry(event.Data, w.performanceOrigin, originOf(w.securityURL.String()), p.environmentView().Time.NetworkScale, p.performanceClamper, w.performanceIsolated)
 			if entry != nil {
-				w.performance.append(w.performance.create(entry, nil))
+				w.performance.appendResource(entry, event.Data)
 			}
 		}
 	}

@@ -45,6 +45,8 @@ type performanceRecord struct {
 	data     map[string]any
 	detail   engine.Value
 	buffered bool
+	// Resource start before timer precision reduction; never exposed to scripts.
+	sortStart time.Time
 }
 
 type performanceSubscription struct {
@@ -92,7 +94,14 @@ func (p *performanceTimeline) values(records []*performanceRecord, ordered bool)
 	if ordered {
 		records = append([]*performanceRecord(nil), records...)
 		sort.SliceStable(records, func(i, j int) bool {
-			return numberValue(records[i].data["startTime"]) < numberValue(records[j].data["startTime"])
+			left, right := numberValue(records[i].data["startTime"]), numberValue(records[j].data["startTime"])
+			if left != right {
+				return left < right
+			}
+			if !records[i].sortStart.IsZero() && !records[j].sortStart.IsZero() {
+				return records[i].sortStart.Before(records[j].sortStart)
+			}
+			return false
 		})
 	}
 	values := make([]map[string]any, 0, len(records))

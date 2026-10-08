@@ -52,7 +52,7 @@ func (r *Realm) syncPerformanceEntries() {
 		}
 		entry := performanceResourceEntry(event.Data, r.performanceOrigin, r.origin, p.environmentView().Time.NetworkScale, p.performanceClamper, r.securityState().crossOriginIsolated)
 		if entry != nil {
-			r.performance.append(r.performance.create(entry, nil))
+			r.performance.appendResource(entry, event.Data)
 		}
 	}
 	if r.performance.navigationRecord == nil {
@@ -67,6 +67,12 @@ func (r *Realm) syncPerformanceEntries() {
 		r.performance.navigationDelivered = true
 		r.performance.publish(r.performance.navigationRecord)
 	}
+}
+
+func (p *performanceTimeline) appendResource(entry, source map[string]any) {
+	record := p.create(entry, nil)
+	record.sortStart, _ = source["performanceStart"].(time.Time)
+	p.append(record)
 }
 
 func performanceResourceEntry(data map[string]any, origin time.Time, securityOrigin string, scale float64, clamper performanceClamper, isolated bool) map[string]any {

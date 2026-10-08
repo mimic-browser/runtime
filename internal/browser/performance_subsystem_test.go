@@ -16,6 +16,17 @@ import (
 	"time"
 )
 
+func TestPerformanceResourceTiesKeepFetchStartOrder(t *testing.T) {
+	start := time.Now()
+	first := &performanceRecord{data: map[string]any{"name": "first", "startTime": 12.3}, sortStart: start}
+	second := &performanceRecord{data: map[string]any{"name": "second", "startTime": 12.3}, sortStart: start.Add(time.Microsecond)}
+	timeline := &performanceTimeline{}
+	values := timeline.values([]*performanceRecord{second, first}, true)
+	if values[0]["name"] != "first" || values[1]["name"] != "second" {
+		t.Fatalf("resource entries with clamped start times lost fetch order: %#v", values)
+	}
+}
+
 func TestPerformanceSurfaceMatchesFrozenChrome(t *testing.T) {
 	parallelBrowserTest(t)
 
