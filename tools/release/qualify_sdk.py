@@ -77,7 +77,7 @@ def main():
         token = os.getenv("SDK_QUALIFICATION_TOKEN")
         if not token:
             receipt["status"] = "not-configured"
-            print("::warning::SDK_QUALIFICATION_TOKEN is missing; verified runtime was not dispatched for SDK qualification")
+            print("::warning::SDK qualification token is not configured; verified runtime was not dispatched for SDK qualification")
         else:
             request = urllib.request.Request("https://api.github.com/repos/mimic-browser/sdk/dispatches",
                 data=json.dumps({"event_type": "runtime-released", "client_payload": payload}).encode(),
