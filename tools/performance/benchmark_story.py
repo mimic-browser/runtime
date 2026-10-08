@@ -1,7 +1,7 @@
-"""Render the README benchmark story from a completed benchmark checkpoint.
+"""Render the README benchmark image from a completed benchmark checkpoint.
 
-The measured values come only from raw.json and summary.json. The checked-in
-background is decorative and never participates in metric selection or scaling.
+Only raw.json and summary.json supply measurements. The visual follows the
+Mimic site's navy, periwinkle and restrained comparison-bar design.
 """
 
 import argparse
@@ -10,20 +10,21 @@ import json
 from pathlib import Path
 from statistics import median
 
-from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 from matplotlib import font_manager
 
 
 ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_BACKGROUND = ROOT / "docs/assets/benchmark-mimic-adapts-background-20260921.png"
-MIMIC = "#55a8ff"
-MINT = "#62e6ce"
-CHROME = "#8b97a8"
-TEXT = "#f5f7fa"
-MUTED = "#a7b1c2"
-QUIET = "#737e8e"
-LINE = "#27313b"
-PANEL = "#090d11"
+DEFAULT_OUTPUT = ROOT / "docs/assets/benchmark-story.png"
+BG = "#070e17"
+SURFACE = "#101a2a"
+LINE = "#34445f"
+TEXT = "#f0f3f7"
+MUTED = "#b6bfdc"
+QUIET = "#8e9db7"
+BLUE = "#93a6ff"
+BLUE_BRIGHT = "#b9c7ff"
+CHROME = "#64738e"
 
 
 def load_json(path):
@@ -38,7 +39,7 @@ def validate_checkpoint(directory):
     if not raw.get("finished"):
         raise ValueError("benchmark checkpoint is incomplete")
     if raw["metadata"]["arguments"].get("smoke"):
-        raise ValueError("smoke runs cannot produce the README benchmark story")
+        raise ValueError("smoke runs cannot produce the README benchmark image")
     for path in (raw_path, summary_path):
         expected = manifest["sha256"].get(path.name)
         actual = hashlib.sha256(path.read_bytes()).hexdigest()
@@ -71,59 +72,43 @@ def fonts():
     mono = font_manager.findfont("DejaVu Sans Mono")
     return {
         "eyebrow": ImageFont.truetype(mono, 22),
-        "title": ImageFont.truetype(bold, 66),
-        "subtitle": ImageFont.truetype(regular, 27),
-        "metric": ImageFont.truetype(bold, 54),
-        "label": ImageFont.truetype(bold, 23),
-        "small": ImageFont.truetype(regular, 19),
-        "tiny": ImageFont.truetype(regular, 16),
-        "tiny_bold": ImageFont.truetype(bold, 16),
+        "title": ImageFont.truetype(bold, 76),
+        "subtitle": ImageFont.truetype(regular, 28),
+        "metric": ImageFont.truetype(bold, 86),
+        "label": ImageFont.truetype(bold, 26),
+        "small": ImageFont.truetype(regular, 21),
+        "tiny": ImageFont.truetype(regular, 18),
+        "tiny_bold": ImageFont.truetype(bold, 18),
     }
-
-
-def rounded(draw, box, fill, outline=LINE, radius=22, width=2):
-    draw.rounded_rectangle(box, radius=radius, fill=fill, outline=outline, width=width)
 
 
 def text(draw, xy, value, font, fill=TEXT, anchor=None):
     draw.text(xy, value, font=font, fill=fill, anchor=anchor)
 
 
-def comparison_bar(draw, x, y, width, mimic_value, chrome_value, lower, font_set, unit):
+def comparison_bar(draw, x, y, width, mimic_value, chrome_value, font_set, unit):
     maximum = max(mimic_value, chrome_value)
-    for offset, label, value, color in ((0, "Mimic", mimic_value, MINT), (42, "Chrome", chrome_value, CHROME)):
+    for offset, label, value, color in ((0, "Chrome", chrome_value, CHROME), (47, "Mimic", mimic_value, BLUE)):
         text(draw, (x, y + offset), label, font_set["tiny"], MUTED)
-        bar_x = x + 92
+        bar_x = x + 88
         bar_width = max(8, int(width * value / maximum))
-        draw.rounded_rectangle((bar_x, y + offset + 4, bar_x + width, y + offset + 21), 8, fill="#172029")
-        draw.rounded_rectangle((bar_x, y + offset + 4, bar_x + bar_width, y + offset + 21), 8, fill=color)
-        text(draw, (bar_x + width + 16, y + offset + 1), f"{value:.1f} {unit}", font_set["tiny_bold"], TEXT)
-    direction = chrome_value / mimic_value if lower else mimic_value / chrome_value
-    return direction
+        draw.rounded_rectangle((bar_x, y + offset + 7, bar_x + width, y + offset + 17), 5, fill="#25334b")
+        draw.rounded_rectangle((bar_x, y + offset + 7, bar_x + bar_width, y + offset + 17), 5, fill=color)
+        text(draw, (bar_x + width + 18, y + offset - 1), f"{value:.1f} {unit}", font_set["tiny_bold"])
 
 
-def render(checkpoint, output, background):
+def render(checkpoint, output):
     raw, summary = validate_checkpoint(checkpoint)
     fs = fonts()
-    bg = Image.open(background).convert("RGB")
-    canvas = Image.new("RGB", (2000, 1125), "#050707")
-    hero = bg.resize((2000, 667), Image.Resampling.LANCZOS)
-    hero = ImageEnhance.Brightness(hero).enhance(0.62)
-    hero = hero.filter(ImageFilter.GaussianBlur(0.35))
-    canvas.paste(hero, (0, 0))
-    overlay = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
-    od = ImageDraw.Draw(overlay)
-    od.rectangle((0, 0, 2000, 1125), fill=(3, 7, 10, 28))
-    od.rectangle((0, 520, 2000, 1125), fill=(5, 7, 8, 244))
-    canvas = Image.alpha_composite(canvas.convert("RGBA"), overlay).convert("RGB")
+    canvas = Image.new("RGB", (2000, 1125), BG)
+    glow = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+    gd = ImageDraw.Draw(glow)
+    gd.ellipse((1180, -340, 2300, 700), fill=(67, 91, 220, 54))
+    gd.ellipse((-570, 90, 720, 1020), fill=(41, 89, 175, 37))
+    canvas = Image.alpha_composite(canvas.convert("RGBA"), glow.filter(ImageFilter.GaussianBlur(145))).convert("RGB")
     draw = ImageDraw.Draw(canvas)
 
     date = raw["metadata"]["date"][:10]
-    text(draw, (90, 62), f"MIMIC  /  VERIFIED CHECKPOINT  /  {date}", fs["eyebrow"], MINT)
-    text(draw, (90, 112), "Same browser surface.", fs["title"])
-    text(draw, (90, 184), "Far less machinery.", fs["title"], MIMIC)
-    text(draw, (92, 270), "Fresh local benchmark · Chrome 152 · identical fixtures and correctness gates", fs["subtitle"], MUTED)
-
     mimic_ready = startup(raw, "mimic", "cdp_ready_ms")
     chrome_ready = startup(raw, "chrome", "cdp_ready_ms")
     mimic_rss = startup(raw, "mimic", "rss_mib")
@@ -135,33 +120,45 @@ def render(checkpoint, output, background):
     level = max(n for n in levels if n <= 50) if any(n <= 50 for n in levels) else max(levels)
     mrow, crow = mc[level], cc[level]
 
-    cards = [(90, 570, 650, 945), (675, 570, 1235, 945), (1260, 570, 1910, 945)]
-    for box in cards:
-        rounded(draw, box, PANEL)
+    draw.rounded_rectangle((88, 57, 302, 101), radius=22, fill="#273765", outline="#596fb5", width=2)
+    text(draw, (195, 79), "BENCHMARK", fs["eyebrow"], BLUE_BRIGHT, anchor="mm")
+    text(draw, (1910, 72), f"CHROME 152  /  {date}", fs["eyebrow"], QUIET, anchor="ra")
+    text(draw, (90, 150), "Same web.", fs["title"])
+    text(draw, (90, 240), "Less weight.", fs["title"], BLUE)
+    text(draw, (94, 356), "Measured on identical local fixtures with the same correctness gates.", fs["subtitle"], MUTED)
+    draw.line((90, 459, 1910, 459), fill=LINE, width=2)
 
-    text(draw, (125, 608), "01  START LIGHT", fs["eyebrow"], MIMIC)
-    text(draw, (125, 657), f"{chrome_rss / mimic_rss:.1f}×", fs["metric"], MINT)
-    text(draw, (125, 719), "less ready RSS", fs["label"])
-    comparison_bar(draw, 125, 775, 260, mimic_rss, chrome_rss, True, fs, "MiB")
-    text(draw, (125, 885), f"CDP ready: {mimic_ready:.0f} vs {chrome_ready:.0f} ms", fs["small"], QUIET)
+    cards = [
+        (
+            90, 510, 660, 967, "01 / START LIGHT",
+            f"{chrome_rss / mimic_rss:.1f}×", "less ready RSS",
+            mimic_rss, chrome_rss, "MiB",
+            f"CDP ready: {mimic_ready:.0f} vs {chrome_ready:.0f} ms",
+        ),
+        (
+            715, 510, 1285, 967, f"02 / {level} STATIC PAGES",
+            f"{mrow['throughput'] / crow['throughput']:.1f}×", "more throughput",
+            mrow["throughput"], crow["throughput"], "pages/s",
+            "Completed static concurrency series",
+        ),
+        (
+            1340, 510, 1910, 967, "03 / KEEP IT LIGHT",
+            f"{crow['rss_mib'] / mrow['rss_mib']:.1f}×", "less active RSS",
+            mrow["rss_mib"] / 1024, crow["rss_mib"] / 1024, "GiB",
+            f"Measured with {level} live static Pages",
+        ),
+    ]
+    for x1, y1, x2, y2, heading, metric, label, mimic, chrome, unit, note in cards:
+        draw.rounded_rectangle((x1, y1, x2, y2), radius=23, fill=SURFACE, outline=LINE, width=2)
+        text(draw, (x1 + 34, y1 + 38), heading, fs["eyebrow"], BLUE_BRIGHT)
+        text(draw, (x1 + 34, y1 + 100), metric, fs["metric"], BLUE)
+        text(draw, (x1 + 37, y1 + 213), label, fs["label"])
+        comparison_bar(draw, x1 + 37, y1 + 292, 235, mimic, chrome, fs, unit)
+        text(draw, (x1 + 37, y1 + 411), note, fs["small"], QUIET)
 
-    text(draw, (710, 608), f"02  SCALE TO {level} PAGES", fs["eyebrow"], MIMIC)
-    text(draw, (710, 657), f"{mrow['throughput'] / crow['throughput']:.1f}×", fs["metric"], MINT)
-    text(draw, (710, 719), "static throughput", fs["label"])
-    comparison_bar(draw, 710, 775, 230, mrow["throughput"], crow["throughput"], False, fs, "pages/s")
-    text(draw, (710, 885), f"Active RSS: {mrow['rss_mib'] / 1024:.2f} vs {crow['rss_mib'] / 1024:.2f} GiB", fs["small"], QUIET)
-
-    text(draw, (1295, 608), "03  KEEP IT LIGHT", fs["eyebrow"], MIMIC)
-    text(draw, (1295, 657), f"{crow['rss_mib'] / mrow['rss_mib']:.1f}×", fs["metric"], MINT)
-    text(draw, (1295, 719), "less active RSS", fs["label"])
-    comparison_bar(draw, 1295, 775, 270, mrow["rss_mib"] / 1024, crow["rss_mib"] / 1024, True, fs, "GiB")
-    text(draw, (1295, 885), f"Measured with {level} live static Pages", fs["small"], QUIET)
-
-    draw.line((90, 1000, 1910, 1000), fill=LINE, width=2)
-    footer = f"10 fresh starts · 20 warm samples/workload · {level}-Page static waves · process-tree RSS · lower memory / higher throughput is better"
-    text(draw, (90, 1028), footer, fs["tiny"], MUTED)
-    text(draw, (90, 1063), "Controlled local fixtures; not a claim of universal compatibility or website performance.", fs["tiny"], QUIET)
-    text(draw, (1910, 1063), "REPRODUCIBLE FROM REPOSITORY DATA", fs["tiny_bold"], MIMIC, anchor="ra")
+    text(draw, (90, 1025), "10 fresh starts · 20 warm samples/workload · process-tree RSS", fs["tiny"], MUTED)
+    text(draw, (90, 1063), "Controlled fixtures; results are workload and machine specific.", fs["tiny"], QUIET)
+    text(draw, (1910, 1063), "METHOD + RAW DATA IN REPOSITORY", fs["tiny_bold"], BLUE_BRIGHT, anchor="ra")
 
     output.parent.mkdir(parents=True, exist_ok=True)
     canvas.save(output, optimize=True)
@@ -169,7 +166,6 @@ def render(checkpoint, output, background):
         "checkpoint": date,
         "raw_sha256": hashlib.sha256((checkpoint / "raw.json").read_bytes()).hexdigest(),
         "summary_sha256": hashlib.sha256((checkpoint / "summary.json").read_bytes()).hexdigest(),
-        "background_sha256": hashlib.sha256(background.read_bytes()).hexdigest(),
         "generator_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         "output_sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
         "concurrency_level": level,
@@ -180,10 +176,9 @@ def render(checkpoint, output, background):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("checkpoint", type=Path)
-    parser.add_argument("output", type=Path)
-    parser.add_argument("--background", type=Path, default=DEFAULT_BACKGROUND)
+    parser.add_argument("output", type=Path, nargs="?", default=DEFAULT_OUTPUT)
     args = parser.parse_args()
-    render(args.checkpoint, args.output, args.background)
+    render(args.checkpoint, args.output)
 
 
 if __name__ == "__main__":

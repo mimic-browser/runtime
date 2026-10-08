@@ -92,19 +92,20 @@ The historical `benchmark/report.py` remains byte-for-byte frozen because it is
 part of the measurement harness fingerprint. `tools/report_benchmark.py` provides
 the English reporting variant with the same calculations.
 
-Generate the current README benchmark story from a completed, integrity-checked
-checkpoint. The decorative background is checked in; every displayed number is
+Generate the README benchmark image from a completed, integrity-checked
+checkpoint. The image follows the website palette; every displayed number is
 read from `raw.json` and `summary.json`, whose hashes are validated against the
-checkpoint manifest:
+checkpoint manifest. The default output path stays the same for future
+checkpoints, so the README always uses the newly generated image:
 
 ```powershell
 .build/benchmark-venv/Scripts/python.exe tools/performance/benchmark_story.py `
-  benchmark/runs/13-rss-20260929 `
-  docs/assets/benchmark-story-20260929.png
+  benchmark/runs/13-rss-20260929
 ```
 
-The generator also writes `benchmark-story-20260929.receipt.json` with source,
-generator, background and output hashes.
+The generator also writes `docs/assets/benchmark-story.receipt.json` with
+checkpoint, source, generator and output hashes. Update the README benchmark
+text and methodology link when publishing a new measured checkpoint.
 
 ## Measurement contract
 
