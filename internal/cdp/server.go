@@ -599,6 +599,13 @@ func (s *session) handleCommand(m message) (afterUnlock func()) {
 			return
 		}
 	}
+	if m.Method == "Page.close" {
+		// Match Target.closeTarget's browser-owned lifetime. Cleanup cannot run
+		// under the Page command mutex, and must remain joined by this accepted
+		// transport worker even if the client has already disconnected.
+		s.reply(m.ID, map[string]any{}, nil)
+		return func() { s.server.closePage(s.page) }
+	}
 	if value, handled, cookieErr := s.handleStorageCookies(m.Method, p); handled {
 		s.reply(m.ID, value, cookieErr)
 		return

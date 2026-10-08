@@ -175,6 +175,32 @@ func orderedPageCommand(method string) bool {
 		!strings.HasPrefix(method, "Browser.") && !strings.HasPrefix(method, "Mimic.")
 }
 
+// Once read from an attached client, closing an owned browser object belongs to
+// that object's lifecycle, not to the requesting socket. EOF still cancels
+// evaluations, navigation and other session work, but must not revoke an
+// accepted close (clients may intentionally disconnect without its reply).
+// Legacy envelopes carry the same ownership as the enclosed command; their
+// normal handler still validates parameters and resolves the child session.
+func browserOwnedClose(m message) bool {
+	for {
+		switch m.Method {
+		case "Target.closeTarget", "Target.disposeBrowserContext", "Browser.close", "Page.close":
+			return true
+		case "Target.sendMessageToTarget":
+			var envelope struct {
+				Message string `json:"message"`
+			}
+			var inner message
+			if json.Unmarshal(m.Params, &envelope) != nil || json.Unmarshal([]byte(envelope.Message), &inner) != nil {
+				return false
+			}
+			m = inner
+		default:
+			return false
+		}
+	}
+}
+
 func (c *connection) dispatch(s *session, m message) {
 	if c.profileCommands {
 		m.timing = &commandTiming{queued: time.Now()}
@@ -205,7 +231,7 @@ func (c *connection) dispatch(s *session, m message) {
 				}
 			}
 		}
-		if s.ctx.Err() != nil {
+		if s.ctx.Err() != nil && !browserOwnedClose(m) {
 			s.reply(m.ID, nil, fmt.Errorf("Session closed"))
 			if m.timing != nil {
 				s.commandTimings.Delete(m.ID)

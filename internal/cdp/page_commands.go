@@ -38,10 +38,6 @@ func (s *session) handlePage(ctx context.Context, method string, p map[string]an
 		return metrics, true, nil
 	case "Page.bringToFront":
 		return empty, true, nil
-	case "Page.close":
-		// Do not try to close a Page while retaining its command mutex.
-		go s.server.closePage(s.page)
-		return empty, true, nil
 	case "Audits.enable", "WebMCP.enable":
 		s.setDomain(method[:len(method)-7], true)
 		return empty, true, nil

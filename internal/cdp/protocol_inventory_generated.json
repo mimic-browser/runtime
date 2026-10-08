@@ -1023,8 +1023,10 @@
       "returns": [],
       "support": {
         "status": "partial",
-        "notes": "Acknowledges then closes CDP server and owned Pages; embedding process lifetime is separate.",
-        "tests": []
+        "notes": "Acknowledges then closes CDP server and owned Pages; an accepted close survives requesting transport EOF. Embedding process lifetime is separate.",
+        "tests": [
+          "internal/cdp/accepted_close_test.go#TestAcceptedCloseSurvivesTransportEOF"
+        ]
       }
     },
     {
@@ -10356,9 +10358,10 @@
       "returns": [],
       "support": {
         "status": "partial",
-        "notes": "Closes Page asynchronously; beforeunload dialogs and handlers are not modeled.",
+        "notes": "Acknowledges then closes the Page through browser-owned cleanup, joined even if the requesting transport disconnects. Beforeunload dialogs and handlers are not modeled.",
         "tests": [
-          "compatibility/cdp_automation.py#page.create"
+          "compatibility/cdp_automation.py#page.create",
+          "internal/cdp/accepted_close_test.go#TestAcceptedCloseSurvivesTransportEOF"
         ]
       }
     },
@@ -14463,11 +14466,12 @@
       ],
       "support": {
         "status": "implemented",
-        "notes": "Closes a live target and cancels its tasks including synchronous JavaScript. Nested sessions emit leaf-before-parent detach notifications so clients release closed child Pages.",
+        "notes": "Closes a live target and cancels its tasks including synchronous JavaScript. An accepted close survives requesting transport EOF. Nested sessions emit leaf-before-parent detach notifications so clients release closed child Pages.",
         "tests": [
           "internal/cdp/snapshot_boundary_test.go#TestCloseTargetCancelsBusyPumpBeforeLock",
           "internal/cdp/snapshot_boundary_test.go#TestCloseTargetCancelsUnboundedParserScript",
-          "internal/cdp/target_detach_order_test.go#TestDetachNotifiesNestedSessionsBeforeParent"
+          "internal/cdp/target_detach_order_test.go#TestDetachNotifiesNestedSessionsBeforeParent",
+          "internal/cdp/accepted_close_test.go#TestAcceptedCloseSurvivesTransportEOF"
         ]
       }
     },
@@ -14590,9 +14594,10 @@
       "returns": [],
       "support": {
         "status": "implemented",
-        "notes": "Disposes the named context and all its Pages.",
+        "notes": "Disposes the named context and all its Pages; an accepted disposal survives requesting transport EOF.",
         "tests": [
-          "internal/cdp/transport_test.go#TestBrowserContextsOwnPagesAndAreDisposed"
+          "internal/cdp/transport_test.go#TestBrowserContextsOwnPagesAndAreDisposed",
+          "internal/cdp/accepted_close_test.go#TestAcceptedCloseSurvivesTransportEOF"
         ]
       }
     },
@@ -14753,10 +14758,11 @@
       "returns": [],
       "support": {
         "status": "partial",
-        "notes": "Session-ID routing and teardown; legacy targetId-only addressing is not supported.",
+        "notes": "Session-ID routing and teardown; accepted inner lifecycle closes survive requesting transport EOF, while ordinary session commands remain cancellable. Legacy targetId-only addressing is not supported.",
         "tests": [
           "internal/cdp/server_test.go#TestPyppeteerBrowserAndSessionHandshake",
-          "internal/cdp/intercept_test.go#TestInterceptionDetachResumesRequest"
+          "internal/cdp/intercept_test.go#TestInterceptionDetachResumesRequest",
+          "internal/cdp/accepted_close_test.go#TestAcceptedCloseSurvivesTransportEOF"
         ]
       }
     },
