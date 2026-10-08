@@ -4,38 +4,162 @@
     <meta charset="utf-8" />
     <title>Renderer POC dashboard</title>
     <style>
-      * { box-sizing: border-box; }
-      body { margin: 0; background: #eef2f7; color: #1b2638; font: 15px Arial, sans-serif; }
-      .shell { display: grid; grid-template-columns: 250px minmax(0, 1fr); min-height: 100vh; }
-      aside { background: #14243d; color: #dce8fb; padding: 30px 22px; }
-      .brand { color: white; font-size: 26px; font-weight: 700; margin-bottom: 48px; }
-      .nav { padding: 13px 16px; margin: 7px 0; border-radius: 9px; }
-      .nav.active { background: #2d4a72; color: #fff; }
-      main { padding: 35px 42px; }
-      header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-      h1 { margin: 0 0 8px; font-size: 30px; }
-      .muted { color: #6c7b90; }
-      .badge { border-radius: 999px; background: #d9f6e9; color: #087546; padding: 10px 16px; font-weight: 700; }
-      .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
-      .card, .panel { background: white; border: 1px solid #dde5ee; border-radius: 16px; box-shadow: 0 8px 24px #1b355314; }
-      .card { padding: 23px; min-height: 155px; }
-      .label { color: #64748b; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
-      .number { margin: 20px 0 6px; font-size: 35px; font-weight: 700; }
-      .positive { color: #089466; }
-      .negative { color: #db5261; }
-      .columns { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(270px, 1fr); gap: 20px; margin-top: 22px; }
-      .panel { padding: 26px; }
-      h2 { margin: 0 0 20px; font-size: 19px; }
-      .chart { height: 210px; display: flex; align-items: end; gap: 11px; padding: 18px 0 0; border-bottom: 1px solid #dbe3ed; }
-      .bar { flex: 1; border-radius: 6px 6px 0 0; background: linear-gradient(180deg, #56b7fd, #3560d4); }
-      .bar:nth-child(3n) { background: linear-gradient(180deg, #83dfc3, #1b9f83); }
-      .row { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #edf1f5; padding: 16px 0; }
-      .avatar { display: inline-block; width: 32px; height: 32px; border-radius: 50%; background: #b5ccfa; margin-right: 10px; vertical-align: middle; }
-      .avatar.orange { background: #ffd7b5; }
-      .avatar.green { background: #a7e9d2; }
-      .table { margin-top: 22px; }
-      .table .row:first-child { color: #697b92; font-size: 12px; text-transform: uppercase; }
-      .pill { padding: 5px 10px; border-radius: 99px; background: #e4f9ef; color: #087546; }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #eef2f7;
+        color: #1b2638;
+        font-size: 15px;
+        font-family: Arial, sans-serif;
+      }
+      .shell {
+        display: grid;
+        grid-template-columns: 250px minmax(0, 1fr);
+        min-height: 100vh;
+      }
+      aside {
+        background: #14243d;
+        color: #dce8fb;
+        padding: 30px 22px;
+      }
+      .brand {
+        color: white;
+        font-size: 26px;
+        font-weight: 700;
+        margin-bottom: 48px;
+      }
+      .nav {
+        padding: 13px 16px;
+        margin: 7px 0;
+        border-radius: 9px;
+      }
+      .nav.active {
+        background: #2d4a72;
+        color: #fff;
+      }
+      main {
+        padding: 35px 42px;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 30px;
+      }
+      .muted {
+        color: #6c7b90;
+      }
+      .badge {
+        border-radius: 999px;
+        background: #d9f6e9;
+        color: #087546;
+        padding: 10px 16px;
+        font-weight: 700;
+      }
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 20px;
+      }
+      .card,
+      .panel {
+        background: white;
+        border: 1px solid #dde5ee;
+        border-radius: 16px;
+        box-shadow: 0 8px 24px #1b355314;
+      }
+      .card {
+        padding: 23px;
+        min-height: 155px;
+      }
+      .label {
+        color: #64748b;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      .number {
+        margin: 20px 0 6px;
+        font-size: 35px;
+        font-weight: 700;
+      }
+      .positive {
+        color: #089466;
+      }
+      .negative {
+        color: #db5261;
+      }
+      .columns {
+        display: grid;
+        grid-template-columns: minmax(0, 1.5fr) minmax(270px, 1fr);
+        gap: 20px;
+        margin-top: 22px;
+      }
+      .panel {
+        padding: 26px;
+      }
+      h2 {
+        margin: 0 0 20px;
+        font-size: 19px;
+      }
+      .chart {
+        height: 210px;
+        display: flex;
+        align-items: end;
+        gap: 11px;
+        padding: 18px 0 0;
+        border-bottom: 1px solid #dbe3ed;
+      }
+      .bar {
+        flex: 1;
+        border-radius: 6px 6px 0 0;
+        background: linear-gradient(180deg, #56b7fd, #3560d4);
+      }
+      .bar:nth-child(3n) {
+        background: linear-gradient(180deg, #83dfc3, #1b9f83);
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid #edf1f5;
+        padding: 16px 0;
+      }
+      .avatar {
+        display: inline-block;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #b5ccfa;
+        margin-right: 10px;
+        vertical-align: middle;
+      }
+      .avatar.orange {
+        background: #ffd7b5;
+      }
+      .avatar.green {
+        background: #a7e9d2;
+      }
+      .table {
+        margin-top: 22px;
+      }
+      .table .row:first-child {
+        color: #697b92;
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+      .pill {
+        padding: 5px 10px;
+        border-radius: 99px;
+        background: #e4f9ef;
+        color: #087546;
+      }
     </style>
   </head>
   <body>
@@ -49,30 +173,79 @@
       </aside>
       <main>
         <header>
-          <div><h1>Performance overview</h1><div class="muted">Your business at a glance · October 2026</div></div>
+          <div>
+            <h1>Performance overview</h1>
+            <div class="muted">Your business at a glance · October 2026</div>
+          </div>
           <div class="badge">● &nbsp; All systems healthy</div>
         </header>
         <section class="cards">
-          <div class="card"><div class="label">Total revenue</div><div class="number">$128,430</div><div class="positive">▲ 18.6% from last month</div></div>
-          <div class="card"><div class="label">Active customers</div><div class="number">8,492</div><div class="positive">▲ 7.3% from last month</div></div>
-          <div class="card"><div class="label">Conversion rate</div><div class="number">3.82%</div><div class="negative">▼ 0.4% from last month</div></div>
+          <div class="card">
+            <div class="label">Total revenue</div>
+            <div class="number">$128,430</div>
+            <div class="positive">▲ 18.6% from last month</div>
+          </div>
+          <div class="card">
+            <div class="label">Active customers</div>
+            <div class="number">8,492</div>
+            <div class="positive">▲ 7.3% from last month</div>
+          </div>
+          <div class="card">
+            <div class="label">Conversion rate</div>
+            <div class="number">3.82%</div>
+            <div class="negative">▼ 0.4% from last month</div>
+          </div>
         </section>
         <section class="columns">
-          <div class="panel"><h2>Revenue trend</h2><div class="muted">Monthly revenue over the last year</div>
-            <div class="chart"><div class="bar" style="height:38%"></div><div class="bar" style="height:50%"></div><div class="bar" style="height:46%"></div><div class="bar" style="height:62%"></div><div class="bar" style="height:55%"></div><div class="bar" style="height:70%"></div><div class="bar" style="height:66%"></div><div class="bar" style="height:76%"></div><div class="bar" style="height:67%"></div><div class="bar" style="height:83%"></div><div class="bar" style="height:78%"></div><div class="bar" style="height:95%"></div></div>
+          <div class="panel">
+            <h2>Revenue trend</h2>
+            <div class="muted">Monthly revenue over the last year</div>
+            <div class="chart">
+              <div class="bar" style="height: 73px"></div>
+              <div class="bar" style="height: 96px"></div>
+              <div class="bar" style="height: 88px"></div>
+              <div class="bar" style="height: 118px"></div>
+              <div class="bar" style="height: 105px"></div>
+              <div class="bar" style="height: 134px"></div>
+              <div class="bar" style="height: 126px"></div>
+              <div class="bar" style="height: 145px"></div>
+              <div class="bar" style="height: 128px"></div>
+              <div class="bar" style="height: 159px"></div>
+              <div class="bar" style="height: 149px"></div>
+              <div class="bar" style="height: 181px"></div>
+            </div>
           </div>
-          <div class="panel"><h2>Top customers</h2>
-            <div class="row"><span><i class="avatar"></i>Acme Corp</span><strong>$24,500</strong></div>
-            <div class="row"><span><i class="avatar orange"></i>Bright Labs</span><strong>$18,750</strong></div>
-            <div class="row"><span><i class="avatar green"></i>Orbit Studio</span><strong>$15,320</strong></div>
-            <div class="row"><span><i class="avatar"></i>Meridian Co</span><strong>$12,900</strong></div>
+          <div class="panel">
+            <h2>Top customers</h2>
+            <div class="row">
+              <span><i class="avatar"></i>Acme Corp</span><strong>$24,500</strong>
+            </div>
+            <div class="row">
+              <span><i class="avatar orange"></i>Bright Labs</span><strong>$18,750</strong>
+            </div>
+            <div class="row">
+              <span><i class="avatar green"></i>Orbit Studio</span><strong>$15,320</strong>
+            </div>
+            <div class="row">
+              <span><i class="avatar"></i>Meridian Co</span><strong>$12,900</strong>
+            </div>
           </div>
         </section>
-        <section class="panel table"><h2>Recent transactions</h2>
+        <section class="panel table">
+          <h2>Recent transactions</h2>
           <div class="row"><span>Customer</span><span>Amount</span><span>Status</span></div>
-          <div class="row"><span>Acme Corp · Enterprise plan</span><strong>$2,490.00</strong><span class="pill">Completed</span></div>
-          <div class="row"><span>Bright Labs · Annual renewal</span><strong>$1,850.00</strong><span class="pill">Completed</span></div>
-          <div class="row"><span>Orbit Studio · Team plan</span><strong>$790.00</strong><span class="pill">Completed</span></div>
+          <div class="row">
+            <span>Acme Corp · Enterprise plan</span><strong>$2,490.00</strong
+            ><span class="pill">Completed</span>
+          </div>
+          <div class="row">
+            <span>Bright Labs · Annual renewal</span><strong>$1,850.00</strong
+            ><span class="pill">Completed</span>
+          </div>
+          <div class="row">
+            <span>Orbit Studio · Team plan</span><strong>$790.00</strong
+            ><span class="pill">Completed</span>
+          </div>
         </section>
       </main>
     </div>

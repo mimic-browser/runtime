@@ -12,9 +12,13 @@ go run . -input fixture.html -output screenshot.png -width 1440 -height 900
 ```
 
 The fixture exercises Grid, Flexbox, text, gradients, shadows, rounded corners,
-percentage-height chart bars and a table-like transaction list. On the tested
-engine commit, the page renders to 1440 x 1080, but the intended sans-serif font
-falls back to serif and the percentage-height bars are absent. The engine grows
-the image to the full document height, so a viewport screenshot would need a
-crop. These are concrete compatibility and integration limits, not Chrome 152
-reference measurements.
+chart bars and a table-like transaction list. The engine does not interpret the
+fixture's original `font` shorthand or percentage-height bars inside the flex
+chart. This experiment expands the font declaration and uses explicit bar heights
+as input workarounds. It also crops the engine's full-document output to the
+requested viewport. These changes do not fix the engine's CSS implementation.
+
+The screenshot is compared locally against frozen Chrome 152 in explicitly
+headless mode. The engine still lays out the lower two-column Grid differently,
+uses a different font face, and paints text with different metrics. Headless
+Chrome is a visual diagnostic here, not Mimic's authoritative headful oracle.

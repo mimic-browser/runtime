@@ -27,6 +27,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	if result.Bounds().Dy() > *height {
+		result = result.SubImage(image.Rect(0, 0, result.Bounds().Dx(), *height)).(*image.RGBA)
+	}
 	png, err := engine.EncodePNG(result)
 	if err != nil {
 		panic(err)
