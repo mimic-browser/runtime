@@ -3,6 +3,9 @@ package cdp
 import (
 	"context"
 	"fmt"
+
+	"github.com/moreveal/mimic/internal/browser"
+	"github.com/moreveal/mimic/internal/trace"
 )
 
 func (s *session) handlePage(ctx context.Context, method string, p map[string]any) (any, bool, error) {
@@ -36,6 +39,41 @@ func (s *session) handlePage(ctx context.Context, method string, p map[string]an
 			metrics[css] = metrics[key]
 		}
 		return metrics, true, nil
+	case "Page.captureScreenshot":
+		format := stringValue(p["format"])
+		if format != "" && format != "png" {
+			return nil, true, fmt.Errorf("approximate screenshots support PNG only")
+		}
+		if value, present := p["fromSurface"]; present && value == false {
+			return nil, true, fmt.Errorf("view screenshots are unsupported")
+		}
+		if _, present := p["quality"]; present {
+			return nil, true, fmt.Errorf("PNG screenshot quality is unsupported")
+		}
+		var clip *browser.ScreenshotClip
+		if raw, present := p["clip"]; present {
+			value, ok := raw.(map[string]any)
+			if !ok {
+				return nil, true, fmt.Errorf("invalid screenshot clip")
+			}
+			scale, _ := value["scale"].(float64)
+			if scale != 1 {
+				return nil, true, fmt.Errorf("scaled screenshots are unsupported")
+			}
+			clip = &browser.ScreenshotClip{}
+			clip.X, _ = value["x"].(float64)
+			clip.Y, _ = value["y"].(float64)
+			clip.Width, _ = value["width"].(float64)
+			clip.Height, _ = value["height"].(float64)
+		}
+		png, warnings, err := s.page.CaptureApproximateScreenshot(ctx, clip)
+		if err != nil {
+			return nil, true, err
+		}
+		for _, warning := range warnings {
+			s.page.Trace().Add(trace.Error, "approximateScreenshot.warning", map[string]any{"message": warning})
+		}
+		return map[string]any{"data": png}, true, nil
 	case "Page.bringToFront":
 		return empty, true, nil
 	case "Audits.enable", "WebMCP.enable":

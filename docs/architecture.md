@@ -107,11 +107,15 @@ Host-record conversion creates own data properties; inherited setters must not
 intercept fields transported into V8. This does not establish complete structured
 clone semantics or preserve ordering lost in a Go map.
 
-### Graphics observations without rendering
+### Graphics observations and approximate screenshots
 
-Mimic does not render a display and must not require a GPU or an embedded graphics
-engine. Canvas and graphics support models script-observable state and queries,
-rather than reconstructing an image for its own sake. Capability values remain
+Mimic does not render a live display and must not require a GPU. On-demand
+`Page.captureScreenshot` sends an immutable Page snapshot to an independent CPU
+HTML renderer. Its PNG is explicitly approximate visual context; it is neither
+Mimic's authoritative layout nor a Chrome pixel reference. See
+[approximate screenshots](approximate-screenshots.md). Canvas and graphics
+support models script-observable state and queries rather than reconstructing
+an image for its own sake. Capability values remain
 projections of the selected Environment, not properties of the host's GPU.
 
 Readback is not an independent random or precomputed fingerprint. It must derive
