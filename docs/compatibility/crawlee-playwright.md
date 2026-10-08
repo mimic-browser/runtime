@@ -51,7 +51,8 @@ The launcher keeps Crawlee's BrowserPool, queue, hooks, sessions, retries, and
 browser retirement. Its current boundary is documented in the fork's
 [PlaywrightCrawler README](https://github.com/moreveal/crawlee/blob/master/packages/playwright-crawler/README.md#using-mimic-instead-of-chromium):
 Chromium Playwright only; no `remoteBrowser` or Crawlee proxy configuration
-with `mimicPath`. Mimic does not support pixel screenshots.
+with `mimicPath`. Mimic provides approximate PNG screenshots through standard
+CDP, with no guarantee of visual accuracy; see [approximate screenshots](../approximate-screenshots.md).
 
 ## What was checked
 

@@ -9,7 +9,9 @@ Mimic models Chrome-visible JavaScript and browser state in Go without running
 or embedding Chromium. It has an explicit browser scheduler, resource loader,
 separate document/frame/Worker realms, and a subset of CDP.
 
-It is not a renderer, a Chromium wrapper, or a fully compatible Chrome browser.
+Mimic provides [approximate screenshots](approximate-screenshots.md) from an
+independent renderer. It does not guarantee Chrome-like pixels or full browser
+compatibility.
 Generated API names describe known shape; they do not imply implemented semantics.
 No external-site result or performance claim is a product guarantee.
 
