@@ -113,6 +113,12 @@ type Request struct {
 	// They deliberately live on Request, never on cached Response objects.
 	PerformanceOwner string
 	PerformanceStart time.Time
+	// ObservePerformanceCompletion joins an immutable request's completed
+	// timing to its initiating agent clock before any response consumer runs.
+	// It must be safe on the transport goroutine and never enter a JS engine.
+	// The offset is measured in milliseconds from PerformanceStart; response
+	// caches contain neither the callback nor any agent-owned clock state.
+	ObservePerformanceCompletion func(completedMillis float64) `json:"-"`
 	// criticalCHRestarted is loader-owned navigation state. It prevents a
 	// malformed or changing response from causing an unbounded internal retry.
 	criticalCHRestarted bool
@@ -985,6 +991,13 @@ func (l *Loader) after(ctx context.Context, r Request, res Response) (Response, 
 		transferSize = 0
 	}
 	performanceInitiatorType := r.PerformanceInitiatorType
+	if r.ObservePerformanceCompletion != nil {
+		phases := res.BrowserVisibleTiming.Phases
+		if phases == nil {
+			phases = res.TransportTiming.Phases
+		}
+		r.ObservePerformanceCompletion(PerformanceCompletionMillis(phases, r.redirectEnd, float64(res.Duration)/float64(time.Millisecond)))
+	}
 	if performanceInitiatorType == "" {
 		performanceInitiatorType = string(r.Initiator)
 		switch r.Initiator {

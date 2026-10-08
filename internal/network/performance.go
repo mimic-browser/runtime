@@ -5,6 +5,25 @@ import (
 	"strings"
 )
 
+// PerformanceCompletionMillis is the latest completed transport phase in the
+// initiating request's time coordinate. Resource entries and agent clocks use
+// this same boundary, including redirects, cache hits and synthetic responses.
+func PerformanceCompletionMillis(phases map[string]float64, redirectEnd, duration float64) float64 {
+	end := redirectEnd
+	for _, name := range []string{"dnsStart", "dnsEnd", "tcpConnectStart", "requestHeadersSent", "firstResponseByte"} {
+		end = max(end, phases[name])
+	}
+	connectEnd, ok := phases["tlsHandshakeEnd"]
+	if !ok {
+		connectEnd = phases["tcpConnectEnd"]
+	}
+	responseEnd, ok := phases["responseComplete"]
+	if !ok {
+		responseEnd = duration
+	}
+	return max(end, connectEnd, responseEnd)
+}
+
 // The immutable request URL list already owns redirect history. Timing
 // visibility is accumulated across its responses, so returning to the client's
 // origin cannot expose phases hidden by an intermediate response.

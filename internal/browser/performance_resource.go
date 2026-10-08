@@ -96,7 +96,7 @@ func performanceResourceEntry(data map[string]any, origin time.Time, securityOri
 		phases = transportPhases(data["transportTiming"])
 	}
 	rawDuration := numberValue(data["durationMs"])
-	end := stamp(transportPhase(phases, "responseComplete", rawDuration))
+	end := stamp(network.PerformanceCompletionMillis(phases, fetchOffset, rawDuration))
 	dnsStart := max(fetchStart, stamp(transportPhase(phases, "dnsStart", fetchOffset)))
 	dnsEnd := max(dnsStart, stamp(transportPhase(phases, "dnsEnd", fetchOffset)))
 	connectStart := max(dnsEnd, stamp(transportPhase(phases, "tcpConnectStart", fetchOffset)))

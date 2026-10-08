@@ -36,6 +36,16 @@ func (r *Realm) withResourceTiming(request network.Request) network.Request {
 	if request.PerformanceOwner == "" {
 		request.PerformanceOwner = r.ID
 		request.PerformanceStart = r.performanceClockNow()
+		start, clock, scale := request.PerformanceStart, r.scheduler, p.environmentView().Time.NetworkScale
+		request.ObservePerformanceCompletion = func(completedMillis float64) {
+			completed := start.Add(time.Duration(completedMillis * scale * float64(time.Millisecond)))
+			clock.AdvanceTo(completed)
+			p.mu.Lock()
+			if completed.After(p.clock) {
+				p.clock = completed
+			}
+			p.mu.Unlock()
+		}
 	}
 	return request
 }

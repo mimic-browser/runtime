@@ -215,13 +215,15 @@ func (s *Scheduler) Wait(ctx context.Context) error {
 // safe. No goroutines or polling are needed to combine the wake channels.
 func WaitAny(ctx context.Context, queues []*Scheduler) error {
 	cases := []reflect.SelectCase{{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(ctx.Done())}}
+	waitStarts := make([]time.Time, len(queues))
 	var delay time.Duration
 	hasDeadline := false
-	for _, s := range queues {
+	for index, s := range queues {
 		cases = append(cases, reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(s.wake)})
 		s.mu.Lock()
+		waitStarts[index] = s.nowLocked()
 		if !s.paused && len(s.tasks) > 0 {
-			remaining := s.tasks[0].due.Sub(s.nowLocked())
+			remaining := s.tasks[0].due.Sub(waitStarts[index])
 			if remaining <= 0 {
 				s.mu.Unlock()
 				return ctx.Err()
@@ -250,9 +252,13 @@ func WaitAny(ctx context.Context, queues []*Scheduler) error {
 	if hasDeadline && selected == len(cases)-1 && elapsed < delay {
 		elapsed = delay
 	}
-	for _, s := range queues {
+	for index, s := range queues {
 		s.mu.Lock()
-		s.now = s.now.Add(time.Duration(float64(elapsed) * s.executionScale))
+		// An external completion may already have observed this interval.
+		// Add elapsed time to the pre-wait sample, never to that newer stamp.
+		if observed := waitStarts[index].Add(time.Duration(float64(elapsed) * s.executionScale)); observed.After(s.now) {
+			s.now = observed
+		}
 		s.mu.Unlock()
 	}
 	if selected == 0 {
@@ -694,5 +700,26 @@ func (s *Scheduler) AdvanceBy(delta time.Duration) {
 	}
 	s.mu.Lock()
 	s.now = s.now.Add(delta)
+	s.mu.Unlock()
+}
+
+// AdvanceTo observes an already completed external operation on the canonical
+// clock. When called inside a turn, retain its elapsed execution and sampled
+// animation time; subsequent live reads and the turn's final stamp must include
+// the same completion. An older observation never moves time backwards.
+func (s *Scheduler) AdvanceTo(completed time.Time) {
+	s.mu.Lock()
+	if delta := completed.Sub(s.nowLocked()); delta > 0 {
+		s.now = s.now.Add(delta)
+		if !s.runningAt.IsZero() {
+			s.runningBase = s.runningBase.Add(delta)
+		}
+		s.mu.Unlock()
+		select {
+		case s.wake <- struct{}{}:
+		default:
+		}
+		return
+	}
 	s.mu.Unlock()
 }

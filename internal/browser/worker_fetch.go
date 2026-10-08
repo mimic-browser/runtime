@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"time"
 
 	"github.com/moreveal/mimic/internal/engine"
 	"github.com/moreveal/mimic/internal/scheduler"
@@ -34,6 +35,10 @@ func (w *DedicatedWorker) installFetch(host map[string]any, lifetime context.Con
 		request.ClientIsWorker = true
 		request.PerformanceOwner = fmt.Sprintf("%s/worker/%d", w.parent.ID, w.id)
 		request.PerformanceStart = w.scheduler.Now()
+		start, clock, scale := request.PerformanceStart, w.scheduler, w.parent.agent.Page().environmentView().Time.NetworkScale
+		request.ObservePerformanceCompletion = func(completedMillis float64) {
+			clock.AdvanceTo(start.Add(time.Duration(completedMillis * scale * float64(time.Millisecond))))
+		}
 		request.TopLevelURL = w.topLevelURL
 		request.HasCrossSiteAncestor = w.cookieContext.HasCrossSiteAncestor
 		if w.url.Scheme == "blob" {
