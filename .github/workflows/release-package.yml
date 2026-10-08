@@ -15,6 +15,11 @@ on:
         description: Full source SHA of the reused CI binaries
         required: true
         type: string
+      packaging_revision:
+        description: Committed packaging revision (defaults to the release tag)
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -37,7 +42,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-          ref: ${{ inputs.version }}
+          ref: ${{ inputs.packaging_revision || inputs.version }}
           fetch-depth: 0
       - uses: actions/setup-go@v5
         with:

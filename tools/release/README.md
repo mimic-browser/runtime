@@ -81,6 +81,11 @@ add notes or packaging changes; it must not alter the binary. For a local run:
 python tools/release/prepare.py --version v0.1.9 --ci-run TAG_BUILD_RUN_ID --binary-source-revision TAG_COMMIT_SHA
 ```
 
+If documentation or packaging changes follow the tagged binary build, pass the
+exact committed `packaging_revision` to the Package release workflow. It keeps
+`binary_source_revision` bound to the successful tag build and records both
+revisions in the receipts; it does not rebuild or relabel the executable.
+
 ## Publish
 
 Push the exact release commit and its tag to `mimic-browser/runtime`, then run:
