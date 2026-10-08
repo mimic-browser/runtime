@@ -13,7 +13,7 @@ import (
 	"path"
 	"strings"
 
-	webengine "github.com/go-webengine/engine"
+	webengine "github.com/go-webengine/engine/static"
 )
 
 const snapshotOrigin = "https://mimic-render.invalid"
@@ -73,10 +73,8 @@ func Render(ctx context.Context, files map[string][]byte, width, height int) (re
 		return nil, fmt.Errorf("snapshot has no index.html")
 	}
 	engine := webengine.New()
-	engine.DisableJS = true
-	engine.TextPseudoElements = true
 	engine.Client = &http.Client{Transport: snapshotTransport{files: files}}
-	result, _, err = engine.RenderHTML(ctx, string(html), snapshotOrigin+"/index.html", image.Rect(0, 0, width, height))
+	result, err = engine.RenderHTML(ctx, string(html), snapshotOrigin+"/index.html", image.Rect(0, 0, width, height))
 	if err != nil {
 		return nil, err
 	}

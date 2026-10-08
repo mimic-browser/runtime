@@ -5,9 +5,10 @@ import (
 	"flag"
 	"fmt"
 	"image"
+	"image/png"
 	"os"
 
-	"github.com/go-webengine/engine"
+	"github.com/go-webengine/engine/static"
 )
 
 func main() {
@@ -21,21 +22,21 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	renderer := engine.New()
-	renderer.DisableJS = true
-	result, _, err := renderer.RenderHTML(context.Background(), string(html), "https://mimic.test/", image.Rect(0, 0, *width, *height))
+	renderer := static.New()
+	result, err := renderer.RenderHTML(context.Background(), string(html), "https://mimic.test/", image.Rect(0, 0, *width, *height))
 	if err != nil {
 		panic(err)
 	}
 	if result.Bounds().Dy() > *height {
 		result = result.SubImage(image.Rect(0, 0, result.Bounds().Dx(), *height)).(*image.RGBA)
 	}
-	png, err := engine.EncodePNG(result)
+	file, err := os.Create(*output)
 	if err != nil {
 		panic(err)
 	}
-	if err := os.WriteFile(*output, png, 0o644); err != nil {
+	defer file.Close()
+	if err := png.Encode(file, result); err != nil {
 		panic(err)
 	}
-	fmt.Printf("wrote %s (%d bytes, %dx%d)\n", *output, len(png), result.Bounds().Dx(), result.Bounds().Dy())
+	fmt.Printf("wrote %s (%dx%d)\n", *output, result.Bounds().Dx(), result.Bounds().Dy())
 }
