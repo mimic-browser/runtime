@@ -249,6 +249,6 @@ Context/origin/page isolation, redaction, clone constraints and pixels, atomic
 validation, frame reuse/rate reduction, late teardown, and live WebRTC output
 changes with actual RTP/frame statistics.
 
-The [completion verification](compatibility/media-device-profiles-completion-20261008.md)
+The [capture lifecycle reference](compatibility/media-device-profile-lifecycle.md)
 also exercises catalog replacement while native camera and microphone Open/Close
 are deliberately blocked, including independent updates in another Context.

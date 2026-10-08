@@ -34,12 +34,11 @@ The added `TestBootstrapSnapshotColdChildRelations` covers same-origin and
 cross-origin children as the first captured realm, a parent toJSON getter that
 must not be read, child seed admission/restoration, canonical parent/top identity,
 access denial, and reuse of a child-created seed in a top Page. It was compiled
-but **not executed**, at the user's request.
+but **not executed** for this verification.
 
 ## Bounded offline replay
 
-The user subsequently authorized local VM execution without a real site run.
-The replay driver uses only the 39 responses from `manual-20260911-202858` through
+The local VM replay has no live-site connection. The replay driver uses only the 39 responses from `manual-20260911-202858` through
 a replacement Page transport. There is no live fallback. Unknown GETs return a
 transport error; the first uncaptured non-GET request cancels the replay. Neither
 stored nor newly computed request bodies were sent to an external server.
@@ -89,12 +88,12 @@ request hashes and commands are retained in `.build/vm-offline-20260911/`, with
 the compact receipt in `summary.json`. Raw scripts, cookies and request bodies
 are not included in Git.
 
-## Validation handed to the user
+## Validation scope
 
 Production and offline-helper builds succeeded. The browser test binary compiles.
 No browser suite, targeted test execution, race, general differential, new Chrome
-oracle, native stress or performance gate was run for this package. Those checks
-were explicitly left to the user; no historical passing result is substituted.
+oracle, native stress or performance gate was run for this package. Historical
+passing results do not qualify this unexecuted validation scope.
 The [native stability debt](snapshot-stability-debt-2026-09-11.md) remains open
 under its existing immediate-reopen condition.
 

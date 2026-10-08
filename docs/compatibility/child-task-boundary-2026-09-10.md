@@ -13,7 +13,7 @@ explain the protected scenario's failure.
 
 ## Evidence and limits
 
-The reference used here is the user-authorized system Chrome 152.0.7977.83,
+The measured reference is system Chrome 152.0.7977.83,
 not frozen 152.0.7977.82. Mimic's running executable contains the production
 changes committed in 1851d61, including Resource Timing ownership and JSON
 serialization. No timing, API result, continuation or request body was replaced.
@@ -23,7 +23,7 @@ Private evidence is under `compatibility/private-captures/`:
 * `chrome-extra-postfix-20260910`: fresh disposable Chrome context, message
   listener in pages/frames, normal navigation and revisit.
 * `mimic-extra-postfix-20260910`: cookies and HTTP cache cleared, the same
-  listener, existing user-started CDP instance. Observed `overrunBegin`,
+  listener, existing CDP instance. Observed `overrunBegin`,
   `overrunEnd`, then `fail` 600010; no successful document.
 * `mimic-overrun-tasks-20260910`: additional run with the runtime trace retained.
   This run reaches the CDP pump's context deadline and is **incomplete**, not

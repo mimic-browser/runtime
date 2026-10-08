@@ -87,10 +87,6 @@ suite. Each subsystem report states its unsupported boundaries. No model backend
 full slot subsystem, profiler console instrumentation or general rendering
 subsystem is claimed.
 
-All package commits are integrated into local main. The five temporary worktrees
-and branches created for this package have been removed after preserving useful
-evidence. Other worktrees remain untouched.
-
 Private final evidence: `.build/observable-compat-package/package/`,
 `package-replay.exe` and `comparison-package.json`. Baseline and intermediate
 replays remain alongside them for attribution and repeat controls.

@@ -24,8 +24,7 @@ representatives 19/28, no new leaves, regressions or Chrome drift. Original bran
 corpus improves 583 to 578 records, five removed with no added/changed remaining
 records. General corpus stays 40; relations stay two. These sets overlap and are
 not added. Fresh full Chrome-to-Chrome corpus, fuzzer discovery, sweep and paired
-performance gates were not repeated in this unchanged environment, following the
-user's instruction to prioritize important work. Their previous measurements
+performance gates were not repeated in this unchanged environment. Their previous measurements
 remain historical; the fixed and affected corpora were replayed on this build.
 
 An initial new regression fixture used unimplemented DOMImplementation.createDocumentType

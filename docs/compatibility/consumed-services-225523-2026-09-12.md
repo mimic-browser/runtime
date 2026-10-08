@@ -48,8 +48,8 @@ are not summed as independent defects.
 
 Final private evidence is under `.build/consumed-services`: `verified-replay`
 contains the diagnostic comparison and serializer records, `verified-original`
-the unmodified saved-response replay, and `merged-evidence` the preserved agent
-oracles and logs. Replay completion at the first uncaptured boundary reports
+the unmodified saved-response replay, and `merged-evidence` the retained
+reference observations and logs. Replay completion at the first uncaptured boundary reports
 `context canceled`; this is the bounded offline harness outcome, not a fresh
 server verdict. The explicit missing-body fixture handling remains documented
 in the prior packet; a missing CDP body is not represented as captured data.

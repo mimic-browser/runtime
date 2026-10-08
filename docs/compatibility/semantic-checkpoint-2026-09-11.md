@@ -105,7 +105,7 @@ items exceed a small safe patch or need new controlled evidence:
 - **Environment-dependent or unmeasured:** codec/device/GPU capabilities and
   TLS/H2/H3 behavior; localhost HTTP/1.1 does not establish them.
 
-The user-directed stability disposition is documented separately in
+The remaining stability boundary is documented separately in
 [stability debt](snapshot-stability-debt-2026-09-11.md). Performance/concurrency
 is in the [optimization backlog](../performance/report.md); unchanged prior
 baselines remain authoritative, including incomplete gates. No target-site

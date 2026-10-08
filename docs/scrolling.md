@@ -50,6 +50,6 @@ and 912 ms respectively, not an isolated performance benchmark.
 
 The first broad test run exposed two regressions (inert/XML document accessors
 and unnecessary root getter reads). Both were fixed and focused tests rerun.
-The repeat full suite was stopped at the user's request before completion; no
+The repeat full suite did not complete; no
 final full-suite pass or fresh performance-gate result is claimed. Local evidence
 is under `.build/scroll-*`; the compiled executable is `.build/mimic-scrolling.exe`.

@@ -8,8 +8,8 @@ resident memory for medium/large responses. It does not implement network stream
 Linux (Ubuntu/WSL2), Go 1.26.4, V8 152, source base
 `f07bd2d643eebbadc28d582ef93f01c832a50106`. Control/candidate/candidate/control,
 three iterations of each size in each process: six observations per variant/size.
-Server, Page and test driver run in the same Linux process; other campaign agents
-paused all builds/tests during the timing window. All bytes are checked.
+Server, Page and test driver run in the same Linux process; no other builds or
+tests ran during the timing window. All bytes are checked.
 
 | Response | Page operation control | Candidate | Speedup | Go allocation control → candidate |
 |---|---:|---:|---:|---:|

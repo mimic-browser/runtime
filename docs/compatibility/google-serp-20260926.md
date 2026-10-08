@@ -22,7 +22,7 @@ the second Search navigation. It still received a redirect to `/sorry/index`
 and HTTP 429, with no JavaScript exception notifications. Fixing this defect
 does **not** establish Google admission or explain the remaining rejection.
 
-The user's ordinary Chrome 154.0.8037.57 and incognito HARs both contain
+Retained ordinary Chrome 154.0.8037.57 and incognito HARs both contain
 successful Search HTML. The ordinary capture is a reload in an existing
 session. The incognito capture starts at a Search request already containing
 `sei`; it does not contain the preceding intermediate document. These are
@@ -42,7 +42,7 @@ were removed. The full local test suite was not run.
 
 ## Follow-up: complete incognito CAPTCHA chain
 
-A subsequent user-provided HAR includes the previously missing intermediate
+An additional retained HAR includes the previously missing intermediate
 document. Its SHA-256 is
 `0287cc6905e36cf82a22048c92e4c7a78dacd68fe589057366a2077cdbc6c4aa`.
 Chrome 154 first received 92,415 bytes of intermediate Search HTML, then

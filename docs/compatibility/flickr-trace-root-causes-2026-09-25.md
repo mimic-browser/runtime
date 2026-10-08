@@ -1,15 +1,11 @@
 # Flickr: Mimic Error Root Cause Audit
 
-> **Addendum after the fixes, September 25, 2026.** The statement below that no
-> token was confirmed applies only to the initial automated captures. The user
-> showed a nonempty `cf-turnstile-response` in DevTools in their regular Chrome
-> session on the same tab, including a new token after refresh. A check through
-> the Computer Use extension showed an empty value and did not reflect the
-> DevTools state. The user's screenshots confirm success in regular Chrome; the
-> extension could not access that session's exact network traffic. Frozen Chrome
-> 152 and Mimic did not obtain a token within 90 seconds in separate automated
-> sessions. Those are different environments, and their results do not apply to
-> the user's regular Chrome session.
+> **Reference scope, September 25, 2026.** An ordinary Chrome session showed a
+> nonempty `cf-turnstile-response`, including after refresh, in retained DevTools
+> screenshots. An extension-based read returned an empty value and did not expose
+> that session's exact network traffic. Frozen Chrome 152 and Mimic produced no
+> token within 90 seconds in separate automated captures. These observations use
+> different environments and do not form a matched success/failure comparison.
 
 Date: September 25, 2026. Reviewed commit: `059a25dc8094a9860959f3f739d6424de561c6cf`. Reference: frozen Chrome **152.0.7977.82**, Windows, Playwright/CDP.
 
@@ -267,6 +263,6 @@ Since the initial audit, defects #1-14 have been fixed in the general URL, DOM/r
 
 Unhandled Weglot, Webflow, and Osano errors stopped occurring on the reloaded page. `window.turnstile` and one response field appear. The next difference involved the `IntersectionObserver` lifecycle: Webflow starts Turnstile for a form only when it enters the observed region. After the first shadow tree was created, Mimic switched **the entire** page from native layout to fallback JS layout. On Flickr, this incorrectly changed the coordinates of lower forms and initialized two extra widgets. For a zero-size shadow host without ordinary child nodes, the fix limits that switch to the affected branch; hosts that can change document flow retain the page-wide fallback calculation. Mimic and frozen Chrome then each create one widget for the search form; the two subscription forms remain outside the observed region. The upper subscription form measured `y=2764.56` in Mimic and `y=2758.53` in Chrome; the lower form measured `y=4278.06` and `y=4270.61`, respectively. Existing focused Shadow DOM, CSSOM, and IntersectionObserver checks pass after the fix.
 
-In a separate 90-second network trace, after corrections, Mimic shows one field with a blank value in all 18 measurements. The page does not throw any raw JS errors. There is `600010` in the Turnstile console (Cloudflare refers to the `600*` family as a general validation failure, without publicly decoding the suffix; see [official code table](https://developers.cloudflare.com/turnstile/troubleshooting/client-side-errors/error-codes/)); four calls to `brunhild.challenges.cloudflare.com` failed with a DNS error. In a separate capture, frozen Chrome 152 also did not receive a token and encountered this DNS failure. Since the user's normal Chrome on the same page received the token, these automatic captures do not prove that a bug in Mimic's implementation is causing the Turnstile failure. The live network and successful session context of regular Chrome were not available through the Computer Use extension.
+In a separate 90-second network trace, after corrections, Mimic shows one field with a blank value in all 18 measurements. The page does not throw any raw JS errors. There is `600010` in the Turnstile console (Cloudflare refers to the `600*` family as a general validation failure, without publicly decoding the suffix; see [official code table](https://developers.cloudflare.com/turnstile/troubleshooting/client-side-errors/error-codes/)); four calls to `brunhild.challenges.cloudflare.com` failed with a DNS error. In a separate capture, frozen Chrome 152 also did not receive a token and encountered this DNS failure. Since a separate ordinary Chrome session on the same page received a token, these automatic captures do not prove that a bug in Mimic's implementation is causing the Turnstile failure. The live network and successful session context of regular Chrome were not available through the extension-based observation.
 
 Replays: `.build/flickr_io_audit.cjs`, `.build/flickr-audit/io-audit.txt`, `.build/flickr-audit/challenge-mimic/trace.json` and `.build/flickr-audit/challenge-chrome/trace.json`. Token values ​​were not transferred to the report.

@@ -1,6 +1,6 @@
 # Manual capture 211032 and offline replay scope correction
 
-This is a read-only analysis of the user-supplied
+This is a read-only analysis of the retained capture
 `manual-20260911-211032`, compared with `manual-20260911-202858` and the
 existing offline `after-descriptors` trace. No site, VM, browser test, oracle,
 race, stress or performance run was started for this analysis.

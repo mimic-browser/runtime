@@ -25,7 +25,7 @@ scheduler cost; it is not a measurement of the complete public CDP or Page API.
 
 Four independent processes per boundary/form each execute one first kernel and
 twelve subsequent kernels, with forward/reverse boundary order and no concurrent
-heavy agent work. Chrome runs the exact expression through Runtime.evaluate
+heavy build or test workloads. Chrome runs the exact expression through Runtime.evaluate
 with awaitPromise/returnByValue. Its wall time includes CDP transport, unlike
 Mimic's direct owner operation; those values indicate the gap rather than an
 exact pure-JavaScript execution ratio. Diagnostic profiling is disabled during

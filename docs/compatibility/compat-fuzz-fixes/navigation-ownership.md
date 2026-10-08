@@ -1,8 +1,8 @@
 # Navigation and realm ownership block
 
-This block follows the architecture stopping point in [the first report](report.md).
-The user authorized implementing that foundation, including substantial changes,
-then documenting unfinished work. It does not claim to close all original 28 groups.
+This reference describes the navigation ownership foundation identified in
+[the first report](report.md), including its remaining limits. It does not
+establish complete support for all original 28 observation groups.
 
 ## Semantic changes
 

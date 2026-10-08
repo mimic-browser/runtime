@@ -94,33 +94,10 @@ must not be reported as zero execution cost. This is a local diagnostic and
 does not replace the frozen correctness, concurrency or memory gates.
 The probe requires `aiohttp` and `psutil` in the selected Python environment.
 
-`python tools/performance/click_latency.py --binary .build/mimic.exe --output .build/click-UNIQUE`
-creates a fresh Context, adds one local TodoMVC item, and verifies six real
-checkbox clicks. `--site github` checks a README disclosure; the harness refuses
-to click if the projected point hits a different control. The current geometry
-model can fail that guard. `--site github-probe` measures repeated hit tests and
-safe mouse movement without activating links. `--site blast --clicks 6` runs
-three login-menu open/Escape-close cycles, checking `aria-expanded` after every
-action without filling or submitting a form. Add `--exercise-form` to also wait
-for the visible login field, verify its projected hit, click it, type the fixed
-synthetic text `mimic-latency-check`, and clear it. This never submits the form.
-Form readiness, field-click and typing/clearing latencies are separate metrics.
-`--chrome --binary PATH` runs the
-same observation against pinned Chrome. `--profile-cdp` retains server command
-timings for attribution; keep it separate from unprofiled latency measurements.
-Outputs include executable and harness hashes, source status, per-command and
-per-action timings, validated state, lifecycle events, and 100 ms process-tree
-RSS/private-memory/CPU snapshots. CPU snapshots count only currently live
-processes; they are not a cumulative account of exited Chrome children.
-Each run has an outer timeout and closes its own processes. Use a fresh output
-directory. Live HTML can differ between engines and runs, so these observations
-do not replace the frozen workload comparison.
-
 `python tools/performance/live_latency.py --before .build/before.exe --after .build/after.exe --output .build/live-latency-UNIQUE`
 records five alternating clean-process trials of ChatGPT login, GitHub,
 SpigotMC, Modrinth, React and Wikipedia. It retains binary/source hashes,
 per-command client timing, resource/lifecycle events and validated DOM results.
-The original desktop login script and frozen comparison runner are not edited.
 Use `--mode both --preview both --sites chatgpt` to separate retained Contexts
 and an actual preview subscriber. Startup discovery uses a bounded connection
 probe; totals include process startup, unlike a script attaching to an already

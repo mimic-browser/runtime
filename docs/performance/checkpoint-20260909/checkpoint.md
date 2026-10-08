@@ -1,14 +1,13 @@
-# Stopped checkpoint — 2026-09-09
+# Benchmark checkpoint — 2026-09-09
 
-Performance work stopped at this checkpoint. The control fast gate completed;
-no full matrix was run. Subsequent changes were limited to validation, artifact
-preservation, and commits.
+The control fast gate completed; no full matrix was run. Results below identify
+their measured source revisions and distinguish production code from experimental
+variants.
 
 Production implementation remains 52a2aa2. Latest snapshot code is committed
 separately as a19b84d, based on ca557ca; it is not promoted. The rejected 8 MiB
-nursery change is preserved separately as 2d4264e. All experimental worktrees were
-checked; these were the only two with outstanding changes before preservation.
-The final main documentation commit is the commit containing this checkpoint.
+nursery experiment is preserved separately as 2d4264e. Neither experimental
+revision is part of the measured production implementation.
 
 ## Commits
 
@@ -17,8 +16,7 @@ Complete main and detached experimental history for this checkpoint is in
 6277094 (insertion traversal), 0abfa05 (observation handlers), 4d0f0a1 (native
 intrinsic preservation), 52a2aa2 (catalog filtering). Main evidence commits and
 all isolated experiments are listed separately so experimental wins cannot be
-mistaken for production results. This checkpoint's final documentation commit
-is intentionally not self-referenced in its own contents.
+mistaken for production results.
 
 ## Benchmarks and limitations
 

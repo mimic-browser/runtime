@@ -74,8 +74,8 @@ that the entire browser package was run under race instrumentation.
 
 `.build/mimic-scheduler.exe` was built from this candidate; its SHA-256 is
 `5d2d1cee77a4d2600533dafc94e1bf530e7caced2649c5f6e7e7b15e3baed19e`.
-It contains the production changes described here. After the user restarted
-the CDP instance, the shared harness completed both local probes successfully:
+It contains the production changes described here. Against the rebuilt CDP
+instance, the shared harness completed both local probes successfully:
 `frame-task-interleaving` and `frame-microtask-checkpoint` are valid, complete
 and have zero differences against system Chrome 152.0.7977.83. The latter
 matches all five entry modes (eval, getter, call, construct and throw).

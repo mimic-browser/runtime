@@ -142,5 +142,5 @@ The experiment narrows the next architectural question. Chrome-like latency
 will require avoiding a material part of the current rendering product set or
 producing it in a representation whose construction does not involve millions
 of JS property/function/object operations. That is the separate
-automation-first/render-barrier design stage requested after first-build work;
+automation-first/render-barrier design problem;
 it should not be presented as another optimization of the current producer.

@@ -13,7 +13,6 @@ Fresh system Chrome navigated by POST to application 404 and its same-context GE
 revisit also returned application 404. No POST was forced and no proof was copied.
 The earliest **causal** divergence before the completion decision remains unknown.
 
-The user authorized system Chrome because no frozen CDP instance was available.
 Measured reference: Google Chrome **152.0.7977.83**, not the frozen Chromium
 **152.0.7977.82** profile. Reports explicitly mark this alternate reference. Product
 brands and language preferences differ; they are not silently normalized away or
@@ -47,8 +46,7 @@ Total: **74 -> 61** leaves on shared cases. A later ninth harness self-test veri
 undefined/NaN/infinity/-0/bigint/array-hole normalization and passes both current
 runtimes. The initial comparison used ordinary JSON observations; the eight shared
 fixtures were unchanged when the tagged normalizer was added and their after-counts
-remained identical. A rebuilt baseline rerun with the new normalizer was rejected
-by automatic tool approval (`blocked by policy`, no further reason); it did not run.
+remained identical. A rebuilt baseline rerun with the new normalizer did not run.
 Do not present the ninth case as a newly measured baseline result.
 
 Private evidence: `corpus-before-final`, `corpus-after-final`,

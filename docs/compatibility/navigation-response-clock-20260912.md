@@ -23,5 +23,5 @@ browser-visible completion cannot precede transport completion. Cache/timing
 focused tests pass. Frozen navigation expectations and known streaming/opaque
 boundaries were not modified.
 
-Full suite, race and performance validation are deferred to the combined
-semantic-residual checkpoint, as requested.
+The full suite, race checks and performance validation were not run for this
+isolated change. Focused results do not substitute for those broader checks.

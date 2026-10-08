@@ -124,10 +124,8 @@ the experimental capture attempted Fetch.enable on worker targets, which do not
 support that domain, leaving worker setup incomplete. Its 403 cannot be
 attributed to the application or used to compare unpacked final observations.
 
-Automatic tool approval rejected the attempted launch of a freshly built
-Mimic payload-diagnostic process with `blocked by policy`, without a more
-specific reason. That launch did not occur. No successful fresh payload diff or
-post-fix Mimic pass is claimed.
+The freshly built payload-diagnostic process was not launched. No fresh
+payload comparison or post-fix Mimic pass was established by this check.
 
 Next useful evidence is the owner-side Security Events verdict for the final
 Mimic request and its repeated navigation: action, rule, client address, and
@@ -151,5 +149,3 @@ successful same-session revisit, not merely receipt of cf_clearance.
   all five tests pass.
 * `.build/mimic.exe` rebuilt. Navigation semantics are unchanged by this batch;
   the binary adds opt-in diagnostics, not a claimed fix for the server rejection.
-* Both temporary Mimic servers started for the ordinary and navigation-stack
-  captures were stopped. The user's Chrome process was left running.

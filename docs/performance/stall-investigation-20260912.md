@@ -63,8 +63,7 @@ denominator and is not replaced by a successful retry.
 
 ### Real Pyppeteer click phases
 
-Medians in milliseconds, same five paired runs. The original desktop `main.py`
-is unchanged. `button.click()` uses the visible element, scrolling/visibility
+Medians in milliseconds, same five paired runs. The measured client workload is unchanged. `button.click()` uses the visible element, scrolling/visibility
 observation, content quads and actual mouse input, followed by checking both
 `dialog.open` and `:modal`.
 
@@ -304,14 +303,14 @@ and retirement is confirmed, while exact attribution of all retained RSS is not.
 
 ## Measurement protocol
 
-`tools/performance/live_latency.py` preserves the original desktop script and
-uses its US locale profile and visible button handle with real Pyppeteer click.
+`tools/performance/live_latency.py` uses an unchanged client workload, a US locale
+profile and a visible button handle with real Pyppeteer click.
 It separates connection/context setup, navigation, selector, IntersectionObserver,
 content quads, input events and modal observation. Generic content probes are
 read-only; at most one DOM probe is outstanding and a timeout ends the trial.
 
-Startup totals include launching a fresh browser. The user's desktop script
-attaches to an existing process. Initial exploratory startup detection incurred
+Startup totals include launching a fresh browser. The attach-only client workload
+uses an existing process. Initial exploratory startup detection incurred
 an approximately 500 ms Windows connection-refusal delay; bounded probes removed
 that measurement artifact. Those exploratory totals must not be pooled with
 the final paired campaign.
@@ -565,11 +564,10 @@ navigation/snapshot runs then passed in approximately 11.9 and 11.4 seconds on
 These two observations establish the reproduced timeout fix, not a new
 five-pair live distribution or a complete GitHub application compatibility claim.
 
-At the user's request, work ends with these important fixes and a commit,
-without another full correctness, frozen matrix or live campaign after the
-last corrections. The broad run therefore must not be reported as an exit-zero
+No full correctness suite, frozen matrix or live campaign was repeated after
+the last corrections. The broad run therefore must not be reported as an exit-zero
 final-source run. The final committed executable is `.build/mimic-optimized.exe`;
 its commit and SHA-256 receipt is `.build/stalls-committed-release.json`.
-Earlier measurements remain attached to their actual binaries. The original
-desktop `main.py` is unchanged (SHA-256
-`cb6734186d1922edd609af0a87ef224dbb14a54ab070ae672f8cd200a4b9d08b`).
+Earlier measurements remain attached to their actual binaries. The unchanged
+client workload has SHA-256
+`cb6734186d1922edd609af0a87ef224dbb14a54ab070ae672f8cd200a4b9d08b`.

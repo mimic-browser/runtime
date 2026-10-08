@@ -40,13 +40,11 @@ restored oracle PASS (1.840 s). Targeted browser race PASS (11.762 s); filtered
 WebAPI race has no matching tests. Full browser race is not claimed. Existing
 opt-in skips remain in the test receipt.
 
-The user requested reduced validation overhead during this package. The pending
-performance gate scheduler was cancelled before either gate started: this small
-receiver-only change does not alter owner lifetimes or engine concurrency.
+Neither planned performance gate started. This receiver-only change does not
+alter owner lifetimes or engine concurrency.
 Prior owner-package gates remain evidence for that earlier revision, not a new
 measurement here. No new performance claim is made. Already-completed controls
-are retained; future stable-environment packages will use focused controls when
-needed rather than repeat the complete Chrome-to-Chrome set mechanically.
+are retained with their original source and environment identities.
 
 [Compact evidence](document-getter-brands-20260911/) records binary/revision/dirty
 state, probe hashes, all-leaf transitions, failures/skips and validation scope.

@@ -1,7 +1,7 @@
 # Resource and document compatibility follow-up — 2026-09-10
 
 Reference: frozen Chrome 152.0.7977.82. This follows `svg-audit-2026-09-10.md`
-and the user's `manual-20260910-051107` capture. It is a general compatibility
+and the retained `manual-20260910-051107` capture. It is a general compatibility
 batch, not evidence of a successful Cloudflare challenge. The manual capture
 contained no SVG unsupported exceptions; its SVG text ink notices were still
 approximation notices. A 403 and DNS failures do not identify a server rejection

@@ -1,8 +1,8 @@
 # Wikipedia: semantics-preserving implementation plan
 
-Status: **planning only, 2026-09-19**. The user stopped diagnosis and requested
-a plan for real fixes. No more ablation runs are scheduled. Experimental source
-changes have been removed and saved under `tools/performance/pocs`.
+Status: **design proposal, 2026-09-19**. This document describes proposed production
+changes, not a measured implementation. Experimental patches are retained under
+`tools/performance/pocs` and are not part of production source.
 
 ## Target and evidence boundary
 

@@ -1,267 +1,137 @@
-# Voxel: результаты и передача расследования, 2026-09-10
+# Captured workload exceptions and SVG geometry
 
-## Текущее состояние
+This reference separates locally reproduced browser defects from remote-server
+outcomes. A retained diagnostic capture returned HTTP 403 for its main document.
+Successful live acceptance was **not established**; eliminating JavaScript
+exceptions is insufficient evidence.
 
-Прохождение Voxel **не подтверждено**. Последний завершённый диагностический
-прогон вернул основной документ с HTTP 403. Исправление ошибок JavaScript само
-по себе не доказывает принятие браузера сервером.
+Measurements belong to the retained captures and binaries, not every later
+revision. Current boundaries are in [SVG geometry](svg-geometry.md),
+[offline audio](offline-audio.md) and [architecture](../architecture.md).
 
-После исправлений четыре исходные группы ошибок перестали появляться в
-завершённых диагностических прогонах. Выполнение дошло до следующей ошибки:
-`Cannot read properties of undefined (reading 'call')`. Конкретный API,
-получатель непосредственно в момент исключения не записаны. Последующий
-локальный разбор установил конкретный дефект `SVG <g>.getBBox`, который
-воспроизводит эту ошибку; подробности и степень уверенности — ниже.
+## SVG availability and error attribution
 
-## Дополнение: локализация `reading 'call'`
+In the retained `voxel-20260910-payload-fixed2/trace.json`, events 2875/2876
+record unsupported Element<g>.getBBox immediately before
+`Cannot read properties of undefined (reading 'call')`.
 
-В сохранённом `voxel-20260910-payload-fixed2/trace.json` непосредственно перед
-первым console-сообщением с отчётом `reading 'call'` идут события:
+The corresponding VM frame, line 4, column 125708, reads a method then calls its
+.call property. Receiver/property values were not retained. Another trace also
+records two unsupported getBBox reads. Order alone is not a complete causal
+observation.
 
-- sequence 2875: `Element<g>.getBBox`, `supported: false`;
-- sequence 2876: `unsupported`, `Element<g>.getBBox`;
-- затем сообщение с ошибкой.
-
-Кадр VM в соответствующем instrumented source, строка 4, колонка 125708,
-читает метод из объекта и вызывает его через свойство, соответствующее `.call`.
-Локальные receiver/property значения этого кадра не сохранены. В новой ручной
-записи `manual-20260910-025339` то же неподдерживаемое чтение getBBox встречается
-дважды, на sequence 2136 и 4826; распакованных error-report там нет.
-
-Независимая локальная репродукция создаёт SVG, группу g и rect с x=10, y=20,
-width=30, height=40, затем выполняет:
+An independent reproduction creates SVG, a group and a rectangle at x=10,
+y=20, width=30, height=40:
 
 ```javascript
 const fn = g.getBBox;
 const box = fn.call(g);
 ```
 
-| Наблюдение | Chrome 152.0.7977.82 | Mimic V8 / Goja |
+| Observation | Chrome 152.0.7977.82 | Measured Mimic V8/Goja baseline |
 | --- | --- | --- |
-| `typeof g.getBBox` | `function` | `undefined` |
-| `Object.prototype.toString.call(g)` | `[object SVGGElement]` | `[object SVGElement]` |
-| Результат | `{x:10,y:20,width:30,height:40}` | TypeError |
-| Текст ошибки V8 | нет ошибки | `Cannot read properties of undefined (reading 'call')` |
+| typeof g.getBBox | function | undefined |
+| Group brand | [object SVGGElement] | [object SVGElement] |
+| Result | {x:10,y:20,width:30,height:40} | TypeError |
+| V8 exception | None | Cannot read properties of undefined (reading 'call') |
 
-Отсутствие getBBox и неверное семейство SVG-интерфейсов подтверждены локально.
-Совпадение порядка трассы и точного текста исключения делает getBBox сильным
-объяснением старого отчёта; окончательной записи переменных VM пока нет.
-Причина HTTP 403 этим не доказана.
+The missing method and incorrect interface family are confirmed locally and
+reproduce the exact exception. Missing VM locals prevent definitive attribution
+of the captured report. Neither finding establishes the cause of HTTP 403.
 
-Артефакты находятся в локальном каталоге ручной записи: `svg_bbox_repro.js`,
-`svg-bbox-chrome152.json`, `svg-bbox-mimic.txt`,
-`local_svg_diagnostic_test.go.txt`. Диагностический тест только печатает
-наблюдения: его PASS означает успешное снятие результатов, а не совместимость.
+The retained reproduction includes `svg_bbox_repro.js`,
+`svg-bbox-chrome152.json`, `svg-bbox-mimic.txt` and
+`local_svg_diagnostic_test.go.txt`. The printing test's PASS means successful
+observation collection, not compatibility.
 
-Семейство SVGGraphicsElement/SVGGElement и наблюдения bounding box реализованы
-после расширения нативного эталона до 55 групп. Примитивы, пути, объединение
-границ, вложенные transforms/viewBox, detached/display-состояния и receiver из
-другого realm проходят на V8 и Goja. Вычисления не требуют графического backend.
-Текст и use остаются явной границей поддержки; успешный сетевой проход после
-этого изменения ещё не записан. Подробности: [svg-geometry.md](svg-geometry.md).
+## Geometry evidence and text boundary
 
-### Ручная проверка после SVG-исправления
+The measured SVGGraphicsElement/SVGGElement implementation was checked against
+55 native reference groups on V8/Goja: primitives, paths, group unions, nested
+transforms/viewBox, detached/display states and cross-realm receivers.
+Geometry observations require no graphics backend.
 
-`manual-20260910-031647` содержит 5965 событий трассы. По сравнению с
-`manual-20260910-025339` исчезла граница `unsupported Element<g>.getBBox` (два
-события). Метод теперь отмечен как поддержанный на sequence 2491 и 4979.
-Оба исполнения доходят до `SVG.getBBox.text` на sequence 2504 и 4992 — это
-явная граница неподдерживаемых текстовых bounds, а не отсутствующий метод.
-Других новых имён semantic-missing/unsupported при сравнении нет.
+A subsequent 5965-event capture no longer contains the two unsupported group
+getBBox observations. Supported calls occur at 2491/4979; both reach the explicit
+SVG.getBBox.text boundary at 2504/4992. No new unsupported/semantic-missing names
+appear in the comparison. This establishes method availability, not text-bound
+compatibility.
 
-Следующая подтверждённая работа — SVG text bounding-box observations с
-нативным эталоном для метрик шрифта, baseline, text-anchor, x/y/dx/dy и tspan.
-Нельзя подставлять общий прямоугольник или объявлять текст измеренным через
-приблизительные Canvas-метрики без проверки совпадения наблюдений с Chrome.
+Text and use remain explicit limits at that captured revision. Text bounds need
+font, baseline, text-anchor, x/y/dx/dy and tspan references; approximate Canvas
+metrics alone do not establish SVG parity.
 
-Сетевой результат всё ещё 403 для трёх основных загрузок iroshop. Ray IDs:
-`a389ed26a8ce2dc5-TBS`, `a389ed6f2afb2dc5-TBS`, `a389edc05cac2dc5-TBS`.
-Два дочерних документа — 200. Дважды повторился DNS-отказ для
-brunhild.challenges.cloudflare.com; его роль пока не установлена.
-Распакованных caught-error payloads в ручной записи нет, поэтому исчезновение
-всех error-report либо причина серверного 403 этим не доказаны.
-Локальный `manual-analysis.json` сохраняет сопоставление без cookie и токенов.
+The capture still has three main-document 403 responses and two child-document
+200 responses. Two challenge-resource DNS failures have no proven causal role.
+No decoded caught-error payloads were present, so all error reports are not
+proven absent. A successful live acceptance control was not retained.
 
-Повторная попытка запуска 10 сентября была отклонена автоматической проверкой
-инструмента до старта процесса: `blocked by policy`, без подробной причины.
-Это ограничение среды запуска агента, а не новый ответ Voxel или Cloudflare.
-Нового сетевого результата от этой попытки нет.
+## Independently reproduced mechanisms
 
-## Подтверждённые причины и исправления
-
-| Исходное наблюдение | Установленная причина | Исправленная группа |
+| Observation | Established mechanism | Measured correction |
 | --- | --- | --- |
-| `Cannot read properties of null (reading 'then')` | `navigator.getBattery()` попадал в общую заглушку и возвращал null | Стабильные Promise и BatteryManager на Navigator, состояние отсутствующего аппаратного backend, проверки получателя; также пустое состояние gamepads |
-| `Expected a Node`, затем `Expected Nodes` | Узел другого realm не проходит локальный `instanceof Node`; документы имели отдельные пространства ID | Общая арена узлов внутри Page, приватное распознавание настоящих узлов, вставка/замена/перенос, фрагменты, обход дерева; сохранение Attr как настоящего Node |
-| Обфусцированное `… is not a function` | В локальных переменных исключения обнаружен предшествующий сбой чтения `nodeId` при borrowed `getComputedStyle` для чужого узла | Передача идентичности узла через межфреймовый мост; computed style читает таблицы стилей документа-владельца |
-| `Unsupported audio operation: createOscillator` | Отсутствовала семантика генерации сигнала | OscillatorNode, PeriodicWave и DynamicsCompressor, связанные параметры и жизненный цикл; CPU DSP без GPU и аппаратного аудио |
+| null read through then | getBattery reached a generic null-returning stub. | Stable Navigator Promise/BatteryManager identity, no-hardware state, receiver checks and empty gamepad state. |
+| Expected a Node / Expected Nodes | Foreign nodes failed local instanceof checks; documents used separate ID spaces. | Page-owned node arena, private genuine-node recognition, insertion/replacement/moves/fragments/traversal and Attr identity. |
+| Obfuscated not-a-function report | Captured locals showed an earlier nodeId failure in borrowed getComputedStyle for a foreign node. | Node identity crosses the frame bridge; styles come from the owner document. |
+| Unsupported createOscillator | Signal generation unavailable. | OscillatorNode, PeriodicWave, DynamicsCompressor, parameter/lifetime behavior and CPU DSP. |
+| Battery event order | Four property handlers differed from addEventListener ordering. | Shared DOM assignment/replacement/removal/reattachment semantics. |
 
-Дополнительная превентивная проверка обнаружила неправильный порядок всех
-четырёх обработчиков BatteryManager относительно addEventListener. Они теперь
-используют общий механизм обработчиков DOM. Тесты проверяют первоначальное
-назначение, замену, удаление и повторное подключение.
+Related frozen references cover Window/Worker base64, dirName/maxLength,
+Document/HTMLElement handlers and WebGL color spaces. Arenas remain Page-isolated.
+At the measured revision, individual unreachable nodes are not collected before
+Page closure. Audio has an explicit tolerance, not bit-identical native FFT.
 
-В той же накопленной серии присутствуют измеренные исправления base64 в Window
-и Worker, отражения dirName/maxLength, обработчиков Document/HTMLElement и
-цветовых пространств WebGL. Их эталоны и регрессии сохраняются вместе с кодом.
+## Evidence and binary identity
 
-Архитектурные границы описаны в [architecture.md](../architecture.md),
-а поддержка и точность DSP — в [offline-audio.md](offline-audio.md).
-Арена изолирована между Pages; сборка отдельных недостижимых узлов до закрытия
-Page не реализована. Синтез аудио имеет явный числовой допуск, а не обещание
-побитового совпадения с нативным FFT.
+Raw responses, instrumented sources, payloads/events/traces, binaries and
+integrity manifests remain in ignored `compatibility/private-captures/`.
+They can contain cookies and challenge tokens. Private target URLs and session
+correlation identifiers are omitted from this public reference.
 
-## Сохранённые результаты
+- A capture with an undersized Node pipe string limit is invalid evidence.
+  Complete captures match 20/20, 6/6 and 3/3 serializer pairs to POST bodies.
+  The fixed2 capture matches 3/3 pairs across four POST requests; not every POST necessarily
+  uses the instrumented serializer.
+- Instrumentation changes source, timing and observable globals. Snapshots skip
+  accessor getters and mark traversal limits. These observations cannot alone
+  explain an uninstrumented server outcome.
+- The fixed2 capture predates the final battery-event correction. Its integrity manifest
+  identifies that binary, not a final-build claim.
+- A separate 530-CDP-event/8493-runtime-event capture reports missing battery,
+  gamepad and oscillator semantics but has no executable hash/launch metadata.
+  It cannot establish a corrected-build regression. No pre-pack or
+  Runtime.exceptionThrown event is present; caught exceptions can still exist.
+- No successful Chrome network control was captured by this diagnostic method.
+  Local native API oracles are not successful-server-response references.
+- A clearance cookie is present in recordings that still return 403. Its presence
+  does not prove acceptance; no cookie decryption/server-key recovery was shown.
 
-Каталоги ниже находятся в локальном `compatibility/private-captures/` и намеренно
-не входят в Git: сетевые материалы содержат приватные cookie и challenge-токены.
-В публичный отчёт включены только результаты и идентификаторы корреляции.
+## Diagnostic tooling boundaries
 
-| Каталог | Наблюдение |
-| --- | --- |
-| `iroshop-20260910-payload1` | Невалидная попытка: слишком маленький лимит строки Node pipe; не использовать как доказательство |
-| `iroshop-20260910-payload2` | 20 пар вход/выход сопоставлены с POST; четыре исходные группы ошибок |
-| `voxel-20260910-payload3` | 6/6 пар сопоставлены; те же четыре группы; ответы ресурсов сохранены |
-| `voxel-20260910-exception3` | Native-inspector диагностика локальных переменных для первоначальных причин |
-| `voxel-20260910-payload-fixed1` | 3/3 пары сопоставлены; остался `Expected Nodes`, впоследствии исправлен общий brand-check replaceChild |
-| `voxel-20260910-payload-fixed2` | 3/3 пары сопоставлены, всего 4 POST; одна группа `reading 'call'`; основной документ 403, дочерний документ 200 |
+The ignored `compatibility/private-captures/payload-diagnostic/` tools are
+separate from the runtime. Capture needs a large enough Node pipe limit.
+The analyzer uses version-specific field names and historically copies a binary
+from a fixed path; its executable identity must match the capture before use.
+Otherwise it can overwrite the wrong retained binary.
 
-Последний основной Ray ID: `a38977df7fe718a4-TBS`.
-Дочерний Ray ID: `a38977e3cfcd2928-TBS`.
-В этом конкретном отчёте ошибка находится в сигнале `30`; номера и
-обфусцированные имена нестабильны и не должны попадать в runtime-логику.
+The exception overlay generator emits diagnostic Go source that must remain
+outside ordinary package discovery. A diagnostic printing test and a frozen
+compatibility expectation have different meanings.
 
-Начало стека оставшейся ошибки: `oD.gk`, строка 4, колонка 125708;
-следующие кадры — `oD.<computed>.<computed>` и `o2`. Это кадры VM, а не
-доказательство отсутствия какого-либо конкретного Web API.
+## Recorded validation
 
-Для fixed2 сохранены `analysis.json`, `payloads.json`, `events.json`,
-`trace.json`, исходные ответы, инструментированные исходники,
-`captured-mimic.exe` и `integrity.json`. Бинарник этого прогона предшествует
-последней правке порядка событий батареи и не представляет финальную сборку.
+These statuses apply to the retained source/binary evidence:
 
-## Ограничения доказательств
+- DOM/browser suites passed; browser took 214.215 seconds.
+- Event/document-reference tests passed after the battery-handler correction.
+- Focused race checks for cross-realm DOM, Navigator, identity, parallel Pages
+  and teardown passed in 25.378 seconds.
+- Other production packages, commands, Chrome data and compatibility checks
+  passed in the recorded validation.
+- Six audio references passed on Goja/V8. Exact PCM tests were retained; new
+  comparisons used tolerance 1e-5, with measured composite error at most 2.39e-7.
+- Source-fixture hashes for 14 captures and whitespace checks passed.
 
-- Инструментирование меняет исходник, время выполнения и наблюдаемое глобальное
-  состояние. Оно помогает локализовать исключение, но не устанавливает причину
-  серверного отказа в неинструментированном запуске.
-- Сопоставление выполнено по точному равенству выхода инструментированного
-  упаковщика и POST body. Не каждый POST обязан проходить через найденную форму
-  упаковщика. Снимки пропускают accessor-getters и явно отмечают пределы обхода.
-- Успешный Chrome-проход, записанный именно этим диагностическим механизмом,
-  пока не получен. Нативные локальные API-эталоны есть; они не являются сетевым
-  эталоном успешного прохождения.
-- Наличие cf_clearance не доказывает успешный серверный вердикт. В предыдущих
-  материалах cookie выдавалась и отправлялась повторно, но возвращался 403.
-  Расшифровщик clearance или серверные ключи не найдены. Проект cf-research
-  использовался как база знаний и источник статического парсера, а не как
-  доказательство возможности расшифровки cookie.
-
-## Что делать дальше
-
-1. Начать с сохранённого fixed2: проверить integrity.json, найти запись ошибки,
-   связанный requestId и ближайшие события trace. Не считать последний
-   зарегистрированный API причиной без воспроизводимого примера.
-2. При доступной диагностической среде получить исключение с локальными
-   переменными: установить, какое значение равно undefined перед `.call`,
-   откуда оно получено и какие receiver/аргументы использованы. Не подставлять
-   пустую функцию и не подавлять исключение для продолжения выполнения.
-3. Выделить минимальную локальную HTML/JS-репродукцию без сайта и его VM.
-   Измерить её в frozen Chrome 152.0.7977.82, V8 и Goja. Расширить проверку
-   на родственные методы, неверные receiver, межфреймовые значения, identity,
-   дескрипторы и порядок событий — в зависимости от установленной причины.
-4. Исправить общий семантический механизм. Сохранить нативный эталон и регрессию;
-   не менять ожидаемое поведение ради прохождения теста. Проверить, что
-   исправление не добавляет общего состояния между Pages.
-5. После локальных проверок сравнить обычную и диагностическую сборки отдельно.
-   Для каждого прогона сохранять точный бинарник, его hash, исходную ревизию и
-   diff, URL, время, транспортные параметры и Ray ID. Отдельно проверить Voxel
-   и принадлежащий пользователю `https://iroshop.tech/mimic-e2e`.
-6. Если ошибок JS больше нет, но остаётся 403, сопоставить запросы iroshop с
-   Security Events в доступной пользователю Cloudflare-панели: действие,
-   сработавшее правило и его условие, Ray ID и последовательность переходов.
-   Сравнивать с подтверждённо успешной записью Chrome при одинаковых условиях.
-   Не объяснять отказ fingerprint/TLS/cookie без различающего наблюдения.
-
-Критерий завершения: не только отсутствие прежних error-report, но и фактическая
-загрузка целевого документа обычной сборкой; повторный запрос в той же сессии
-также проверен. Любой оставшийся 403 фиксируется как незакрытый результат.
-
-## Локальные команды проверки
-
-Из корня репозитория:
-
-```powershell
-python tools/compatibility/capture_query_oracle.py internal/browser/testdata/cross_realm_nodes_oracle.js compatibility/captures/semantic-checkpoints/cross-realm-nodes-chrome152.json --secure-context
-go test ./internal/browser -run 'TestDocumentCompatibilityOracle|TestDOMObservationsMatchChrome|TestOfflineAudio' -count=1
-go test -race ./internal/browser -run 'TestDocumentCompatibilityOracle/(cross-realm-nodes|navigator-power)|TestFrameHandleIdentityUsesCapturedWeakMap|TestPerformanceParallelPages|TestAwaitChildWorkCancellationAndPageTeardown' -count=1
-go test ./...
-go build -o .build/mimic.exe ./cmd/mimic
-git diff --check
-```
-
-Скрипт снятия эталона требует уже запущенный Chrome 152 с CDP на 9343 и создаёт
-изолированный контекст с локальным документом. Переснимать эталон следует лишь
-при изменении репродукции; сохранённые ожидания не корректировать вручную.
-
-## Диагностические инструменты и известные ловушки
-
-Локальные инструменты: `compatibility/private-captures/payload-diagnostic/`.
-Их README описывает overlay и формат записи. Они не входят в production runtime.
-
-- `capture.py`: исходные ответы, события, trace, снимки входа/выхода; большой
-  лимит строки Node pipe обязателен для полных исходников.
-- `analyze.py`: сейчас использует имена полей конкретной записанной версии;
-  новый формат требует проверки анализатора. Он также копирует бинарник из
-  фиксированного `.build/mimic-payload-diagnostic.exe`. Не запускать его для
-  другого бинарника или старой записи без исправления происхождения файла:
-  можно ошибочно перезаписать сохранённый исполняемый файл.
-- `make-exception-overlay.py`: фильтр включает `reading 'call'`. Генератор
-  создаёт `exception-spike.go`; после генерации его нужно хранить с расширением
-  `.go.txt` и обновлять путь overlay, иначе `go test ./...` увидит лишний пакет.
-  В текущем локальном overlay путь уже исправлен. Генератор ещё не автоматизирует
-  это переименование.
-- Старый `.build/mimic-exception4-diagnostic.exe` не включает последнюю правку
-  событий батареи. Для новых выводов нужна свежая сборка и её отдельный архив.
-- Не коммитить сырые ответы, cookie, токены, частные capture-каталоги и бинарники.
-
-## Выполненная валидация
-
-- Полный набор `internal/dom` и `internal/browser` прошёл; browser — 214.215 с.
-- После последней правки событий отдельно прошли event-тесты и новые/старые
-  document-эталоны, включая батарею и обработчики Document/HTMLElement.
-- Выборочная race-проверка межфреймового DOM, Navigator, identity, параллельных
-  Pages и teardown прошла — 25.378 с.
-- Остальные production-пакеты, команды, Chrome-данные и compatibility прошли.
-- Шесть новых аудио-эталонов проверены на Goja/V8; старые точные PCM-тесты
-  сохранены. Допуск новых PCM-сравнений — 1e-5; измеренная ошибка составных
-  графов в этой серии не превышала 2.39e-7.
-- Проверены hashes исходных fixtures для 14 новых captures и `git diff --check`.
-- `.build/mimic.exe` собран из финальных исходников этой серии.
-
-## Проверка ручной записи manual-20260910-022019
-
-Получена после коммита исправлений. В записи 530 CDP-событий и 8493 событий
-Mimic trace, тела ответов сохранены. Это iroshop `/mimic-e2e`, не Voxel:
-три загрузки основного документа завершились 403, дочерние challenge-документы
-вернулись с 200. Основные Ray ID:
-`a3899518eb8a18a4-TBS`, `a38995492ca818a4-TBS`, `a3899586687c18a4-TBS`.
-
-В trace по три раза отмечены semantic-missing для `Navigator.getBattery`,
-`Navigator.getGamepads` и `WebAudio.createOscillator`. Это указывает на сборку
-до соответствующих исправлений. При проверке действующий процесс на порту
-9431 запускал `.build/mimic-live-retry.exe` от 2026-09-09 23:34:51; свежая
-`.build/mimic.exe` собрана 2026-09-10 02:10:16. В самой записи нет hash бинарника
-и метаданных запуска, поэтому строго связать её с процессом невозможно.
-
-Записей pre-pack probe и Runtime.exceptionThrown нет. Отсутствие последнего
-не доказывает отсутствие перехваченных страницей исключений. Эта запись не
-подтверждает регрессию исправлений и не локализует оставшуюся `reading 'call'`.
-Санитизированное резюме сохранено рядом: `review-summary.json`.
-
-Для следующего ручного прогона сначала завершить старый сервер Mimic и запустить
-свежую `.build/mimic.exe` на том порту, к которому подключён сборщик. Сохранить
-абсолютный путь бинарника, SHA256, commit, параметры запуска и время рядом с
-events/trace. Обычный ручной прогон полезен для статусов и регрессий; локализация
-перехваченного исключения требует отдельной минимальной репродукции либо
-доступного стека с локальными переменными, а не угадывания по списку API.
+No successful live-server result after the SVG change is established.
+Remaining caught-exception attribution requires a minimal causal reproduction
+or retained VM locals, not the last API name in a trace.

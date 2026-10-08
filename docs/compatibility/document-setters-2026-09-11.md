@@ -27,8 +27,7 @@ overlap. No new discovery-group count is claimed; the last nine observational
 groups remain a historical measurement, not nine proven root causes.
 
 Only focused Chrome controls were repeated. Full unchanged Chrome controls,
-fuzzer discovery, sweep and performance gates were omitted following the user's
-request to prioritize important work. No performance improvement or complete
+fuzzer discovery, sweep and performance gates were not run. No performance improvement or complete
 ownership/lifetime reclamation is claimed. All probes use local fixtures and
 frozen Chrome 152.0.7977.82; no target site ran.
 

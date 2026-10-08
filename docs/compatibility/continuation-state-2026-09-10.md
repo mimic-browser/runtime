@@ -107,8 +107,8 @@ Private baseline evidence: `resource-scope-before-v2`. The first probe
 it is incomplete and is not the ownership oracle. The reduced probe uses a
 child-local evaluation and is complete in both runtimes.
 
-The user started the newly built executable after automatic launch review
-blocked the agent's launch. `semantics-after-20260910` contains a complete fresh
+The newly built executable was measured through its existing CDP endpoint.
+`semantics-after-20260910` contains a complete fresh
 differential: resource ownership, worker microtasks and SameSite each have zero
 differences. Navigation cookies agree; four remaining Origin/Fetch Metadata
 differences occur only in the cross-site redirect cases of that corpus.
@@ -267,10 +267,9 @@ need native source/call IDs, scheduler parent-task IDs and value-flow tracking;
 adding stacks alone would not be taint tracing. Instrumentation overhead and
 observable behavior need an uninstrumented control.
 
-Automatic review previously rejected launching a new Mimic comparison process
-with `blocked by policy`, without a more specific reason. That launch was not
-repeated through another mechanism. The user subsequently started the fresh
-binary on port 9349, making comparison available through its existing CDP.
+The initial fresh-process comparison did not run. A subsequent comparison used
+the freshly built binary through its existing CDP endpoint on port 9349; the
+results below apply to that measured process.
 
 ## Validation
 

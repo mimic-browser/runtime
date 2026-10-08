@@ -56,8 +56,9 @@ that all widgets, resources or workflows work. Preview counts measure received
 HTML updates, not screenshot/rendering parity. A challenge or denial page is
 not counted as the requested site's application loading successfully.
 
-Home Depot returned HTTP 403 / `Access Denied`. The user confirmed the same
-result in their main browser, so this is an expected external restriction.
+Home Depot returned HTTP 403 / `Access Denied`; the same response was reported
+in a separate ordinary-browser session. This does not establish a Mimic-specific
+semantic defect or identify the restriction mechanism.
 Royal Albert Hall returned HTTP 200 with `Pardon Our Interruption` and
 Incapsula resources. Its content is a challenge, despite the successful HTTP
 status. Commands and departure work there; the challenge's precise decision

@@ -83,8 +83,7 @@ on both V8 and Goja. Existing storage, reflection and capability tests are retai
 The old blanket compile-unsupported assertion now checks a texture shader outside
 the implemented subset and the GL error for drawing without a linked program.
 
-A live capture attempt for this batch was rejected by automatic tool approval
-with only "blocked by policy". Therefore no new Cloudflare pass or causal
-improvement is claimed. WebGPU resource/command execution, fonts/offline audio,
-remaining networking observations and miscellaneous capability APIs are still
-outstanding; completion of this checkpoint does not close the overall task.
+No new live capture ran for this validation scope, so it establishes no
+Cloudflare success or causal improvement. WebGPU resource/command execution,
+fonts/offline audio, remaining network observations and other capability APIs
+were outside this checkpoint's qualification scope.

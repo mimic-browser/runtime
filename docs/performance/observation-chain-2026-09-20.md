@@ -157,5 +157,4 @@ cadence is a separate, smaller contribution.
 
 No semantics-preserving 4 s Wikipedia result has been established. The four
 earlier small PoCs combined improved only about 5% and were removed. Fixture tape
-artifacts remain unvalidated and were not executed after the user redirected
-the investigation to this whole-chain comparison.
+artifacts remain unvalidated and were not executed in this whole-chain comparison.

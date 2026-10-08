@@ -5,9 +5,8 @@ This is a current disposition update. It does not rewrite or invalidate the
 or the separately reproduced [numeric allocator failure](snapshot-numeric-allocator-2026-09-11.md).
 
 At implementation revision `b5b62e6`, all executed known snapshot regressions and
-opt-in lifecycle stress scenarios pass the bounded final matrix below. Per the
-user's stopping rule, the unexplained `SizeFromMap` / broader native crash family
-is moved from an indefinitely open investigation to **stability technical debt**.
+opt-in lifecycle stress scenarios pass the bounded matrix below. The unexplained
+`SizeFromMap` / broader native crash family remains **stability technical debt**.
 Its cause is not established and absence of future crashes is not proved.
 
 ## Evidence and scope

@@ -123,10 +123,28 @@ the current behavioral reference.
   data. For reportable comparisons, ensure the executed binary corresponds to
   the intended fresh build.
 
-- Record significant results, regressions, remaining bottlenecks, and known
-  limitations in `docs/performance/report.md`.
+- Keep significant validated results, remaining bottlenecks and known limitations
+  in `docs/performance/report.md`. It is a current technical summary, not a daily
+  activity log. Retain intermediate trials and investigations privately.
 
 ## Changes
+
+- Public repositories, websites, documentation and release notes present the
+  project and its current user-facing behavior. Never publish private issue
+  tracker identifiers, links, exported tasks, internal task relationships or
+  project-management metadata.
+
+- Do not publish daily work diaries, personal browsing activity, agent progress
+  reports, prompt histories or task-completion checklists. Explain usage,
+  supported behavior, material limitations and significant shipped changes.
+  Contributor documentation may explain technical mechanisms and reproducible
+  validation without narrating private work sessions.
+
+- Preserve detailed local investigations and their original evidence in ignored
+  local storage or private CI artifacts. Keep public benchmark methodology,
+  frozen behavioral evidence and compatibility limitations accurate; retaining
+  evidence does not require publishing internal work logs. Review documentation,
+  filenames, copied release text and generated outputs before publication.
 
 - When adding, removing, or changing CDP handlers, update
   `internal/cdp/protocol_support.json` in the same change with the actual support

@@ -1,4 +1,4 @@
-# Producer-program attempt: rejected, requested replacement unfinished
+# Producer-program experiment: incomplete replacement
 
 ## Scope and status
 
@@ -12,7 +12,7 @@ geometry dirty generations, and recursive provisional-box publication. It does
 not replace the recursive sizing/flow evaluator or implement a new selective
 invalidation scheme. Consequently, touching all producer categories is **not**
 equivalent to eliminating their measured work. This is not the full production
-replacement requested by the user and does not establish a no-go for Part B.
+replacement and does not establish a no-go for Part B.
 
 The implementation is unaccepted and uncommitted. Do not ship it on these results.
 
@@ -95,7 +95,7 @@ That report itself records independent concurrent edits during cleanup.
 
 The fixed binary receipts remain valid descriptions of the tested binaries;
 the mutable worktree is not their exact source snapshot, and the control is not
-the requested clean post-audit production baseline. Further changes and any
+a clean post-audit production baseline. Further changes and any
 rollback must first reconcile these overlapping edits. Original incoming edits
 must not be restored wholesale over the other writer's cleanup. Work stopped
 without attempting that destructive rollback.

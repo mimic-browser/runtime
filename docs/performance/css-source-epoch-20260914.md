@@ -33,7 +33,7 @@ the additive diagnostic, candidate contains only that diagnostic and the CSS
 prototype. Bootstrap/snapshot experiments in the working directory are not in
 either executable. Ordinary timings have diagnostic profiling disabled and
 retain the normal tracing policy. Two sequential C-A-A-C blocks per configuration
-give four processes per variant, with no concurrent heavy agent work. Values
+give four processes per variant, with no concurrent heavy builds or tests. Values
 below are medians of process medians; CPU includes process setup and collection.
 
 ## Result

@@ -129,3 +129,21 @@ The capture tool requires `websockets`, creates and closes its own page, checks
 the exact Chrome/V8/Chromium versions and browser mode, then refreshes the source,
 provenance and parameter observations. It never closes the shared browser. Review
 the resulting schema and observation differences before accepting a refresh.
+# SDK-owned Mimic extension snapshot
+
+The canonical extension contract lives in the SDK repository at
+`schema/mimic/protocol.json`. The runtime consumes the exact reviewed bytes in
+`internal/cdp/protocol/mimic.json` and verifies their SHA-256 against
+`mimic.source.json` during ordinary offline generation. The current local
+snapshot is explicitly marked unreleased; its content hash is the pin until an
+SDK source revision is published. No generation step fetches a repository or
+chooses a runtime API compatibility mode.
+
+Mimic extensions have their own parameter/result projections in the generated
+inventory. They never change the frozen Chrome counts or source bytes.
+`wireSchemaGenerated` reports shape availability; `protocol_support.json`
+continues to own semantic scope and regression evidence. Coverage tests check
+that current stable handlers are present in the pinned contract. A deliberately
+experimental new command may stay outside stable bindings when its registry
+declaration explicitly sets `experimental: true`; raw SDK dispatch does not
+depend on generated membership.

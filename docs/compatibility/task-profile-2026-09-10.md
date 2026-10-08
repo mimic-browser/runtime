@@ -33,7 +33,7 @@ as a private patch and removed from production sources.
 
 ## Network versus execution
 
-In the user's original trace, request 872 receives its response at sequence
+In the original retained trace, request 872 receives its response at sequence
 900 in **299.272 ms**. The following flow request is sequence 2756, another
 **10,967.117 ms** later. The bulk of this interval is not waiting for that
 network response.
@@ -115,7 +115,7 @@ overrun determines the server's outcome. Raw evidence is in `control-before`,
 
 ## overrunBegin correlation
 
-The original 6.521386-second task is **2080–2497** in the user's trace. Message
+The original 6.521386-second task is **2080–2497** in the retained trace. Message
 values were not retained there, only their field types and encoded sizes.
 Consequently an `overrunBegin` label cannot be assigned to a particular
 original message with confidence.

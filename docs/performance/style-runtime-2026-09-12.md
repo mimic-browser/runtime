@@ -15,9 +15,9 @@ The live page had a timer callback lasting 2637 ms under profiling. It repeatedl
 
 The changes preserve one event loop per Page. They do not move author JavaScript off that loop or add global shared Page state.
 
-## Live user script
+## Live client workload
 
-The user script was copied unchanged for the final measurement, with its SHA recorded. A wrapper changed only the endpoint and timed its calls. Identical 1280×720 viewports were prepared outside the timed runs. Three measured alternating runs per browser follow one excluded warm-up; browser profiles/caches are reused. Chrome was 152.0.7977.83. All 12 runs returned 5 categories, 27 forums and 39 subforums.
+The client workload was unchanged for the final measurement, with its SHA recorded. A wrapper changed only the endpoint and timed its calls. Identical 1280×720 viewports were prepared outside the timed runs. Three measured alternating runs per browser follow one excluded warm-up; browser profiles/caches are reused. Chrome was 152.0.7977.83. All 12 runs returned 5 categories, 27 forums and 39 subforums.
 
 | Median, ms | Baseline Mimic | Updated Mimic | Chrome |
 |---|---:|---:|---:|

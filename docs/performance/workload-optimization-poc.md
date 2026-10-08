@@ -163,8 +163,8 @@ arbitrary transport errors and persistent initial-state checkpoints remain
 unsupported. No production URL guard lattice, automatic live fallback,
 universal rollback, module pruning, cloud optimizer or public API migration was
 built. The wrapper is not an OS sandbox for networking performed by the external
-client itself. Frozen workload correctness is not proof of the user's unasserted
-semantic requirements, and a passing frozen capture is not proof of safe live
+client itself. Frozen workload correctness does not establish unasserted
+application requirements, and a passing frozen capture is not proof of safe live
 specialization tomorrow.
 
 One necessary shared runtime fix was found: nested `document.write` paused at a

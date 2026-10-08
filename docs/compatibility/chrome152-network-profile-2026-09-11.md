@@ -87,4 +87,4 @@ QUIC CRYPTO fragmentation/coalescing, ACK scheduling, congestion control and
 all packet-level timing have not been matched to Chrome. Zero-RTT application
 data, Retry, ECH configuration negotiation and arbitrary experiment states are
 not established by these cold/resumption tests. Proxy, loss, migration and path
-validation scenarios remain outside this work's requested scope.
+validation scenarios remain outside the measured coverage.

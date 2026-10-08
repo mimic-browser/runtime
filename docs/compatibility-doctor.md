@@ -417,6 +417,6 @@ new capture preparation records existing workers before the scenario. No success
 real AntiBot Challenge is claimed. The supported contract is evidence collection and conservative
 comparison, not universal conformance, zero false negatives or automatic repair.
 
-See the [7 October contributor field validation](compatibility/doctor-field-validation-2026-10-07.md)
-for varied live-site screening, the retained XPath defect and fix, and remaining
-capture/replay qualification boundaries.
+See the [evidence and replay reference](compatibility/doctor-field-validation-2026-10-07.md)
+for session ownership, capture authority, retained semantic probes and current
+collection/replay boundaries.
