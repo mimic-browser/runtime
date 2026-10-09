@@ -33,13 +33,14 @@ ordinary CDP client.
 
 ## Quick start
 
-Install the Node SDK from GitHub and add Playwright as an optional client:
+Install the SDK from npm with the Playwright client used in this example:
 
 ```sh
-npm install git+https://github.com/mimic-browser/sdk.git playwright-core@1.63.0
+npm install mimic-browser playwright-core@1.63.0
 ```
 
-Save this as `scrape.mjs` and run it with `node scrape.mjs`:
+Requires Node.js 22.19 or newer. Save this as `scrape.mjs` and run it with
+`node scrape.mjs`:
 
 ```javascript
 import { launch } from "mimic-browser/playwright";
@@ -55,9 +56,14 @@ try {
 }
 ```
 
-The first launch downloads a verified runtime for supported hosts; later launches
-reuse the local cache. The SDK also has
-[Python, Go, .NET and other integrations](https://github.com/mimic-browser/sdk#choose-your-language-and-client).
+The first launch downloads a verified runtime for supported Windows x64 or
+Linux x64 hosts; later launches reuse the persistent local cache. No Chromium
+installation or manual executable path is needed. Playwright and Puppeteer are
+optional clients: choose the one your project uses.
+
+For Python, C#, Java, Kotlin, Go, Rust, Ruby or PHP, choose your language and
+client in the [SDK quickstart](https://mimic.boo/sdk/). It includes installation
+commands and runnable launch/connect examples for each integration.
 
 ### Bring your own CDP client
 
