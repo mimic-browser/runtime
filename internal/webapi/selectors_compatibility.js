@@ -66,7 +66,9 @@ const compatibilitySelectors = (() => {
             return { ...emptySelector()[0] };
           }
           if (token.type === 'pseudo') {
-            if (token.name === checkedPseudo) throw syntax('Unknown pseudo-class');
+            if (token.name === checkedPseudo || token.name === 'mimic-internal-filtered-nth')
+              throw syntax('Unknown pseudo-class');
+            if (token.nthOf) next.nthOf = validate(token.nthOf, true, false, false, strict);
             if (extensions.has(token.name)) throw syntax('Non-standard pseudo-class');
             if (Array.isArray(token.data)) {
               const inner = validate(
@@ -100,6 +102,7 @@ const compatibilitySelectors = (() => {
         ...token,
         ...(token.type === 'pseudo' && token.name === 'checked' ? { name: checkedPseudo } : {}),
         ...(Array.isArray(token.data) ? { data: copy(token.data) } : {}),
+        ...(token.nthOf ? { nthOf: copy(token.nthOf) } : {}),
       })),
     );
   }
@@ -182,9 +185,20 @@ const compatibilitySelectors = (() => {
     },
     'focus-visible': (node) => compatibilityElementState.focusVisible(node),
   };
-  function options(scope) {
+  function options(scope, shadowRoot = null) {
+    const shadowHost = shadowSlots.get(shadowRoot)?.host;
+    const scopedAdapter = shadowHost
+      ? {
+          ...adapter,
+          getParent: (node) =>
+            node === shadowHost ? null : parent(node) === shadowRoot ? shadowHost : parent(node),
+          getChildren: (node) => children(node === shadowHost ? shadowRoot : node),
+        }
+      : adapter;
     return {
-      adapter,
+      adapter: scopedAdapter,
+      shadowHost,
+      hostParent: parent,
       equals: adapter.equals,
       context: scope,
       relativeSelector: false,
@@ -413,7 +427,7 @@ const compatibilitySelectors = (() => {
     }
     return context;
   };
-  function compileStyle(selector) {
+  function compileStyle(selector, shadowRoot = null) {
     try {
       // A style read matches many rules against the same element. Keep even
       // leaf predicates in the shared read scope so id/class/attribute facts
@@ -428,7 +442,7 @@ const compatibilitySelectors = (() => {
           ),
         );
       if (scoped(ast)) return (node) => predicate(node, selector)(node);
-      return ast.length ? library.compileToken(copy(ast), options(null)) : () => false;
+      return ast.length ? library.compileToken(copy(ast), options(null, shadowRoot)) : () => false;
     } catch (error) {
       // Invalid/unsupported CSS rules are ignored, but DOM selector methods
       // continue to throw SyntaxError through their existing boundary.

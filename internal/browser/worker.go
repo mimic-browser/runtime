@@ -3,9 +3,6 @@ package browser
 import (
 	"context"
 	cryptorand "crypto/rand"
-	"crypto/sha1"
-	"crypto/sha256"
-	"crypto/sha512"
 	"errors"
 	"fmt"
 	"net/url"
@@ -207,6 +204,8 @@ func (w *DedicatedWorker) run(ctx context.Context, source string) {
 		return workerFonts
 	})
 	installURLHost(host, runtime, func() *url.URL { return w.url })
+	installWebCryptoHost(host, runtime)
+	installTextDecoderHost(host, runtime)
 	host["createObjectURL"] = runtime.Function(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
 		source := w.url
 		if source.Scheme == "blob" {
@@ -358,33 +357,6 @@ func (w *DedicatedWorker) run(ctx context.Context, source string) {
 	host["randomUUID"] = runtime.Function(func(engine.Value, []engine.Value) (engine.Value, error) {
 		p.trace.Add(trace.API, "Crypto.randomUUID", map[string]any{"worker": w.id})
 		return runtime.Value(uuid.NewString()), nil
-	})
-	host["cryptoDigest"] = runtime.Function(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
-		name := strings.ToUpper(strings.ReplaceAll(strarg(args, 0), "_", "-"))
-		data := byteSlice(arg(args, 1))
-		var digest []byte
-		switch name {
-		case "SHA-1", "SHA1":
-			value := sha1.Sum(data)
-			digest = value[:]
-		case "SHA-256", "SHA256":
-			value := sha256.Sum256(data)
-			digest = value[:]
-		case "SHA-384", "SHA384":
-			value := sha512.Sum384(data)
-			digest = value[:]
-		case "SHA-512", "SHA512":
-			value := sha512.Sum512(data)
-			digest = value[:]
-		default:
-			return nil, fmt.Errorf("NotSupportedError: unsupported digest algorithm %s", name)
-		}
-		out := make([]int, len(digest))
-		for index, value := range digest {
-			out[index] = int(value)
-		}
-		p.trace.Add(trace.API, "SubtleCrypto.digest", map[string]any{"algorithm": name, "bytes": len(data), "worker": w.id})
-		return runtime.Value(out), nil
 	})
 	host["performanceNow"] = runtime.Function(func(engine.Value, []engine.Value) (engine.Value, error) {
 		return runtime.Value(p.performanceClamper.now(workerScheduler.Now(), w.performanceOrigin, w.performanceIsolated)), nil

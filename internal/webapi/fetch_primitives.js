@@ -1,4 +1,33 @@
 // Canonical realm-independent primitives shared by Window and Worker.
+const bufferViewCheck = ArrayBuffer.isView;
+const bufferSourceSlice = ArrayBuffer.prototype.slice;
+const bufferSourceLength = Object.getOwnPropertyDescriptor(ArrayBuffer.prototype, 'byteLength').get;
+const bufferSourceArray = Uint8Array;
+const bufferSourceCopy = Uint8Array.prototype.slice;
+const bufferSourceTypedPrototype = Object.getPrototypeOf(Uint8Array.prototype);
+const bufferSourceTypedGetters = ['buffer', 'byteOffset', 'byteLength'].map(
+  (name) => Object.getOwnPropertyDescriptor(bufferSourceTypedPrototype, name).get,
+);
+const bufferSourceDataGetters = ['buffer', 'byteOffset', 'byteLength'].map(
+  (name) => Object.getOwnPropertyDescriptor(DataView.prototype, name).get,
+);
+const bufferSourceBytes = (value) => {
+  if (bufferViewCheck(value)) {
+    let parts;
+    try {
+      parts = bufferSourceTypedGetters.map((get) => Reflect.apply(get, value, []));
+    } catch {
+      parts = bufferSourceDataGetters.map((get) => Reflect.apply(get, value, []));
+    }
+    Reflect.apply(bufferSourceLength, parts[0], []);
+    return Reflect.apply(bufferSourceCopy, new bufferSourceArray(...parts), []);
+  }
+  try {
+    return new bufferSourceArray(Reflect.apply(bufferSourceSlice, value, [0]));
+  } catch {
+    throw new TypeError('The provided value is not an ArrayBuffer or ArrayBufferView');
+  }
+};
 const usvString = (value) => {
   if (typeof value === 'symbol') throw new TypeError('Cannot convert a Symbol value to a string');
   const text = String(value);
@@ -721,7 +750,12 @@ class URL {
     return urlState(this).href;
   }
   set href(v) {
-    urlState(this).href = host.urlParts(String(v)).href;
+    const state = urlState(this);
+    try {
+      state.href = host.urlParts(String(v), '').href;
+    } catch {
+      throw new TypeError('Invalid URL');
+    }
   }
   get origin() {
     return urlParts(this).origin;

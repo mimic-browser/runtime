@@ -59,6 +59,24 @@ func performanceSource() string {
 //go:embed base64.js
 var base64Surface string
 
+//go:embed webcrypto.js
+var webCryptoSurface string
+
+//go:embed css_registered_properties.js
+var cssRegisteredPropertiesSurface string
+
+//go:embed css_property_worlds.js
+var cssPropertyWorldsSurface string
+
+//go:embed css_typed_values.js
+var cssTypedValuesSurface string
+
+//go:embed storage_events.js
+var storageEventsSurface string
+
+//go:embed view_transitions.js
+var viewTransitionsSurface string
+
 //go:embed native_functions.js
 var nativeFunctionsSurface string
 
@@ -423,8 +441,8 @@ func composeSurface(generated, exposureSource string) string {
 	domCompatibility := strings.Replace(domCompatibilitySurface, "/* dialog_lifecycle */", dialogSurface, 1)
 	parts := []string{capabilitySurface, generated, "installLazyShape();", "finalizeBindings();", exposureSource, "installGeneratedLazyOperations();",
 		"installNavigatorCapabilities();installLazySingletonBindings();", mediaSourceSurface, navigatorIdentitySurface, cssSupportsSurface, strings.Replace(domCompatibility, "/* shared_abort_encoding */", abortEncodingSurface, 1),
-		templatesCompatibilitySurface, selectorsVendorSurface, selectorsCompatibilitySurface, xpathCompatibilitySurface, cssomCompatibilitySurface, strings.Replace(strings.Replace(strings.Replace(strings.Replace(svgGeometrySurface, "/* shared_svg_boundaries */", svgBoundariesSurface, 1), "/* shared_svg_text */", svgTextSurface, 1), "/* shared_svg_css_transform */", svgCSSTransformSurface, 1), "/* shared_svg_types */", svgTypesSurface+svgCoordinatesSurface+svgReflectionsSurface+svgPathMetricsSurface+svgUseSurface+svgAttributeDefaultsSurface+svgAttributeSemanticsSurface, 1), streamPrelude,
-		streamsVendorSurface, "}", strings.Replace(fetchCompatibilitySurface, "/* cache_storage */", cacheStorageSurface, 1), strings.Replace(formControlsSurface, "/* constraint_validation */", oneByteSource(constraintValidationSurface), 1), traversalCompatibilitySurface, strings.Replace(documentCompatibilitySurface, "/* shared_document_state */", documentStateSurface, 1), documentAllSurface, attributesCompatibilitySurface, webAnimationsSurface, imageResourcesSurface, screenFocusSurface, eventsCompatibilitySurface, windowErrorsSurface, inputSurface, windowObservationsSurface, windowServicesSurface, speechSynthesisSurface, documentPictureInPictureSurface, navigationSurface, indexedDBSurface, fileSystemSurface, documentStreamSurface, shadowSerializationSurface, canvasObservationsSource(), fontFacesSurface, rtcSessionSurface, cameraCaptureSurface, rtcMediaSurface, trustedTypesSinksSurface, "trustedCaptureEvents();registerBootstrapCallback('installTrustedTypesEnforcer',trustedEnforceString);", "finalizeDocumentGetterBindings();finalizeSingletonGetterBindings();finalizePerformanceBindings();finalizeCallableBindings();finalizeNativeBindings();globalThis.__mimicNativeFunctionSources=nativeFunctionSourceState;", "finalizeFrameIntrinsicBindings();", marker}
+		templatesCompatibilitySurface, selectorsVendorSurface, selectorsCompatibilitySurface, xpathCompatibilitySurface, cssomCompatibilitySurface, cssRegisteredPropertiesSurface, cssPropertyWorldsSurface, cssTypedValuesSurface, strings.Replace(strings.Replace(strings.Replace(strings.Replace(svgGeometrySurface, "/* shared_svg_boundaries */", svgBoundariesSurface, 1), "/* shared_svg_text */", svgTextSurface, 1), "/* shared_svg_css_transform */", svgCSSTransformSurface, 1), "/* shared_svg_types */", svgTypesSurface+svgCoordinatesSurface+svgReflectionsSurface+svgPathMetricsSurface+svgUseSurface+svgAttributeDefaultsSurface+svgAttributeSemanticsSurface, 1), streamPrelude,
+		streamsVendorSurface, "}", strings.Replace(fetchCompatibilitySurface, "/* cache_storage */", cacheStorageSurface, 1), strings.Replace(formControlsSurface, "/* constraint_validation */", oneByteSource(constraintValidationSurface), 1), traversalCompatibilitySurface, strings.Replace(documentCompatibilitySurface, "/* shared_document_state */", documentStateSurface, 1), documentAllSurface, attributesCompatibilitySurface, webAnimationsSurface, imageResourcesSurface, screenFocusSurface, eventsCompatibilitySurface, storageEventsSurface, viewTransitionsSurface, windowErrorsSurface, inputSurface, windowObservationsSurface, windowServicesSurface, speechSynthesisSurface, documentPictureInPictureSurface, navigationSurface, indexedDBSurface, fileSystemSurface, documentStreamSurface, shadowSerializationSurface, canvasObservationsSource(), fontFacesSurface, rtcSessionSurface, cameraCaptureSurface, rtcMediaSurface, trustedTypesSinksSurface, "trustedCaptureEvents();registerBootstrapCallback('installTrustedTypesEnforcer',trustedEnforceString);", "finalizeDocumentGetterBindings();finalizeSingletonGetterBindings();finalizePerformanceBindings();finalizeCallableBindings();finalizeNativeBindings();globalThis.__mimicNativeFunctionSources=nativeFunctionSourceState;", "finalizeFrameIntrinsicBindings();", marker}
 	base := strings.Replace(oneByteSource(handwrittenSurface), "/* shared_fetch_primitives */", fetchPrimitivesSurface, 1)
 	base = strings.Replace(base, "/* shared_promise_intrinsics */", promiseIntrinsicsSurface, 1)
 	base = strings.Replace(base, "/* profile_locale */", localeSurface, 1)
@@ -437,6 +455,7 @@ func composeSurface(generated, exposureSource string) string {
 	base = strings.Replace(base, "/* shared_native_functions */", nativeFunctionsSurface, 1)
 	base = strings.Replace(base, "/* shared_dom_name_validation */", domNameValidationSurface, 1)
 	base = strings.Replace(base, "/* shared_base64 */", base64Surface, 1)
+	base = strings.Replace(base, "/* shared_webcrypto */", webCryptoSurface, 1)
 	base = strings.Replace(base, "/* shared_webkit_css */", webkitCSSNamesSurface+cssPropertyCatalogSurface+cssComputedValuesSurface+webkitCSSSurface+cssShorthandsSurface+cssValueGrammarSurface+cssAnimationGrammarSurface+cssFontMetricsSurface+cssObservableValuesSurface+cssMediaQueriesSurface, 1)
 	base = strings.Replace(base, "/* shared_css_box_geometry */", cssBoxGeometrySurface+elementVisibilitySurface, 1)
 	base = strings.Replace(base, "/* shared_dom_matrix */", cssColorsSurface+domMatrixSurface, 1)
@@ -479,6 +498,7 @@ func WorkerSurface(generated string, exposure *compatibility.RealmExposure) stri
 	// Initial Worker algorithms and the shared surface retain the same private
 	// exception factory. The constructor itself stays in the shared surface scope.
 	workerPrimitives := strings.Replace(fetchPrimitivesSurface, "const platformDOMException =", "platformDOMException =", 1)
+	workerPrimitives = strings.Replace(workerPrimitives, "const bufferSourceBytes =", "bufferSourceBytes =", 1)
 	shared := structuredCloneSurface + "\n" + workerPrimitives + "\ninstallFileReader();Object.assign(globalThis,{TextEncoder,DOMException,URL,URLSearchParams,Blob,File,FormData,FileReader,Headers});\n" + abortEncodingSurface + "\n{let structuredClone;\n" + streamsVendorSurface + "\n}\n" + fetchCompatibilitySurface
 	// Preserve one private factory across the Worker's separate platform blocks.
 	// The consuming block removes the transport property before author code.
@@ -486,6 +506,9 @@ func WorkerSurface(generated string, exposure *compatibility.RealmExposure) stri
 	base := strings.Replace(strings.Replace(handwrittenWorkerSurface, "/* shared_trusted_types */", trustedTypesSurface, 1), "/* shared_worker_fetch */", shared, 1)
 	base = strings.Replace(base, "/* shared_performance */", performanceSource(), 1)
 	base = strings.Replace(base, "/* shared_promise_intrinsics */", promiseIntrinsicsSurface, 1)
+	// These base64 functions are private WebCrypto helpers. Public Worker
+	// operations are installed and marked in the final native binding scope.
+	base = strings.Replace(base, "/* shared_webcrypto */", "const markNative = () => {};\n"+base64Surface+webCryptoSurface, 1)
 	base += "\n{const host=__workerHost,bootstrapRestoreHooks=[];let intlEnvironment=host.intlEnvironment();const nativeIntl=typeof Intl!=='undefined';const bindingString=value=>{if(typeof value==='symbol')throw new TypeError('Cannot convert a Symbol value to a string');return String(value)};\n" + nativeFunctionsSurface + "\nif(nativeIntl){\n" + intlSurface + "\n}\n" + localeSurface + "\n}\n"
 	return base + "\n" + generated + "\n" + exposureSource + "__finishWorkerSurface();if(typeof __workerExposure!=='undefined')__applyWorkerPrototypeExposure(__workerExposure);delete globalThis.__applyWorkerExposure;delete globalThis.__applyWorkerPrototypeExposure;delete globalThis.__finishWorkerSurface;delete globalThis.__mimic;delete globalThis.__mimicIDLExposure;\n{const host=__workerHost;\nconst platformDOMException=globalThis.__workerPlatformDOMException;\ndelete globalThis.__workerPlatformDOMException;\n" + promiseIntrinsicsSurface + nativeFunctionsSurface + navigatorIdentitySurface + workerStorageSurface + fileSystemSurface + "\ndelete globalThis.__mimicClonePlatforms;\n" + consoleSurface + "\nglobalThis.console=consoleObject;\n" + base64Surface + cssColorsSurface + "\nfor(const [name,value] of Object.entries({atob,btoa}))Object.defineProperty(WorkerGlobalScope.prototype,name,{value,writable:true,enumerable:true,configurable:true});\n" + domMatrixSurface + "\n" + canvasObservationsSource() + "\n" + webglObservationsSource() + "\n" + webgpuObservationsSource() + "\n" + fontFacesSurface + `
 // Worker operations need the same ordinary function shape and private source

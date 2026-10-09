@@ -1,0 +1,139 @@
+{
+  "browser": "Chrome/152.0.7977.82",
+  "metadata": {
+    "existingBrowser": true,
+    "isolatedBrowserContext": true,
+    "syntheticSecureContext": false,
+    "localHeaderEcho": true,
+    "cookieEcho": false,
+    "fixture": "internal/browser/testdata/css_dom_observations_oracle.js",
+    "fixtureSHA256": "7281c76c6975e39556b976b867d8ac336ad6f50ece8b7cd1e83fee48df1c1ed4",
+    "fixtureHashNormalization": "LF",
+    "worker": false
+  },
+  "result": {
+    "pseudo": [
+      "\"first suffix\"",
+      "rgb(255, 0, 0)",
+      "\"after\"",
+      "\"next suffix\""
+    ],
+    "registered": [
+      "5px",
+      "1px",
+      "10px",
+      "30px"
+    ],
+    "errors": [
+      "InvalidModificationError",
+      "SyntaxError",
+      "SyntaxError",
+      "SyntaxError",
+      "ok"
+    ],
+    "typed": {
+      "map": "[object StylePropertyMapReadOnly]",
+      "size": "[object CSSUnitValue]",
+      "value": 21,
+      "unit": "px",
+      "text": "21px",
+      "sizeIdentity": false,
+      "has": true,
+      "all": [
+        "21px"
+      ],
+      "live": "25px"
+    },
+    "shadow": [
+      "72%",
+      "rgb(1, 2, 3)",
+      "21px"
+    ],
+    "rangeResult": {
+      "html": "Pre<b><span>MID</span></b>Post",
+      "identity": true,
+      "text": "MID",
+      "start": 1,
+      "end": 2,
+      "textHTML": "a<i>bcd</i>e",
+      "partial": "InvalidStateError"
+    }
+  },
+  "environment": {
+    "url": "http://127.0.0.1:19612/",
+    "webdriver": false,
+    "webdriverDescriptor": {
+      "enumerable": true,
+      "configurable": true,
+      "getter": "function get webdriver() { [native code] }"
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+    "languages": [
+      "ru-RU"
+    ],
+    "platform": "Win32",
+    "secureContext": true,
+    "crossOriginIsolated": false,
+    "visibilityState": "hidden",
+    "hasFocus": true,
+    "viewport": {
+      "width": 1272,
+      "height": 709,
+      "deviceScaleFactor": 1
+    },
+    "window": {
+      "x": 0,
+      "y": 0,
+      "outerWidth": 0,
+      "outerHeight": 0
+    }
+  },
+  "captureMetadata": {
+    "schemaVersion": 1,
+    "chromeVersion": "152.0.7977.82",
+    "chromiumRevision": "1669021",
+    "chromiumCommit": "d04cdb24d67b081f6cf80200ffc5233f44b61109",
+    "v8Version": "15.2.124.21",
+    "platform": "windows-x64",
+    "browserMode": "headful",
+    "commandLineFeatureOverrides": [],
+    "viewport": {
+      "width": 1272,
+      "height": 709,
+      "deviceScaleFactor": 1
+    },
+    "window": {
+      "x": 0,
+      "y": 0,
+      "outerWidth": 0,
+      "outerHeight": 0
+    },
+    "secureContextState": true,
+    "isolationState": false,
+    "environmentProfileId": "chrome-152-windows-x64-headful-controlled-v1",
+    "profileFreshness": "fresh-controlled",
+    "visibilityState": "hidden",
+    "hasFocus": true,
+    "osWindowState": "hidden",
+    "executableSHA256": "EA36DD818A90176F1A70616F0363D9BE527229389A6C073A0B1688B9E73F67E9",
+    "launchArguments": [
+      "--remote-debugging-port=9343",
+      "--user-data-dir=E:\\GitHub\\mimic\\.build\\lexbench-compatibility-20261009\\chrome-profile-2ed836a0766941e480fc1b1949bd669a",
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--window-size=1280,800",
+      "about:blank"
+    ],
+    "webdriver": false,
+    "webdriverDescriptor": {
+      "enumerable": true,
+      "configurable": true,
+      "getter": "function get webdriver() { [native code] }"
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+    "languages": [
+      "ru-RU"
+    ],
+    "documentURL": "http://127.0.0.1:19612/"
+  }
+}

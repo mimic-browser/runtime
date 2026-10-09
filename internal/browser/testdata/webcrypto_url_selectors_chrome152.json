@@ -1,0 +1,346 @@
+{
+  "browser": "Chrome/152.0.7977.82",
+  "metadata": {
+    "existingBrowser": true,
+    "isolatedBrowserContext": true,
+    "syntheticSecureContext": false,
+    "localHeaderEcho": true,
+    "cookieEcho": false,
+    "fixture": "internal/browser/testdata/webcrypto_url_selectors_oracle.js",
+    "fixtureSHA256": "f054abf39649dbca8b28c7bbf30d9569542707e4fc1a63bc2dab7cbd2409d6b3",
+    "fixtureHashNormalization": "LF",
+    "worker": false
+  },
+  "result": {
+    "environment": {
+      "webdriver": false,
+      "webdriverDescriptor": {
+        "enumerable": true,
+        "configurable": true,
+        "getter": "function get webdriver() { [native code] }"
+      },
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+      "languages": [
+        "ru-RU"
+      ],
+      "platform": "Win32",
+      "secureContext": true,
+      "crossOriginIsolated": false,
+      "visibilityState": "hidden",
+      "hasFocus": true,
+      "viewport": {
+        "width": 1272,
+        "height": 709,
+        "deviceScaleFactor": 1
+      },
+      "window": {
+        "x": 0,
+        "y": 0,
+        "outerWidth": 0,
+        "outerHeight": 0
+      }
+    },
+    "urls": [
+      "http://www.google.com/foo",
+      "http://foo/",
+      "http://xn--6qqa088eba/",
+      "http://example.com/"
+    ],
+    "selectors": [
+      "c",
+      "c",
+      "c,e",
+      "a,c"
+    ],
+    "errors": {
+      "emptyUsages": "SyntaxError",
+      "emptyRaw": "DataError",
+      "partialByte": {
+        "name": "HMAC",
+        "hash": {
+          "name": "SHA-256"
+        },
+        "length": 1
+      },
+      "hashAlias": "NotSupportedError",
+      "hashUnderscore": "NotSupportedError",
+      "aesLength": "OperationError"
+    },
+    "hmacResult": {
+      "algorithm": {
+        "name": "HMAC",
+        "hash": {
+          "name": "SHA-256"
+        },
+        "length": 24
+      },
+      "signature": [
+        32,
+        15,
+        210,
+        249,
+        218,
+        218,
+        144,
+        185,
+        18,
+        18,
+        34,
+        90,
+        107,
+        94,
+        89,
+        117,
+        81,
+        46,
+        223,
+        253,
+        2,
+        80,
+        59,
+        185,
+        142,
+        166,
+        18,
+        202,
+        144,
+        77,
+        170,
+        36
+      ],
+      "valid": true,
+      "jwk": {
+        "alg": "HS256",
+        "ext": true,
+        "k": "AQID",
+        "key_ops": [
+          "sign",
+          "verify"
+        ],
+        "kty": "oct"
+      }
+    },
+    "aes": [
+      {
+        "tagLength": 32,
+        "ciphertext": [
+          194,
+          208,
+          72,
+          66,
+          188,
+          233,
+          255
+        ],
+        "plaintext": [
+          97,
+          98,
+          99
+        ]
+      },
+      {
+        "tagLength": 64,
+        "ciphertext": [
+          194,
+          208,
+          72,
+          66,
+          188,
+          233,
+          255,
+          6,
+          175,
+          189,
+          80
+        ],
+        "plaintext": [
+          97,
+          98,
+          99
+        ]
+      },
+      {
+        "tagLength": 96,
+        "ciphertext": [
+          194,
+          208,
+          72,
+          66,
+          188,
+          233,
+          255,
+          6,
+          175,
+          189,
+          80,
+          65,
+          103,
+          25,
+          127
+        ],
+        "plaintext": [
+          97,
+          98,
+          99
+        ]
+      },
+      {
+        "tagLength": 104,
+        "ciphertext": [
+          194,
+          208,
+          72,
+          66,
+          188,
+          233,
+          255,
+          6,
+          175,
+          189,
+          80,
+          65,
+          103,
+          25,
+          127,
+          96
+        ],
+        "plaintext": [
+          97,
+          98,
+          99
+        ]
+      },
+      {
+        "tagLength": 112,
+        "ciphertext": [
+          194,
+          208,
+          72,
+          66,
+          188,
+          233,
+          255,
+          6,
+          175,
+          189,
+          80,
+          65,
+          103,
+          25,
+          127,
+          96,
+          234
+        ],
+        "plaintext": [
+          97,
+          98,
+          99
+        ]
+      },
+      {
+        "tagLength": 120,
+        "ciphertext": [
+          194,
+          208,
+          72,
+          66,
+          188,
+          233,
+          255,
+          6,
+          175,
+          189,
+          80,
+          65,
+          103,
+          25,
+          127,
+          96,
+          234,
+          234
+        ],
+        "plaintext": [
+          97,
+          98,
+          99
+        ]
+      },
+      {
+        "tagLength": 128,
+        "ciphertext": [
+          194,
+          208,
+          72,
+          66,
+          188,
+          233,
+          255,
+          6,
+          175,
+          189,
+          80,
+          65,
+          103,
+          25,
+          127,
+          96,
+          234,
+          234,
+          3
+        ],
+        "plaintext": [
+          97,
+          98,
+          99
+        ]
+      }
+    ]
+  },
+  "captureMetadata": {
+    "schemaVersion": 1,
+    "chromeVersion": "152.0.7977.82",
+    "chromiumRevision": "1669021",
+    "chromiumCommit": "d04cdb24d67b081f6cf80200ffc5233f44b61109",
+    "v8Version": "15.2.124.21",
+    "platform": "windows-x64",
+    "browserMode": "headful",
+    "commandLineFeatureOverrides": [],
+    "viewport": {
+      "width": 1272,
+      "height": 709,
+      "deviceScaleFactor": 1
+    },
+    "window": {
+      "x": 0,
+      "y": 0,
+      "outerWidth": 0,
+      "outerHeight": 0
+    },
+    "secureContextState": true,
+    "isolationState": false,
+    "environmentProfileId": "chrome-152-windows-x64-headful-controlled-v1",
+    "profileFreshness": "fresh-controlled",
+    "visibilityState": "hidden",
+    "hasFocus": true,
+    "osWindowState": "hidden",
+    "executableSHA256": "EA36DD818A90176F1A70616F0363D9BE527229389A6C073A0B1688B9E73F67E9",
+    "launchArguments": [
+      "--remote-debugging-port=9343",
+      "--user-data-dir=E:\\GitHub\\mimic\\.build\\lexbench-compatibility-20261009\\chrome-profile-2ed836a0766941e480fc1b1949bd669a",
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--window-size=1280,800",
+      "about:blank"
+    ],
+    "webdriver": false,
+    "webdriverDescriptor": {
+      "enumerable": true,
+      "configurable": true,
+      "getter": "function get webdriver() { [native code] }"
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+    "languages": [
+      "ru-RU"
+    ]
+  }
+}

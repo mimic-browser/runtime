@@ -2,15 +2,7 @@ package browser
 
 import (
 	"context"
-	"crypto"
-	"crypto/aes"
-	"crypto/cipher"
 	cryptorand "crypto/rand"
-	"crypto/rsa"
-	"crypto/sha1"
-	"crypto/sha256"
-	"crypto/sha512"
-	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -67,6 +59,8 @@ type Realm struct {
 	pipLifecycle             engine.Value
 	activationConsumed       bool
 	cookieNotifier           engine.Value
+	storageNotifier          engine.Value
+	cssPropertyRegistration  engine.Value
 	launchNotifier           engine.Value
 	cookieUnsubscribe        func()
 	cacheHandles             map[uint64]*cacheBucket
@@ -655,6 +649,8 @@ func (r *Realm) Close() error {
 	r.windowReferences = nil
 	r.cacheHandles = nil
 	r.cookieNotifier = nil
+	r.storageNotifier = nil
+	r.cssPropertyRegistration = nil
 	r.launchNotifier = nil
 	r.performance = nil
 	r.performanceNavigationResponse = nil
@@ -1502,124 +1498,6 @@ func (r *Realm) installBindingsOnOwner() error {
 	host["internalRandomUUID"] = r.fn(func(engine.Value, []engine.Value) (engine.Value, error) {
 		return r.val(uuid.NewString()), nil
 	})
-	host["subtleDigest"] = r.fn(func(_ engine.Value, a []engine.Value) (engine.Value, error) {
-		algorithm, input := strings.ToUpper(strings.ReplaceAll(strarg(a, 0), "_", "-")), byteSlice(arg(a, 1))
-		var digest []byte
-		switch algorithm {
-		case "SHA-1":
-			sum := sha1.Sum(input)
-			digest = sum[:]
-		case "SHA-256":
-			sum := sha256.Sum256(input)
-			digest = sum[:]
-		case "SHA-384":
-			sum := sha512.Sum384(input)
-			digest = sum[:]
-		case "SHA-512":
-			sum := sha512.Sum512(input)
-			digest = sum[:]
-		default:
-			return nil, fmt.Errorf("unsupported digest algorithm %q", algorithm)
-		}
-		out := make([]int, len(digest))
-		for i, value := range digest {
-			out[i] = int(value)
-		}
-		return r.val(out), nil
-	})
-	host["subtleImportRSAOAEP"] = r.fn(func(_ engine.Value, a []engine.Value) (engine.Value, error) {
-		der := byteSlice(arg(a, 0))
-		parsed, err := x509.ParsePKIXPublicKey(der)
-		if err != nil {
-			return nil, fmt.Errorf("invalid SPKI key: %w", err)
-		}
-		key, ok := parsed.(*rsa.PublicKey)
-		if !ok {
-			return nil, fmt.Errorf("SPKI key is not RSA")
-		}
-		exponent := key.E
-		publicExponent := []int{}
-		for shift := 24; shift >= 0; shift -= 8 {
-			value := (exponent >> shift) & 0xff
-			if value != 0 || len(publicExponent) != 0 {
-				publicExponent = append(publicExponent, value)
-			}
-		}
-		parts := make([]string, len(publicExponent))
-		for i, value := range publicExponent {
-			parts[i] = strconv.Itoa(value)
-		}
-		return r.val(strconv.Itoa(key.N.BitLen()) + "|" + strings.Join(parts, ",")), nil
-	})
-	host["subtleRSAOAEPEncrypt"] = r.fn(func(_ engine.Value, a []engine.Value) (engine.Value, error) {
-		algorithm, der, input, label := strings.ToUpper(strings.ReplaceAll(strarg(a, 0), "_", "-")), byteSlice(arg(a, 1)), byteSlice(arg(a, 2)), byteSlice(arg(a, 3))
-		parsed, err := x509.ParsePKIXPublicKey(der)
-		if err != nil {
-			return nil, fmt.Errorf("invalid SPKI key: %w", err)
-		}
-		key, ok := parsed.(*rsa.PublicKey)
-		if !ok {
-			return nil, fmt.Errorf("SPKI key is not RSA")
-		}
-		var hash crypto.Hash
-		switch algorithm {
-		case "SHA-1":
-			hash = crypto.SHA1
-		case "SHA-256":
-			hash = crypto.SHA256
-		case "SHA-384":
-			hash = crypto.SHA384
-		case "SHA-512":
-			hash = crypto.SHA512
-		default:
-			return nil, fmt.Errorf("unsupported RSA-OAEP hash %q", algorithm)
-		}
-		ciphertext, err := rsa.EncryptOAEP(hash.New(), cryptorand.Reader, key, input, label)
-		if err != nil {
-			return nil, err
-		}
-		out := make([]int, len(ciphertext))
-		for i, value := range ciphertext {
-			out[i] = int(value)
-		}
-		return r.val(out), nil
-	})
-	host["subtleAESGCM"] = r.fn(func(_ engine.Value, a []engine.Value) (engine.Value, error) {
-		operation, key, iv, additionalData, input, tagBits := strarg(a, 0), byteSlice(arg(a, 1)), byteSlice(arg(a, 2)), byteSlice(arg(a, 3)), byteSlice(arg(a, 4)), int(numarg(a, 5))
-		block, err := aes.NewCipher(key)
-		if err != nil {
-			return nil, err
-		}
-		tagSize := tagBits / 8
-		var aead cipher.AEAD
-		switch {
-		case len(iv) == 12 && tagSize == 16:
-			aead, err = cipher.NewGCM(block)
-		case len(iv) == 12:
-			aead, err = cipher.NewGCMWithTagSize(block, tagSize)
-		case tagSize == 16:
-			aead, err = cipher.NewGCMWithNonceSize(block, len(iv))
-		default:
-			err = fmt.Errorf("non-standard AES-GCM nonce and tag sizes cannot be combined")
-		}
-		if err != nil {
-			return nil, err
-		}
-		var result []byte
-		if operation == "encrypt" {
-			result = aead.Seal(nil, iv, input, additionalData)
-		} else {
-			result, err = aead.Open(nil, iv, input, additionalData)
-			if err != nil {
-				return nil, err
-			}
-		}
-		out := make([]int, len(result))
-		for i, value := range result {
-			out[i] = int(value)
-		}
-		return r.val(out), nil
-	})
 	host["title"] = r.transientFn(func(engine.Value, []engine.Value) (engine.Value, error) { return r.val(r.document.Title()), nil })
 	host["readyState"] = r.transientFn(func(engine.Value, []engine.Value) (engine.Value, error) {
 		state := r.readyState
@@ -2157,6 +2035,9 @@ func (r *Realm) installBindingsOnOwner() error {
 		return r.val(r.origin), nil
 	})
 	installURLHost(host, r.runtime, r.documentURL)
+	installWebCryptoHost(host, r.runtime)
+	installTextDecoderHost(host, r.runtime)
+	r.installCSSPropertyRegistrationHosts(host)
 	host["setLocationPart"] = r.fn(func(_ engine.Value, a []engine.Value) (engine.Value, error) {
 		part, v := strarg(a, 0), strarg(a, 1)
 		u := r.documentURL()
@@ -3320,6 +3201,13 @@ func numargValue(value any) int64 {
 func addStorageHosts(r *Realm, h map[string]any) {
 	p := r.agent.Page()
 	origin := r.origin
+	h["installStorageNotifier"] = r.fn(func(_ engine.Value, a []engine.Value) (engine.Value, error) {
+		r.storageNotifier = nil
+		if len(a) != 0 {
+			r.storageNotifier = a[0]
+		}
+		return nil, nil
+	})
 	storageFunction := func(fn engine.Function) engine.Function {
 		return func(this engine.Value, args []engine.Value) (engine.Value, error) {
 			p.ctx.storageMu.Lock()
@@ -3360,18 +3248,39 @@ func addStorageHosts(r *Realm, h map[string]any) {
 		return r.val(v), nil
 	}))
 	h["storageSet"] = r.fn(storageFunction(func(_ engine.Value, a []engine.Value) (engine.Value, error) {
-		store(strarg(a, 0))[strarg(a, 1)] = strarg(a, 2)
+		area, key, value := strarg(a, 0), strarg(a, 1), strarg(a, 2)
+		s := store(area)
+		old, exists := s[key]
+		if exists && old == value {
+			return nil, nil
+		}
+		s[key] = value
+		var before any
+		if exists {
+			before = old
+		}
+		r.notifyStorage(area, key, before, value)
 		return nil, nil
 	}))
 	h["storageRemove"] = r.fn(storageFunction(func(_ engine.Value, a []engine.Value) (engine.Value, error) {
-		delete(store(strarg(a, 0)), strarg(a, 1))
+		area, key := strarg(a, 0), strarg(a, 1)
+		s := store(area)
+		old, exists := s[key]
+		if exists {
+			delete(s, key)
+			r.notifyStorage(area, key, old, nil)
+		}
 		return nil, nil
 	}))
 	h["storageClear"] = r.fn(storageFunction(func(_ engine.Value, a []engine.Value) (engine.Value, error) {
 		s := store(strarg(a, 0))
+		if len(s) == 0 {
+			return nil, nil
+		}
 		for k := range s {
 			delete(s, k)
 		}
+		r.notifyStorage(strarg(a, 0), nil, nil, nil)
 		return nil, nil
 	}))
 }

@@ -171,7 +171,68 @@ const cssComputedShorthand = (element, name) => {
   const ordinary = serializeOrdinaryCSSShorthand(name, values);
   return ordinary || values.join(' ');
 };
-const cssComputedValue = (element, name) => {
+const cssSerializeComputedContent = (element, value) => {
+  if (['normal', 'none'].includes(value)) return value;
+  try {
+    const ast = mimicSelectorLibrary.parseStylesheet(value, { context: 'value' });
+    const quote = (text) =>
+      '"' +
+      text
+        .replaceAll('\\', '\\\\')
+        .replaceAll('"', '\\"')
+        .replaceAll('\n', '\\a ')
+        .replaceAll('\r', '\\d ')
+        .replaceAll('\f', '\\c ') +
+      '"';
+    const result = [];
+    let strings = '';
+    let hasString = false;
+    const flush = () => {
+      if (hasString) result.push(quote(strings));
+      strings = '';
+      hasString = false;
+    };
+    for (const node of ast.children) {
+      if (node.type === 'String') {
+        strings += node.value;
+        hasString = true;
+        continue;
+      }
+      if (node.type === 'Function' && node.name.toLowerCase() === 'attr') {
+        const argumentsList = Array.from(node.children);
+        const attribute = argumentsList[0];
+        if (attribute?.type !== 'Identifier') {
+          flush();
+          result.push(mimicSelectorLibrary.generateCSS(node));
+          continue;
+        }
+        const observed = host.getAttribute(elementSlot(element).nodeId, attribute.name);
+        if (observed !== null) {
+          strings += observed;
+          hasString = true;
+          continue;
+        }
+        const fallback = argumentsList.find((child) => child.type === 'String');
+        strings += fallback?.value || '';
+        hasString = true;
+        continue;
+      }
+      flush();
+      result.push(mimicSelectorLibrary.generateCSS(node));
+    }
+    flush();
+    return result.join(' ');
+  } catch {
+    return value;
+  }
+};
+const cssComputedValue = (element, name, pseudo = '') => {
+  if (name.startsWith('--'))
+    return withStyleReadCache(() => {
+      const foreign = foreignCSSObservation(element, 'value', name);
+      return foreign ?? cssCustomPropertyValue(element, name) ?? '';
+    });
+  if (pseudo) return withStyleReadCache(() => resolveCSSComputedValue(element, name, pseudo));
   const native = blitzStyleValue(element, name);
   if (
     name === 'font-size' &&
@@ -319,21 +380,21 @@ const cssInheritedSource = (element, name) => {
 };
 // Immutable scalar projections share the canonical observation epoch. Animation
 // time is not a DOM mutation, so animated realms always resolve a fresh value.
-const resolveCSSComputedValue = (element, name) => {
-  const foreign = foreignCSSObservation(element, 'value', name);
+const resolveCSSComputedValue = (element, name, pseudo = '') => {
+  const foreign = pseudo ? null : foreignCSSObservation(element, 'value', name);
   if (foreign !== null) return foreign;
   if (!computedStyleDocumentAvailable(element) || !computedStyleAvailable(element)) return '';
   const initial = cssInitialValues.get(name),
-    entries = computedCSSDeclarations(element),
-    animated = webAnimationComputedValue(element, name);
+    entries = pseudo ? uncachedCSSDeclarations(element, pseudo) : computedCSSDeclarations(element),
+    animated = pseudo ? undefined : webAnimationComputedValue(element, name);
   const declaration =
       animated === undefined ? entries.find((e) => e.name === name) : { name, value: animated },
     specified = declaration?.value;
-  let value = specified,
+  let value = geometryValue(element, specified),
     inherit = cssInheritedProperties.has(name);
   if (value === 'inherit' || ((value == null || value === 'unset') && inherit)) {
     value = undefined;
-    const source = cssInheritedSource(cssFontParent(element), name);
+    const source = cssInheritedSource(pseudo ? element : cssFontParent(element), name);
     if (source) {
       const v = source.value;
       value =
@@ -358,6 +419,7 @@ const resolveCSSComputedValue = (element, name) => {
     }
     return '';
   }
+  if (name === 'content') return cssSerializeComputedContent(element, value);
   if (name === 'transform' && value !== 'none') {
     const raw = declaration?.parsedValue ?? value;
     try {
@@ -385,7 +447,13 @@ const resolveCSSComputedValue = (element, name) => {
       return value;
     }
   }
-  if (name === 'color') return cssResolvedColor(element);
+  if (name === 'color') {
+    if (pseudo && value !== 'currentcolor') {
+      const rgba = cssColorRGBA(value, cssUsedColorScheme(element));
+      if (rgba) return cssSerializeColor(rgba);
+    }
+    return cssResolvedColor(element);
+  }
   if (
     ['opacity', 'fill-opacity', 'stroke-opacity', 'stop-opacity', 'flood-opacity'].includes(name) &&
     cssNumberRegex.test(value)

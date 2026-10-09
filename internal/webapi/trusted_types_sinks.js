@@ -327,6 +327,58 @@ const trustedDocumentWrite = (receiver, args, name) => {
       s.endOffset = s.startOffset;
       refresh(s);
     };
+    const extractSelected = (s) => {
+      const fragment = s.owner.createDocumentFragment();
+      if (s.collapsed) return fragment;
+      const root = commonAncestor(s.startContainer, s.endContainer);
+      let collapseContainer = s.startContainer,
+        collapseOffset = s.startOffset;
+      if (!s.startContainer.contains(s.endContainer)) {
+        const child = childUnder(root, s.startContainer);
+        collapseContainer = root;
+        collapseOffset = Array.from(root.childNodes).indexOf(child) + 1;
+      }
+      const moves = [],
+        edits = [];
+      const plan = (source, target) => {
+        for (const child of Array.from(source.childNodes)) {
+          if (!overlaps(s, child)) continue;
+          if (nodeSelected(s, child)) {
+            if (child.nodeType === 10)
+              throw platformDOMException(
+                'DocumentType cannot be extracted',
+                'HierarchyRequestError',
+              );
+            moves.push([child, target]);
+          } else if ([3, 4, 8].includes(child.nodeType)) {
+            const from = child === s.startContainer ? s.startOffset : 0;
+            const to = child === s.endContainer ? s.endOffset : child.data.length;
+            const copy = child.cloneNode(false);
+            copy.data = child.data.slice(from, to);
+            moves.push([copy, target]);
+            edits.push([child, from, to - from]);
+          } else {
+            const copy = child.cloneNode(false);
+            moves.push([copy, target]);
+            plan(child, copy);
+          }
+        }
+      };
+      if (s.startContainer === s.endContainer && [3, 4, 8].includes(s.startContainer.nodeType)) {
+        const copy = s.startContainer.cloneNode(false);
+        copy.data = s.startContainer.data.slice(s.startOffset, s.endOffset);
+        moves.push([copy, fragment]);
+        edits.push([s.startContainer, s.startOffset, s.endOffset - s.startOffset]);
+      } else plan(root, fragment);
+      // Classify the complete selection before moving any canonical node.
+      // Moving a selected sibling changes offsets needed by later comparisons.
+      for (const [node, from, count] of edits) node.deleteData(from, count);
+      for (const [node, target] of moves) target.appendChild(node);
+      s.startContainer = s.endContainer = collapseContainer;
+      s.startOffset = s.endOffset = collapseOffset;
+      refresh(s);
+      return fragment;
+    };
     method(Document.prototype, 'createRange', function () {
       if (!(this instanceof Document)) throw new TypeError('Illegal invocation');
       const range = Object.create(Range.prototype);
@@ -457,10 +509,33 @@ const trustedDocumentWrite = (receiver, args, name) => {
       return contents(rangeState(this));
     });
     method(Range.prototype, 'extractContents', function () {
-      const state = rangeState(this),
-        fragment = contents(state);
-      deleteSelected(state);
-      return fragment;
+      return extractSelected(rangeState(this));
+    });
+    method(Range.prototype, 'surroundContents', function (newParent) {
+      const state = rangeState(this);
+      if (!arguments.length || !(newParent instanceof Node))
+        throw new TypeError('Parameter is not a Node');
+      const root = commonAncestor(state.startContainer, state.endContainer);
+      const partial = (node) => {
+        for (const child of node.childNodes) {
+          if (
+            child.nodeType !== 3 &&
+            child.contains(state.startContainer) !== child.contains(state.endContainer)
+          )
+            return true;
+          if (partial(child)) return true;
+        }
+        return false;
+      };
+      if (partial(root))
+        throw platformDOMException('Range partially contains a non-Text node', 'InvalidStateError');
+      if ([9, 10, 11].includes(newParent.nodeType))
+        throw platformDOMException('Invalid wrapper node', 'InvalidNodeTypeError');
+      const fragment = extractSelected(state);
+      while (newParent.firstChild) newParent.removeChild(newParent.firstChild);
+      this.insertNode(newParent);
+      newParent.appendChild(fragment);
+      this.selectNode(newParent);
     });
     method(Range.prototype, 'deleteContents', function () {
       deleteSelected(rangeState(this));

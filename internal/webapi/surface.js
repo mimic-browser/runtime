@@ -1863,19 +1863,30 @@
             (selector.match(/(^|[\s>+~])[a-zA-Z][\w-]*/g) || []).length;
           const pseudo = /::?(before|after)$/.exec(selector)?.[1] || '';
           let matcher;
+          const scopedMatchers = new WeakMap();
           rules.push({
             selector,
             declarations,
             specificity,
             pseudo,
-            matches: (node) =>
+            matches: (node, shadowRoot = null) =>
               conditions.every((condition) =>
                 condition.type === 'media'
                   ? cssMediaMatches(condition.value)
                   : compatibilityCSSSupports.matches?.(condition.value) === true,
               ) &&
               (
-                matcher ||
+                (shadowRoot
+                  ? scopedMatchers.get(shadowRoot) ||
+                    (() => {
+                      const compiled = compatibilitySelectors.compileStyle(
+                        pseudo ? selector.replace(/::?(before|after)$/, '') : selector,
+                        shadowRoot,
+                      );
+                      scopedMatchers.set(shadowRoot, compiled);
+                      return compiled;
+                    })()
+                  : matcher) ||
                 (matcher = compatibilitySelectors.compileStyle(
                   pseudo ? selector.replace(/::?(before|after)$/, '') : selector,
                 ))
@@ -1907,8 +1918,9 @@
   // Cache only the ordered rule program. Revalidate canonical owner sheets on
   // every read; computed matches and element state never survive the read.
   const orderedStyleRules = new WeakMap();
-  const styleSheetRules = (element) => {
+  const styleSheetRules = (element, selectedRoot = null) => {
     const root =
+        selectedRoot ||
         containingShadowRoot(element) ||
         wrap(cssObservationNodeState(element).ownerDocument) ||
         document,
@@ -1936,7 +1948,16 @@
       rules = [];
       let order = 0;
       for (const text of sources)
-        for (const rule of parsedStyleRules(text)) rules.push({ ...rule, order: order++ });
+        for (const rule of parsedStyleRules(text))
+          rules.push({
+            ...rule,
+            order: order++,
+            matches: (node) =>
+              rule.matches(
+                node,
+                root instanceof ShadowRoot && /:host(?:\b|[-(])/.test(rule.selector) ? root : null,
+              ),
+          });
       orderedStyleRules.set(root, { sources, rules });
     }
     cache?.set(root, rules);
@@ -1954,6 +1975,13 @@
       styleSheetRules(element),
       pseudo,
     );
+    const ownShadow = elementShadows.get(element);
+    if (ownShadow)
+      matched.push(
+        ...compatibilitySelectors
+          .matchingStyles(element, styleSheetRules(element, ownShadow), pseudo)
+          .filter((rule) => /:host(?:\b|[-(])/.test(rule.selector)),
+      );
     const inline = pseudo ? '' : cssObservationNodeState(element).inline;
     const dialog =
       !pseudo && elementSlot(element)?.tagName === 'DIALOG'
@@ -2074,7 +2102,10 @@
   const cssResolvedColor = (element) => {
     const scheme = cssUsedColorScheme(element);
     for (let n = element; n && elementSlot(n); n = cssFontParent(n)) {
-      const value = computedCSSDeclarations(n).find((e) => e.name === 'color')?.value;
+      const value = geometryValue(
+        n,
+        computedCSSDeclarations(n).find((e) => e.name === 'color')?.value,
+      );
       if (!value || ['inherit', 'unset', 'currentcolor'].includes(value.toLowerCase())) continue;
       if (value === 'initial') break;
       const rgba = cssColorRGBA(value, scheme);
@@ -2432,7 +2463,7 @@
       return cssComputedNames.map((name) => ({
         name,
         get value() {
-          return cssComputedValue(state.element, name);
+          return cssComputedValue(state.element, name, state.pseudo);
         },
         priority: '',
       }));
@@ -2456,9 +2487,9 @@
       compatibilityElementState.inlineStyleChanged(state.element, old);
     };
   class CSSStyleDeclaration {
-    constructor(token, element, computed = false) {
+    constructor(token, element, computed = false, pseudo = '') {
       if (token !== hostToken) illegal('CSSStyleDeclaration');
-      cssSlots.set(this, { element, computed });
+      cssSlots.set(this, { element, computed, pseudo });
     }
     get length() {
       const state = cssState(this);
@@ -2483,7 +2514,7 @@
       name = cssName(name);
       const state = cssState(this);
       return state.computed
-        ? cssComputedValue(state.element, name)
+        ? cssComputedValue(state.element, name, state.pseudo)
         : readCSSDeclaration(cssEntries(this), name);
     }
     getPropertyPriority(name) {
@@ -2554,9 +2585,9 @@
   const cssScalarBatchNames = Array.from(new Set(Object.values(cssNamedProperties))).filter(
     (name) => !blitzProperties.includes(name),
   );
-  const cssDeclaration = (element, computed = false) => {
+  const cssDeclaration = (element, computed = false, pseudo = '') => {
     const prefetchComputedNames = () => {
-      if (!computed) return;
+      if (!computed || pseudo) return;
       withStyleReadCache(() => {
         const record = blitzPackedRecord(element);
         if (!record || record.packed.batchedStyles.has(record.at)) return;
@@ -2578,7 +2609,7 @@
         packed.batchedStyles.add(at);
       });
     };
-    const target = new CSSStyleDeclaration(hostToken, element, computed),
+    const target = new CSSStyleDeclaration(hostToken, element, computed, pseudo),
       proxy = new Proxy(target, {
         get(t, p, r) {
           if (typeof p === 'string') {
@@ -3625,18 +3656,7 @@
       /^var\(\s*(--[\w-]+)\s*(?:,([\s\S]*))?\)$/.exec(text) ||
       /var\(\s*(--[\w-]+)\s*(?:,([^()]*))?\)/.exec(text);
     if (!match) return null;
-    let replacement = null;
-    for (let owner = element; owner; owner = geometryParent(owner)) {
-      const value = computedCSSDeclarations(owner).find((entry) => entry.name === match[1])?.value;
-      if (value === undefined || value === 'inherit' || value === 'unset') continue;
-      if (value === 'initial') break;
-      const key = elementSlot(owner).nodeId + ':' + match[1];
-      if (seen.has(key)) return null;
-      const next = new Set(seen);
-      next.add(key);
-      replacement = geometryValue(owner, value, next);
-      break;
-    }
+    let replacement = cssCustomPropertyValue(element, match[1], seen);
     replacement ??= geometryValue(element, match[2]?.trim(), seen);
     return replacement == null
       ? null
@@ -6403,303 +6423,7 @@
       },
     });
   /* shared_base64 */
-  const cryptoKeySlot = Symbol('CryptoKey slots');
-  class CryptoKey {
-    constructor() {
-      illegal('CryptoKey');
-    }
-    get type() {
-      const slot = this && this[cryptoKeySlot];
-      if (!slot) throw new TypeError('Illegal invocation');
-      return slot.type;
-    }
-    get extractable() {
-      const slot = this && this[cryptoKeySlot];
-      if (!slot) throw new TypeError('Illegal invocation');
-      return slot.extractable;
-    }
-    get algorithm() {
-      const slot = this && this[cryptoKeySlot];
-      if (!slot) throw new TypeError('Illegal invocation');
-      return slot.algorithm;
-    }
-    get usages() {
-      const slot = this && this[cryptoKeySlot];
-      if (!slot) throw new TypeError('Illegal invocation');
-      return slot.usages.slice();
-    }
-  }
-  const cryptoBytes = (data) => {
-    if (!ArrayBuffer.isView(data) && !(data instanceof ArrayBuffer))
-      throw new TypeError("The provided value is not of type '(ArrayBuffer or ArrayBufferView)'");
-    return ArrayBuffer.isView(data) ? Uint8Array.from(data) : new Uint8Array(data);
-  };
-  const cryptoAlgorithmName = (algorithm) =>
-    String(typeof algorithm === 'string' ? algorithm : algorithm && algorithm.name)
-      .toUpperCase()
-      .replaceAll('_', '-');
-  class SubtleCrypto {
-    constructor() {
-      illegal('SubtleCrypto');
-    }
-    digest(algorithm, data) {
-      const name = typeof algorithm === 'string' ? algorithm : algorithm && algorithm.name;
-      try {
-        const algorithmName = String(name),
-          input = Array.from(cryptoBytes(data));
-        if (!host.executionContextActive()) return new platformPromise(() => {});
-        const bytes = host.subtleDigest(algorithmName, input),
-          result = new Uint8Array(bytes);
-        return platformPromiseResolve(result.buffer);
-      } catch (error) {
-        return platformPromiseReject(error);
-      }
-    }
-    importKey(format, keyData, algorithm, extractable, keyUsages) {
-      try {
-        if (String(format) !== 'spki' || cryptoAlgorithmName(algorithm) !== 'RSA-OAEP')
-          throw platformDOMException('The operation is not supported', 'NotSupportedError');
-        const hashName =
-            typeof algorithm.hash === 'string'
-              ? algorithm.hash
-              : algorithm.hash && algorithm.hash.name,
-          hash = String(hashName).toUpperCase().replaceAll('_', '-'),
-          der = Array.from(cryptoBytes(keyData)),
-          usages = Array.from(keyUsages || [], String);
-        if (usages.some((usage) => usage !== 'encrypt'))
-          throw platformDOMException('Unsupported key usage for an RSA-OAEP key', 'SyntaxError');
-        const metadata = host.subtleImportRSAOAEP(der),
-          key = Object.create(CryptoKey.prototype),
-          slot = {
-            type: 'public',
-            extractable: Boolean(extractable),
-            algorithm: {
-              name: 'RSA-OAEP',
-              modulusLength: metadata[0],
-              publicExponent: new Uint8Array(metadata[1]),
-              hash: { name: hash },
-            },
-            usages,
-            der,
-            hash,
-          };
-        Object.defineProperty(key, cryptoKeySlot, { value: slot });
-        return platformPromiseResolve(key);
-      } catch (error) {
-        return platformPromiseReject(error);
-      }
-    }
-    encrypt(algorithm, key, data) {
-      try {
-        const slot = key && key[cryptoKeySlot];
-        if (!slot)
-          throw new TypeError(
-            "Failed to execute 'encrypt' on 'SubtleCrypto': parameter 2 is not of type 'CryptoKey'.",
-          );
-        if (
-          cryptoAlgorithmName(algorithm) !== 'RSA-OAEP' ||
-          slot.algorithm.name !== 'RSA-OAEP' ||
-          !slot.usages.includes('encrypt')
-        )
-          throw platformDOMException(
-            'The requested operation is not valid for the provided key',
-            'InvalidAccessError',
-          );
-        const label =
-            algorithm && algorithm.label !== undefined
-              ? Array.from(cryptoBytes(algorithm.label))
-              : [],
-          bytes = host.subtleRSAOAEPEncrypt(
-            slot.hash,
-            slot.der,
-            Array.from(cryptoBytes(data)),
-            label,
-          ),
-          result = new Uint8Array(bytes);
-        return platformPromiseResolve(result.buffer);
-      } catch (error) {
-        return platformPromiseReject(error);
-      }
-    }
-    decrypt() {
-      return platformPromiseReject(
-        platformDOMException('The operation is not supported', 'NotSupportedError'),
-      );
-    }
-    sign() {
-      return platformPromiseReject(
-        platformDOMException('The operation is not supported', 'NotSupportedError'),
-      );
-    }
-    verify() {
-      return platformPromiseReject(
-        platformDOMException('The operation is not supported', 'NotSupportedError'),
-      );
-    }
-    exportKey() {
-      return platformPromiseReject(
-        platformDOMException('The operation is not supported', 'NotSupportedError'),
-      );
-    }
-    generateKey() {
-      return platformPromiseReject(
-        platformDOMException('The operation is not supported', 'NotSupportedError'),
-      );
-    }
-    deriveKey() {
-      return platformPromiseReject(
-        platformDOMException('The operation is not supported', 'NotSupportedError'),
-      );
-    }
-    deriveBits() {
-      return platformPromiseReject(
-        platformDOMException('The operation is not supported', 'NotSupportedError'),
-      );
-    }
-    wrapKey() {
-      return platformPromiseReject(
-        platformDOMException('The operation is not supported', 'NotSupportedError'),
-      );
-    }
-    unwrapKey() {
-      return platformPromiseReject(
-        platformDOMException('The operation is not supported', 'NotSupportedError'),
-      );
-    }
-  }
-  SubtleCrypto.prototype.importKey = function (format, keyData, algorithm, extractable, keyUsages) {
-    try {
-      format = String(format);
-      const name = cryptoAlgorithmName(algorithm),
-        usages = Array.from(keyUsages || [], String),
-        key = Object.create(CryptoKey.prototype);
-      let slot;
-      if (format === 'raw' && name === 'AES-GCM') {
-        const bytes = Array.from(cryptoBytes(keyData));
-        if (![16, 24, 32].includes(bytes.length))
-          throw platformDOMException('Invalid AES key length', 'DataError');
-        if (usages.some((usage) => !['encrypt', 'decrypt', 'wrapKey', 'unwrapKey'].includes(usage)))
-          throw platformDOMException('Unsupported key usage for an AES-GCM key', 'SyntaxError');
-        slot = {
-          type: 'secret',
-          extractable: Boolean(extractable),
-          algorithm: { name: 'AES-GCM', length: bytes.length * 8 },
-          usages,
-          bytes,
-        };
-      } else if (format === 'spki' && name === 'RSA-OAEP') {
-        const hashName =
-            typeof algorithm.hash === 'string'
-              ? algorithm.hash
-              : algorithm.hash && algorithm.hash.name,
-          hash = String(hashName).toUpperCase().replaceAll('_', '-'),
-          der = Array.from(cryptoBytes(keyData));
-        if (usages.some((usage) => usage !== 'encrypt'))
-          throw platformDOMException('Unsupported key usage for an RSA-OAEP key', 'SyntaxError');
-        const metadata = String(host.subtleImportRSAOAEP(der)).split('|');
-        slot = {
-          type: 'public',
-          extractable: Boolean(extractable),
-          algorithm: {
-            name: 'RSA-OAEP',
-            modulusLength: Number(metadata[0]),
-            publicExponent: new Uint8Array(metadata[1].split(',').map(Number)),
-            hash: { name: hash },
-          },
-          usages,
-          der,
-          hash,
-        };
-      } else throw platformDOMException('The operation is not supported', 'NotSupportedError');
-      Object.defineProperty(key, cryptoKeySlot, { value: slot });
-      return platformPromiseResolve(key);
-    } catch (error) {
-      return platformPromiseReject(error);
-    }
-  };
-  const aesGCMOperation = (operation, algorithm, key, data) => {
-    try {
-      const slot = key && key[cryptoKeySlot];
-      if (!slot)
-        throw new TypeError(
-          "Failed to execute '" +
-            operation +
-            "' on 'SubtleCrypto': parameter 2 is not of type 'CryptoKey'.",
-        );
-      if (
-        cryptoAlgorithmName(algorithm) !== 'AES-GCM' ||
-        slot.algorithm.name !== 'AES-GCM' ||
-        !slot.usages.includes(operation)
-      )
-        throw platformDOMException(
-          'The requested operation is not valid for the provided key',
-          'InvalidAccessError',
-        );
-      if (!algorithm || algorithm.iv === undefined)
-        throw new TypeError("Failed to normalize algorithm: 'iv' is required");
-      const iv = Array.from(cryptoBytes(algorithm.iv));
-      if (!iv.length)
-        throw platformDOMException(
-          'The operation failed for an operation-specific reason',
-          'OperationError',
-        );
-      const additionalData =
-          algorithm.additionalData === undefined
-            ? []
-            : Array.from(cryptoBytes(algorithm.additionalData)),
-        tagLength = algorithm.tagLength === undefined ? 128 : Number(algorithm.tagLength);
-      if (![32, 64, 96, 104, 112, 120, 128].includes(tagLength))
-        throw platformDOMException('Invalid AES-GCM tag length', 'OperationError');
-      const bytes = host.subtleAESGCM(
-          operation,
-          slot.bytes,
-          iv,
-          additionalData,
-          Array.from(cryptoBytes(data)),
-          tagLength,
-        ),
-        result = new Uint8Array(bytes);
-      return platformPromiseResolve(result.buffer);
-    } catch (error) {
-      return platformPromiseReject(error);
-    }
-  };
-  SubtleCrypto.prototype.encrypt = function (algorithm, key, data) {
-    const slot = key && key[cryptoKeySlot];
-    if (slot?.algorithm.name === 'AES-GCM') return aesGCMOperation('encrypt', algorithm, key, data);
-    try {
-      if (!slot)
-        throw new TypeError(
-          "Failed to execute 'encrypt' on 'SubtleCrypto': parameter 2 is not of type 'CryptoKey'.",
-        );
-      if (
-        cryptoAlgorithmName(algorithm) !== 'RSA-OAEP' ||
-        slot.algorithm.name !== 'RSA-OAEP' ||
-        !slot.usages.includes('encrypt')
-      )
-        throw platformDOMException(
-          'The requested operation is not valid for the provided key',
-          'InvalidAccessError',
-        );
-      const label =
-          algorithm && algorithm.label !== undefined
-            ? Array.from(cryptoBytes(algorithm.label))
-            : [],
-        bytes = host.subtleRSAOAEPEncrypt(
-          slot.hash,
-          slot.der,
-          Array.from(cryptoBytes(data)),
-          label,
-        ),
-        result = new Uint8Array(bytes);
-      return platformPromiseResolve(result.buffer);
-    } catch (error) {
-      return platformPromiseReject(error);
-    }
-  };
-  SubtleCrypto.prototype.decrypt = function (algorithm, key, data) {
-    return aesGCMOperation('decrypt', algorithm, key, data);
-  };
+  /* shared_webcrypto */
   const subtleCrypto = Object.create(SubtleCrypto.prototype);
   class Crypto {
     constructor() {
@@ -9343,12 +9067,14 @@
   };
   window.performance = installPerformanceObject(Object.create(Performance.prototype));
   window.DOMStringList = DOMStringList;
-  window.getComputedStyle = (e) => {
+  window.getComputedStyle = (e, pseudo = null) => {
     if (elementSlot(e)?.type !== 'element')
       throw new TypeError(
         "Failed to execute 'getComputedStyle' on 'Window': parameter 1 is not of type 'Element'.",
       );
-    return cssDeclaration(e, true);
+    pseudo = pseudo == null ? '' : String(pseudo);
+    if (/^::?(?:before|after)$/.test(pseudo)) pseudo = pseudo.replace(/^::?/, '');
+    return cssDeclaration(e, true, pseudo);
   };
   window.matchMedia = (q) => ({
     matches: cssMediaMatches(String(q)),

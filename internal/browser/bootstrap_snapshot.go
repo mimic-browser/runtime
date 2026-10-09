@@ -478,6 +478,8 @@ func (r *Realm) retryBootstrap(err error) error {
 	r.indexedNotifier = nil
 	r.indexedEncoder = nil
 	r.cookieNotifier = nil
+	r.storageNotifier = nil
+	r.cssPropertyRegistration = nil
 	r.launchNotifier = nil
 	r.speechNotifier = nil
 	r.cameraNotifier = nil

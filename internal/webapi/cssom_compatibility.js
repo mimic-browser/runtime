@@ -762,6 +762,10 @@ const readBlitzInputs = () => {
     return JSON.stringify({ unsupported: 'quirks mode adapter pending' });
   if (styleObservationDynamic)
     return JSON.stringify({ unsupported: 'animation lifecycle adapter pending' });
+  if (cssRegisteredProperties.names().size)
+    return JSON.stringify({
+      unsupported: 'registered custom properties require semantic style resolution',
+    });
   // A composed shadow tree can change the host's flow box and the positions
   // of following siblings. Only a zero-sized host with no light children is
   // independent of native light-tree flow; all other cases retain the
@@ -790,7 +794,7 @@ const readBlitzInputs = () => {
   if (blitzControlMembershipRevision !== membershipRevision) {
     blitzControlMembership = compatibilitySelectors.query(
       document,
-      'input,textarea,select,video',
+      'input,textarea,select,option,video',
       false,
       false,
     );
@@ -840,9 +844,12 @@ const readBlitzInputs = () => {
   const focused = compatibilityElementState.focused?.();
   const focusAncestors = new Set();
   for (let node = focused; node; node = cssObservationParent(node)) focusAncestors.add(node);
-  // Default attribute state is already native. Only private form slots and
-  // the focused ancestor chain supply non-attribute overrides.
+  // Default HTML state and dirty slots have one canonical owner. The native
+  // producer does not derive CHECKED from markup, so include controls even
+  // when no author script has read their private slots yet.
   const stateNodes = new Set(compatibilityElementState.nativeStateControls?.() || []);
+  for (const node of blitzControlMembership)
+    if (['INPUT', 'OPTION'].includes(elementSlot(node)?.tagName)) stateNodes.add(node);
   for (const node of focusAncestors) stateNodes.add(node);
   for (const node of stateNodes) {
     const slot = elementSlot(node);

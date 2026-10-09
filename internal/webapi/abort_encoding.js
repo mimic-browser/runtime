@@ -71,6 +71,12 @@ class AbortController {
 expose('AbortSignal', AbortSignal);
 expose('AbortController', AbortController);
 const decoderSlots = new WeakMap();
+const decoderFinalizer =
+  typeof FinalizationRegistry === 'function' &&
+  typeof FinalizationRegistry.prototype.register === 'function' &&
+  typeof FinalizationRegistry.prototype.unregister === 'function'
+    ? new FinalizationRegistry((id) => host.releaseTextDecoder(id))
+    : null;
 const decoderLabels = new Map([
   ['utf-8', 'utf-8'],
   ['utf8', 'utf-8'],
@@ -108,7 +114,7 @@ class TextDecoder {
     label = String(label)
       .replace(/^[\t\n\f\r ]+|[\t\n\f\r ]+$/g, '')
       .toLowerCase();
-    const encoding = decoderLabels.get(label);
+    const encoding = decoderLabels.get(label) || host.textEncodingName?.(label);
     if (!encoding) throw new RangeError('Unsupported encoding: ' + label);
     decoderSlots.set(this, {
       encoding,
@@ -116,6 +122,7 @@ class TextDecoder {
       ignoreBOM: !!options.ignoreBOM,
       bytes: [],
       bom: false,
+      id: 0,
     });
   }
   get encoding() {
@@ -130,15 +137,7 @@ class TextDecoder {
   decode(input, options = {}) {
     const s = decoderSlots.get(this),
       stream = !!options.stream,
-      bytes = s.bytes.concat(
-        input == null
-          ? []
-          : Array.from(
-              ArrayBuffer.isView(input)
-                ? new Uint8Array(input.buffer, input.byteOffset, input.byteLength)
-                : new Uint8Array(input),
-            ),
-      );
+      bytes = s.bytes.concat(input === undefined ? [] : Array.from(bufferSourceBytes(input)));
     s.bytes = [];
     let output = '';
     if (s.encoding === 'windows-1252') {
@@ -146,6 +145,30 @@ class TextDecoder {
         output += String.fromCodePoint(
           byte >= 0x80 && byte <= 0x9f ? windows1252C1[byte - 0x80] : byte,
         );
+      return output;
+    }
+    if (s.encoding !== 'utf-8') {
+      const result = JSON.parse(host.decodeText(s.id, s.encoding, bytes, !stream, s.fatal));
+      decoderFinalizer?.unregister(s);
+      if (result.error) {
+        s.id = 0;
+        s.bom = false;
+        throw new TypeError(result.error);
+      }
+      s.id = stream ? result.id : 0;
+      s.bytes = result.pending;
+      if (stream) decoderFinalizer?.register(this, s.id, s);
+      output = result.text;
+      if (!s.bom && output) {
+        s.bom = true;
+        if (
+          !s.ignoreBOM &&
+          ['utf-16le', 'utf-16be'].includes(s.encoding) &&
+          output.charCodeAt(0) === 0xfeff
+        )
+          output = output.slice(1);
+      }
+      if (!stream) s.bom = false;
       return output;
     }
     return decodeUTF8(s, bytes, stream);

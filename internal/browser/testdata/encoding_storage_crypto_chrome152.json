@@ -1,0 +1,248 @@
+{
+  "browser": "Chrome/152.0.7977.82",
+  "metadata": {
+    "existingBrowser": true,
+    "isolatedBrowserContext": true,
+    "syntheticSecureContext": false,
+    "localHeaderEcho": true,
+    "cookieEcho": false,
+    "fixture": "internal/browser/testdata/encoding_storage_crypto_oracle.js",
+    "fixtureSHA256": "0ea7f6ad6e3ff823bc9a8536152a46da36fe7557e03157fb1249f9f9bcc658f5",
+    "fixtureHashNormalization": "LF",
+    "worker": false
+  },
+  "result": {
+    "encodings": [
+      "utf-8",
+      "windows-1252",
+      "windows-1252",
+      "gbk",
+      "shift_jis",
+      "utf-16le",
+      "utf-16be",
+      "big5",
+      "euc-kr",
+      "gb18030",
+      "iso-2022-jp",
+      "x-user-defined"
+    ],
+    "decoded": [
+      {
+        "encoding": "gbk",
+        "decoded": "\u4f60\u597d",
+        "stream": "\u4f60\u597d",
+        "fatal": "\u4f60\u597d"
+      },
+      {
+        "encoding": "shift_jis",
+        "decoded": "\u3042\u3044",
+        "stream": "\u3042\u3044",
+        "fatal": "\u3042\u3044"
+      },
+      {
+        "encoding": "gb18030",
+        "decoded": "\ufffd",
+        "stream": "\ufffd",
+        "fatal": "\ufffd"
+      },
+      {
+        "encoding": "utf-16le",
+        "decoded": "a\ufffd",
+        "stream": "a\ufffd",
+        "fatal": "a\ufffd"
+      },
+      {
+        "encoding": "utf-16be",
+        "decoded": "a\ufffd",
+        "stream": "a\ufffd",
+        "fatal": "a\ufffd"
+      },
+      {
+        "encoding": "iso-2022-jp",
+        "decoded": "\u3042\u3044A",
+        "stream": "\u3042\u3044A",
+        "fatal": "\u3042\u3044A"
+      },
+      {
+        "encoding": "x-user-defined",
+        "decoded": "A\uf780\uf7ff",
+        "stream": "A\uf780\uf7ff",
+        "fatal": "A\uf780\uf7ff"
+      }
+    ],
+    "malformed": [
+      "TypeError",
+      "TypeError",
+      "TypeError",
+      "TypeError",
+      "TypeError"
+    ],
+    "storage": {
+      "rows": [
+        [
+          "s",
+          null,
+          "4",
+          true,
+          "session",
+          true,
+          false,
+          false,
+          true
+        ],
+        [
+          "a",
+          null,
+          "1",
+          true,
+          "local",
+          true,
+          false,
+          false,
+          true
+        ],
+        [
+          "a",
+          "1",
+          "2",
+          true,
+          "local",
+          true,
+          false,
+          false,
+          true
+        ],
+        [
+          "a",
+          "2",
+          null,
+          true,
+          "local",
+          true,
+          false,
+          false,
+          true
+        ],
+        [
+          "b",
+          null,
+          "3",
+          true,
+          "local",
+          true,
+          false,
+          false,
+          true
+        ],
+        [
+          null,
+          null,
+          null,
+          true,
+          "local",
+          true,
+          false,
+          false,
+          true
+        ]
+      ],
+      "own": []
+    },
+    "cryptography": {
+      "pbkdf2": "ae4d0c95af6b46d32d0adff928f06dd02a303f8ef3c251dfd6e2d85a95474c43",
+      "derived": "ae4d0c95af6b46d32d0adff928f06dd0",
+      "hkdf": "3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf34007208d5b887185865",
+      "AES-CBC": {
+        "ciphertext": "c1b3927c67512c32e2d947e78cd3d229",
+        "plain": "010203"
+      },
+      "AES-CTR": {
+        "ciphertext": "67eb48",
+        "plain": "010203"
+      },
+      "kw": "0a1dd7265771ee3c61006a20b12ac812632ae22f7f83a7d0",
+      "unwrapped": "ae4d0c95af6b46d32d0adff928f06dd0",
+      "partial": {
+        "raw": "80",
+        "signature": "7d45d3f93b7bd3a1df995242f6cf826fd0c8f9743bc28ab9a3aed789e6c54acc"
+      }
+    }
+  },
+  "environment": {
+    "url": "http://127.0.0.1:27072/",
+    "webdriver": false,
+    "webdriverDescriptor": {
+      "enumerable": true,
+      "configurable": true,
+      "getter": "function get webdriver() { [native code] }"
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+    "languages": [
+      "ru-RU"
+    ],
+    "platform": "Win32",
+    "secureContext": true,
+    "crossOriginIsolated": false,
+    "visibilityState": "hidden",
+    "hasFocus": true,
+    "viewport": {
+      "width": 1272,
+      "height": 709,
+      "deviceScaleFactor": 1
+    },
+    "window": {
+      "x": 0,
+      "y": 0,
+      "outerWidth": 0,
+      "outerHeight": 0
+    }
+  },
+  "captureMetadata": {
+    "schemaVersion": 1,
+    "chromeVersion": "152.0.7977.82",
+    "chromiumRevision": "1669021",
+    "chromiumCommit": "d04cdb24d67b081f6cf80200ffc5233f44b61109",
+    "v8Version": "15.2.124.21",
+    "platform": "windows-x64",
+    "browserMode": "headful",
+    "commandLineFeatureOverrides": [],
+    "viewport": {
+      "width": 1272,
+      "height": 709,
+      "deviceScaleFactor": 1
+    },
+    "window": {
+      "x": 0,
+      "y": 0,
+      "outerWidth": 0,
+      "outerHeight": 0
+    },
+    "secureContextState": true,
+    "isolationState": false,
+    "environmentProfileId": "chrome-152-windows-x64-headful-controlled-v1",
+    "profileFreshness": "fresh-controlled",
+    "visibilityState": "hidden",
+    "hasFocus": true,
+    "osWindowState": "hidden",
+    "executableSHA256": "EA36DD818A90176F1A70616F0363D9BE527229389A6C073A0B1688B9E73F67E9",
+    "launchArguments": [
+      "--remote-debugging-port=9343",
+      "--user-data-dir=E:\\GitHub\\mimic\\.build\\lexbench-compatibility-20261009\\chrome-profile-2ed836a0766941e480fc1b1949bd669a",
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--window-size=1280,800",
+      "about:blank"
+    ],
+    "webdriver": false,
+    "webdriverDescriptor": {
+      "enumerable": true,
+      "configurable": true,
+      "getter": "function get webdriver() { [native code] }"
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+    "languages": [
+      "ru-RU"
+    ],
+    "documentURL": "http://127.0.0.1:27072/"
+  }
+}

@@ -44,6 +44,7 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/klauspost/compress v1.18.7
 	github.com/maclof/gov8 v0.1.1
+	github.com/nlnwa/whatwg-url v0.6.2
 	github.com/pion/interceptor v0.1.49
 	github.com/pion/mediadevices v0.10.0
 	github.com/pion/opus v0.1.1-0.20261005072002-44637de087b3
@@ -64,6 +65,7 @@ require (
 	github.com/ajroetker/go-highway v0.0.4 // indirect
 	github.com/bdandy/go-errors v1.2.2 // indirect
 	github.com/bdandy/go-socks4 v1.2.3 // indirect
+	github.com/bits-and-blooms/bitset v1.20.0 // indirect
 	github.com/blackjack/webcam v0.6.1 // indirect
 	github.com/cloudflare/circl v1.6.2 // indirect
 	github.com/dlclark/regexp2/v2 v2.5.2 // indirect

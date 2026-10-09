@@ -1,114 +1,80 @@
 package browser
 
 import (
-	"fmt"
 	"net/url"
-	"strings"
 
 	"github.com/moreveal/mimic/internal/engine"
+	whatwg "github.com/nlnwa/whatwg-url/url"
 )
 
+// Constructors, reflected element URLs and worker fetches share the browser
+// parser. net/url remains the transport representation, after WHATWG parsing.
 func resolveURL(base *url.URL, raw string) (*url.URL, error) {
-	reference, err := url.Parse(raw)
+	u, err := whatwg.ParseRef(base.String(), raw)
 	if err != nil {
 		return nil, err
 	}
-	if !reference.IsAbs() && base.Opaque != "" && !strings.HasPrefix(raw, "#") {
-		return nil, fmt.Errorf("cannot resolve a relative URL against an opaque base")
-	}
-	return normalizedSpecialURL(base.ResolveReference(reference)), nil
+	return url.Parse(u.Href(false))
 }
-
-// WHATWG special URLs with an authority serialize an empty path as "/".
-// Keep that path on the URL value so every reflection and setter agrees.
-func normalizedSpecialURL(u *url.URL) *url.URL {
-	if u != nil && (u.Scheme == "http" || u.Scheme == "https") && u.Host != "" && u.Path == "" {
-		u.Path = "/"
+func browserURLOrigin(u *whatwg.Url) string {
+	switch u.Scheme() {
+	case "http", "https", "ws", "wss", "ftp":
+		return u.Scheme() + "://" + u.Host()
+	case "blob":
+		if inner, err := whatwg.Parse(u.Pathname()); err == nil {
+			return browserURLOrigin(inner)
+		}
 	}
-	return u
+	return "null"
 }
-
 func installURLHost(host map[string]any, runtime engine.Runtime, baseURL func() *url.URL) {
 	function := runtime.Function
 	if borrowed, ok := runtime.(interface{ TransientFunction(engine.Function) any }); ok {
 		function = borrowed.TransientFunction
 	}
 	host["urlParts"] = function(func(_ engine.Value, a []engine.Value) (engine.Value, error) {
-		base := baseURL()
-		if len(a) > 1 && strarg(a, 1) == "" {
-			reference, err := url.Parse(strarg(a, 0))
-			if err != nil || !reference.IsAbs() {
-				return nil, fmt.Errorf("invalid absolute URL")
-			}
-		}
-		if len(a) > 1 && strarg(a, 1) != "" {
-			var err error
-			base, err = url.Parse(strarg(a, 1))
-			if err != nil || !base.IsAbs() {
-				return nil, fmt.Errorf("invalid base URL")
-			}
-		}
-		// Explicit bases come from URL/Request constructors. The one-argument
-		// path is also used by existing element URL reflection, whose fallback
-		// semantics are separate from constructor failure behavior.
-		var u *url.URL
+		var u *whatwg.Url
 		var err error
-		if len(a) > 1 {
-			u, err = resolveURL(base, strarg(a, 0))
+		if len(a) > 1 && strarg(a, 1) == "" {
+			u, err = whatwg.Parse(strarg(a, 0))
 		} else {
-			u, err = base.Parse(strarg(a, 0))
+			base := baseURL().String()
+			if len(a) > 1 {
+				base = strarg(a, 1)
+			}
+			u, err = whatwg.ParseRef(base, strarg(a, 0))
 		}
 		if err != nil {
 			return nil, err
 		}
-		u = normalizedSpecialURL(u)
-		search, hash := "", ""
-		if u.RawQuery != "" {
-			search = "?" + u.RawQuery
-		}
-		if u.Fragment != "" {
-			hash = "#" + u.Fragment
-		}
-		origin := "null"
-		if u.Scheme == "http" || u.Scheme == "https" {
-			origin = u.Scheme + "://" + u.Host
-		}
-		return runtime.Value(map[string]any{"href": u.String(), "origin": origin, "protocol": u.Scheme + ":", "username": usernameOf(u), "password": passwordOf(u), "host": u.Host, "hostname": u.Hostname(), "port": u.Port(), "pathname": u.EscapedPath(), "search": search, "hash": hash}), nil
+		return runtime.Value(map[string]any{"href": u.Href(false), "origin": browserURLOrigin(u), "protocol": u.Protocol(), "username": u.Username(), "password": u.Password(), "host": u.Host(), "hostname": u.Hostname(), "port": u.Port(), "pathname": u.Pathname(), "search": u.Search(), "hash": u.Hash()}), nil
 	})
 	host["setURLPart"] = function(func(_ engine.Value, a []engine.Value) (engine.Value, error) {
-		u, err := url.Parse(strarg(a, 0))
+		u, err := whatwg.Parse(strarg(a, 0))
 		if err != nil {
 			return nil, err
 		}
-		part, value := strarg(a, 1), strarg(a, 2)
-		switch part {
+		value := strarg(a, 2)
+		switch strarg(a, 1) {
 		case "protocol":
-			u.Scheme = strings.TrimSuffix(value, ":")
+			u.SetProtocol(value)
 		case "username":
-			password := passwordOf(u)
-			u.User = url.UserPassword(value, password)
+			u.SetUsername(value)
 		case "password":
-			u.User = url.UserPassword(usernameOf(u), value)
+			u.SetPassword(value)
 		case "host":
-			u.Host = value
+			u.SetHost(value)
 		case "hostname":
-			port := u.Port()
-			u.Host = value
-			if port != "" {
-				u.Host += ":" + port
-			}
+			u.SetHostname(value)
 		case "port":
-			u.Host = u.Hostname()
-			if value != "" {
-				u.Host += ":" + value
-			}
+			u.SetPort(value)
 		case "pathname":
-			u.Path, u.RawPath = value, ""
+			u.SetPathname(value)
 		case "search":
-			u.RawQuery = strings.TrimPrefix(value, "?")
+			u.SetSearch(value)
 		case "hash":
-			u.Fragment = strings.TrimPrefix(value, "#")
+			u.SetHash(value)
 		}
-		return runtime.Value(normalizedSpecialURL(u).String()), nil
+		return runtime.Value(u.Href(false)), nil
 	})
 }

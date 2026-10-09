@@ -2,6 +2,7 @@
   'use strict';
   /* shared_promise_intrinsics */
   let platformDOMException;
+  let bufferSourceBytes;
   const webIDLNumber = (value) => +value;
   let cloneCodec;
   const listenerTargets = new WeakMap(),
@@ -303,25 +304,7 @@
       return host.randomUUID();
     }
   }
-  class SubtleCrypto {
-    constructor() {
-      throw new TypeError('Illegal constructor');
-    }
-    digest(algorithm, data) {
-      const name = typeof algorithm === 'string' ? algorithm : algorithm && algorithm.name;
-      if (!ArrayBuffer.isView(data) && !(data instanceof ArrayBuffer))
-        return platformPromiseReject(
-          new TypeError('Data must be an ArrayBuffer or ArrayBufferView'),
-        );
-      const bytes =
-        data instanceof ArrayBuffer
-          ? new Uint8Array(data)
-          : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-      return platformPromiseResolve(host.cryptoDigest(String(name), Array.from(bytes))).then(
-        (result) => new Uint8Array(result).buffer,
-      );
-    }
-  }
+  /* shared_webcrypto */
   /* shared_performance */
   const hostToken = host.token();
   const bindingString = (value) => {
@@ -441,6 +424,7 @@
     WorkerLocation,
     Crypto,
     SubtleCrypto,
+    CryptoKey,
     Performance,
     TrustedHTML,
     TrustedScript,

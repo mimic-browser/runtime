@@ -125,12 +125,13 @@ func (c *Context) pumpIndexed(db *indexedDatabase) {
 func addIndexedDBHosts(r *Realm, h map[string]any) {
 	h["indexedDBTaskIdentity"] = r.fn(func(_ engine.Value, _ []engine.Value) (engine.Value, error) {
 		p := r.agent.Page()
-		p.mu.RLock()
-		defer p.mu.RUnlock()
-		for _, owner := range p.realmOwners {
-			status := owner.scheduler.ExecutionStatus()
+		// A nested Page task can leave its caller's scheduler marked running.
+		// The Page clock tracks the innermost task; map iteration cannot select
+		// the task whose transaction activity is currently being observed.
+		if current := p.activeClock.Load(); current != nil {
+			status := current.ExecutionStatus()
 			if status.Running {
-				return r.val(owner.ID + ":" + strconv.FormatUint(status.TaskID, 10)), nil
+				return r.val("task:" + strconv.FormatUint(status.TaskID, 10)), nil
 			}
 		}
 		return r.val("script:" + strconv.FormatUint(p.databaseScriptEpoch, 10)), nil
