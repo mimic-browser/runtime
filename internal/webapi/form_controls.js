@@ -1,6 +1,15 @@
 // Stateful HTML form values. DOM attributes remain in the canonical node store;
 // dirty value/checked/selected state belongs to the realm's element identity.
 {
+  // Form algorithms and reflected IDL getters read canonical attributes through
+  // captured DOM operations, without invoking author overrides on controls.
+  const applyControlAttribute = Reflect.apply,
+    getControlAttribute = Element.prototype.getAttribute,
+    hasControlAttribute = Element.prototype.hasAttribute;
+  const controlAttribute = (element, name) =>
+    element == null ? undefined : applyControlAttribute(getControlAttribute, element, [name]);
+  const controlHasAttribute = (element, name) =>
+    element == null ? undefined : applyControlAttribute(hasControlAttribute, element, [name]);
   const inputs = new WeakMap(),
     textareas = new WeakMap(),
     options = new WeakMap(),
@@ -246,7 +255,7 @@
   const string = (name, key, attribute = key.toLowerCase()) =>
     define(name, key, {
       get() {
-        return this.getAttribute(attribute) || '';
+        return controlAttribute(this, attribute) || '';
       },
       set(value) {
         this.setAttribute(attribute, String(value));
@@ -255,7 +264,7 @@
   const boolean = (name, key, attribute = key.toLowerCase()) =>
     define(name, key, {
       get() {
-        return this.hasAttribute(attribute);
+        return controlHasAttribute(this, attribute);
       },
       set(value) {
         if (value) this.setAttribute(attribute, '');
@@ -297,7 +306,7 @@
     'button',
   ]);
   const typeOf = (e) => {
-    const value = (e.getAttribute('type') || 'text').toLowerCase();
+    const value = (controlAttribute(e, 'type') || 'text').toLowerCase();
     return types.has(value) ? value : 'text';
   };
   const labelable = (e) =>
@@ -305,7 +314,7 @@
     (['button', 'meter', 'output', 'progress', 'select', 'textarea'].includes(e.localName) ||
       (e.localName === 'input' && typeOf(e) !== 'hidden'));
   const labelControl = (label) => {
-    const id = label.getAttribute('for');
+    const id = controlAttribute(label, 'for');
     if (id !== null) {
       const candidate = label.getRootNode().getElementById(id);
       return labelable(candidate) ? candidate : null;
@@ -383,8 +392,8 @@
         : '';
     if (type === 'color') return /^#[\da-f]{6}$/i.test(value) ? value.toLowerCase() : '#000000';
     if (type === 'range') {
-      const min = Number(e.getAttribute('min') ?? 0),
-        rawMax = Number(e.getAttribute('max') ?? 100),
+      const min = Number(controlAttribute(e, 'min') ?? 0),
+        rawMax = Number(controlAttribute(e, 'max') ?? 100),
         max = Math.max(min, rawMax);
       let number = value !== '' && Number.isFinite(Number(value)) ? Number(value) : (min + max) / 2;
       number = Math.max(min, Math.min(max, number));
@@ -423,7 +432,7 @@
     return value;
   }
   const formOwner = (e) => {
-    const id = e.getAttribute('form');
+    const id = controlAttribute(e, 'form');
     if (id !== null) {
       const owner = e.ownerDocument.getElementById(id);
       return owner?.localName === 'form' ? owner : null;
@@ -435,9 +444,9 @@
     const s = inputState(e),
       m = mode(e);
     if (m === 'filename') return '';
-    if (m === 'default-on') return e.getAttribute('value') ?? 'on';
-    if (m === 'default') return e.getAttribute('value') ?? '';
-    return sanitize(e, s.dirty ? s.value : (e.getAttribute('value') ?? ''));
+    if (m === 'default-on') return controlAttribute(e, 'value') ?? 'on';
+    if (m === 'default') return controlAttribute(e, 'value') ?? '';
+    return sanitize(e, s.dirty ? s.value : (controlAttribute(e, 'value') ?? ''));
   };
   define('HTMLInputElement', 'type', {
     get() {
@@ -490,7 +499,7 @@
   define('HTMLInputElement', 'checked', {
     get() {
       const s = inputState(this);
-      return s.dirtyChecked ? s.checked : this.hasAttribute('checked');
+      return s.dirtyChecked ? s.checked : controlHasAttribute(this, 'checked');
     },
     set(value) {
       const s = inputState(this);
@@ -612,9 +621,9 @@
     return null;
   };
   const optionDisabled = (option) =>
-    option.disabled ||
+    controlHasAttribute(option, 'disabled') ||
     (option.parentElement?.localName === 'optgroup' &&
-      option.parentElement.hasAttribute('disabled'));
+      controlHasAttribute(option.parentElement, 'disabled'));
   function selection(select) {
     if (isolatedControls) {
       const list = optionList(select);
@@ -623,7 +632,10 @@
     const list = optionList(select),
       state = selectState(select),
       signature = list
-        .map((option) => String(optionState(option).id) + ':' + option.hasAttribute('selected'))
+        .map(
+          (option) =>
+            String(optionState(option).id) + ':' + controlHasAttribute(option, 'selected'),
+        )
         .join(',');
     if (signature !== state.signature) {
       state.noSelection = false;
@@ -631,11 +643,15 @@
     }
     let selected = list.filter((option) => {
       const s = optionState(option);
-      return s.dirty ? s.selected : option.hasAttribute('selected');
+      return s.dirty ? s.selected : controlHasAttribute(option, 'selected');
     });
-    if (!select.multiple) {
+    if (!controlHasAttribute(select, 'multiple')) {
       if (selected.length > 1) selected = selected.slice(-1);
-      if (!selected.length && !state.noSelection && Number(select.size) <= 1) {
+      if (
+        !selected.length &&
+        !state.noSelection &&
+        Number(compatibilityElementState.formOperation(select, 'get', 'size')) <= 1
+      ) {
         const first = list.find((option) => !optionDisabled(option));
         if (first) selected = [first];
       }
@@ -682,7 +698,7 @@
   };
   const collection = (get, prototype, formControls = false) => {
     const matches = (name) =>
-      name === '' ? [] : get().filter((e) => e.id === name || e.getAttribute('name') === name);
+      name === '' ? [] : get().filter((e) => e.id === name || controlAttribute(e, 'name') === name);
     const namedItem = (name) => {
       const found = matches(name);
       return formControls && found.length > 1
@@ -728,7 +744,7 @@
   });
   define('HTMLOptionElement', 'value', {
     get() {
-      return this.getAttribute('value') ?? this.text;
+      return controlAttribute(this, 'value') ?? this.text;
     },
     set(value) {
       this.setAttribute('value', String(value));
@@ -736,7 +752,7 @@
   });
   define('HTMLOptionElement', 'label', {
     get() {
-      return this.getAttribute('label') ?? this.text;
+      return controlAttribute(this, 'label') ?? this.text;
     },
     set(value) {
       this.setAttribute('label', String(value));
@@ -749,7 +765,7 @@
       const owner = selectOwner(this);
       if (owner) return selection(owner).selected.includes(this);
       const s = optionState(this);
-      return s.dirty ? s.selected : this.hasAttribute('selected');
+      return s.dirty ? s.selected : controlHasAttribute(this, 'selected');
     },
     set(value) {
       const owner = selectOwner(this),
@@ -775,7 +791,7 @@
   });
   define('HTMLSelectElement', 'size', {
     get() {
-      const value = Number(this.getAttribute('size'));
+      const value = Number(controlAttribute(this, 'size'));
       return Number.isInteger(value) && value >= 0 ? value : 0;
     },
     set(value) {
@@ -900,7 +916,7 @@
     for (const property of ['minLength', 'maxLength'])
       define(name, property, {
         get() {
-          const raw = this.getAttribute(property.toLowerCase());
+          const raw = controlAttribute(this, property.toLowerCase());
           return raw !== null && /^\d+$/.test(raw) ? Number(raw) : -1;
         },
         set(value) {
@@ -945,14 +961,14 @@
   const isSubmitButton = (control) =>
     control?.localName === 'button'
       ? !['reset', 'button'].includes(
-          String(control.getAttribute('type') || 'submit').toLowerCase(),
+          String(controlAttribute(control, 'type') || 'submit').toLowerCase(),
         )
       : control?.localName === 'input' && ['submit', 'image'].includes(typeOf(control));
   const disabledForForm = (control) => {
-    if (control.hasAttribute('disabled')) return true;
+    if (controlHasAttribute(control, 'disabled')) return true;
     for (let ancestor = control.parentElement; ancestor; ancestor = ancestor.parentElement) {
       if (ancestor.localName === 'datalist') return true;
-      if (ancestor.localName === 'fieldset' && ancestor.hasAttribute('disabled')) {
+      if (ancestor.localName === 'fieldset' && controlHasAttribute(ancestor, 'disabled')) {
         const legend = Array.from(ancestor.children).find((e) => e.localName === 'legend');
         if (!legend || !legend.contains(control)) return true;
       }
@@ -989,7 +1005,7 @@
     define('HTMLFormElement', name, {
       get() {
         formCheck(this);
-        const value = (this.getAttribute(name) || '').toLowerCase();
+        const value = (controlAttribute(this, name) || '').toLowerCase();
         return values.includes(value) ? value : fallback;
       },
       set(value) {
@@ -1014,7 +1030,7 @@
   define('HTMLFormElement', 'action', {
     get() {
       formCheck(this);
-      const raw = this.getAttribute('action');
+      const raw = controlAttribute(this, 'action');
       if (!raw) return document.URL;
       try {
         return new URL(raw, document.baseURI).href;
@@ -1127,7 +1143,7 @@
       throw platformDOMException(reason, 'NotSupportedError');
     };
     const override = (attribute, fallback) =>
-      submitter?.hasAttribute(attribute) ? submitter.getAttribute(attribute) : fallback;
+      controlHasAttribute(submitter, attribute) ? controlAttribute(submitter, attribute) : fallback;
     const target = override('formtarget', this.target).toLowerCase();
     if (target && target !== '_self' && !(target === '_top' && window.top === window))
       return missing('Named, parent, and new browsing-context form targets are not implemented');
@@ -1203,8 +1219,8 @@
       submittingForms.add(this);
       try {
         if (
-          !this.hasAttribute('novalidate') &&
-          !submitter?.hasAttribute('formnovalidate') &&
+          !controlHasAttribute(this, 'novalidate') &&
+          !controlHasAttribute(submitter, 'formnovalidate') &&
           !validateForm(this)
         )
           return;
@@ -1253,7 +1269,7 @@
       return;
     submittingForms.add(form);
     try {
-      if (!form.hasAttribute('novalidate') && !validateForm(form)) return;
+      if (!controlHasAttribute(form, 'novalidate') && !validateForm(form)) return;
       if (dispatchSubmit(form) && form.isConnected) submitForm.call(form);
     } finally {
       submittingForms.delete(form);
@@ -1263,7 +1279,7 @@
     if (!control?.isConnected || control.disabled) return;
     const type =
       control.localName === 'button'
-        ? String(control.getAttribute('type') || 'submit').toLowerCase()
+        ? String(controlAttribute(control, 'type') || 'submit').toLowerCase()
         : typeOf(control);
     if (type === 'reset') {
       formOwner(control)?.reset();
@@ -1276,8 +1292,8 @@
     submittingForms.add(form);
     try {
       if (
-        !form.hasAttribute('novalidate') &&
-        !control.hasAttribute('formnovalidate') &&
+        !controlHasAttribute(form, 'novalidate') &&
+        !controlHasAttribute(control, 'formnovalidate') &&
         !validateForm(form)
       )
         return;

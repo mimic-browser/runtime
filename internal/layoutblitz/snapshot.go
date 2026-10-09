@@ -9,7 +9,7 @@ import (
 
 // ObservationProperties is the fixed browser-consumer schema, not a workload
 // selector list. Other CSSOM values use scalar readback from the same owner.
-var ObservationProperties = []string{"display", "visibility", "cursor", "content-visibility", "opacity", "pointer-events", "position", "z-index", "overflow-x", "overflow-y", "direction", "font-size", "transform", "transform-origin", "isolation", "perspective", "content"}
+var ObservationProperties = []string{"display", "visibility", "cursor", "content-visibility", "opacity", "pointer-events", "position", "z-index", "overflow-x", "overflow-y", "direction", "font-size", "transform", "transform-origin", "isolation", "perspective", "content", "background-image"}
 
 // PackedSnapshot has a versioned header followed by sorted canonical records
 // and an interned UTF-8 string pool. Worlds binary-search IDs in place, without

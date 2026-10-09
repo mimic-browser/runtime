@@ -12,6 +12,7 @@ mimic-taffy-layout = { path = "../../layouttaffy/native" }
 blitz-dom = { git = "https://github.com/moreveal/blitz.git", rev = "19a72d4a4163038d748603fbcf709d38bfa6a998", default-features = false, features = ["system-fonts", "floats"] }
 style = { package = "stylo", version = "0.21" }
 style_dom = { package = "stylo_dom", version = "0.21" }
+stylo_static_prefs = "0.21"
 blitz-traits = { git = "https://github.com/moreveal/blitz.git", rev = "19a72d4a4163038d748603fbcf709d38bfa6a998" }
 markup5ever = "0.39"
 

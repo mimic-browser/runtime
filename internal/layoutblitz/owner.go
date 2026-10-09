@@ -17,6 +17,7 @@ int32_t mimic_blitz_element(MimicBlitzHandle*, uint64_t, const char*, size_t, co
 int32_t mimic_blitz_attribute(MimicBlitzHandle*, uint64_t, const char*, size_t, const char*, size_t, const char*, size_t);
 int32_t mimic_blitz_append(MimicBlitzHandle*, uint64_t, uint64_t);
 int32_t mimic_blitz_state(MimicBlitzHandle*, uint64_t, uint32_t, uint32_t);
+int32_t mimic_blitz_restyle_subtree(MimicBlitzHandle*);
 int32_t mimic_blitz_color_scheme(MimicBlitzHandle*, uint32_t);
 int32_t mimic_blitz_text(MimicBlitzHandle*, uint64_t, const char*, size_t, uint32_t);
 int32_t mimic_blitz_resolve(MimicBlitzHandle*, double, uint64_t*);
@@ -96,6 +97,10 @@ func (o *Owner) Append(parent, child uint64) error {
 
 func (o *Owner) State(id uint64, mask, flags uint32) error {
 	return check(C.mimic_blitz_state(o.handle, C.uint64_t(id), C.uint32_t(mask), C.uint32_t(flags)))
+}
+
+func (o *Owner) RestyleSubtree() error {
+	return check(C.mimic_blitz_restyle_subtree(o.handle))
 }
 
 func (o *Owner) ColorScheme(dark bool) error {

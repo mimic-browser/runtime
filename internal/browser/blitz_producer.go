@@ -233,10 +233,11 @@ func (r *Realm) prepareBlitz() (resultErr error) {
 	}
 	accounting.mark("keyValidation")
 	var inputs struct {
-		Unsupported string                 `json:"unsupported"`
-		States      []blitzElementState    `json:"states"`
-		Sheets      []blitzStylesheetInput `json:"sheets"`
-		Controls    []blitzControlValue    `json:"controls"`
+		Unsupported     string                 `json:"unsupported"`
+		RestyleOnChange bool                   `json:"restyleOnChange"`
+		States          []blitzElementState    `json:"states"`
+		Sheets          []blitzStylesheetInput `json:"sheets"`
+		Controls        []blitzControlValue    `json:"controls"`
 	}
 	if r.blitzInputs == nil {
 		return fmt.Errorf("blitz: owner input adapter not initialized")
@@ -378,6 +379,14 @@ func (r *Realm) prepareBlitz() (resultErr error) {
 		return err
 	}
 	accounting.mark("controls")
+	if inputs.RestyleOnChange {
+		// Rematch reverse dependencies once per changed canonical epoch while
+		// retaining nodes, parsed stylesheets and fonts. Clean reads return at
+		// the key fast path above; they never pay for another style traversal.
+		if err := state.document.Owner.RestyleSubtree(); err != nil {
+			return err
+		}
+	}
 	generation, err := state.document.Owner.Resolve(0)
 	if err != nil {
 		return err

@@ -22,6 +22,25 @@ return rows===table.rows&&rows instanceof HTMLCollection&&rows.length===3&&rows[
 	})
 }
 
+func TestFormControlAttributeReadsIgnoreAuthorMethods(t *testing.T) {
+	parallelBrowserTest(t)
+	historyTestPages(t, func(t *testing.T, page *Page) {
+		value, err := page.Evaluate(context.Background(), `(() => {
+ document.body.innerHTML='<form><input name="entry" value="text"><input type="checkbox" name="on" checked><select name="choice" size="invalid"><option value="a">A</option><option>B</option></select></form>';
+ const form=document.querySelector('form'),input=form.firstElementChild,check=input.nextElementSibling,select=form.lastElementChild;
+ const get=Element.prototype.getAttribute,has=Element.prototype.hasAttribute,fail=()=>{throw Error('author attribute method')};
+ Element.prototype.getAttribute=Element.prototype.hasAttribute=fail;
+ const reflected=input.name==='entry'&&input.type==='text'&&input.value==='text'&&check.checked&&select.size===0&&select.selectedIndex===0&&select.value==='a';
+ Element.prototype.getAttribute=get;Element.prototype.hasAttribute=has;
+ for(const control of [input,check,select,...select.options])control.getAttribute=control.hasAttribute=fail;
+ return reflected&&JSON.stringify(Array.from(new FormData(form)))==='[["entry","text"],["on","on"],["choice","a"]]';
+})()`)
+		if err != nil || value != true {
+			t.Fatalf("private form attribute reads: %v %v", value, err)
+		}
+	})
+}
+
 func TestFormControlDirtyValuesAndReset(t *testing.T) {
 	parallelBrowserTest(t)
 	b, err := New(v8engine.Factory{}, chrome152.New())

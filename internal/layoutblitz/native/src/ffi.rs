@@ -112,6 +112,14 @@ pub extern "C" fn mimic_blitz_state(handle: *mut Handle, id: u64, mask: u32, fla
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn mimic_blitz_restyle_subtree(handle: *mut Handle) -> i32 {
+    call(handle, |owner| {
+        owner.restyle_subtree();
+        Ok(())
+    })
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn mimic_blitz_detach(handle: *mut Handle, id: u64) -> i32 {
     call(handle, |owner| owner.detach(id).map_err(|_| ()))
 }

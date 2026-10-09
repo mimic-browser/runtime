@@ -28,6 +28,7 @@ func TestBlitzControlContentAdmission(t *testing.T) {
 			{"video", `document.body.append(document.createElement('video'));`, true},
 			{"video-repair", `document.querySelector('video').remove();`, false},
 			{"no-author-getters", `for(const id of ['area','field','pick']){const e=document.getElementById(id);Object.defineProperty(e,'value',{get(){throw Error('author value')}});e.getAttribute=()=>{throw Error('author attribute')};}document.getElementById('target').setAttribute('data-admission','refresh');`, false},
+			{"no-author-selection-getters", `const pick=document.getElementById('pick');for(const key of ['size','multiple'])Object.defineProperty(pick,key,{get(){throw Error('author '+key)}});const option=pick.firstElementChild;for(const key of ['getAttribute','hasAttribute'])option[key]=()=>{throw Error('author option attribute')};Object.defineProperty(option,'disabled',{get(){throw Error('author disabled')}});document.getElementById('target').setAttribute('data-admission','selection-refresh');`, false},
 		} {
 			t.Run(tc.name, func(t *testing.T) {
 				_, err := p.Evaluate(context.Background(), `(()=>{`+tc.script+`return document.getElementById('target').getBoundingClientRect().width})()`)

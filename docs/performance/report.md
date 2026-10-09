@@ -24,7 +24,7 @@ The [Wikipedia E2E reference](wikipedia-e2e-current.md) records the complete
 unchanged Playwright workflow and its acceptance criteria. A faster isolated
 CDP call, DOM operation or synthetic click is not an E2E result.
 
-## Validated optimization checkpoint
+## Bootstrap optimization checkpoint
 
 Bootstrap preparation now uses generated immutable metadata from the frozen
 captures, bounded source and compiled-code caches, and direct admission of a
@@ -62,6 +62,50 @@ process-tree RSS. Forced-GC attribution measured approximately 9.57 MiB of live
 V8 heap per static Page; this is a diagnostic measurement, not ordinary RSS.
 The changes do not establish a memory reduction. Concurrent host CPU load also
 limits interpretation of unpaired absolute latency measurements.
+
+## Resource discovery and relational styles
+
+Background-image observations now travel in the existing packed native style
+projection. Resource discovery checks ancestor visibility only for elements
+whose computed background contains a URL, and shares ancestor results within
+one validated style-read scope. It still observes the canonical computed style
+and invalidates with the existing observation epoch.
+
+The pinned native selector parser now enables `:has()`. Admitted relational
+selectors rematch the subtree after a changed canonical epoch while retaining
+nodes, parsed stylesheets and fonts. Clean observations retain their fast path.
+Predicates not represented by the native state owner, including `:required`
+and `:dir()`, retain the semantic fallback. This is a conservative admission
+boundary; incremental reverse-dependency invalidation remains future work.
+
+Two alternating fresh-process control/candidate pairs, each prepared by the
+same validated static workload, passed the complete unchanged Wikipedia
+workflow. Control durations were 39.307 and 40.446 s; candidate durations were
+34.372 and 34.741 s. The medians differ by 5.320 s, or 13.3%. These matched
+observations establish an improvement over the bootstrap checkpoint under
+those host conditions. They do not establish parity with another browser.
+
+The final binary includes a subsequent narrow correctness repair: form-state
+and reflected attribute reads use captured DOM operations rather than author
+overrides. Focused form, relational-selector, stylesheet, background-resource,
+frame, isolated-world and snapshot checks passed. This binary also passed one
+complete cold Wikipedia run at 20.213 s and its subsequent warm run at 11.439 s.
+Those final absolute timings are unpaired and are not a further speedup claim.
+
+The final iterative gate passed all six semantic workloads, four static
+50-Page waves including the excluded warmup, and static/React 10-Page memory
+checks. Five measured warm samples gave navigation-through-result medians of
+32.284 ms for static, 158.849 ms for DOM and 78.447 ms for React. Three measured
+50-Page waves gave median throughput of 192.28 Pages/s through the last result,
+excluding teardown, and approximately 809.89 MiB active process-tree RSS.
+Throughput including teardown was 150.84 sessions/s. These changes do not
+establish a memory reduction.
+
+An initial gate passed its 10- and 25-Page waves but failed its last 50-Page
+wave with process-wide CDP disconnection. That wave is invalid and excluded
+from successful results. The exact cause was not established; the subsequent
+complete gate with preserved process logs passed. The unresolved failure
+limits confidence in sustained density despite the successful checkpoint.
 
 ## Architectural constraints
 

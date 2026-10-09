@@ -829,6 +829,7 @@ dependencies = [
  "mimic-taffy-layout",
  "stylo",
  "stylo_dom",
+ "stylo_static_prefs",
 ]
 
 [[package]]

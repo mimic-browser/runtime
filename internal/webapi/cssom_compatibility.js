@@ -1,6 +1,53 @@
 // Constructed sheets keep their parsed rules in the realm. Adoption references
 // the same sheet, so replacement and rule edits are visible to every adopter.
 // Snapshots serialize this state without inserting nodes into the live DOM.
+const nativeRelationalSelector = (() => {
+  const pseudos = new Set([
+    'has',
+    'is',
+    'where',
+    'not',
+    'root',
+    'empty',
+    'first-child',
+    'last-child',
+    'only-child',
+    'first-of-type',
+    'last-of-type',
+    'only-of-type',
+    'nth-child',
+    'nth-last-child',
+    'nth-of-type',
+    'nth-last-of-type',
+    'checked',
+    'focus',
+    'focus-within',
+    'focus-visible',
+    'target',
+  ]);
+  return (selector) => {
+    if (!/:has\s*\(/i.test(selector) && !selector.includes('\\')) return null;
+    let relational = false,
+      unsupported = false;
+    const visit = (groups) => {
+      for (const group of groups)
+        for (const token of group) {
+          if (token.type !== 'pseudo') continue;
+          relational ||= token.name === 'has';
+          // Keep the semantic fallback for predicates not projected by the
+          // native state owner, or grammar disabled in the pinned parser.
+          unsupported ||= !pseudos.has(token.name) || Boolean(token.nthOf);
+          if (Array.isArray(token.data)) visit(token.data);
+        }
+    };
+    try {
+      visit(mimicSelectorLibrary.parse(selector));
+    } catch {
+      return { unsupported: true };
+    }
+    return relational ? { unsupported } : null;
+  };
+})();
 const constructedStyleSheets = (() => {
   if (typeof globalThis.StyleSheet !== 'function' || typeof globalThis.CSSRuleList !== 'function')
     return {
@@ -625,6 +672,7 @@ const constructedStyleSheets = (() => {
       if ((adopted.get(root) || []).length)
         return { unsupported: 'adopted stylesheet adapter pending', sheets: [] };
       const collection = Array.from(ownerCollection(root));
+      let restyleOnChange = false;
       for (const sheet of collection) {
         let cached = nativeEligibilityCache.get(sheet);
         if (!cached || cached.revision !== revision) {
@@ -635,12 +683,20 @@ const constructedStyleSheets = (() => {
             }
             return '';
           };
+          let relational = false;
           const visit = (rule) => {
             const state = rules.get(rule);
+            let relationalUnsupported = false;
+            if (state.node.type === 'Rule') {
+              const selector = preludeText(state.node.prelude);
+              // The pinned native matcher supports :has(), but its incremental
+              // invalidator does not cover all ancestor/sibling dependencies.
+              const admission = nativeRelationalSelector(selector);
+              relational ||= Boolean(admission);
+              relationalUnsupported = admission?.unsupported;
+            }
             return (
-              (state.node.type === 'Rule' && /:has\s*\(/i.test(preludeText(state.node.prelude))
-                ? 'native :has() style invalidation pending'
-                : '') ||
+              (relationalUnsupported ? 'native relational predicate adapter pending' : '') ||
               (!editedDeclarationBlocks.has(state.node.block) &&
                 firstReason(declarations(state.node.block), blitzUnsupportedDeclaration)) ||
               (entriesForBlock(state.node.block).some(
@@ -652,7 +708,8 @@ const constructedStyleSheets = (() => {
               ''
             );
           };
-          cached = { revision, unsupported: firstReason(requireSheet(sheet).rules, visit) };
+          const unsupported = firstReason(requireSheet(sheet).rules, visit);
+          cached = { revision, unsupported, relational };
           nativeEligibilityCache.set(sheet, cached);
         }
         if (cached.unsupported)
@@ -660,9 +717,11 @@ const constructedStyleSheets = (() => {
             unsupported: cached.unsupported,
             sheets: [],
           };
+        restyleOnChange ||= cached.relational;
       }
       return {
         unsupported: '',
+        restyleOnChange,
         sheets: collection.map((sheet) => ({
           id: elementSlot(requireSheet(sheet).owner).nodeId,
           text: sourceText(sheet),

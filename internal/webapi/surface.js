@@ -2181,6 +2181,9 @@
     'isolation',
     'perspective',
     'content',
+    // Resource discovery reads this for every displayed element. Project it
+    // with the other columns instead of one host/native call per element.
+    'background-image',
   ];
   const decodeBlitzPacket = (buffer, decoder = new TextDecoder()) => {
     const view = new DataView(buffer);
@@ -3896,17 +3899,24 @@
     });
   const frameHasLayout = (nodeID) =>
     withStyleReadCache(() => {
+      const cache = styleReadCache.frameLayout || (styleReadCache.frameLayout = new WeakMap());
+      const visited = [];
       let connected = false;
       for (let n = wrap(nodeID); elementSlot(n)?.type === 'element'; n = geometryParent(n)) {
-        if (host.isConnected(elementSlot(n).nodeId)) connected = true;
-        const entries = computedCSSDeclarations(n),
-          display = entries.find((e) => e.name === 'display')?.value;
-        if (
-          display === 'none' ||
-          (display === undefined && host.getAttribute(elementSlot(n).nodeId, 'hidden') !== null)
-        )
-          return false;
+        if (cache.has(n)) {
+          connected = cache.get(n);
+          break;
+        }
+        visited.push(n);
+        // Membership in the validated native projection proves connectivity.
+        // Fallback Documents still read the canonical DOM host directly.
+        if (blitzPackedRecord(n) || host.isConnected(elementSlot(n).nodeId)) connected = true;
+        if (cssComputedValue(n, 'display') === 'none') {
+          connected = false;
+          break;
+        }
       }
+      for (const element of visited) cache.set(element, connected);
       return connected;
     });
   registerBootstrapCallback('installFrameViewport', readFrameViewport, frameHasLayout);
@@ -3949,9 +3959,11 @@
           return '[]';
         const urls = new Set();
         for (const candidate of compatibilitySelectors.query(document, '*')) {
-          if (!frameHasLayout(elementSlot(candidate).nodeId)) continue;
           const value = cssComputedValue(candidate, 'background-image');
           if (!/url\s*\(/i.test(value)) continue;
+          // Most elements have no image. Only actual resource candidates need
+          // the ancestor visibility walk; style resolution is side-effect free.
+          if (!frameHasLayout(elementSlot(candidate).nodeId)) continue;
           const ast = mimicSelectorLibrary.parseStylesheet(value, { context: 'value' });
           const visit = (node) => {
             if (node.type === 'Url') urls.add(node.value);

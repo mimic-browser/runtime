@@ -50,6 +50,13 @@ pub struct Rect {
 
 impl Owner {
     pub fn new(root: u64, width: u32, height: u32) -> Self {
+        // Parsing is process policy, not mutable Page state. The pinned Stylo
+        // defaults disable :has(); reverse invalidation is handled by Mimic's
+        // subtree restyle on changed epochs until native dependencies mature.
+        static SELECTOR_POLICY: std::sync::Once = std::sync::Once::new();
+        SELECTOR_POLICY.call_once(|| {
+            stylo_static_prefs::set_pref!("layout.css.has-selector.enabled", true);
+        });
         let document = BaseDocument::new(DocumentConfig {
             viewport: Some(Viewport::new(width, height, 1.0, ColorScheme::Light)),
             style_threading: StyleThreading::Sequential,
@@ -250,6 +257,17 @@ impl Owner {
         self.dirty = false;
         self.generation += 1;
         true
+    }
+
+    /// Keep parsed sheets, fonts and canonical node identities while rematching
+    /// relational selectors whose reverse dependencies are not yet incremental.
+    pub fn restyle_subtree(&mut self) {
+        if let Some(root) = self.document.try_root_element().map(|node| node.id) {
+            self.document.get_node_mut(root).unwrap().set_restyle_hint(
+                style::invalidation::element::restyle_hints::RestyleHint::restyle_subtree(),
+            );
+            self.dirty = true;
+        }
     }
 
     pub fn rect(&self, id: u64) -> Result<Rect, Error> {
