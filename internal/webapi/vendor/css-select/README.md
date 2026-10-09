@@ -18,6 +18,12 @@ The bundle also exports CSS-tree's full stylesheet parser and serializer for
 constructed CSSStyleSheet rules. It shares tokenizer/AST modules with selectors;
 the CSS property validation database is still excluded.
 
+Registered custom properties use the pinned CSS-tree value lexer. The build
+projects only its type definitions from the upstream data module; unused
+property and at-rule tables are excluded. Each realm creates its value lexer
+on the first validation request, while ordinary selector and stylesheet parsing
+remain available without constructing that validator.
+
 The runtime adapter reads canonical Mimic node wrappers and host state. It retains
 no second DOM. A synchronous query owns a temporary lazy memo of primitive reads;
 AST and predicate caches are bounded and realm-local, with weak scope keys.

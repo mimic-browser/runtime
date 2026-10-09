@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/moreveal/mimic/compatibility"
 	"github.com/moreveal/mimic/internal/csp"
 	"github.com/moreveal/mimic/internal/engine"
 	"github.com/moreveal/mimic/internal/monotime"
@@ -405,19 +404,17 @@ func (w *DedicatedWorker) run(ctx context.Context, source string) {
 		_ = w.reportError(err)
 		return
 	}
-	generated := ""
-	var exposure *compatibility.RealmExposure
+	bootstrap := ""
 	if bundle := p.Compatibility(); bundle != nil && bundle.Surface() != nil {
-		generated = bundle.Surface().GeneratedJavaScript
 		key := "worker.insecure.non-isolated"
 		if w.isSecureContext() {
 			key = "worker.secure.non-isolated"
 		}
-		if selected, ok := bundle.Surface().Exposures[key]; ok {
-			exposure = &selected
-		}
+		bootstrap = webapi.WorkerSurfaceFor(bundle.Surface(), key)
 	}
-	bootstrap := webapi.WorkerSurface(generated, exposure)
+	if bootstrap == "" {
+		bootstrap = webapi.WorkerSurface("", nil)
+	}
 	// Native Worker globals already exist when the initial script job is
 	// queued. Our generated bindings are the implementation of those globals,
 	// not page work, so install them while establishing the agent. Otherwise a

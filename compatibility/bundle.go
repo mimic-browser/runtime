@@ -27,6 +27,23 @@ type WebAPISurface struct {
 	// the pinned browser. WebIDL remains the declaration source; these profiles
 	// provide the runtime-enabled exposure decision that IDL alone cannot make.
 	Exposures map[string]RealmExposure
+	// LookupExposure lazily decodes immutable captures when a consumer needs
+	// their structured form. BootstrapMetadata avoids decoding them for restore.
+	LookupExposure    func(string) (RealmExposure, bool)
+	BootstrapMetadata map[string]BootstrapMetadata
+}
+
+type BootstrapMetadata struct {
+	ExposureJSON string
+	CatalogJSON  string
+}
+
+func (s *WebAPISurface) Exposure(name string) (RealmExposure, bool) {
+	if s.LookupExposure != nil {
+		return s.LookupExposure(name)
+	}
+	exposure, ok := s.Exposures[name]
+	return exposure, ok
 }
 
 type SurfaceProperty struct {

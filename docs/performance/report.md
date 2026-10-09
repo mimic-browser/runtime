@@ -24,6 +24,45 @@ The [Wikipedia E2E reference](wikipedia-e2e-current.md) records the complete
 unchanged Playwright workflow and its acceptance criteria. A faster isolated
 CDP call, DOM operation or synthetic click is not an E2E result.
 
+## Validated optimization checkpoint
+
+Bootstrap preparation now uses generated immutable metadata from the frozen
+captures, bounded source and compiled-code caches, and direct admission of a
+valid disk snapshot. The adapter used to validate a loaded snapshot becomes its
+first consumer; later Pages still receive independent adapters. Snapshot seeding
+reuses accepted platform code without changing classic-script lexical scope.
+Workers reuse immutable surface composition and keep independent realm state.
+
+Registered CSS property discovery is validated once per observation epoch and
+invalidates on stylesheet and document changes, including snapshot restoration.
+Custom-property inheritance walks ancestors iteratively. The pinned CSS value
+lexer initializes lazily and includes only its required type tables. Its
+validation results matched the previous bundle in 10,350 comparisons.
+
+The current fresh binary passed 104 single-Page workload executions. Historical
+first-Page navigation medians improved from approximately 194 to 50 ms with a
+disk snapshot and from 630 to 526 ms with an empty cache (seven current samples
+per mode). These historical comparisons are not matched host controls.
+Fourteen alternating control/candidate pairs measured async navigation through
+result at 125.18 versus 87.48 ms, with execution at 90.18 versus 53.51 ms.
+DOM and CPU execution were effectively unchanged in those paired controls.
+The paired candidate precedes the final narrow CSS discovery corrections.
+
+Focused runtime, browser, metadata and platform tests passed, including snapshot
+ownership, Page isolation, Worker crypto, style invalidation and teardown.
+The iterative fast gate passed its six correctness workloads and density checks.
+The final unchanged Wikipedia workflow passed all three cold and three warm
+runs: cold median 26.761 s (26.331–29.400 s), warm median 14.396 s
+(12.161–15.082 s). This remains slower than the earlier control's 20.016 s cold
+and 8.357 s warm; an E2E improvement over that control is not established.
+
+Memory remains a substantial constraint. At the checkpoint before the final
+narrow CSS corrections, 50 warm static Pages retained approximately 793 MiB
+process-tree RSS. Forced-GC attribution measured approximately 9.57 MiB of live
+V8 heap per static Page; this is a diagnostic measurement, not ordinary RSS.
+The changes do not establish a memory reduction. Concurrent host CPU load also
+limits interpretation of unpaired absolute latency measurements.
+
 ## Architectural constraints
 
 Independent Pages retain independent execution owners. Immutable platform data

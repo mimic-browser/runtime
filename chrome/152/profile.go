@@ -163,12 +163,21 @@ var immutableSurface = sync.OnceValue(func() *compatibility.WebAPISurface {
 	return &compatibility.WebAPISurface{
 		GeneratedJavaScript:        generated.Surface,
 		GeneratedCatalogJSON:       generated.SurfaceCatalog,
-		TrustedTypeEventAttributes: trustedTypeEventAttributes(generated.SurfaceCatalog),
-		Exposures: map[string]compatibility.RealmExposure{
-			"window.insecure.non-isolated": generated.InsecureWindowExposure(),
-			"window.secure.non-isolated":   generated.SecureWindowExposure(),
-			"window.secure.isolated":       generated.SecureIsolatedWindowExposure(),
-			"worker.secure.non-isolated":   generated.SecureWorkerExposure(),
+		TrustedTypeEventAttributes: generated.BootstrapEventAttributes,
+		BootstrapMetadata:          generated.BootstrapMetadata,
+		LookupExposure: func(name string) (compatibility.RealmExposure, bool) {
+			switch name {
+			case "window.insecure.non-isolated":
+				return generated.InsecureWindowExposure(), true
+			case "window.secure.non-isolated":
+				return generated.SecureWindowExposure(), true
+			case "window.secure.isolated":
+				return generated.SecureIsolatedWindowExposure(), true
+			case "worker.secure.non-isolated":
+				return generated.SecureWorkerExposure(), true
+			default:
+				return compatibility.RealmExposure{}, false
+			}
 		},
 	}
 })

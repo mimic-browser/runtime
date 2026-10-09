@@ -1,8 +1,10 @@
 package webapi
 
 import (
+	"crypto/sha256"
 	_ "embed"
 	"encoding/json"
+	"io"
 	"strconv"
 	"strings"
 	"sync"
@@ -369,7 +371,10 @@ type surfaceKey struct {
 	exposure string
 }
 
-type surfaceOutput struct{ Source, ExposureJSON, CatalogJSON string }
+type surfaceOutput struct {
+	Source, ExposureJSON, CatalogJSON string
+	Digest                            [32]byte
+}
 
 var surfaceSources = struct {
 	sync.Mutex
@@ -389,21 +394,54 @@ func BootstrapFor(surface *compatibility.WebAPISurface, name string) (string, st
 	return output.Source, output.ExposureJSON, output.CatalogJSON
 }
 
+// BootstrapDigest hashes immutable transport once. Browser profile inputs are
+// still included separately in each document's artifact key.
+func BootstrapDigest(surface *compatibility.WebAPISurface, name string) [32]byte {
+	return bootstrapFor(surface, name).Digest
+}
+
 func bootstrapFor(surface *compatibility.WebAPISurface, name string) surfaceOutput {
 	key := surfaceKey{surface, name}
+	return cachedSurface(key, func() surfaceOutput {
+		if metadata, ok := surface.BootstrapMetadata[name]; ok {
+			return surfaceOutput{Source: composeSurface(surface.GeneratedJavaScript, "applyTargetExposure(JSON.parse(host.exposureJSON()));\n"), ExposureJSON: metadata.ExposureJSON, CatalogJSON: metadata.CatalogJSON}
+		}
+		exposure, ok := surface.Exposure(name)
+		if !ok {
+			return surfaceOutput{Source: Surface(surface.GeneratedJavaScript, nil), CatalogJSON: surface.GeneratedCatalogJSON}
+		}
+		encoded, err := marshalExposure(exposure)
+		if err != nil {
+			panic(err)
+		}
+		return surfaceOutput{Source: composeSurface(surface.GeneratedJavaScript, "applyTargetExposure(JSON.parse(host.exposureJSON()));\n"), ExposureJSON: string(encoded), CatalogJSON: selectedCatalog(surface.GeneratedCatalogJSON, exposure)}
+	})
+}
+
+// WorkerSurfaceFor caches immutable source composition, never agent state.
+func WorkerSurfaceFor(surface *compatibility.WebAPISurface, name string) string {
+	return cachedSurface(surfaceKey{surface, "worker:" + name}, func() surfaceOutput {
+		exposure, ok := surface.Exposure(name)
+		if !ok {
+			return surfaceOutput{Source: WorkerSurface(surface.GeneratedJavaScript, nil)}
+		}
+		return surfaceOutput{Source: WorkerSurface(surface.GeneratedJavaScript, &exposure)}
+	}).Source
+}
+
+func cachedSurface(key surfaceKey, compose func() surfaceOutput) surfaceOutput {
 	surfaceSources.Lock()
 	build := surfaceSources.values[key]
 	if build == nil {
 		build = sync.OnceValue(func() surfaceOutput {
-			exposure, ok := surface.Exposures[name]
-			if !ok {
-				return surfaceOutput{Source: Surface(surface.GeneratedJavaScript, nil), CatalogJSON: surface.GeneratedCatalogJSON}
+			output := compose()
+			hash := sha256.New()
+			for _, part := range []string{output.Source, output.ExposureJSON, output.CatalogJSON} {
+				io.Copy(hash, strings.NewReader(part))
+				hash.Write([]byte{0})
 			}
-			encoded, err := marshalExposure(exposure)
-			if err != nil {
-				panic(err)
-			}
-			return surfaceOutput{Source: composeSurface(surface.GeneratedJavaScript, "applyTargetExposure(JSON.parse(host.exposureJSON()));\n"), ExposureJSON: string(encoded), CatalogJSON: selectedCatalog(surface.GeneratedCatalogJSON, exposure)}
+			copy(output.Digest[:], hash.Sum(nil))
+			return output
 		})
 		if len(surfaceSources.values) < 8 {
 			surfaceSources.values[key] = build

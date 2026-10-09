@@ -13,6 +13,90 @@ import (
 	"github.com/moreveal/mimic/internal/engine"
 )
 
+func TestLoadedSnapshotTransfersValidatedConsumer(t *testing.T) {
+	seed, err := (Factory{}).BuildBootstrapSnapshot(context.Background(), `globalThis.items=[]`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data := seed.(engine.PersistentBootstrapSnapshot).BootstrapSnapshotBytes()
+	seed.Close()
+	artifact, err := (Factory{}).LoadBootstrapSnapshot(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	snapshot := artifact.(*bootstrapSnapshot)
+	validated := snapshot.validated
+	first, err := snapshot.NewRuntime()
+	if err != nil || first != validated || snapshot.validated != nil {
+		t.Fatalf("first consumer: %v", err)
+	}
+	defer first.Close()
+	if _, err := first.Eval(context.Background(), `items.push(1)`, "mutate"); err != nil {
+		t.Fatal(err)
+	}
+	second, err := snapshot.NewRuntime()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer second.Close()
+	if second == first {
+		t.Fatal("shared mutable consumer")
+	}
+	if err := snapshot.Close(); err != nil {
+		t.Fatal(err)
+	}
+	got, err := second.Eval(context.Background(), `items.length`, "isolated")
+	if err != nil || got.String() != "0" {
+		t.Fatalf("consumer isolation after artifact close: %v %v", got, err)
+	}
+	unused, err := (Factory{}).LoadBootstrapSnapshot(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	idle := unused.(*bootstrapSnapshot).validated
+	if err := unused.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := idle.Eval(context.Background(), "true", "closed"); err == nil {
+		t.Fatal("unused consumer retained after artifact close")
+	}
+}
+
+func TestBootstrapSnapshotConsumesCachedPlatformStage(t *testing.T) {
+	const source = `(function(){globalThis.readStage=()=>stageValue;globalThis.stageItems=[]})()`
+	producer := (Factory{}).New()
+	ctx := context.Background()
+	if _, err := producer.Eval(ctx, "let stageValue=1", "producer"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := producer.(engine.BootstrapRuntime).EvalBootstrap(ctx, source, "mimic:webapi-surface"); err != nil {
+		t.Fatal(err)
+	}
+	producer.Close()
+	if bootstrapCode.get(bootstrapKeyFor(source, "mimic:webapi-surface")) == nil {
+		t.Fatal("missing code cache")
+	}
+	snapshot, err := (Factory{}).BuildBootstrapSnapshot(ctx, "let stageValue=10", source+"\n//# sourceURL=mimic:webapi-surface", "stageValue=42")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer snapshot.Close()
+	for i := 0; i < 2; i++ {
+		r, err := snapshot.NewRuntime()
+		if err != nil {
+			t.Fatal(err)
+		}
+		value, err := r.Eval(ctx, "readStage()===42&&stageItems.length===0", "verify")
+		if err != nil || value.Export() != true {
+			t.Fatalf("stage state: %v %v", value, err)
+		}
+		if _, err := r.Eval(ctx, "stageItems.push(1)", "mutate"); err != nil {
+			t.Fatal(err)
+		}
+		r.Close()
+	}
+}
+
 func TestBootstrapSnapshotClosuresAndLifetime(t *testing.T) {
 	snapshot, err := (Factory{}).BuildBootstrapSnapshot(context.Background(), `(()=>{let host; class Item{}; globalThis.seed={Item, array:[], bind(value){host=value}, read(){return host()}, make(){return new Item}}})()`)
 	if err != nil {

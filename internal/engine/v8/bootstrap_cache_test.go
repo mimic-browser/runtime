@@ -86,6 +86,37 @@ func TestBootstrapCacheKeysExactSource(t *testing.T) {
 	}
 }
 
+func TestBootstrapCacheRetainsGraphThroughHelperInstallation(t *testing.T) {
+	var cache bootstrapCache
+	r := (Factory{}).New().(*adapter)
+	defer r.Close()
+	const source = "globalThis.cachedGraph=[]"
+	if _, err := r.EvalBootstrap(context.Background(), source, "cache-budget-test"); err != nil {
+		t.Fatal(err)
+	}
+	code := bootstrapCode.get(bootstrapKeyFor(source, "cache-budget-test"))
+	if code == nil {
+		t.Fatal("no compiled code")
+	}
+	graph := bootstrapKeyFor(source, "graph")
+	cache.put(graph, code)
+	for i := 0; i < 8; i++ {
+		cache.put(bootstrapKeyFor(source, fmt.Sprint(i)), code)
+	}
+	if cache.get(graph) != code {
+		t.Fatal("platform helpers evicted graph")
+	}
+	for i := 8; i < 40; i++ {
+		cache.put(bootstrapKeyFor(source, fmt.Sprint(i)), code)
+	}
+	if len(cache.entries) > bootstrapCacheEntries || cache.bytes > bootstrapCacheBytes {
+		t.Fatal("cache exceeded bounds")
+	}
+	if cache.get(graph) != nil {
+		t.Fatal("LRU graph never evicted")
+	}
+}
+
 func TestOwnerBatchKeepsCallbacksAndMicrotasksOrdered(t *testing.T) {
 	r := (Factory{}).New().(*adapter)
 	defer r.Close()

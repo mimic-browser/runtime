@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -56,23 +57,22 @@ func (Factory) LoadBootstrapSnapshot(data []byte) (engine.BootstrapSnapshot, err
 		_ = blob.Release()
 		return nil, err
 	}
-	adapter, err := newAdapter(owner, nil)
+	adapter, err := newAdapter(owner, newDiagnostics())
 	if err != nil {
 		_ = owner.Dispose()
 		_ = blob.Release()
 		return nil, err
 	}
-	if err := adapter.Close(); err != nil {
-		_ = blob.Release()
-		return nil, err
-	}
-	return &bootstrapSnapshot{blob: blob, size: len(data)}, nil
+	// Validation already materialized an independent consumer. Transfer it
+	// once rather than destroying it and repeating deserialization for Page 1.
+	return &bootstrapSnapshot{blob: blob, size: len(data), validated: adapter}, nil
 }
 
 type bootstrapSnapshot struct {
-	mu   sync.Mutex
-	blob *gov8.StartupData
-	size int
+	mu        sync.Mutex
+	blob      *gov8.StartupData
+	size      int
+	validated *adapter
 }
 
 // BuildBootstrapSnapshot serializes realm-owned initialization, including the
@@ -288,6 +288,33 @@ func runSnapshotSeed(ctx context.Context, iso *gov8.Isolate, realm *gov8.Context
 		return err
 	}
 	defer catcher.Close()
+	// The captured Web API stage is already an IIFE compiled by EvalBootstrap.
+	// Reuse that immutable code in the creator instead of parsing it a second
+	// time. Other seed stages keep classic-script lexical sharing semantics.
+	const surfaceName = "mimic:webapi-surface"
+	const surfaceOrigin = "\n//# sourceURL=" + surfaceName
+	if strings.HasSuffix(source, surfaceOrigin) {
+		body := strings.TrimSuffix(source, surfaceOrigin)
+		cached := bootstrapCode.get(bootstrapKeyFor(body, surfaceName))
+		if cached != nil {
+			function, _, compileErr := realm.CompilePlatformBootstrap(scope, source, cached, catcher)
+			if compileErr != nil {
+				return exceptionError(catcher, scope, realm, "bootstrap snapshot", compileErr)
+			}
+			global, globalErr := realm.GlobalObject(scope)
+			if globalErr != nil {
+				return globalErr
+			}
+			_, ok, callErr := function.Call(scope, global.Value)
+			if callErr == nil && !ok {
+				callErr = errors.New("bootstrap seed execution failed")
+			}
+			if callErr != nil {
+				return exceptionError(catcher, scope, realm, "bootstrap snapshot", callErr)
+			}
+			return nil
+		}
+	}
 	script, err := realm.CompilePlatformSeed(scope, source, catcher)
 	if err != nil {
 		return exceptionError(catcher, scope, realm, "bootstrap snapshot", err)
@@ -300,6 +327,17 @@ func runSnapshotSeed(ctx context.Context, iso *gov8.Isolate, realm *gov8.Context
 }
 
 func (s *bootstrapSnapshot) NewRuntime() (engine.Runtime, error) {
+	s.mu.Lock()
+	if s.blob == nil {
+		s.mu.Unlock()
+		return nil, errors.New("bootstrap snapshot is closed")
+	}
+	if first := s.validated; first != nil {
+		s.validated = nil
+		s.mu.Unlock()
+		return first, nil
+	}
+	s.mu.Unlock()
 	owner, profile, err := s.newRuntimeOwner()
 	if err != nil {
 		return nil, err
@@ -477,13 +515,19 @@ func (s *bootstrapSnapshot) BootstrapSnapshotBytes() []byte {
 }
 func (s *bootstrapSnapshot) Close() error {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	if s.blob == nil {
+		s.mu.Unlock()
 		return nil
 	}
+	first := s.validated
+	s.validated = nil
 	err := s.blob.Release()
 	if err == nil {
 		s.blob = nil
+	}
+	s.mu.Unlock()
+	if first != nil {
+		err = errors.Join(err, first.Close())
 	}
 	return err
 }

@@ -8,7 +8,7 @@
     "node_modules/source-map-js/lib/source-map-generator.js": 4970,
     "node_modules/is-potential-custom-element-name/index.js": 456,
     "node_modules/boolbase/index.js": 96,
-    "entry.js": 1160,
+    "entry.js": 1165,
     "node_modules/css-tree/lib/utils/List.js": 4222,
     "node_modules/css-tree/lib/utils/create-custom-error.js": 186,
     "node_modules/css-tree/lib/parser/SyntaxError.js": 1065,
@@ -152,6 +152,6 @@
     "node_modules/css-tree/lib/lexer/search.js": 484,
     "node_modules/css-tree/lib/lexer/structure.js": 1904,
     "node_modules/css-tree/lib/lexer/Lexer.js": 6603,
-    "node_modules/css-tree/dist/data.js": 82980
+    "node_modules/css-tree/dist/data.js": 36641
   }
 }

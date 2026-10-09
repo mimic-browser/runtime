@@ -50,6 +50,11 @@ func withRuntimePool(snapshot engine.BootstrapSnapshot) engine.BootstrapSnapshot
 	if value, err := strconv.Atoi(os.Getenv("MIMIC_REALMS_PER_ISOLATE")); err == nil && value > 0 {
 		capacity = value
 	}
+	if capacity == 1 {
+		// Independent owners need no lane bookkeeping. The artifact can hand
+		// its validated first consumer directly to the first Page.
+		return snapshot
+	}
 	return &pooledBootstrapSnapshot{base: snapshot, pool: provider.NewRuntimePool(capacity)}
 }
 
@@ -139,7 +144,9 @@ func (r *Realm) bootstrapSource() *bootstrapSource {
 				exposureName = "window.secure.isolated"
 			}
 		}
-		if selected, ok := surface.Exposures[exposureName]; ok {
+		if _, prepared := surface.BootstrapMetadata[exposureName]; prepared {
+			// Restoring a known graph needs serialized metadata, not capture parsing.
+		} else if selected, ok := surface.Exposure(exposureName); ok {
 			exposure = &selected
 		} else {
 			exposureName = ""
@@ -166,7 +173,15 @@ func (r *Realm) bootstrapSource() *bootstrapSource {
 		DevPreview                                           bool
 	}{profileEnvironment.Presentation, profileEnvironment.Features, security.secureContext, security.crossOriginIsolated, security.credentialless, security.originAgentCluster, r.agent.Page().ctx.browser.devPreview})
 	hash := sha256.New()
-	for _, part := range []string{plan.source, plan.exposureJSON, plan.catalogJSON, string(profile)} {
+	parts := []string{plan.source, plan.exposureJSON, plan.catalogJSON}
+	if surface != nil && !r.agent.Page().ctx.browser.devPreview {
+		digest := webapi.BootstrapDigest(surface, exposureName)
+		hash.Write([]byte("immutable-bootstrap-digest\x00"))
+		hash.Write(digest[:])
+		parts = nil
+	}
+	parts = append(parts, string(profile))
+	for _, part := range parts {
 		// Bootstrap source is multi-megabyte immutable text. Converting it to
 		// []byte here copied the entire source for every Page (about 300 MiB
 		// for 100 Pages). SHA-256 reads the slice synchronously and never mutates it.

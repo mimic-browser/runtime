@@ -61,6 +61,18 @@ func (b *Browser) prepareProfileBootstrap(key [32]byte, security documentSecurit
 }
 
 func (b *Browser) buildProfileBootstrap(ctx context.Context, key [32]byte, security documentSecurity) error {
+	// Preparation is already single-flight for this key. Admit a disk artifact
+	// before materializing a throwaway Page; missing/corrupt files still rebuild.
+	if b.bootstrapSnapshots.hasDiskStore() {
+		factory, ok := b.factory.(engine.BootstrapSnapshotFactory)
+		if ok {
+			snapshot, capture, _ := b.bootstrapSnapshots.selectEntry(b.lifetime, factory, key)
+			if snapshot != nil {
+				return nil
+			}
+			b.bootstrapSnapshots.abandon(capture)
+		}
+	}
 	address := "http://untrusted.invalid/"
 	if security.secureContext {
 		address = "http://localhost/"

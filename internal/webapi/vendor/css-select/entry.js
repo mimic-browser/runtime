@@ -63,9 +63,12 @@ export { default as parseStylesheet } from 'css-tree/parser';
 export { default as generateCSS } from 'css-tree/generator';
 import { Lexer } from 'css-tree/lexer';
 import definitions from 'css-tree/dist/data';
-const valueLexer = new Lexer({ generic: true, types: definitions.types });
+// Declaration grammar is needed only when a registered property is validated.
+// Keep the matcher realm-local, but do not materialize it for ordinary pages.
+let valueLexer;
 export const matchesValueSyntax = (syntax, value) => {
   try {
+    valueLexer ||= new Lexer({ generic: true, types: definitions.types });
     return valueLexer.match(syntax, value).matched !== null;
   } catch {
     return false;

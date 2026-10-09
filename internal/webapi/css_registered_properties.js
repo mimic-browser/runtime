@@ -47,13 +47,40 @@ const cssRegisteredProperties = (() => {
       );
     return { name, syntax, inherits: Boolean(inherits), initial };
   };
-  let sourceVersion = '',
+  let validatedVersion = null;
+  let sourceVersion = null,
     fromSheets = new Map();
+  bootstrapRestoreHooks.push(() => {
+    // Epochs identify state within a Document, not across snapshot consumers.
+    validatedVersion = null;
+    sourceVersion = null;
+    fromSheets = new Map();
+  });
   const refresh = () => {
+    // The canonical observation covers DOM, CSSOM, adopted sheets and media
+    // inputs. Reuse its read memo instead of collecting every sheet for each
+    // custom-property lookup, including recursive inheritance.
+    const observation = styleReadCache;
+    if (observation?.registeredPropertySheets === fromSheets) return;
+    // Native projections may request variables outside a JS read scope.
+    // Validate the same stylesheet program once per authoritative epoch there.
+    const version =
+      observation?.version || host.observationVersion() + ':' + constructedStyleSheets.revision();
+    if (version === validatedVersion) {
+      if (observation) observation.registeredPropertySheets = fromSheets;
+      return;
+    }
     const sources = constructedStyleSheets.sources(document);
-    const version = JSON.stringify(sources);
-    if (version === sourceVersion) return;
-    sourceVersion = version;
+    if (
+      sourceVersion &&
+      sources.length === sourceVersion.length &&
+      sources.every((source, index) => source === sourceVersion[index])
+    ) {
+      validatedVersion = version;
+      if (observation) observation.registeredPropertySheets = fromSheets;
+      return;
+    }
+    sourceVersion = sources;
     fromSheets = new Map();
     const walk = (nodes) => {
       for (const node of nodes) {
@@ -88,10 +115,15 @@ const cssRegisteredProperties = (() => {
       }
     };
     for (const source of sources) {
+      // Escaped names still go through the parser. Other sheets cannot contain
+      // a property registration without a literal at-keyword.
+      if (!/@property/i.test(source) && !source.includes('\\')) continue;
       try {
         walk(mimicSelectorLibrary.parseStylesheet(source).children);
       } catch {}
     }
+    validatedVersion = version;
+    if (observation) observation.registeredPropertySheets = fromSheets;
   };
   if (globalThis.CSS)
     Object.defineProperty(CSS, 'registerProperty', {
@@ -127,49 +159,55 @@ const cssRegisteredProperties = (() => {
 })();
 const cssCustomPropertyValue = (element, name, seen = new Set()) => {
   const registration = cssRegisteredProperties.get(name);
-  const key = elementSlot(element).nodeId + ':' + name;
-  if (seen.has(key)) return null;
-  const next = new Set(seen);
-  next.add(key);
-  const declaration = computedCSSDeclarations(element).find((entry) => entry.name === name);
-  let value = declaration?.value;
-  const inherits = registration?.inherits ?? true;
-  if (
-    value === 'inherit' ||
-    ((value == null || value === 'unset' || value === 'revert' || value === 'revert-layer') &&
-      inherits)
-  ) {
-    const parent = cssFontParent(element);
-    return elementSlot(parent)?.type === 'element'
-      ? cssCustomPropertyValue(parent, name, seen)
-      : (registration?.initial ?? null);
-  }
-  if (value == null || ['initial', 'unset', 'revert', 'revert-layer'].includes(value))
-    value = registration?.initial ?? null;
-  if (value === null) return null;
-  value = geometryValue(element, value, next);
-  if (
-    registration &&
-    (value === null ||
-      (registration.syntax !== '*' &&
-        !mimicSelectorLibrary.matchesValueSyntax(registration.syntax, value)))
-  ) {
-    const parent = cssFontParent(element);
-    return registration.inherits && elementSlot(parent)?.type === 'element'
-      ? cssCustomPropertyValue(parent, name, seen)
-      : registration.initial;
-  }
-  if (registration && registration.syntax !== '*') {
-    if (registration.syntax === '<color>') {
-      const rgba = cssColorRGBA(value, cssUsedColorScheme(element));
-      if (rgba) return cssSerializeColor(rgba);
+  // Inheritance keeps the dependency scope unchanged. Only resolving a
+  // defining value needs a new scope, so empty ancestors allocate no Sets.
+  for (let owner = element; ; ) {
+    const key = elementSlot(owner).nodeId + ':' + name;
+    if (seen.has(key)) return null;
+    const declaration = computedCSSDeclarations(owner).find((entry) => entry.name === name);
+    let value = declaration?.value;
+    const inherits = registration?.inherits ?? true;
+    if (
+      value === 'inherit' ||
+      ((value == null || value === 'unset' || value === 'revert' || value === 'revert-layer') &&
+        inherits)
+    ) {
+      const parent = cssFontParent(owner);
+      if (elementSlot(parent)?.type !== 'element') return registration?.initial ?? null;
+      owner = parent;
+      continue;
     }
-    if (registration.syntax === '<length>') {
-      const length = cssResolveLength(value, cssGeometryLengthContext(element, 0));
-      if (length !== null) return cssSerializeNumber(length) + 'px';
+    if (value == null || ['initial', 'unset', 'revert', 'revert-layer'].includes(value))
+      value = registration?.initial ?? null;
+    if (value === null) return null;
+    const next = new Set(seen);
+    next.add(key);
+    value = geometryValue(owner, value, next);
+    if (
+      registration &&
+      (value === null ||
+        (registration.syntax !== '*' &&
+          !mimicSelectorLibrary.matchesValueSyntax(registration.syntax, value)))
+    ) {
+      const parent = cssFontParent(owner);
+      if (registration.inherits && elementSlot(parent)?.type === 'element') {
+        owner = parent;
+        continue;
+      }
+      return registration.initial;
     }
-    if (['<number>', '<integer>'].includes(registration.syntax) && cssNumberRegex.test(value))
-      return cssSerializeNumber(Number(value));
+    if (registration && registration.syntax !== '*') {
+      if (registration.syntax === '<color>') {
+        const rgba = cssColorRGBA(value, cssUsedColorScheme(owner));
+        if (rgba) return cssSerializeColor(rgba);
+      }
+      if (registration.syntax === '<length>') {
+        const length = cssResolveLength(value, cssGeometryLengthContext(owner, 0));
+        if (length !== null) return cssSerializeNumber(length) + 'px';
+      }
+      if (['<number>', '<integer>'].includes(registration.syntax) && cssNumberRegex.test(value))
+        return cssSerializeNumber(Number(value));
+    }
+    return value;
   }
-  return value;
 };
