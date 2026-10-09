@@ -253,7 +253,7 @@ compatibilityScrolling = (() => {
       windowScrollX = x;
       windowScrollY = y;
     }
-    if (!element) host.recordScrollPosition(x, y);
+    host.recordScrollPosition(x, y, element ? elementSlot(element).nodeId : 0);
     if (withinKnownRange)
       positionRanges.set(element || document, { ...knownRange, version: geometryVersion() });
     if (x || y) hasOffsets = true;

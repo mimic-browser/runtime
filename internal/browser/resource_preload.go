@@ -116,23 +116,7 @@ func (r *Realm) preloadResource(id int64, attributes map[string]string) {
 		r.preloadContext, r.cancelPreloads = context.WithCancel(r.resourceContext)
 	}
 	preloadContext := r.preloadContext
-	key := preloadRequestKey(request)
-	r.preloadsMu.Lock()
-	if r.preloads == nil {
-		r.preloads = make(map[preloadKey]*resourcePreload)
-	}
-	pending := r.preloads[key]
-	if pending == nil {
-		pending = &resourcePreload{done: make(chan struct{})}
-		r.preloads[key] = pending
-		r.resourceWG.Add(1)
-		go func() {
-			defer r.resourceWG.Done()
-			defer close(pending.done)
-			pending.response, pending.err = r.agent.Page().loader.Load(preloadContext, r.withResourceTiming(request))
-		}()
-	}
-	r.preloadsMu.Unlock()
+	pending := r.startResourcePreload(preloadContext, request)
 	r.resourceWG.Add(1)
 	go func() {
 		defer r.resourceWG.Done()
@@ -211,4 +195,28 @@ func (r *Realm) preloadResources() {
 			r.preloadResource(link.ID, link.Attributes)
 		}
 	}
+}
+
+// Pending responses belong to this Document. Only transport work runs outside
+// the Page loop; demand consumes the same immutable result and still performs
+// its ordinary admission, response validation and execution lifecycle.
+func (r *Realm) startResourcePreload(preloadContext context.Context, request network.Request) *resourcePreload {
+	key := preloadRequestKey(request)
+	r.preloadsMu.Lock()
+	if r.preloads == nil {
+		r.preloads = make(map[preloadKey]*resourcePreload)
+	}
+	pending := r.preloads[key]
+	if pending == nil {
+		pending = &resourcePreload{done: make(chan struct{})}
+		r.preloads[key] = pending
+		r.resourceWG.Add(1)
+		go func() {
+			defer r.resourceWG.Done()
+			defer close(pending.done)
+			pending.response, pending.err = r.agent.Page().loader.Load(preloadContext, r.withResourceTiming(request))
+		}()
+	}
+	r.preloadsMu.Unlock()
+	return pending
 }

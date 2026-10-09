@@ -23,27 +23,44 @@ func coordinateValue(value any) float64 {
 	}
 }
 
-func (s *session) nodeID(ctx context.Context, p map[string]any) (int64, error) {
+func (s *session) nodeOwner(ctx context.Context, p map[string]any) (*browser.Frame, int64, error) {
 	if object := stringValue(p["objectId"]); object != "" {
-		return s.runtimeDebugger().RequestNode(ctx, object)
+		frameID, id, err := s.runtimeDebugger().NodeObjectOwner(ctx, object)
+		if err != nil {
+			return nil, 0, err
+		}
+		frame, ok := s.page.Frame(frameID)
+		if !ok {
+			return nil, 0, fmt.Errorf("Node document is no longer active")
+		}
+		return frame, id, nil
 	}
 	id := int64(intValue(p["nodeId"], intValue(p["backendNodeId"], 0)))
-	d, ok := s.page.Document()
+	frame, id, ok := s.page.InspectorNodeOwner(id)
 	if !ok {
-		return 0, fmt.Errorf("No document")
+		return nil, 0, fmt.Errorf("Could not find node with given id")
 	}
-	if _, ok := d.Get(id); !ok {
-		return 0, fmt.Errorf("Could not find node with given id")
+	_, ok = s.page.InspectorDocument(frame)
+	if !ok {
+		return nil, 0, fmt.Errorf("No document")
 	}
-	return id, nil
+	if _, ok := s.page.InspectorCanonicalNode(frame, id); !ok {
+		return nil, 0, fmt.Errorf("Could not find node with given id")
+	}
+	return frame, id, nil
+}
+
+func (s *session) nodeID(ctx context.Context, p map[string]any) (int64, error) {
+	_, id, err := s.nodeOwner(ctx, p)
+	return id, err
 }
 
 func (s *session) nodeFunction(ctx context.Context, p map[string]any, fn string, args []any) (any, error) {
-	id, err := s.nodeID(ctx, p)
+	frame, id, err := s.nodeOwner(ctx, p)
 	if err != nil {
 		return nil, err
 	}
-	frame, ok := s.page.FrameForDOMNode(id)
+	ok := frame != nil
 	objectID := stringValue(p["objectId"])
 	if objectID != "" {
 		frameID, ownerErr := s.runtimeDebugger().ObjectFrameID(objectID)
@@ -100,39 +117,79 @@ func (s *session) frameElementOffset(ctx context.Context, frame *browser.Frame) 
 }
 
 func (s *session) describeNode(id int64, depth int) (map[string]any, error) {
-	d, ok := s.page.Document()
-	if !ok {
-		return nil, fmt.Errorf("No document")
-	}
-	n, ok := d.Get(id)
+	frame, local, ok := s.page.InspectorNodeOwner(id)
 	if !ok {
 		return nil, fmt.Errorf("Could not find node with given id")
 	}
-	result := cdpNode(d, n, depth)
-	var visit func(*browser.Frame)
-	visit = func(frame *browser.Frame) {
-		if frame.ElementNodeID() == id {
-			result["frameId"] = frame.ID
-		}
-		for _, child := range frame.Children() {
-			visit(child)
-		}
+	d, ok := s.page.InspectorDocument(frame)
+	if !ok {
+		return nil, fmt.Errorf("No document")
 	}
-	visit(s.page.Top)
+	n, ok := s.page.InspectorCanonicalNode(frame, local)
+	if !ok {
+		return nil, fmt.Errorf("Could not find node with given id")
+	}
+	result := s.inspectorCDPNode(d, n, depth)
 	return result, nil
 }
 
 func (s *session) handleDOM(ctx context.Context, method string, p map[string]any) (any, bool, error) {
+	if value, handled, err := s.handleDOMSearch(ctx, method, p); handled {
+		return value, true, err
+	}
 	empty := map[string]any{}
 	switch method {
+	case "DOM.pushNodesByBackendIdsToFrontend":
+		ids := []any{}
+		for _, value := range p["backendNodeIds"].([]any) {
+			id := int64(coordinateValue(value))
+			owner, local, err := s.nodeOwner(ctx, map[string]any{"backendNodeId": id})
+			if err == nil {
+				d, _ := s.page.InspectorDocument(owner)
+				s.emitDOMAncestors(d, local)
+				ids = append(ids, id)
+			} else {
+				ids = append(ids, 0)
+			}
+		}
+		return map[string]any{"nodeIds": ids}, true, nil
+	case "DOM.setAttributesAsText":
+		_, err := s.nodeFunction(ctx, p, `function(text,name){const template=this.ownerDocument.createElement('template');template.innerHTML='<span '+text+'></span>';const parsed=template.content.firstChild;if(!parsed)throw new Error('Invalid attributes');if(name)this.removeAttribute(name);for(const attribute of parsed.attributes)this.setAttribute(attribute.name,attribute.value)}`, []any{map[string]any{"value": p["text"]}, map[string]any{"value": p["name"]}})
+		return empty, true, err
+	case "DOM.setInspectedNode":
+		frame, id, err := s.nodeOwner(ctx, p)
+		if err != nil {
+			return nil, true, err
+		}
+		return empty, true, s.runtimeDebugger().SetInspectedNode(ctx, frame.ID, id)
 	case "DOM.getFrameOwner":
 		frame, ok := s.page.Frame(stringValue(p["frameId"]))
 		if !ok || frame.Parent() == nil || frame.ElementNodeID() == 0 {
 			return nil, true, fmt.Errorf("Frame does not have an owner")
 		}
-		return map[string]any{"backendNodeId": frame.ElementNodeID()}, true, nil
+		return map[string]any{"backendNodeId": s.page.InspectorNodeID(frame.Parent(), frame.ElementNodeID())}, true, nil
+	case "DOM.getOuterHTML":
+		frame, id, err := s.nodeOwner(ctx, p)
+		if err != nil {
+			return nil, true, err
+		}
+		d, _ := s.page.InspectorDocument(frame)
+		var markup string
+		if id >= 1<<31 {
+			root, _ := s.page.InspectorCanonicalNode(frame, id)
+			for _, child := range root.Children {
+				text, childErr := d.OuterHTML(child)
+				if childErr != nil {
+					return nil, true, childErr
+				}
+				markup += text
+			}
+		} else {
+			markup, err = d.OuterHTML(id)
+		}
+		return map[string]any{"outerHTML": markup}, true, err
 	case "DOM.resolveNode":
-		id, err := s.nodeID(ctx, p)
+		owner, id, err := s.nodeOwner(ctx, p)
 		if err != nil {
 			return nil, true, err
 		}
@@ -141,33 +198,36 @@ func (s *session) handleDOM(ctx context.Context, method string, p map[string]any
 			return nil, true, err
 		}
 		if frameID == "" {
-			if frame, ok := s.page.FrameForDOMNode(id); ok {
-				frameID = frame.ID
-			}
+			frameID = owner.ID
 		}
-		object, err := s.runtimeDebugger().ResolveNode(ctx, frameID, realmID, id, stringValue(p["objectGroup"]))
+		object, err := s.runtimeDebugger().ResolveNodeFromFrame(ctx, owner.ID, frameID, realmID, id, stringValue(p["objectGroup"]))
 		return map[string]any{"object": object}, true, err
 	case "DOM.requestNode":
-		id, err := s.runtimeDebugger().RequestNode(ctx, stringValue(p["objectId"]))
+		frameID, id, err := s.runtimeDebugger().NodeObjectOwner(ctx, stringValue(p["objectId"]))
 		if err == nil && id != 0 {
-			if d, ok := s.page.Document(); ok {
+			owner, active := s.page.Frame(frameID)
+			if !active {
+				return nil, true, fmt.Errorf("Node document is no longer active")
+			}
+			if d, ok := s.page.InspectorDocument(owner); ok {
 				s.emitDOMAncestors(d, id)
 			}
+			id = s.page.InspectorNodeID(owner, id)
 		}
 		return map[string]any{"nodeId": id}, true, err
 	case "DOM.describeNode":
-		id, err := s.nodeID(ctx, p)
+		owner, local, err := s.nodeOwner(ctx, p)
 		if err != nil {
 			return nil, true, err
 		}
-		node, err := s.describeNode(id, intValue(p["depth"], 0))
+		node, err := s.describeNode(s.page.InspectorNodeID(owner, local), intValue(p["depth"], 0))
 		return map[string]any{"node": node}, true, err
 	case "DOM.getAttributes":
-		id, err := s.nodeID(ctx, p)
+		owner, local, err := s.nodeOwner(ctx, p)
 		if err != nil {
 			return nil, true, err
 		}
-		node, err := s.describeNode(id, 0)
+		node, err := s.describeNode(s.page.InspectorNodeID(owner, local), 0)
 		if err != nil {
 			return nil, true, err
 		}
@@ -177,62 +237,46 @@ func (s *session) handleDOM(ctx context.Context, method string, p map[string]any
 		}
 		return map[string]any{"attributes": attrs}, true, nil
 	case "DOM.requestChildNodes":
-		id, err := s.nodeID(ctx, p)
+		owner, id, err := s.nodeOwner(ctx, p)
 		if err != nil {
 			return nil, true, err
 		}
-		d, _ := s.page.Document()
+		d, _ := s.page.InspectorDocument(owner)
 		children := []any{}
 		depth := intValue(p["depth"], 1)
 		if depth == 0 {
 			return nil, true, fmt.Errorf("Depth should be a positive number or -1")
 		}
-		for _, child := range d.Children(id) {
-			children = append(children, cdpNode(d, child, depth-1))
+		parent, _ := s.page.InspectorCanonicalNode(owner, id)
+		for _, childID := range parent.Children {
+			if child, ok := d.Get(childID); ok {
+				children = append(children, s.inspectorCDPNode(d, child, depth-1))
+			}
 		}
-		s.event("DOM.setChildNodes", map[string]any{"parentId": id, "nodes": children})
+		if s.domInspector != nil {
+			if node := s.domInspector.nodes[s.page.InspectorNodeID(owner, id)]; node != nil {
+				node.expanded = true
+			}
+		}
+		s.event("DOM.setChildNodes", map[string]any{"parentId": s.page.InspectorNodeID(owner, id), "nodes": children})
 		return empty, true, nil
 	case "DOM.focus":
 		_, err := s.nodeFunction(ctx, p, `function(){if(!this.isConnected||typeof this.focus!=='function')throw new Error('Element is not focusable');this.focus()}`, nil)
 		return empty, true, err
 	case "DOM.scrollIntoViewIfNeeded":
-		id, err := s.nodeID(ctx, p)
+		owner, id, err := s.nodeOwner(ctx, p)
 		if err == nil {
-			if objectID := stringValue(p["objectId"]); objectID != "" {
-				var frameID string
-				frameID, err = s.runtimeDebugger().ObjectFrameID(objectID)
-				if err == nil {
-					err = s.page.ScrollNodeIntoViewInFrame(ctx, frameID, id, p["rect"])
-				}
-			} else {
-				err = s.page.ScrollNodeIntoView(ctx, id, p["rect"])
-			}
+			err = s.page.ScrollNodeIntoViewInFrame(ctx, owner.ID, id, p["rect"])
 		}
 		return empty, true, err
 	case "DOM.getContentQuads", "DOM.getBoxModel":
-		id, idErr := s.nodeID(ctx, p)
+		frame, id, idErr := s.nodeOwner(ctx, p)
 		if idErr != nil {
 			return nil, true, idErr
-		}
-		frame, _ := s.page.FrameForDOMNode(id)
-		if objectID := stringValue(p["objectId"]); objectID != "" {
-			frameID, ownerErr := s.runtimeDebugger().ObjectFrameID(objectID)
-			if ownerErr != nil {
-				return nil, true, ownerErr
-			}
-			frame, _ = s.page.Frame(frameID)
 		}
 		model, err := s.page.ProtocolBoxModel(ctx, frame, id)
 		if err != nil {
 			return nil, true, err
-		}
-		frame, _ = s.page.FrameForDOMNode(id)
-		if objectID := stringValue(p["objectId"]); objectID != "" {
-			frameID, ownerErr := s.runtimeDebugger().ObjectFrameID(objectID)
-			if ownerErr != nil {
-				return nil, true, ownerErr
-			}
-			frame, _ = s.page.Frame(frameID)
 		}
 		for frame != nil && frame.Parent() != nil {
 			dx, dy, offsetErr := s.frameElementOffset(ctx, frame)
@@ -293,9 +337,33 @@ func (s *session) emitDOMAncestors(d *dom.Document, id int64) {
 		return
 	}
 	s.emitDOMAncestors(d, n.Parent)
+	owner := s.page.Top
+	var visit func(*browser.Frame)
+	visit = func(frame *browser.Frame) {
+		if doc, ok := s.page.InspectorDocument(frame); ok && doc == d {
+			owner = frame
+		}
+		for _, child := range frame.Children() {
+			visit(child)
+		}
+	}
+	visit(s.page.Top)
+	parentID := s.page.InspectorNodeID(owner, n.Parent)
+	// Replacing an already published child list makes the frontend recreate
+	// DOMNode objects and invalidates selected-node/cascade identity.
+	if s.domInspector != nil {
+		if node := s.domInspector.nodes[parentID]; node != nil && node.expanded {
+			return
+		}
+	}
 	children := []any{}
 	for _, child := range d.Children(n.Parent) {
-		children = append(children, cdpNode(d, child, 0))
+		children = append(children, s.inspectorCDPNode(d, child, 0))
 	}
-	s.event("DOM.setChildNodes", map[string]any{"parentId": n.Parent, "nodes": children})
+	if s.domInspector != nil {
+		if node := s.domInspector.nodes[parentID]; node != nil {
+			node.expanded = true
+		}
+	}
+	s.event("DOM.setChildNodes", map[string]any{"parentId": parentID, "nodes": children})
 }

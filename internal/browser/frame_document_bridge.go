@@ -282,7 +282,9 @@ func (r *Realm) importFrameReference(encoded map[string]any) (engine.Value, erro
 	if r.frameReferenceImport == nil {
 		return nil, fmt.Errorf("frame reference bridge is not initialized")
 	}
-	return r.runtime.Call(context.Background(), r.frameReferenceImport, nil, r.val(encoded))
+	argument := r.val(encoded)
+	defer releaseRuntimeValues(r.runtime, argument)
+	return r.runtime.Call(context.Background(), r.frameReferenceImport, nil, argument)
 }
 
 func (r *Realm) callFrameReference(args []engine.Value) (engine.Value, error) {

@@ -42,7 +42,14 @@ can target a specific realm or execution-context name, and apply to future
 matching contexts. Removing a binding stops delivery to that session and leaves
 the JavaScript function installed, as Chrome does.
 
-This is an automation-focused Runtime adapter, not a native inspector. Deep
+The optional V8 command-line evaluator creates a native Inspector only for the
+requested evaluation and closes it before returning. Its result is transferred
+into the existing realm/session object table; native Inspector handles never
+escape. Selected-node wrappers and the console-group last result are bounded
+session/realm references. No command-line helpers are permanently installed on
+the author global. See [Chrome DevTools](devtools.md) for usage and limitations.
+
+The general Runtime object adapter remains a Mimic projection. Deep
 serialization is rejected explicitly. Object previews, debugger call-frame
 evaluation, precise native stack locations, and the complete set of internal
 inspector properties are not implemented. Ordinary property descriptors and

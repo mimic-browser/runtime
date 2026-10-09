@@ -161,6 +161,8 @@ func independentControlCommand(method string) bool {
 		"Network.continueInterceptedRequest", "Mimic.startTrace", "Mimic.stopTrace", "Mimic.getTrace",
 		"Mimic.getStatus", "Mimic.getDiagnostics", "Mimic.cancelExecution", "Page.stopLoading", "Target.closeTarget":
 		return true
+	case "Page.screencastFrameAck", "Page.stopScreencast":
+		return true
 	default:
 		return false
 	}
@@ -339,7 +341,7 @@ func (s *session) event(method string, params any) {
 	}
 	domain := strings.SplitN(method, ".", 2)[0]
 	switch domain {
-	case "Page", "Runtime", "Network", "DOM", "Log", "Performance", "Audits", "WebMCP":
+	case "Page", "Runtime", "Network", "DOM", "CSS", "Overlay", "Log", "Performance", "Audits", "WebMCP":
 		if !s.domainEnabled(domain) {
 			return
 		}

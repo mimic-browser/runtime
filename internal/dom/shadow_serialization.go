@@ -12,6 +12,7 @@ import (
 // ShadowSnapshot describes realm-owned shadow attachment state. Its children
 // reference the canonical node store; it is not a second mutable DOM.
 type ShadowSnapshot struct {
+	RootID         int64    `json:"rootID,omitempty"`
 	HostID         int64    `json:"hostID"`
 	Mode           string   `json:"mode"`
 	DelegatesFocus bool     `json:"delegatesFocus"`

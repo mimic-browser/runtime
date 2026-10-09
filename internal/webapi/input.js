@@ -949,7 +949,7 @@
     enumerable: true,
     configurable: true,
   });
-  const mouseCommand = (params, hintedTarget) => {
+  const mouseCommand = (params, hintedTarget, presentation = false) => {
     const x = Number(params.x),
       y = Number(params.y),
       buttonName = params.button || 'none',
@@ -957,11 +957,12 @@
       press = pressPositions.get(button),
       hintRect = hintedTarget?.isConnected ? clientRectFor(hintedTarget) : null,
       hit =
-        hintRect &&
-        x >= hintRect.x &&
-        x < hintRect.x + hintRect.width &&
-        y >= hintRect.y &&
-        y < hintRect.y + hintRect.height
+        (presentation && hintedTarget?.isConnected) ||
+        (hintRect &&
+          x >= hintRect.x &&
+          x < hintRect.x + hintRect.width &&
+          y >= hintRect.y &&
+          y < hintRect.y + hintRect.height)
           ? hintedTarget
           : pointTarget(x, y),
       // CDP sends a press and release separately. Keep an unmoved pointer on
@@ -1059,6 +1060,8 @@
     if (raw === undefined) return legacy(id, operation);
     const params = parse(raw || '{}'),
       element = wrap(id);
+    if (operation === 'presentationMouse')
+      return stringify(mouseCommand(params, element, true) ?? {});
     if (operation === 'scroll')
       return stringify(compatibilityScrolling.dispatch(element, params) ?? {});
     if (operation === 'form')

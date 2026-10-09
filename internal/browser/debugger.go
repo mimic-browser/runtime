@@ -33,19 +33,27 @@ type Debugger struct {
 	ConsoleEnabled func() bool
 	BindingCalled  func(realmID, name, payload string)
 	bindings       map[string][]debuggerBindingScope
+	inspected      []debuggerInspectedNode
+}
+
+type debuggerInspectedNode struct {
+	realm *Realm
+	value engine.Value
 }
 
 type debuggerRealm struct {
-	realm   *Realm
-	frameID string
-	bridge  engine.Value
+	realm       *Realm
+	frameID     string
+	bridge      engine.Value
+	lastConsole engine.Value
 }
 
 type DebuggerOptions struct {
-	RespectCSP    bool // Runtime.evaluate allowUnsafeEvalBlockedByCSP=false
-	ObjectGroup   string
-	ReturnByValue bool
-	AwaitPromise  bool
+	RespectCSP     bool // Runtime.evaluate allowUnsafeEvalBlockedByCSP=false
+	ObjectGroup    string
+	ReturnByValue  bool
+	AwaitPromise   bool
+	CommandLineAPI bool
 }
 
 func NewDebugger(page *Page) *Debugger {
@@ -84,8 +92,13 @@ func releaseDebuggerValue(r *Realm, v engine.Value) {
 }
 
 func (d *Debugger) Close() {
+	for _, node := range d.inspected {
+		releaseDebuggerValue(node.realm, node.value)
+	}
+	d.inspected = nil
 	delete(d.page.debuggers, d)
 	for id, state := range d.realms {
+		releaseDebuggerValue(state.realm, state.lastConsole)
 		releaseDebuggerValue(state.realm, state.bridge)
 		delete(d.realms, id)
 	}
@@ -94,8 +107,19 @@ func (d *Debugger) Close() {
 // Prune drops session roots for destroyed execution contexts, including a
 // document realm which remains alive only through a page-script reference.
 func (d *Debugger) Prune() {
+	kept := d.inspected[:0]
+	for _, node := range d.inspected {
+		if node.realm.closed || node.realm.inactive {
+			releaseDebuggerValue(node.realm, node.value)
+		} else {
+			kept = append(kept, node)
+		}
+	}
+	clear(d.inspected[len(kept):])
+	d.inspected = kept
 	for id, state := range d.realms {
 		if !d.alive(state) {
+			releaseDebuggerValue(state.realm, state.lastConsole)
 			releaseDebuggerValue(state.realm, state.bridge)
 			delete(d.realms, id)
 		}
@@ -216,7 +240,41 @@ func (d *Debugger) Evaluate(ctx context.Context, frameID, realmID, source string
 	var value engine.Value
 	err = state.realm.debuggerInline(ctx, !options.RespectCSP, func(ctx context.Context) error {
 		var err error
-		value, err = state.realm.Evaluate(ctx, source, "")
+		if options.CommandLineAPI {
+			native, ok := state.realm.runtime.(engine.CommandLineRuntime)
+			if !ok {
+				return fmt.Errorf("Command-line API is unsupported by this engine")
+			}
+			selected := make([]engine.Value, 0, len(d.inspected))
+			var imported []engine.Value
+			defer func() {
+				for _, value := range imported {
+					releaseDebuggerValue(state.realm, value)
+				}
+			}()
+			for _, node := range d.inspected {
+				if node.realm.closed || node.realm.inactive {
+					selected = append(selected, nil)
+				} else if node.realm == state.realm {
+					selected = append(selected, node.value)
+				} else {
+					encoded, err := node.realm.crossRealmValue(node.value)
+					if err != nil {
+						return err
+					}
+					state.realm.retainRealm(node.realm)
+					value, err := state.realm.importFrameReference(encoded)
+					if err != nil {
+						return err
+					}
+					imported = append(imported, value)
+					selected = append(selected, value)
+				}
+			}
+			value, err = native.EvalCommandLine(ctx, source, selected, state.lastConsole)
+		} else {
+			value, err = state.realm.Evaluate(ctx, source, "")
+		}
 		return err
 	})
 	if err != nil {
@@ -376,6 +434,14 @@ func (d *Debugger) finish(ctx context.Context, state *debuggerRealm, value engin
 	if !d.alive(state) {
 		return nil, fmt.Errorf("Execution context was destroyed")
 	}
+	if options.ObjectGroup == "console" {
+		retained, err := state.invoke(ctx, "identity", map[string]any{}, value)
+		if err != nil {
+			return nil, err
+		}
+		releaseDebuggerValue(state.realm, state.lastConsole)
+		state.lastConsole = retained
+	}
 	return state.json(ctx, "hold", map[string]any{"objectGroup": options.ObjectGroup, "returnByValue": options.ReturnByValue}, value)
 }
 
@@ -508,7 +574,8 @@ func (d *Debugger) ResolveNode(ctx context.Context, frameID, realmID string, nod
 	if err != nil {
 		return nil, err
 	}
-	if _, ok := state.realm.document.Get(nodeID); !ok {
+	frame, _ := d.page.Frame(state.frameID)
+	if _, ok := d.page.InspectorCanonicalNode(frame, nodeID); !ok {
 		return nil, fmt.Errorf("Could not find node with given id")
 	}
 	result, err := state.json(ctx, "resolve", map[string]any{"nodeId": nodeID, "objectGroup": group}, nil)
@@ -519,18 +586,58 @@ func (d *Debugger) ResolveNode(ctx context.Context, frameID, realmID string, nod
 }
 
 func (d *Debugger) RequestNode(ctx context.Context, objectID string) (int64, error) {
+	_, id, err := d.NodeObjectOwner(ctx, objectID)
+	return id, err
+}
+
+// NodeObjectOwner follows the canonical foreign-reference bridge. A DOM node
+// returned to a parent Console still belongs to its child document, even though
+// the remote object table and wrapper belong to the evaluating parent realm.
+func (d *Debugger) NodeObjectOwner(ctx context.Context, objectID string) (string, int64, error) {
 	state, err := d.objectState(objectID)
 	if err != nil {
-		return 0, err
+		return "", 0, err
+	}
+	value, err := state.invoke(ctx, "lookup", map[string]any{"objectId": objectID}, nil)
+	if err != nil {
+		return "", 0, err
+	}
+	defer releaseDebuggerValue(state.realm, value)
+	owner := state.realm
+	if owner.frameReferenceDescribe != nil {
+		info, err := owner.runtime.Call(ctx, owner.frameReferenceDescribe, nil, value)
+		if err != nil {
+			return "", 0, err
+		}
+		defer releaseDebuggerValue(state.realm, info)
+		if reference, ok := info.Export().(map[string]any); ok && reference["frame"] != nil {
+			if reference["handle"] == nil {
+				return state.frameID, 0, nil
+			}
+			owner, err = owner.referenceRealm(fmt.Sprint(reference["frame"]), fmt.Sprint(reference["realm"]))
+			if err != nil {
+				return "", 0, err
+			}
+			value = owner.crossValues[int64(numberValue(reference["handle"]))]
+			if value == nil {
+				return "", 0, fmt.Errorf("Node reference is no longer available")
+			}
+			id, err := owner.runtime.Call(ctx, owner.frameNodeDescribe, nil, value)
+			if err != nil {
+				return "", 0, err
+			}
+			defer releaseDebuggerValue(owner, id)
+			return owner.agent.ContextID(), int64(numberValue(id.Export())), nil
+		}
 	}
 	result, err := state.json(ctx, "node", map[string]any{"objectId": objectID}, nil)
 	if err != nil {
-		return 0, err
+		return "", 0, err
 	}
 	if id, ok := result["nodeId"].(float64); ok {
-		return int64(id), nil
+		return state.frameID, int64(id), nil
 	}
-	return 0, nil
+	return state.frameID, 0, nil
 }
 
 // ObjectFrameID returns the owning frame recorded with a remote object. DOM

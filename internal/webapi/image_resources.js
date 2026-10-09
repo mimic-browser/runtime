@@ -27,7 +27,7 @@
     function () {
       check(this);
       const raw = this.getAttribute('src');
-      return raw === null ? '' : host.urlParts(raw).href;
+      return reflectedElementURL(raw);
     },
     function (value) {
       check(this);

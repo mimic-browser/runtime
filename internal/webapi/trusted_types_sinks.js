@@ -137,7 +137,7 @@ const trustedDocumentWrite = (receiver, args, name) => {
     Object.defineProperty(proto, property, {
       get() {
         const raw = this.getAttribute(property.toLowerCase());
-        return raw === null ? '' : host.urlParts(raw).href;
+        return reflectedElementURL(raw);
       },
       set(value) {
         trustedSetAttributeProperty(this, property, value, 'TrustedScriptURL', iface);

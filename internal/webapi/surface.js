@@ -2550,6 +2550,11 @@
       if (containingShadowRoot(state.element)) host.invalidateStyleObservations();
       compatibilityElementState.inlineStyleChanged(state.element, old);
     };
+  const cssComputedPropertyNames = new Set([
+    ...cssComputedNames,
+    ...Object.values(cssNamedProperties),
+    ...Object.keys(cssComputedShorthands),
+  ]);
   class CSSStyleDeclaration {
     constructor(token, element, computed = false, pseudo = '') {
       if (token !== hostToken) illegal('CSSStyleDeclaration');
@@ -2577,6 +2582,11 @@
     getPropertyValue(name) {
       name = cssName(name);
       const state = cssState(this);
+      // Unknown names have no computed declaration. In particular, camelCase
+      // getPropertyValue probes must not resolve the whole cascade before the
+      // caller tries the corresponding named CSSOM property.
+      if (state.computed && !name.startsWith('--') && !cssComputedPropertyNames.has(name))
+        return '';
       return state.computed
         ? cssComputedValue(state.element, name, state.pseudo)
         : readCSSDeclaration(cssEntries(this), name);
@@ -3989,6 +3999,8 @@
   registerBootstrapCallback('installFrameViewport', readFrameViewport, frameHasLayout);
   const pseudoContentRules = new WeakMap();
   registerBootstrapCallback('installComputedStyleFlatTree', (nodeID, kind, name) => {
+    if (kind === 'inspectorCSS')
+      return JSON.stringify(constructedStyleSheets.inspect(JSON.parse(name)));
     const element = wrap(nodeID);
     if (kind === 'protocolComputedStyle')
       return withStyleReadCache(() => {
@@ -4026,18 +4038,35 @@
         )
           return '[]';
         const urls = new Set();
-        for (const candidate of compatibilitySelectors.query(document, '*')) {
-          const value = cssComputedValue(candidate, 'background-image');
-          if (!/url\s*\(/i.test(value)) continue;
-          // Most elements have no image. Only actual resource candidates need
-          // the ancestor visibility walk; style resolution is side-effect free.
-          if (!frameHasLayout(elementSlot(candidate).nodeId)) continue;
+        const collect = (value) => {
           const ast = mimicSelectorLibrary.parseStylesheet(value, { context: 'value' });
           const visit = (node) => {
             if (node.type === 'Url') urls.add(node.value);
             if (node.children) node.children.forEach(visit);
           };
           visit(ast);
+        };
+        // A resource-only read avoids building the full geometry/style packet
+        // and creating JS wrappers for every element. Unsupported projections
+        // retain the same canonical scalar observation path below.
+        const native = shadowHosts.size ? null : host.blitzObserve(0, 'imageResources', '');
+        if (native !== null && native !== false) {
+          for (const value of native) collect(value);
+        } else {
+          if (native === null && !shadowHosts.size) {
+            // This resource observation has already validated document-wide
+            // native admission. Scalar reads reuse its negative result until
+            // the canonical observation epoch changes.
+            styleReadCache.blitzPacked = checkpointBlitzPacked = null;
+            checkpointBlitzEpoch = styleReadCache.blitzEpochKey;
+          }
+          for (const candidate of compatibilitySelectors.query(document, '*')) {
+            const value = cssComputedValue(candidate, 'background-image');
+            // Unlike the native resource walk, fallback visibility requires
+            // extra cascade work. Resolve it only for actual image candidates.
+            if (!/url\s*\(/i.test(value)) continue;
+            if (frameHasLayout(elementSlot(candidate).nodeId)) collect(value);
+          }
         }
         return JSON.stringify(Array.from(urls));
       });
@@ -4588,6 +4617,17 @@
       }
       return handlers;
     };
+  // URL attributes reflect the original text when browser URL parsing fails.
+  // URL constructors still throw; an opaque Document base does not make an
+  // element property read exceptional.
+  const reflectedElementURL = (raw) => {
+    if (raw === null) return '';
+    try {
+      return host.urlParts(raw).href;
+    } catch {
+      return raw;
+    }
+  };
   class HTMLScriptElement extends HTMLElement {
     constructor(token, data) {
       super(token, data);
@@ -4606,7 +4646,7 @@
     }
     get src() {
       const value = intrinsicGetAttribute.call(this, 'src');
-      return value === null ? '' : host.urlParts(value).href;
+      return reflectedElementURL(value);
     }
     set src(v) {
       trustedSetAttributeProperty(this, 'src', v, 'TrustedScriptURL', 'HTMLScriptElement');
@@ -4675,7 +4715,7 @@
       handlersFor(this).error = typeof v === 'function' ? v : null;
     }
     get src() {
-      return host.urlParts(intrinsicGetAttribute.call(this, 'src') || '').href;
+      return reflectedElementURL(intrinsicGetAttribute.call(this, 'src'));
     }
     set src(v) {
       intrinsicSetAttribute.call(this, 'src', String(v));
@@ -4751,7 +4791,7 @@
     }
     get src() {
       const value = intrinsicGetAttribute.call(this, 'src');
-      return value === null ? '' : host.urlParts(value).href;
+      return reflectedElementURL(value);
     }
     set src(value) {
       intrinsicSetAttribute.call(this, 'src', String(value));
@@ -4835,7 +4875,7 @@
     }
     get poster() {
       const value = intrinsicGetAttribute.call(this, 'poster');
-      return value === null ? '' : host.urlParts(value).href;
+      return reflectedElementURL(value);
     }
     set poster(value) {
       intrinsicSetAttribute.call(this, 'poster', String(value));
@@ -4886,7 +4926,7 @@
       intrinsicSetAttribute.call(this, 'referrerpolicy', String(v));
     }
     get src() {
-      return host.urlParts(intrinsicGetAttribute.call(this, 'src') || '').href;
+      return reflectedElementURL(intrinsicGetAttribute.call(this, 'src'));
     }
     set src(v) {
       intrinsicSetAttribute.call(this, 'src', String(v));
@@ -4938,7 +4978,7 @@
       host.setAttribute(elementSlot(this).nodeId, 'type', String(value));
     }
     get href() {
-      return host.urlParts(intrinsicGetAttribute.call(this, 'href') || '').href;
+      return reflectedElementURL(intrinsicGetAttribute.call(this, 'href'));
     }
     set href(v) {
       intrinsicSetAttribute.call(this, 'href', String(v));
@@ -5016,7 +5056,7 @@
     }
     get href() {
       const value = intrinsicGetAttribute.call(this, 'href');
-      return value === null ? '' : host.urlParts(value).href;
+      return reflectedElementURL(value);
     }
     set href(value) {
       intrinsicSetAttribute.call(this, 'href', String(value));
@@ -7866,10 +7906,14 @@
     },
     (value, importNode = false) =>
       importNode
-        ? wrap(host.nodeData(value))
+        ? Number(value) >= 2147483648
+          ? elementShadows.get(wrap(Number(value) - 2147483648))
+          : wrap(host.nodeData(value))
         : value === document
           ? host.documentRootID()
-          : bridgeApply(bridgeWeakGet, elementData, [value])?.nodeId || 0,
+          : shadowSlots.has(value)
+            ? 2147483648 + elementSlot(shadowSlots.get(value).host).nodeId
+            : bridgeApply(bridgeWeakGet, elementData, [value])?.nodeId || 0,
     (key) => {
       const value = Reflect.get(globalThis, key);
       return {

@@ -192,6 +192,12 @@ func (c *connection) detach(ss *session, notify bool) {
 }
 
 func (s *Server) closePage(page *browser.Page) bool {
+	return s.closePageFrom(page, nil)
+}
+
+// A direct requester must receive its close reply before its transport closes.
+// Other frontends still disconnect as part of the synchronous target teardown.
+func (s *Server) closePageFrom(page *browser.Page, requester *connection) bool {
 	c, ok := s.Browser.Context(page.ContextID())
 	if !ok {
 		return false
@@ -201,6 +207,12 @@ func (s *Server) closePage(page *browser.Page) bool {
 		for _, ss := range conn.snapshot() {
 			if ss.page == page && ss.id != "" && !ss.browserSession {
 				conn.detach(ss, true)
+			} else if ss.page == page && ss.id == "" && !ss.browserSession && ss.targetType == "page" {
+				ss.stopScreencast()
+				if conn != requester {
+					conn.cancel()
+					_ = conn.conn.Close()
+				}
 			}
 		}
 	}
@@ -511,7 +523,7 @@ func (s *session) handleTarget(m message, p map[string]any) (any, bool, error) {
 		if !ok {
 			return nil, true, fmt.Errorf("No target with given id found")
 		}
-		return map[string]any{"success": s.server.closePage(page)}, true, nil
+		return map[string]any{"success": s.server.closePageFrom(page, s.transport)}, true, nil
 	case "Target.activateTarget":
 		_, _, ok := s.server.target(stringValue(p["targetId"]))
 		if !ok {

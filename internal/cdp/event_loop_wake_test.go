@@ -84,6 +84,24 @@ func TestEventLoopWakeWithoutTicker(t *testing.T) {
 	if eval(s.Page, "globalThis.future") != false {
 		t.Fatal("wake advanced time to a future task")
 	}
+	// A protocol command advances the canonical clock while the pump is paused.
+	// Resuming must account for that same wall interval only once.
+	resumeBusy := s.pausePump(s.Page, false)
+	clockBefore, wallBefore := s.Page.ClockNow(), time.Now()
+	eval(s.Page, `
+globalThis.busyDone = false;
+const busyStart = performance.now();
+while (performance.now() - busyStart < 150) {}
+setTimeout(() => {
+  busyDone = true;
+}, 0);
+void 0;
+`)
+	resumeBusy()
+	waitTrue(s.Page, "globalThis.busyDone===true")
+	if elapsed, wall := s.Page.ClockNow().Sub(clockBefore), time.Since(wallBefore); elapsed > wall+75*time.Millisecond {
+		t.Fatalf("pump counted external execution twice: clock=%s wall=%s", elapsed, wall)
+	}
 	cancel()
 	select {
 	case <-done:

@@ -460,6 +460,7 @@ func (r *Realm) commitChildFrameNavigation(ctx context.Context, navigation *chil
 	defer restoreTaskContext()
 	p.trace.Add(trace.Lifecycle, "frameNavigated", map[string]any{"frameId": navigation.frame.ID, "parentFrameId": navigation.frame.parent.ID, "loaderId": navigation.loaderID, "url": documentURL.String(), "realm": realm.ID})
 	p.runInitScripts(ctx, realm)
+	realm.preloadParserScripts(streamState, string(res.Body))
 	if err := realm.writeDocumentStream(realm, string(res.Body)); err != nil {
 		return err
 	}
@@ -612,6 +613,7 @@ func (r *Realm) crossRealmValue(value engine.Value) (map[string]any, error) {
 		return r.describeCrossRealmValue(value)
 	}
 	encoded, err := r.runtime.Call(context.Background(), r.frameValueEncoder, nil, value)
+	defer releaseRuntimeValues(r.runtime, encoded)
 	if err != nil {
 		return nil, err
 	}

@@ -25,6 +25,13 @@ func (d *Document) PackedSnapshot() ([]byte, error) {
 	return d.packedStyles(ids, false)
 }
 
+// ContainsElement distinguishes a canonical element admitted to this projection
+// from another document in the shared arena or an inert detached subtree.
+func (d *Document) ContainsElement(id int64) bool {
+	node, ok := d.nodes[id]
+	return ok && node.Type == "element"
+}
+
 // PackedNodeStyle materializes the required consumer columns for an
 // undisplayed node in one native style-resolution pass. Geometry remains zero
 // where no layout box exists. It never installs hidden styles as layout state.

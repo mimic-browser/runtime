@@ -101,3 +101,88 @@ func TestCSSBackgroundResourcesUseAppliedDeclarations(t *testing.T) {
 		}
 	})
 }
+
+// Both native computed styles and their semantic fallback must observe
+// visibility transitions and form pseudo classes without fetching hidden URLs.
+func TestCSSBackgroundResourcesTrackHiddenBranchesAndFormState(t *testing.T) {
+	for _, fallback := range []bool{false, true} {
+		t.Run(fmt.Sprintf("fallback=%t", fallback), func(t *testing.T) {
+			historyTestPages(t, func(t *testing.T, p *Page) {
+				var mu sync.Mutex
+				counts := map[string]int{}
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					if r.URL.Path == "/" {
+						fmt.Fprint(w, `<!doctype html><style>
+#hidden{display:none} #hidden div{display:block;background-image:url(/hidden.svg)}
+#probe:focus{background-image:url(/focus.svg)}
+body.typed #probe{background-image:url(/typed.svg)}
+#invisible{visibility:hidden;background-image:url(/invisible.svg)}
+</style><body><input id="probe" required><div id="invisible"></div><section id="hidden"><div></div></section>`)
+					} else {
+						mu.Lock()
+						counts[r.URL.Path]++
+						mu.Unlock()
+						w.Header().Set("Content-Type", "image/svg+xml")
+						fmt.Fprint(w, `<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>`)
+					}
+				}))
+				defer server.Close()
+				if fallback {
+					reduced := true
+					p.SetMediaPreferences("", &reduced)
+				}
+				if err := p.Navigate(context.Background(), server.URL); err != nil {
+					t.Fatal(err)
+				}
+				wait := func(path string) {
+					t.Helper()
+					deadline := time.Now().Add(2 * time.Second)
+					for time.Now().Before(deadline) {
+						mu.Lock()
+						count := counts[path]
+						mu.Unlock()
+						if count == 1 {
+							return
+						}
+						historyEval(t, p, `new Promise(resolve=>setTimeout(()=>resolve(true),10))`, true)
+					}
+					t.Fatalf("resource not fetched: %s", path)
+				}
+				wait("/invisible.svg")
+				mu.Lock()
+				hidden := counts["/hidden.svg"]
+				mu.Unlock()
+				if hidden != 0 {
+					t.Fatal("hidden descendant fetched background")
+				}
+				historyEval(t, p, `document.querySelector('#probe').addEventListener('input',()=>document.body.classList.add('typed'));document.querySelector('#probe').focus();true`, true)
+				wait("/focus.svg")
+				if err := p.DispatchProtocolInput(context.Background(), "Input.insertText", map[string]any{"text": "a"}); err != nil {
+					t.Fatal(err)
+				}
+				wait("/typed.svg")
+				historyEval(t, p, `document.querySelector('#hidden').style.display='block';true`, true)
+				wait("/hidden.svg")
+				historyEval(t, p, `document.querySelector('#hidden').remove();document.querySelector('#probe').value='';true`, true)
+				if fallback {
+					// A negative resource admission belongs only to its exact epoch.
+					// Changing media must restore canonical native observations.
+					reduced := false
+					p.SetMediaPreferences("", &reduced)
+					historyEval(t, p, `document.querySelector('#invisible').style.width='40px';document.querySelector('#invisible').getBoundingClientRect().width===40`, true)
+					state := p.Top.Realm.blitz
+					if state == nil || state.fallback != "" || state.document.Owner == nil {
+						t.Fatal("resource fallback survived a new native admission epoch")
+					}
+				}
+				mu.Lock()
+				defer mu.Unlock()
+				for path, count := range counts {
+					if count != 1 {
+						t.Fatalf("duplicate resource %s: %d", path, count)
+					}
+				}
+			})
+		})
+	}
+}

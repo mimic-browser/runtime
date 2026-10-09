@@ -31,11 +31,17 @@ type documentSecurity struct {
 	permissionsPolicy   string
 }
 type Page struct {
-	closed              atomic.Bool
-	executionGate       *workload.Gate
-	geolocationOverride *GeolocationOverride // Protected by mu; persists across navigation.
+	inspectorNodeSequence int64
+	inspectorNodeIDs      map[inspectorNodeKey]int64
+	inspectorNodeOwners   map[int64]inspectorNodeBinding
+	inspectorTopRealm     string
+	closed                atomic.Bool
+	executionGate         *workload.Gate
+	geolocationOverride   *GeolocationOverride // Protected by mu; persists across navigation.
 
 	previewObservers   map[*PreviewSubscription]struct{} // command-owned; nil without viewers
+	turnObservers      map[*TurnSubscription]struct{}    // allocated only by inspector consumers
+	inspectorViewEpoch uint64                            // command-owned scroll epoch; does not invalidate style caches
 	debuggers          map[*Debugger]struct{}
 	inputIgnored       bool   // Page command owned; survives document navigation.
 	inputHintRealm     *Realm // Last protocol-scrolled target; Page command owned.
@@ -130,6 +136,7 @@ func (p *Page) WakeEventLoop() {
 }
 
 func (p *Page) UnlockCommands() {
+	p.publishTurn()
 	hasPreview := p.previewObservers != nil
 	p.commandMu.Unlock()
 	if hasPreview {
@@ -141,7 +148,10 @@ func (p *Page) UnlockCommands() {
 // A mouse gesture is delivered as move/down/up commands; serializing the whole
 // preview between those phases blocks the gesture and exposes frames Chrome
 // never paints. The completed release publishes the coalesced state.
-func (p *Page) UnlockCommandsWithoutPreview() { p.commandMu.Unlock() }
+func (p *Page) UnlockCommandsWithoutPreview() {
+	p.publishTurn()
+	p.commandMu.Unlock()
+}
 
 func (p *Page) schedulePreviewPublish() {
 	p.previewScheduleMu.Lock()
@@ -212,6 +222,8 @@ func (p *Page) Loader() *network.Loader               { return p.loader }
 func (p *Page) Cookies() *network.CookieStore         { return p.ctx.cookies }
 func (p *Page) NetworkSession() *network.SessionState { return p.ctx.network }
 func (p *Page) Close() error {
+	p.inspectorNodeIDs = nil
+	p.inspectorNodeOwners = nil
 	p.closed.Store(true)
 	p.CancelNavigation()
 	defer p.loader.CloseOwnedTransport()
@@ -924,6 +936,7 @@ func (p *Page) commitNavigationResponse(ctx, taskContext context.Context, u *url
 		})
 		return nil
 	}
+	realm.preloadParserScripts(streamState, string(res.Body))
 	if err := realm.writeDocumentStream(realm, string(res.Body)); err != nil {
 		return err
 	}

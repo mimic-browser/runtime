@@ -2,7 +2,9 @@ package cdp
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
+	"unicode/utf8"
 
 	"github.com/moreveal/mimic/internal/browser"
 	"github.com/moreveal/mimic/internal/trace"
@@ -11,6 +13,39 @@ import (
 func (s *session) handlePage(ctx context.Context, method string, p map[string]any) (any, bool, error) {
 	empty := map[string]any{}
 	switch method {
+	case "Page.getResourceTree":
+		var tree func(*browser.Frame) map[string]any
+		tree = func(frame *browser.Frame) map[string]any {
+			resources := []any{}
+			for _, resource := range s.page.Loader().RetainedResources(frame.ID, frame.RealmID(), frame.URL()) {
+				resources = append(resources, resource)
+			}
+			result := map[string]any{"frame": s.framePayload(frame), "resources": resources}
+			children := []any{}
+			for _, child := range frame.Children() {
+				children = append(children, tree(child))
+			}
+			if len(children) > 0 {
+				result["childFrames"] = children
+			}
+			return result
+		}
+		return map[string]any{"frameTree": tree(s.page.Top)}, true, nil
+	case "Page.getResourceContent":
+		frame, ok := s.page.Frame(stringValue(p["frameId"]))
+		if !ok {
+			return nil, true, fmt.Errorf("No frame for given id found")
+		}
+		response, ok := s.page.Loader().CompletedResource(frame.ID, frame.RealmID(), frame.URL(), stringValue(p["url"]))
+		if !ok {
+			return nil, true, fmt.Errorf("No resource with given URL found")
+		}
+		content := string(response.Body)
+		encoded := !utf8.Valid(response.Body)
+		if encoded {
+			content = base64.StdEncoding.EncodeToString(response.Body)
+		}
+		return map[string]any{"content": content, "base64Encoded": encoded}, true, nil
 	case "Page.reload":
 		return empty, true, s.page.Reload()
 	case "Page.getNavigationHistory":

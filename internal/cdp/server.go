@@ -28,6 +28,9 @@ import (
 )
 
 type Server struct {
+	// DevToolsChrome selects an optional external Blink presentation executable.
+	// It is resolved and launched only by Page.startScreencast.
+	DevToolsChrome    string
 	connectionOpened  func()
 	certificateMu     sync.Mutex
 	networkIDMu       sync.Mutex
@@ -141,7 +144,7 @@ func (s *Server) version(w http.ResponseWriter, r *http.Request) {
 func (s *Server) list(w http.ResponseWriter, r *http.Request) {
 	targets := []any{}
 	for _, page := range s.pages() {
-		targets = append(targets, map[string]any{"id": page.ID, "type": "page", "title": page.Title(), "url": page.URL(), "webSocketDebuggerUrl": "ws://" + r.Host + "/devtools/page/" + page.ID})
+		targets = append(targets, map[string]any{"id": page.ID, "type": "page", "title": page.Title(), "url": page.URL(), "webSocketDebuggerUrl": "ws://" + r.Host + "/devtools/page/" + page.ID, "devtoolsFrontendUrl": "devtools://devtools/bundled/inspector.html?ws=" + r.Host + "/devtools/page/" + page.ID})
 	}
 	writeJSON(w, targets)
 }
@@ -163,6 +166,17 @@ type message struct {
 	order     *commandOrder
 }
 type session struct {
+	documentUpdatedDocument *dom.Document
+	styleTracking           *computedStyleTracking
+	screencast              *screencast
+	inspectMode             string
+	domInspector            *domInspector
+	removeInspectorTurn     func()
+	styleSheets             map[string]inspectorSheet
+	styleSheetRevision      uint64
+	networkInspection       *networkInspection
+	domSearches             map[string][]int64
+	domSearchSequence       uint64
 	commandTimings          sync.Map   // diagnostic only: command id -> *commandTiming
 	commandMu               sync.Mutex // protects binding changes against commands and asynchronous navigation
 	orderMu                 sync.Mutex
@@ -231,6 +245,7 @@ func (s *session) bindPage(page *browser.Page) {
 	s.server.ensurePump(page)
 }
 func (s *session) unbindPage() {
+	s.stopScreencast()
 	s.bindMu.Lock()
 	defer s.bindMu.Unlock()
 	// Release paused requests before waiting for their owning Page turn.
@@ -243,6 +258,24 @@ func (s *session) unbindPage() {
 		s.debugger = nil
 		s.page.UnlockCommands()
 	}
+	s.page.LockCommands()
+	if s.removeInspectorTurn != nil {
+		s.removeInspectorTurn()
+		s.removeInspectorTurn = nil
+	}
+	s.domInspector = nil
+	s.domSearches = nil
+	s.setDomain("DOM", false)
+	if s.domainEnabled("CSS") {
+		s.setDomain("CSS", false)
+		s.styleSheets = nil
+		s.releaseCSSStorage()
+	}
+	s.releaseInspectorTurn()
+	s.stateMu.Lock()
+	s.networkInspection = nil
+	s.stateMu.Unlock()
+	s.page.UnlockCommands()
 	if s.unsub != nil {
 		s.unsub()
 	}
@@ -304,6 +337,7 @@ func (s *Server) pumpEventLoop(lifetime context.Context, page *browser.Page) {
 
 func (s *Server) pumpEventLoopWithTicks(lifetime context.Context, page *browser.Page, ticks <-chan time.Time) {
 	last := time.Now()
+	lastClock := page.ClockNow()
 	for {
 		select {
 		case <-ticks:
@@ -314,7 +348,6 @@ func (s *Server) pumpEventLoopWithTicks(lifetime context.Context, page *browser.
 			return
 		}
 		{
-			delta := time.Since(last)
 			for turn := 0; turn < 32; turn++ {
 				page.LockCommands()
 				if lifetime.Err() != nil {
@@ -331,21 +364,27 @@ func (s *Server) pumpEventLoopWithTicks(lifetime context.Context, page *browser.
 				}
 				s.executions[page] = cancelTurn
 				s.lifecycleMu.Unlock()
+				// Scheduler turns, external commands and network completions
+				// already account for their elapsed time on the canonical clock.
+				// Observe only the remaining idle interval, after acquiring the
+				// command boundary; adding the whole wall interval counts it twice.
+				delta := pumpIdleAdvance(last, lastClock, time.Now(), page.ClockNow())
 				// One debugger pump turn must not monopolize the Page when an
 				// application continuously posts ready timers/network callbacks.
 				// Background JavaScript has the Page lifetime, not the unrelated
 				// navigation timeout: terminating a valid hydration callback at 30s
 				// leaves an otherwise recoverable committed document half-built.
 				more, err := page.AdvanceTimeBudget(turnContext, delta, 1)
-				delta = 0
 				s.lifecycleMu.Lock()
 				delete(s.executions, page)
 				s.lifecycleMu.Unlock()
 				cancelTurn()
 				s.emitIdle(page)
-				page.UnlockCommands()
-				// Exclude time spent executing or waiting for other Page turns.
+				// Sample both clocks inside the same command boundary so another
+				// command cannot advance one between these observations.
 				last = time.Now()
+				lastClock = page.ClockNow()
+				page.UnlockCommands()
 				if more && page.ExternalCommandWaiting() {
 					// A ready background task must not win another burst ahead of
 					// an already queued protocol command. Its wake hint remains
@@ -362,6 +401,17 @@ func (s *Server) pumpEventLoopWithTicks(lifetime context.Context, page *browser.
 			}
 		}
 	}
+}
+
+func pumpIdleAdvance(lastWall, lastClock, wallNow, clockNow time.Time) time.Duration {
+	elapsed := wallNow.Sub(lastWall)
+	if accounted := clockNow.Sub(lastClock); accounted > 0 {
+		elapsed -= accounted
+	}
+	if elapsed < 0 {
+		return 0
+	}
+	return elapsed
 }
 
 // Snapshot serialization owns a consistent task boundary. Prevent the pump
@@ -498,7 +548,9 @@ func (s *session) traceEvent(e trace.Event) {
 			if frameID == s.page.Top.ID && e.Name == "DOMContentLoaded" {
 				// Frozen Blink re-pushes the inspected root document after parsing.
 				// Child-frame commits do not invalidate the entire frontend tree.
-				s.event("DOM.documentUpdated", map[string]any{})
+				if document, ok := s.page.Document(); ok {
+					s.publishDocumentUpdated(document)
+				}
 				s.event("Page.domContentEventFired", map[string]any{"timestamp": timestamp})
 			}
 			if frameID == s.page.Top.ID && e.Name == "load" {
@@ -507,38 +559,7 @@ func (s *session) traceEvent(e trace.Event) {
 			s.event("Page.lifecycleEvent", map[string]any{"name": e.Name, "timestamp": timestamp, "frameId": frameID, "loaderId": s.frameLoaderID(frameID)})
 		}
 	case trace.Network:
-		if strings.HasPrefix(stringValue(e.Data["url"]), "data:") {
-			return
-		}
-		frameID := stringValue(e.Data["context"])
-		if frameID == "" {
-			frameID = s.page.Top.ID
-		}
-		loaderID := s.frameLoaderID(frameID)
-		if e.Data["initiator"] == network.Iframe {
-			loaderID = stringValue(e.Data["id"])
-		}
-		if e.Name == "request" {
-			postData := stringValue(e.Data["postData"])
-			request := map[string]any{"url": e.Data["url"], "method": e.Data["method"], "headers": e.Data["headers"], "postData": postData}
-			if postData != "" {
-				request["hasPostData"] = true
-				request["postDataEntries"] = []any{map[string]any{"bytes": base64.StdEncoding.EncodeToString([]byte(postData))}}
-			}
-			s.event("Network.requestWillBeSent", map[string]any{"requestId": e.Data["id"], "loaderId": loaderID, "documentURL": e.Data["url"], "request": request, "timestamp": float64(e.Time.UnixMilli()) / 1000, "wallTime": float64(e.Time.Unix()), "initiator": map[string]any{"type": "other"}, "type": resourceTypeFromTrace(e.Data["initiator"]), "frameId": frameID})
-		} else if e.Name == "response" {
-			s.event("Network.responseReceived", map[string]any{"requestId": e.Data["id"], "loaderId": loaderID, "timestamp": float64(e.Time.UnixMilli()) / 1000, "type": resourceTypeFromTrace(e.Data["initiator"]), "response": map[string]any{"url": e.Data["url"], "status": e.Data["status"], "statusText": "", "headers": e.Data["headers"], "mimeType": e.Data["mimeType"], "connectionReused": e.Data["connectionReused"], "connectionId": s.server.networkConnectionID(stringValue(e.Data["connectionId"])), "protocol": cdpProtocol(e.Data["protocol"]), "timing": cdpResourceTiming(e.Data["transportTiming"]), "encodedDataLength": e.Data["encodedDataLength"], "securityState": "unknown"}, "frameId": frameID})
-			if partial, _ := e.Data["partial"].(bool); !partial {
-				s.event("Network.loadingFinished", map[string]any{"requestId": e.Data["id"], "timestamp": float64(e.Time.UnixMilli()) / 1000, "encodedDataLength": e.Data["encodedDataLength"]})
-			}
-		} else if e.Name == "failed" {
-			canceled, _ := e.Data["canceled"].(bool)
-			errorText := e.Data["error"]
-			if canceled {
-				errorText = "net::ERR_ABORTED"
-			}
-			s.event("Network.loadingFailed", map[string]any{"requestId": e.Data["id"], "timestamp": float64(e.Time.UnixMilli()) / 1000, "type": resourceTypeFromTrace(e.Data["initiator"]), "errorText": errorText, "canceled": canceled})
-		}
+		s.networkEvent(e)
 	}
 }
 func (s *session) handle(m message) {
@@ -596,8 +617,27 @@ func (s *session) handleCommand(m message) (afterUnlock func()) {
 			if err != errReplySent {
 				s.reply(m.ID, result, err)
 			}
+			if m.Method == "Target.closeTarget" && err == nil && s.id == "" && !s.browserSession {
+				if value, ok := result.(map[string]any); ok && value["success"] == true && stringValue(p["targetId"]) == s.targetID {
+					return func() {
+						s.transport.cancel()
+						_ = s.transport.conn.Close()
+					}
+				}
+			}
 			return
 		}
+	}
+	if value, handled, err := s.handleScreencast(m.Method, p); handled {
+		s.reply(m.ID, value, err)
+		return
+	}
+	if m.Method == "Page.disable" {
+		s.stopScreencast()
+	}
+	if value, handled, err := s.handlePresentationInput(m.Method, p); handled {
+		s.reply(m.ID, value, err)
+		return
 	}
 	if m.Method == "Page.close" {
 		// Match Target.closeTarget's browser-owned lifetime. Cleanup cannot run
@@ -685,6 +725,10 @@ func (s *session) handleCommand(m message) (afterUnlock func()) {
 		s.reply(m.ID, value, cssErr)
 		return
 	}
+	if value, handled, err := s.handleOverlay(s.ctx, m.Method, p); handled {
+		s.reply(m.ID, value, err)
+		return
+	}
 	if value, handled, pageErr := s.handlePage(s.ctx, m.Method, p); handled {
 		s.reply(m.ID, value, pageErr)
 		return
@@ -704,6 +748,16 @@ func (s *session) handleCommand(m message) (afterUnlock func()) {
 		s.setDomain(strings.SplitN(m.Method, ".", 2)[0], true)
 	case "Page.disable", "Network.disable", "DOM.disable", "Log.disable", "Performance.disable", "Security.disable", "Inspector.disable":
 		s.setDomain(strings.SplitN(m.Method, ".", 2)[0], false)
+		if m.Method == "DOM.disable" {
+			s.domInspector = nil
+			s.domSearches = nil
+			s.releaseInspectorTurn()
+		}
+		if m.Method == "Network.disable" {
+			s.stateMu.Lock()
+			s.networkInspection = nil
+			s.stateMu.Unlock()
+		}
 	case "Runtime.disable":
 		s.setDomain("Runtime", false)
 		s.clearContexts()
@@ -754,6 +808,8 @@ func (s *session) handleCommand(m message) (afterUnlock func()) {
 				s.event("Runtime.executionContextCreated", map[string]any{"context": s.ensureRuntimeWorldContext(world.FrameID, world.RealmID, world.MainRealmID, world.Name, world.URL)})
 			}
 		}
+	case "Runtime.getIsolateId":
+		err = fmt.Errorf("Native isolate introspection is unsupported")
 	case "Page.getFrameTree":
 		result = map[string]any{"frameTree": s.frameTree(s.page.Top)}
 	case "Page.navigate":
@@ -806,18 +862,26 @@ func (s *session) handleCommand(m message) (afterUnlock func()) {
 		if d, ok = s.page.Document(); !ok {
 			err = fmt.Errorf("no document")
 		} else {
-			result = map[string]any{"root": cdpNode(d, d.Root(), intValue(p["depth"], 1))}
+			result = map[string]any{"root": s.inspectorCDPNode(d, d.Root(), intValue(p["depth"], 1))}
 		}
 	case "DOM.querySelector", "DOM.querySelectorAll":
 		var ids []int64
-		ids, err = s.page.QueryDOM(s.ctx, int64(intValue(p["nodeId"], 0)), stringValue(p["selector"]), m.Method == "DOM.querySelectorAll")
+		var owner *browser.Frame
+		var local int64
+		owner, local, err = s.nodeOwner(s.ctx, p)
+		if err == nil {
+			ids, err = s.page.QueryDOMInFrame(s.ctx, owner, local, stringValue(p["selector"]), m.Method == "DOM.querySelectorAll")
+		}
 		if err == nil {
 			// Like DOM.requestNode, selector results bind their ancestor path
 			// before returning IDs so a shallow frontend tree can resolve them.
-			if d, ok := s.page.Document(); ok {
+			if d, ok := s.page.InspectorDocument(owner); ok {
 				for _, id := range ids {
 					s.emitDOMAncestors(d, id)
 				}
+			}
+			for index, id := range ids {
+				ids[index] = s.page.InspectorNodeID(owner, id)
 			}
 			if m.Method == "DOM.querySelectorAll" {
 				result = map[string]any{"nodeIds": ids}
@@ -827,22 +891,6 @@ func (s *session) handleCommand(m message) (afterUnlock func()) {
 					id = ids[0]
 				}
 				result = map[string]any{"nodeId": id}
-			}
-		}
-	case "DOM.getOuterHTML":
-		var d *dom.Document
-		var ok bool
-		if d, ok = s.page.Document(); !ok {
-			err = fmt.Errorf("no document")
-		} else {
-			id := int64(intValue(p["nodeId"], 0))
-			if id == 0 {
-				id = int64(intValue(p["backendNodeId"], 0))
-			}
-			var markup string
-			markup, err = d.OuterHTML(id)
-			if err == nil {
-				result = map[string]any{"outerHTML": markup}
 			}
 		}
 	case "Network.getAllCookies":
@@ -890,6 +938,18 @@ func (s *session) handleCommand(m message) (afterUnlock func()) {
 			result = map[string]any{"body": body, "base64Encoded": encoded}
 		} else {
 			err = fmt.Errorf("unknown request id")
+		}
+	case "Network.getRequestPostData":
+		s.stateMu.RLock()
+		data, ok := "", false
+		if s.networkInspection != nil {
+			data, ok = s.networkInspection.postData[stringValue(p["requestId"])]
+		}
+		s.stateMu.RUnlock()
+		if !ok {
+			err = fmt.Errorf("No post data available for the request")
+		} else {
+			result = map[string]any{"postData": data}
 		}
 	case "Network.getCookies":
 		result = map[string]any{"cookies": s.cookiesForURLs(p)}
@@ -1253,6 +1313,8 @@ func cdpNode(d *dom.Document, n dom.Node, depth int) map[string]any {
 	switch n.Type {
 	case "document":
 		nodeType, nodeName, localName = 9, "#document", ""
+	case "fragment":
+		nodeType, nodeName, localName = 11, "#document-fragment", ""
 	case "text":
 		nodeType, nodeName, localName = 3, "#text", ""
 	case "comment":

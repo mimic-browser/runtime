@@ -769,7 +769,18 @@ const compatibilitySelectors = (() => {
       return false;
     }
   }
-  return { query, matches, closest, getElementById, compileStyle, matchingStyles, supports };
+  const matchesStyle = (node, selector, shadowRoot = null) =>
+    run(() => compileStyle(selector, shadowRoot)(node), true);
+  return {
+    query,
+    matches,
+    closest,
+    getElementById,
+    compileStyle,
+    matchesStyle,
+    matchingStyles,
+    supports,
+  };
 })();
 // These late semantic replacements are WebIDL operations too. Validate the
 // private brand before arity and conversion, outside selector-parser error
@@ -843,7 +854,12 @@ Object.defineProperties(DocumentFragment.prototype, {
 // querySelector properties or maintaining an independent native CSS grammar.
 registerBootstrapCallback('setDOMQueryCallback', (nodeID, selector, all) => {
   try {
-    const root = nodeID === host.documentRootID() ? document : wrap(nodeID);
+    const root =
+      nodeID === host.documentRootID()
+        ? document
+        : nodeID >= 2147483648
+          ? elementShadows.get(wrap(nodeID - 2147483648))
+          : wrap(nodeID);
     const result = compatibilitySelectors.query(root, selector, !all);
     return JSON.stringify({
       ids: (all ? result : result ? [result] : []).map((node) => elementSlot(node).nodeId),

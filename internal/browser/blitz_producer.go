@@ -14,19 +14,20 @@ import (
 )
 
 type blitzDocument struct {
-	snapshotReads    uint64
-	snapshot         []byte
-	document         layoutblitz.Document
-	key              string
-	fallback         string
-	sheets           map[uint64]blitzStylesheetInput
-	states           map[uint64]blitzElementState
-	controls         map[uint64]blitzControlValue
-	controlRevision  uint64
-	sheetOrder       []uint64
-	fontRevision     uint64
-	fontsInitialized bool
-	generation       uint64
+	snapshotReads      uint64
+	snapshot           []byte
+	document           layoutblitz.Document
+	key                string
+	fallback           string
+	sheets             map[uint64]blitzStylesheetInput
+	states             map[uint64]blitzElementState
+	controls           map[uint64]blitzControlValue
+	controlRevision    uint64
+	sheetInputRevision uint64
+	sheetOrder         []uint64
+	fontRevision       uint64
+	fontsInitialized   bool
+	generation         uint64
 }
 
 type blitzElementState struct {
@@ -101,7 +102,7 @@ func (r *Realm) installBlitzProducer(host map[string]any) {
 				r.blitzCalls[key] = stat
 			}()
 		}
-		if kind != "snapshot" && !owner.document.IsConnected(id) {
+		if kind != "snapshot" && kind != "imageResources" && !owner.document.IsConnected(id) {
 			return r.val(nil), nil
 		}
 		var observation any
@@ -131,13 +132,26 @@ func (r *Realm) installBlitzProducer(host map[string]any) {
 }
 
 func (owner *Realm) observeBlitz(id int64, kind, property string) (any, error) {
+	// Initial resource discovery shares the bulk CSSOM projection while parser,
+	// stylesheet and load state are still changing. After load, incremental
+	// interaction checkpoints use the smaller resource-only projection. False
+	// selects the ordinary read path; nil below means native admission failed.
+	if kind == "imageResources" && owner.readyState != "complete" {
+		return false, nil
+	}
 	if err := owner.prepareBlitz(); err != nil {
 		return nil, err
 	}
 	if owner.blitz.fallback != "" {
 		return nil, nil
 	}
+	if kind == "imageResources" {
+		return owner.blitz.document.BackgroundImages()
+	}
 	if kind == "node" {
+		if !owner.blitz.document.ContainsElement(id) {
+			return nil, nil
+		}
 		packet, err := owner.blitz.document.PackedNodeStyle(id)
 		return engine.BinaryBuffer(packet), err
 	}
@@ -237,13 +251,21 @@ func (r *Realm) prepareBlitz() (resultErr error) {
 		RestyleOnChange bool                   `json:"restyleOnChange"`
 		States          []blitzElementState    `json:"states"`
 		Sheets          []blitzStylesheetInput `json:"sheets"`
+		SheetRevision   uint64                 `json:"sheetRevision"`
+		SheetsUnchanged bool                   `json:"sheetsUnchanged"`
 		Controls        []blitzControlValue    `json:"controls"`
 	}
 	if r.blitzInputs == nil {
 		return fmt.Errorf("blitz: owner input adapter not initialized")
 	}
 	err := r.runOnOwner(context.Background(), func(ctx context.Context) error {
-		value, err := r.runtime.Call(ctx, r.blitzInputs, nil)
+		knownSheets := state.sheetInputRevision
+		if state.sheets == nil {
+			knownSheets = 0
+		}
+		knownValue := r.val(knownSheets)
+		defer releaseDebuggerValue(r, knownValue)
+		value, err := r.runtime.Call(ctx, r.blitzInputs, nil, knownValue)
 		defer releaseDebuggerValue(r, value)
 		if err != nil {
 			return err
@@ -284,6 +306,16 @@ func (r *Realm) prepareBlitz() (resultErr error) {
 		return err
 	}
 	accounting.mark("canonicalSync")
+	// A canonical reconciliation can replace the native owner after JS has
+	// validated its unchanged sheet inputs. Replay the acknowledged immutable
+	// declarations into that new owner before discarding the previous projection.
+	if previousBuilds != state.document.Builds && inputs.SheetsUnchanged {
+		inputs.Sheets = make([]blitzStylesheetInput, 0, len(state.sheetOrder))
+		for _, id := range state.sheetOrder {
+			inputs.Sheets = append(inputs.Sheets, state.sheets[id])
+		}
+		inputs.SheetsUnchanged = false
+	}
 	if previousBuilds != state.document.Builds || state.sheets == nil {
 		state.snapshot = nil
 		state.sheets = make(map[uint64]blitzStylesheetInput)
@@ -321,32 +353,36 @@ func (r *Realm) prepareBlitz() (resultErr error) {
 		}
 	}
 	accounting.mark("images")
-	order := make([]uint64, len(inputs.Sheets))
-	for index, sheet := range inputs.Sheets {
-		order[index] = sheet.ID
-	}
-	orderChanged := !slices.Equal(order, state.sheetOrder)
-	for _, sheet := range inputs.Sheets {
-		if old, ok := state.sheets[sheet.ID]; ok && old == sheet && !orderChanged {
-			continue
+	if !inputs.SheetsUnchanged {
+		order := make([]uint64, len(inputs.Sheets))
+		for index, sheet := range inputs.Sheets {
+			order[index] = sheet.ID
 		}
-		if err := state.document.Owner.StylesheetAtURL(sheet.ID, sheet.Text, sheet.BaseURL); err != nil {
-			return err
-		}
-		state.sheets[sheet.ID] = sheet
-	}
-	state.sheetOrder = order
-	activeSheets := make(map[uint64]bool, len(inputs.Sheets))
-	for _, sheet := range inputs.Sheets {
-		activeSheets[sheet.ID] = true
-	}
-	for id := range state.sheets {
-		if !activeSheets[id] {
-			if err := state.document.Owner.Stylesheet(id, ""); err != nil {
+		orderChanged := !slices.Equal(order, state.sheetOrder)
+		for _, sheet := range inputs.Sheets {
+			if old, ok := state.sheets[sheet.ID]; ok && old == sheet && !orderChanged {
+				continue
+			}
+			if err := state.document.Owner.StylesheetAtURL(sheet.ID, sheet.Text, sheet.BaseURL); err != nil {
 				return err
 			}
-			delete(state.sheets, id)
+			state.sheets[sheet.ID] = sheet
 		}
+		state.sheetOrder = order
+		activeSheets := make(map[uint64]bool, len(inputs.Sheets))
+		for _, sheet := range inputs.Sheets {
+			activeSheets[sheet.ID] = true
+		}
+		for id := range state.sheets {
+			if !activeSheets[id] {
+				if err := state.document.Owner.Stylesheet(id, ""); err != nil {
+					return err
+				}
+				delete(state.sheets, id)
+			}
+		}
+
+		state.sheetInputRevision = inputs.SheetRevision
 	}
 	accounting.mark("sheets")
 	currentStates := make(map[uint64]blitzElementState, len(inputs.States)+1)

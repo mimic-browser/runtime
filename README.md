@@ -31,6 +31,10 @@ manages the runtime and works alongside real Playwright, Puppeteer and other
 framework objects. You can also start the binary yourself and connect with an
 ordinary CDP client.
 
+For interactive DOM/CSS editing, Console and Network inspection, connect
+[Chrome DevTools](docs/devtools.md). Its optional page view starts an external
+Blink renderer on demand; ordinary Mimic execution requires no Chromium process.
+
 ## Quick start
 
 Install the SDK from npm with the Playwright client used in this example:

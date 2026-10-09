@@ -53,6 +53,10 @@ Approximate PNG screenshots are available through the standard CDP
 `Page.captureScreenshot` command; see [their scope and limitations](approximate-screenshots.md).
 Video and rendered PDFs remain unsupported.
 
+For interactive Elements/Styles editing, Console and Network inspection, see
+[Chrome DevTools](devtools.md). Its optional external Blink page view starts only
+when requested and releases its process/profile when stopped or disconnected.
+
 ## Generated schema and semantic scope
 
 The complete runtime `/json/protocol` schema has **58 domains, 665 commands,
@@ -64,9 +68,8 @@ and incomplete V8 PDL projection are not used as the new wire authority.
 See the [generated domain and command matrix](cdp-coverage-generated.md) and
 [complete machine-readable inventory](../internal/cdp/protocol_inventory_generated.json).
 The inventory covers every schema command and event, including unsupported ones.
-At this checkpoint it declares 9 implemented and 99 partial commands, with 557
-unsupported commands; 26 events have partial support and 208 are unsupported.
-The generated matrix is the authoritative count if these figures change.
+Current support counts are maintained in the generated matrix. Schema presence
+does not imply semantic support.
 
 `Mimic.getCompatibilityMatrix` returns the same generated statuses, scope notes
 and evidence references. `wireSchemaGenerated` and `surfaceRegistered` describe

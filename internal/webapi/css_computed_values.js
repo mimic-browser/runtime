@@ -545,54 +545,63 @@ const resolveCSSComputedValue = (element, name, pseudo = '') => {
     name === 'text-wrap-mode'
   )
     return value;
-  const writing = (() => {
-      for (let p = element; elementSlot(p)?.type === 'element'; p = cssFontParent(p)) {
-        const v = computedCSSDeclarations(p).find((e) => e.name === 'writing-mode')?.value;
-        if (v && !['inherit', 'unset'].includes(v)) return v === 'initial' ? 'horizontal-tb' : v;
-      }
-      return 'horizontal-tb';
-    })(),
-    vertical = writing.startsWith('vertical') || writing.startsWith('sideways'),
-    rtl = (name === 'direction' ? value : cssComputedValue(element, 'direction')) === 'rtl';
-  const sides = vertical
-    ? {
-        block: {
-          start: writing.endsWith('-rl') ? 'right' : 'left',
-          end: writing.endsWith('-rl') ? 'left' : 'right',
-        },
-        inline: { start: rtl ? 'bottom' : 'top', end: rtl ? 'top' : 'bottom' },
-      }
-    : {
-        block: { start: 'top', end: 'bottom' },
-        inline: { start: rtl ? 'right' : 'left', end: rtl ? 'left' : 'right' },
-      };
-  const logical = {
-    'block-size': vertical ? 'width' : 'height',
-    'inline-size': vertical ? 'height' : 'width',
-    'min-block-size': vertical ? 'min-width' : 'min-height',
-    'min-inline-size': vertical ? 'min-height' : 'min-width',
-    'max-block-size': vertical ? 'max-width' : 'max-height',
-    'max-inline-size': vertical ? 'max-height' : 'max-width',
-    'inset-block-start': sides.block.start,
-    'inset-block-end': sides.block.end,
-    'inset-inline-start': sides.inline.start,
-    'inset-inline-end': sides.inline.end,
-  };
-  if (logical[name] && (specified == null || declaration?.allReset || value === 'auto'))
-    return cssComputedValue(element, logical[name]);
-  const physical = /^(border|padding|margin)-(block|inline)-(start|end)(.*)$/.exec(name);
-  if (physical && (specified == null || declaration?.allReset))
-    return cssComputedValue(
-      element,
-      physical[1] + '-' + sides[physical[2]][physical[3]] + physical[4],
-    );
+  if (
+    /^(?:(?:min-|max-)?(?:block|inline)-size|inset-(?:block|inline)-(?:start|end)|(?:border|padding|margin)-(?:block|inline)-(?:start|end)(?:-.+)?)$/.test(
+      name,
+    )
+  ) {
+    const writing = (() => {
+        for (let p = element; elementSlot(p)?.type === 'element'; p = cssFontParent(p)) {
+          const v = computedCSSDeclarations(p).find((e) => e.name === 'writing-mode')?.value;
+          if (v && !['inherit', 'unset'].includes(v)) return v === 'initial' ? 'horizontal-tb' : v;
+        }
+        return 'horizontal-tb';
+      })(),
+      vertical = writing.startsWith('vertical') || writing.startsWith('sideways'),
+      rtl = (name === 'direction' ? value : cssComputedValue(element, 'direction')) === 'rtl';
+    const sides = vertical
+      ? {
+          block: {
+            start: writing.endsWith('-rl') ? 'right' : 'left',
+            end: writing.endsWith('-rl') ? 'left' : 'right',
+          },
+          inline: { start: rtl ? 'bottom' : 'top', end: rtl ? 'top' : 'bottom' },
+        }
+      : {
+          block: { start: 'top', end: 'bottom' },
+          inline: { start: rtl ? 'right' : 'left', end: rtl ? 'left' : 'right' },
+        };
+    const logical = {
+      'block-size': vertical ? 'width' : 'height',
+      'inline-size': vertical ? 'height' : 'width',
+      'min-block-size': vertical ? 'min-width' : 'min-height',
+      'min-inline-size': vertical ? 'min-height' : 'min-width',
+      'max-block-size': vertical ? 'max-width' : 'max-height',
+      'max-inline-size': vertical ? 'max-height' : 'max-width',
+      'inset-block-start': sides.block.start,
+      'inset-block-end': sides.block.end,
+      'inset-inline-start': sides.inline.start,
+      'inset-inline-end': sides.inline.end,
+    };
+    if (logical[name] && (specified == null || declaration?.allReset || value === 'auto'))
+      return cssComputedValue(element, logical[name]);
+    const physical = /^(border|padding|margin)-(block|inline)-(start|end)(.*)$/.exec(name);
+    if (physical && (specified == null || declaration?.allReset))
+      return cssComputedValue(
+        element,
+        physical[1] + '-' + sides[physical[2]][physical[3]] + physical[4],
+      );
+  }
+  // Scalar computed values do not observe boxes. Resolve box state only
+  // inside the serialization branches that actually need it.
+  let boxState;
   const box = () => cssBoxModel.size(element),
-    state = cssBoxModel.state(element),
+    state = () => boxState || (boxState = cssBoxModel.state(element)),
     length = (v, basis = 0) => cssResolveLength(v, cssGeometryLengthContext(element, basis));
   if (
     /^margin-(left|right)$/.test(name) &&
     value === 'auto' &&
-    !['inline', 'inline-block'].includes(state.display)
+    !['inline', 'inline-block'].includes(state().display)
   )
     return cssSerializeNumber(box().edges[name.endsWith('left') ? 'mleft' : 'mright']) + 'px';
   if (name === 'width' || name === 'height') {
@@ -610,7 +619,7 @@ const resolveCSSComputedValue = (element, name, pseudo = '') => {
         Math.max(
           0,
           dimension -
-            (state.get('box-sizing') === 'border-box'
+            (state().get('box-sizing') === 'border-box'
               ? 0
               : name === 'width'
                 ? edges.pleft + edges.pright + edges.bleft + edges.bright
@@ -620,9 +629,9 @@ const resolveCSSComputedValue = (element, name, pseudo = '') => {
     );
   }
   if (/^min-(width|height)$/.test(name) && value === 'auto') return '0px';
-  if (/^(top|right|bottom|left)$/.test(name) && ['fixed', 'absolute'].includes(state.position)) {
+  if (/^(top|right|bottom|left)$/.test(name) && ['fixed', 'absolute'].includes(state().position)) {
     const r = cssBoxModel.rect(element),
-      parent = state.position === 'fixed' ? null : geometryParent(element),
+      parent = state().position === 'fixed' ? null : geometryParent(element),
       p = parent ? cssBoxModel.rect(parent) : { x: 0, y: 0, ...host.viewport() };
     return (
       cssSerializeNumber(
@@ -638,8 +647,8 @@ const resolveCSSComputedValue = (element, name, pseudo = '') => {
   }
   if (name === 'transform-origin' || name === 'perspective-origin') {
     if (
-      state.display === 'inline' &&
-      !['absolute', 'fixed'].includes(state.position) &&
+      state().display === 'inline' &&
+      !['absolute', 'fixed'].includes(state().position) &&
       !replacedGeometryTags.has(elementSlot(element).tagName)
     )
       return '0px 0px';

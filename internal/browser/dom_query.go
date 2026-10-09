@@ -4,18 +4,21 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/moreveal/mimic/internal/engine"
 )
 
 // QueryDOM performs a CDP selector query through the same realm-local parser
 // and matcher as the DOM APIs. The caller holds the Page command boundary.
 func (p *Page) QueryDOM(ctx context.Context, nodeID int64, selector string, all bool) ([]int64, error) {
-	p.mu.RLock()
-	realm := p.Top.Realm
-	p.mu.RUnlock()
+	return p.QueryDOMInFrame(ctx, p.Top, nodeID, selector, all)
+}
+
+func (p *Page) QueryDOMInFrame(ctx context.Context, frame *Frame, nodeID int64, selector string, all bool) ([]int64, error) {
+	realm := frame.Realm
 	if realm == nil {
 		return nil, fmt.Errorf("page has no realm")
 	}
-	node, ok := realm.document.Get(nodeID)
+	node, ok := p.InspectorCanonicalNode(frame, nodeID)
 	if !ok {
 		return nil, fmt.Errorf("could not find node with given id")
 	}
@@ -30,7 +33,14 @@ func (p *Page) QueryDOM(ctx context.Context, nodeID int64, selector string, all 
 	if realm.domQueryCallback == nil {
 		return nil, fmt.Errorf("DOM selector callback unavailable")
 	}
-	value, err := realm.runtime.Call(ctx, realm.domQueryCallback, nil, realm.val(nodeID), realm.val(selector), realm.val(all))
+	args := []engine.Value{realm.val(nodeID), realm.val(selector), realm.val(all)}
+	defer func() {
+		for _, value := range args {
+			releaseDebuggerValue(realm, value)
+		}
+	}()
+	value, err := realm.runtime.Call(ctx, realm.domQueryCallback, nil, args...)
+	defer releaseDebuggerValue(realm, value)
 	if err != nil {
 		return nil, err
 	}

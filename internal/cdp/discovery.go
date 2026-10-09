@@ -31,7 +31,7 @@ func (s *Server) newTarget(w http.ResponseWriter, r *http.Request) {
 	if raw, err := url.QueryUnescape(r.URL.RawQuery); err == nil && raw != "" && raw != "about:blank" {
 		s.startTargetNavigation(page, raw)
 	}
-	writeJSON(w, map[string]any{"id": page.ID, "type": "page", "title": page.Title(), "url": page.URL(), "webSocketDebuggerUrl": "ws://" + r.Host + "/devtools/page/" + page.ID})
+	writeJSON(w, map[string]any{"id": page.ID, "type": "page", "title": page.Title(), "url": page.URL(), "webSocketDebuggerUrl": "ws://" + r.Host + "/devtools/page/" + page.ID, "devtoolsFrontendUrl": "devtools://devtools/bundled/inspector.html?ws=" + r.Host + "/devtools/page/" + page.ID})
 }
 func (s *Server) closeTargetHTTP(w http.ResponseWriter, r *http.Request) {
 	page, ok := s.page(strings.TrimPrefix(r.URL.Path, "/json/close/"))

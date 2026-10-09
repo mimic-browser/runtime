@@ -55,6 +55,7 @@
           children = Array.from(root.childNodes);
         result.push({
           hostID: elementSlot(node).nodeId,
+          rootID: 2147483648 + elementSlot(node).nodeId,
           mode: state.mode,
           delegatesFocus: state.delegatesFocus,
           children: children.map((n) => elementSlot(n).nodeId),

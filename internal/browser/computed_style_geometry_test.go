@@ -93,6 +93,37 @@ func TestScalarComputedValuesPreserveInheritanceAndMutation(t *testing.T) {
 	}
 }
 
+func TestScalarComputedValuesLeaveFallbackGeometryOrderIndependent(t *testing.T) {
+	parallelBrowserTest(t)
+	historyTestPages(t, func(t *testing.T, p *Page) {
+		navigateCapabilityFixture(t, p)
+		reduced := true
+		p.SetMediaPreferences("", &reduced)
+		value, err := p.Evaluate(context.Background(), `(() => {
+  const read = (scalarsFirst) => {
+    document.body.innerHTML = '<div style="width:40px;height:20px"></div>';
+    const element = document.body.firstChild;
+    const style = getComputedStyle(element);
+    const scalars = () => [style.backgroundImage, style.position, style.zIndex, style.borderTopStyle, style.overflowX, style.boxSizing];
+    const box = () => {
+      const rect = element.getBoundingClientRect();
+      return [rect.width, rect.height, style.width, style.height];
+    };
+    const first = scalarsFirst ? [scalars(), box()] : [null, box()];
+    if (!scalarsFirst) first[0] = scalars();
+    element.style.cssText = 'width:80px;height:30px;position:relative;z-index:7;overflow-x:hidden;box-sizing:border-box';
+    return [first, [scalars(), box()]];
+  };
+  const before = read(true), after = read(false);
+  return JSON.stringify({same:JSON.stringify(before) === JSON.stringify(after),before});
+})()`)
+		want := `{"same":true,"before":[[["none","static","auto","none","visible","content-box"],[40,20,"40px","20px"]],[["none","relative","7","none","hidden","border-box"],[80,30,"80px","30px"]]]}`
+		if err != nil || value != want {
+			t.Fatalf("scalar/geometry observation ordering: %v %v", value, err)
+		}
+	})
+}
+
 func TestTaffyRootMemoPreservesNegativeCustomAndWidthBoundaries(t *testing.T) {
 	parallelBrowserTest(t)
 	b, err := New(v8engine.Factory{}, chrome152.New())

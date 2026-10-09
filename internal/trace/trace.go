@@ -287,6 +287,7 @@ func (r *Recorder) Subscribe(f func(Event)) func() {
 // An empty kinds list retains Subscribe's all-event behavior.
 func (r *Recorder) SubscribeKinds(kinds []Kind, f func(Event)) func() {
 	r.mu.Lock()
+	previous := r.observationWantedLocked()
 	r.subID++
 	id := r.subID
 	var filter map[Kind]bool
@@ -300,16 +301,17 @@ func (r *Recorder) SubscribeKinds(kinds []Kind, f func(Event)) func() {
 	wanted := r.observationWantedLocked()
 	change := r.observationChange
 	r.mu.Unlock()
-	if change != nil {
+	if change != nil && wanted != previous {
 		change(wanted, false)
 	}
 	return func() {
 		r.mu.Lock()
+		previous := r.observationWantedLocked()
 		delete(r.subscribers, id)
 		wanted := r.observationWantedLocked()
 		change := r.observationChange
 		r.mu.Unlock()
-		if change != nil {
+		if change != nil && wanted != previous {
 			change(wanted, false)
 		}
 	}

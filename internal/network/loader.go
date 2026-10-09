@@ -133,6 +133,10 @@ type Request struct {
 	chain               requestChain
 }
 type Response struct {
+	// Inspector provenance belongs to retained request history, not the shared
+	// HTTP cache. It prevents a new document from exposing old frame resources.
+	inspectionFrame, inspectionRealm string
+	inspectionInitiator              Initiator
 	// Partial means policy stopped body consumption before the full resource.
 	Partial bool
 	// DecodeDisallowed survives delivery so later consumers cannot silently
@@ -1009,17 +1013,20 @@ func (l *Loader) after(ctx context.Context, r Request, res Response) (Response, 
 			performanceInitiatorType = "link"
 		}
 	}
-	l.trace.Add(trace.Network, "response", map[string]any{"id": r.ID, "url": r.URL.String(), "status": res.Status, "headers": headerStrings(res.Headers), "mimeType": strings.Split(res.Headers.Get("Content-Type"), ";")[0], "encodedDataLength": len(res.Body), "encodedBodySize": encodedBodySize, "decodedBodySize": len(res.Body), "transferSize": transferSize, "durationMs": float64(res.Duration) / float64(time.Millisecond), "protocol": res.Protocol, "transportTiming": res.TransportTiming, "browserVisibleTiming": res.BrowserVisibleTiming, "connectionReused": res.TransportTiming.Reused, "connectionId": res.TransportTiming.ConnectionID, "fromCache": res.FromCache, "partial": res.Partial, "initiator": r.Initiator, "performanceInitiatorType": performanceInitiatorType,
-		"performanceURL": r.performanceURL(), "performanceRedirectEnd": r.redirectEnd,
-		"performanceRedirectCount": r.redirectCount, "performanceTimingAllowFailed": r.performanceTimingAllowFailed(res.Headers),
-		"performanceCORSAccessible": (r.Initiator == Fetch || r.Initiator == XHR) && r.Mode != "no-cors" && corsResponseAllowed(r, res.Headers), "synthetic": res.Synthetic, "context": r.ContextID, "performanceOwner": r.PerformanceOwner, "performanceStart": r.PerformanceStart})
 	debugRetain := r.policySnapshot == nil || r.policySnapshot.config.ReportOnly || r.policySnapshot.decide(r).Work.DebugRetain == nil || *r.policySnapshot.decide(r).Work.DebugRetain
 	if debugRetain && !res.Partial {
 		res.policyOwner, res.policySnapshot = l.resourcePolicy, r.policySnapshot
+		res.inspectionFrame, res.inspectionRealm, res.inspectionInitiator = r.ContextID, r.PerformanceOwner, r.Initiator
 		if err := l.remember(r.ID, res); err != nil {
 			l.trace.Add(trace.Error, "responseBodyStorage", map[string]any{"id": r.ID, "error": err.Error(), "owner": "history"})
 		}
 	}
+	l.trace.Add(trace.Network, "response", map[string]any{"id": r.ID, "url": r.URL.String(), "status": res.Status, "headers": headerStrings(res.Headers), "mimeType": strings.Split(res.Headers.Get("Content-Type"), ";")[0], "encodedDataLength": len(res.Body), "encodedBodySize": encodedBodySize, "decodedBodySize": len(res.Body), "transferSize": transferSize, "durationMs": float64(res.Duration) / float64(time.Millisecond), "protocol": res.Protocol, "transportTiming": res.TransportTiming, "browserVisibleTiming": res.BrowserVisibleTiming, "connectionReused": res.TransportTiming.Reused, "connectionId": res.TransportTiming.ConnectionID, "fromCache": res.FromCache, "partial": res.Partial, "initiator": r.Initiator, "performanceInitiatorType": performanceInitiatorType,
+		"performanceURL": r.performanceURL(), "performanceRedirectEnd": r.redirectEnd,
+		"redirectMode": r.Redirect, "redirectLocation": res.Headers.Get("Location"),
+		"performanceRedirectCount": r.redirectCount, "performanceTimingAllowFailed": r.performanceTimingAllowFailed(res.Headers),
+		"performanceCORSAccessible": (r.Initiator == Fetch || r.Initiator == XHR) && r.Mode != "no-cors" && corsResponseAllowed(r, res.Headers), "synthetic": res.Synthetic, "context": r.ContextID, "performanceOwner": r.PerformanceOwner, "performanceStart": r.PerformanceStart})
+
 	if !res.Partial {
 		l.trace.Add(trace.Resource, "loadEnd", map[string]any{"id": r.ID, "url": r.URL.String(), "status": res.Status, "type": r.Initiator})
 	}
@@ -1168,12 +1175,24 @@ func (l *Loader) Completed(id string) (Response, bool) {
 
 // CompletedURL returns the latest retained response for an absolute URL.
 func (l *Loader) CompletedURL(rawURL string) (Response, bool) {
+	return l.completedURL(rawURL, nil)
+}
+
+func (l *Loader) CompletedResource(frameID, realmID, documentURL, rawURL string) (Response, bool) {
+	return l.completedURL(rawURL, func(r Response) bool { return retainedDocumentResource(r, frameID, realmID, documentURL) })
+}
+
+func retainedDocumentResource(r Response, frameID, realmID, documentURL string) bool {
+	return r.inspectionFrame == frameID && (r.inspectionRealm == realmID || ((r.inspectionInitiator == Navigation || r.inspectionInitiator == Iframe) && r.URL != nil && r.URL.String() == documentURL))
+}
+
+func (l *Loader) completedURL(rawURL string, accept func(Response) bool) (Response, bool) {
 	l.completedMu.RLock()
 	var response Response
 	found := false
 	for i := len(l.completedOrder) - 1; i >= 0; i-- {
 		r, ok := l.completed[l.completedOrder[i]]
-		if ok && r.URL != nil && r.URL.String() == rawURL {
+		if ok && r.URL != nil && r.URL.String() == rawURL && (accept == nil || accept(r)) {
 			response = r
 			found = r.bodyStorageErr == nil && r.sharedBody.retain()
 			break
@@ -1193,6 +1212,35 @@ func (l *Loader) CompletedURL(rawURL string) (Response, bool) {
 	response.Headers = response.Headers.Clone()
 	response.sharedBody = nil
 	return response, true
+}
+
+// RetainedResources reads metadata from the existing bounded response cache.
+func (l *Loader) RetainedResources(frameID, realmID, documentURL string) []map[string]any {
+	l.completedMu.RLock()
+	defer l.completedMu.RUnlock()
+	result := make([]map[string]any, 0, len(l.completedOrder))
+	for _, id := range l.completedOrder {
+		response := l.completed[id]
+		if response.URL == nil || !retainedDocumentResource(response, frameID, realmID, documentURL) || response.URL.String() == documentURL {
+			continue
+		}
+		contentType := response.Headers.Get("Content-Type")
+		kind := "Other"
+		switch {
+		case strings.Contains(contentType, "text/html"):
+			kind = "Document"
+		case strings.Contains(contentType, "text/css"):
+			kind = "Stylesheet"
+		case strings.Contains(contentType, "javascript"):
+			kind = "Script"
+		case strings.HasPrefix(contentType, "image/"):
+			kind = "Image"
+		case strings.HasPrefix(contentType, "font/"):
+			kind = "Font"
+		}
+		result = append(result, map[string]any{"url": response.URL.String(), "type": kind, "mimeType": strings.Split(contentType, ";")[0], "contentSize": response.EncodedBodySize})
+	}
+	return result
 }
 
 // CompletedBody projects directly from retained immutable storage to CDP's

@@ -21,10 +21,12 @@ import (
 // Snapshot is a static, portable document. Files are relative to index.html;
 // byte slices are base64 encoded by the CDP JSON encoder.
 type Snapshot struct {
-	URL       string            `json:"url"`
-	Files     map[string][]byte `json:"files"`
-	Warnings  []string          `json:"warnings"`
-	TimingsMS map[string]int64  `json:"timingsMs"`
+	InspectorFrames map[string]map[string]any `json:"-"`
+	InspectorScroll []float64                 `json:"-"`
+	URL             string                    `json:"url"`
+	Files           map[string][]byte         `json:"files"`
+	Warnings        []string                  `json:"warnings"`
+	TimingsMS       map[string]int64          `json:"timingsMs"`
 }
 
 type snapshotBuilder struct {
@@ -36,6 +38,7 @@ type snapshotBuilder struct {
 	prefetchComplete bool
 	count            int
 	frameCount       int
+	inspector        bool
 }
 
 type snapshotAssetSpec struct {
@@ -58,6 +61,17 @@ const (
 // CaptureSnapshot exports the current DOM, without executing the exported scripts.
 // Callers must serialize this operation with navigation/evaluation, as CDP does.
 func (p *Page) CaptureSnapshot(ctx context.Context) (*Snapshot, error) {
+	return p.captureSnapshot(ctx, false)
+}
+
+// CaptureInspectorSnapshot creates a script-free resource bundle with stable
+// node identities and current CSSOM. An external Blink renderer is a consumer
+// of this immutable projection, never an execution owner of the source Page.
+func (p *Page) CaptureInspectorSnapshot(ctx context.Context) (*Snapshot, error) {
+	return p.captureSnapshot(ctx, true)
+}
+
+func (p *Page) captureSnapshot(ctx context.Context, inspector bool) (*Snapshot, error) {
 	timings := map[string]int64{}
 	stage := time.Now()
 	mark := func(name string) {
@@ -68,6 +82,7 @@ func (p *Page) CaptureSnapshot(ctx context.Context) (*Snapshot, error) {
 		return nil, fmt.Errorf("page has no document")
 	}
 	b := &snapshotBuilder{
+		inspector:  inspector,
 		page:       p,
 		ctx:        ctx,
 		out:        Snapshot{URL: p.URL(), Files: map[string][]byte{}, Warnings: []string{}, TimingsMS: timings},
@@ -95,7 +110,12 @@ func (b *snapshotBuilder) captureFrame(frame *Frame, filename, htmlPrefix string
 		return err
 	}
 	mark("formState")
-	root, err := d.SnapshotTreeWithFormState(d.Root().ID, shadows, forms)
+	var root *html.Node
+	if b.inspector {
+		root, err = d.PreviewTree(d.Root().ID, shadows, forms, frame.RealmID())
+	} else {
+		root, err = d.SnapshotTreeWithFormState(d.Root().ID, shadows, forms)
+	}
 	if err != nil {
 		return err
 	}
@@ -124,6 +144,48 @@ func (b *snapshotBuilder) captureFrame(frame *Frame, filename, htmlPrefix string
 		return false
 	}
 	findBase(root)
+	if b.inspector {
+		styles, styleErr := b.page.ProtocolInspectorCSS(b.ctx, frame, map[string]any{"method": "view"})
+		if styleErr != nil {
+			return styleErr
+		}
+		if b.out.InspectorFrames == nil {
+			b.out.InspectorFrames = make(map[string]map[string]any)
+		}
+		b.out.InspectorFrames[frame.RealmID()] = map[string]any{"scroll": styles["scroll"], "positions": styles["positions"]}
+		if frame == b.page.Top {
+			if values, ok := styles["scroll"].([]any); ok {
+				for _, value := range values {
+					if number, ok := value.(float64); ok {
+						b.out.InspectorScroll = append(b.out.InspectorScroll, number)
+					}
+				}
+			}
+		}
+		var projectStyles func(*html.Node, bool)
+		projectStyles = func(n *html.Node, shadow bool) {
+			if n.Data == "template" {
+				shadow = true
+			}
+			for c := n.FirstChild; c != nil; {
+				next := c.NextSibling
+				if !shadow && c.Type == html.ElementNode && (c.Data == "style" || c.Data == "link") {
+					n.RemoveChild(c)
+				} else {
+					projectStyles(c, shadow)
+				}
+				c = next
+			}
+			if n.Data == "head" {
+				for _, text := range styles["styles"].([]any) {
+					style := &html.Node{Type: html.ElementNode, Data: "style"}
+					style.AppendChild(&html.Node{Type: html.TextNode, Data: text.(string)})
+					n.AppendChild(style)
+				}
+			}
+		}
+		projectStyles(root, false)
+	}
 	mark("findBase")
 	b.prefetchHTMLAssets(root, base)
 	mark("fetchAssets")

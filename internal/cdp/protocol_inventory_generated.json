@@ -17,12 +17,12 @@
     "types": 611,
     "methods": {
       "implemented": 9,
-      "partial": 118,
-      "unsupported": 538
+      "partial": 145,
+      "unsupported": 511
     },
     "events": {
-      "partial": 29,
-      "unsupported": 205
+      "partial": 43,
+      "unsupported": 191
     }
   },
   "entries": [
@@ -1425,7 +1425,11 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Active CSS sessions observe canonical stylesheet/style epochs; headers and stable realm-qualified IDs are scoped to current documents. Last-consumer cleanup releases inspector storage. Native font/animation/compositor notifications are not modeled.",
+        "tests": [
+          "internal/cdp/inspector_lifecycle_test.go#TestInspectorStylesSharedClientsAndCanonicalRuleIdentity"
+        ]
       }
     },
     {
@@ -1458,9 +1462,11 @@
       "returns": [],
       "support": {
         "status": "partial",
-        "notes": "Idempotently disables the session-owned read-only CSS domain and rejects subsequent computed-style reads. No stylesheet or font observer is installed; their notifications remain unsupported.",
+        "notes": "Session CSS activation requires DOM. Canonical realm CSSOM backs live stylesheet inventory, matched/inline/computed styles and editing. Last CSS consumer releases text handles; unchanged turns do not rescan styles. UA rule inventory and native font/animation attribution are unsupported.",
         "tests": [
-          "internal/cdp/css_test.go#TestCSSReadOnlyDomainUsesCanonicalStyle"
+          "internal/cdp/css_test.go#TestCSSReadOnlyDomainUsesCanonicalStyle",
+          "internal/cdp/inspector_lifecycle_test.go#TestInspectorInactiveAndIdleCost",
+          "internal/cdp/inspector_lifecycle_test.go#TestInspectorStylesSharedClientsAndCanonicalRuleIdentity"
         ]
       }
     },
@@ -1475,9 +1481,11 @@
       "returns": [],
       "support": {
         "status": "partial",
-        "notes": "Session-owned read-only CSS activation, requiring DOM.enable as in frozen Chrome 152. Enables canonical computed-style reads. Stylesheet inventory, font/stylesheet notifications, rule editing and matched-rule inspection are not implemented.",
+        "notes": "Session CSS activation requires DOM. Canonical realm CSSOM backs live stylesheet inventory, matched/inline/computed styles and editing. Last CSS consumer releases text handles; unchanged turns do not rescan styles. UA rule inventory and native font/animation attribution are unsupported.",
         "tests": [
-          "internal/cdp/css_test.go#TestCSSReadOnlyDomainUsesCanonicalStyle"
+          "internal/cdp/css_test.go#TestCSSReadOnlyDomainUsesCanonicalStyle",
+          "internal/cdp/inspector_lifecycle_test.go#TestInspectorInactiveAndIdleCost",
+          "internal/cdp/inspector_lifecycle_test.go#TestInspectorStylesSharedClientsAndCanonicalRuleIdentity"
         ]
       }
     },
@@ -1582,9 +1590,13 @@
       ],
       "support": {
         "status": "partial",
-        "notes": "Reads modeled standard properties and inherited custom properties through the canonical document-owner CSSOM, with CSS enable prerequisite, live mutation visibility and no author getter invocation. Existing CSSOM value boundaries apply; exact Blink property inventory/order and unsupported styling remain unverified.",
+        "notes": "Canonical owner-realm computed and inline styles, author/adopted stylesheet matches, inherited rules, before/after pseudo rules, media/supports filtering and shadow scoping. Source text/ranges describe the normalized inspector CSSOM projection. UA rules, container condition details, keyframe inventory, font attribution and forced pseudo state are unsupported.",
         "tests": [
-          "internal/cdp/css_test.go#TestCSSReadOnlyDomainUsesCanonicalStyle"
+          "internal/cdp/css_test.go#TestCSSReadOnlyDomainUsesCanonicalStyle",
+          "internal/cdp/inspector_test.go#TestInspectorCSSLiveEditing",
+          "internal/cdp/inspector_css_ranges_test.go#TestInspectorCSSSelectorRangesAndIdentity",
+          "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles"
         ]
       }
     },
@@ -1618,7 +1630,14 @@
         "attributesStyle"
       ],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Canonical owner-realm computed and inline styles, author/adopted stylesheet matches, inherited rules, before/after pseudo rules, media/supports filtering and shadow scoping. Source text/ranges describe the normalized inspector CSSOM projection. UA rules, container condition details, keyframe inventory, font attribution and forced pseudo state are unsupported.",
+        "tests": [
+          "internal/cdp/inspector_test.go#TestInspectorCSSLiveEditing",
+          "internal/cdp/inspector_css_ranges_test.go#TestInspectorCSSSelectorRangesAndIdentity",
+          "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles"
+        ]
       }
     },
     {
@@ -1701,7 +1720,14 @@
         "cssFunctionRules"
       ],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Canonical owner-realm computed and inline styles, author/adopted stylesheet matches, inherited rules, before/after pseudo rules, media/supports filtering and shadow scoping. Source text/ranges describe the normalized inspector CSSOM projection. UA rules, container condition details, keyframe inventory, font attribution and forced pseudo state are unsupported.",
+        "tests": [
+          "internal/cdp/inspector_test.go#TestInspectorCSSLiveEditing",
+          "internal/cdp/inspector_css_ranges_test.go#TestInspectorCSSSelectorRangesAndIdentity",
+          "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles"
+        ]
       }
     },
     {
@@ -1750,7 +1776,13 @@
         "text"
       ],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Canonical stylesheet/inline text editing with validated UTF-16 source ranges. Declaration and selector edits preserve existing CSSRule/CSSStyleDeclaration identity and invalidate the shared style resolver. Full sheet replacement reparses rules. Inspector source is normalized CSSOM text; multi-edit batches are sequential, without rollback. No inspector undo journal.",
+        "tests": [
+          "internal/cdp/inspector_test.go#TestInspectorCSSLiveEditing",
+          "internal/cdp/inspector_css_ranges_test.go#TestInspectorCSSSelectorRangesAndIdentity",
+          "internal/cdp/inspector_lifecycle_test.go#TestInspectorStylesSharedClientsAndCanonicalRuleIdentity"
+        ]
       }
     },
     {
@@ -1950,7 +1982,13 @@
         "selectorList"
       ],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Canonical stylesheet/inline text editing with validated UTF-16 source ranges. Declaration and selector edits preserve existing CSSRule/CSSStyleDeclaration identity and invalidate the shared style resolver. Full sheet replacement reparses rules. Inspector source is normalized CSSOM text; multi-edit batches are sequential, without rollback. No inspector undo journal.",
+        "tests": [
+          "internal/cdp/inspector_test.go#TestInspectorCSSLiveEditing",
+          "internal/cdp/inspector_css_ranges_test.go#TestInspectorCSSSelectorRangesAndIdentity",
+          "internal/cdp/inspector_lifecycle_test.go#TestInspectorStylesSharedClientsAndCanonicalRuleIdentity"
+        ]
       }
     },
     {
@@ -1987,7 +2025,13 @@
         "sourceMapURL"
       ],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Canonical stylesheet/inline text editing with validated UTF-16 source ranges. Declaration and selector edits preserve existing CSSRule/CSSStyleDeclaration identity and invalidate the shared style resolver. Full sheet replacement reparses rules. Inspector source is normalized CSSOM text; multi-edit batches are sequential, without rollback. No inspector undo journal.",
+        "tests": [
+          "internal/cdp/inspector_test.go#TestInspectorCSSLiveEditing",
+          "internal/cdp/inspector_css_ranges_test.go#TestInspectorCSSSelectorRangesAndIdentity",
+          "internal/cdp/inspector_lifecycle_test.go#TestInspectorStylesSharedClientsAndCanonicalRuleIdentity"
+        ]
       }
     },
     {
@@ -2006,7 +2050,13 @@
         "styles"
       ],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Canonical stylesheet/inline text editing with validated UTF-16 source ranges. Declaration and selector edits preserve existing CSSRule/CSSStyleDeclaration identity and invalidate the shared style resolver. Full sheet replacement reparses rules. Inspector source is normalized CSSOM text; multi-edit batches are sequential, without rollback. No inspector undo journal.",
+        "tests": [
+          "internal/cdp/inspector_test.go#TestInspectorCSSLiveEditing",
+          "internal/cdp/inspector_css_ranges_test.go#TestInspectorCSSSelectorRangesAndIdentity",
+          "internal/cdp/inspector_lifecycle_test.go#TestInspectorStylesSharedClientsAndCanonicalRuleIdentity"
+        ]
       }
     },
     {
@@ -2068,7 +2118,11 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Active CSS sessions observe canonical stylesheet/style epochs; headers and stable realm-qualified IDs are scoped to current documents. Last-consumer cleanup releases inspector storage. Native font/animation/compositor notifications are not modeled.",
+        "tests": [
+          "internal/cdp/inspector_lifecycle_test.go#TestInspectorStylesSharedClientsAndCanonicalRuleIdentity"
+        ]
       }
     },
     {
@@ -2083,7 +2137,11 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Active CSS sessions observe canonical stylesheet/style epochs; headers and stable realm-qualified IDs are scoped to current documents. Last-consumer cleanup releases inspector storage. Native font/animation/compositor notifications are not modeled.",
+        "tests": [
+          "internal/cdp/inspector_lifecycle_test.go#TestInspectorStylesSharedClientsAndCanonicalRuleIdentity"
+        ]
       }
     },
     {
@@ -2098,7 +2156,11 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Active CSS sessions observe canonical stylesheet/style epochs; headers and stable realm-qualified IDs are scoped to current documents. Last-consumer cleanup releases inspector storage. Native font/animation/compositor notifications are not modeled.",
+        "tests": [
+          "internal/cdp/inspector_lifecycle_test.go#TestInspectorStylesSharedClientsAndCanonicalRuleIdentity"
+        ]
       }
     },
     {
@@ -2113,7 +2175,12 @@
         "nodeIds"
       ],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Explicit session-owned computed-style watches observe canonical style epochs. Single-node changes notify; property/value watches collect changed frontend-bound element IDs. No periodic scanner runs while inactive or unchanged.",
+        "tests": [
+          "internal/cdp/inspector_lifecycle_test.go#TestInspectorStylesSharedClientsAndCanonicalRuleIdentity",
+          "internal/cdp/inspector_lifecycle_test.go#TestInspectorComputedPropertyTracking"
+        ]
       }
     },
     {
@@ -2144,7 +2211,12 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Explicit session-owned computed-style watches observe canonical style epochs. Single-node changes notify; property/value watches collect changed frontend-bound element IDs. No periodic scanner runs while inactive or unchanged.",
+        "tests": [
+          "internal/cdp/inspector_lifecycle_test.go#TestInspectorStylesSharedClientsAndCanonicalRuleIdentity",
+          "internal/cdp/inspector_lifecycle_test.go#TestInspectorComputedPropertyTracking"
+        ]
       }
     },
     {
@@ -2159,7 +2231,11 @@
       ],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Explicit session-owned computed-style watches observe canonical style epochs. Single-node changes notify; property/value watches collect changed frontend-bound element IDs. No periodic scanner runs while inactive or unchanged.",
+        "tests": [
+          "internal/cdp/inspector_lifecycle_test.go#TestInspectorStylesSharedClientsAndCanonicalRuleIdentity"
+        ]
       }
     },
     {
@@ -2503,7 +2579,15 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "On-demand notifications for requested frontend nodes reflect canonical state at completed Page turns, including frame/shadow ownership. Mutation bursts are coalesced; exact native per-mutation delivery ordering, distributed nodes and UA shadow events are incomplete.",
+        "tests": [
+          "internal/cdp/inspector_test.go#TestInspectorDOMNotificationsAndCleanup",
+          "internal/cdp/inspector_mutations_test.go#TestInspectorShadowAttachmentAndChildUpdates",
+          "internal/cdp/inspector_mutations_test.go#TestInspectorChildFrameNotificationsAndSerialization",
+          "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles"
+        ]
       }
     },
     {
@@ -2519,7 +2603,15 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "On-demand notifications for requested frontend nodes reflect canonical state at completed Page turns, including frame/shadow ownership. Mutation bursts are coalesced; exact native per-mutation delivery ordering, distributed nodes and UA shadow events are incomplete.",
+        "tests": [
+          "internal/cdp/inspector_test.go#TestInspectorDOMNotificationsAndCleanup",
+          "internal/cdp/inspector_mutations_test.go#TestInspectorShadowAttachmentAndChildUpdates",
+          "internal/cdp/inspector_mutations_test.go#TestInspectorChildFrameNotificationsAndSerialization",
+          "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles"
+        ]
       }
     },
     {
@@ -2535,7 +2627,15 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "On-demand notifications for requested frontend nodes reflect canonical state at completed Page turns, including frame/shadow ownership. Mutation bursts are coalesced; exact native per-mutation delivery ordering, distributed nodes and UA shadow events are incomplete.",
+        "tests": [
+          "internal/cdp/inspector_test.go#TestInspectorDOMNotificationsAndCleanup",
+          "internal/cdp/inspector_mutations_test.go#TestInspectorShadowAttachmentAndChildUpdates",
+          "internal/cdp/inspector_mutations_test.go#TestInspectorChildFrameNotificationsAndSerialization",
+          "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles"
+        ]
       }
     },
     {
@@ -2551,7 +2651,15 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "On-demand notifications for requested frontend nodes reflect canonical state at completed Page turns, including frame/shadow ownership. Mutation bursts are coalesced; exact native per-mutation delivery ordering, distributed nodes and UA shadow events are incomplete.",
+        "tests": [
+          "internal/cdp/inspector_test.go#TestInspectorDOMNotificationsAndCleanup",
+          "internal/cdp/inspector_mutations_test.go#TestInspectorShadowAttachmentAndChildUpdates",
+          "internal/cdp/inspector_mutations_test.go#TestInspectorChildFrameNotificationsAndSerialization",
+          "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles"
+        ]
       }
     },
     {
@@ -2568,7 +2676,17 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "On-demand notifications for requested frontend nodes reflect canonical state at completed Page turns, including frame/shadow ownership. Mutation bursts are coalesced; exact native per-mutation delivery ordering, distributed nodes and UA shadow events are incomplete.",
+        "tests": [
+          "internal/cdp/inspector_test.go#TestInspectorDOMNotificationsAndCleanup",
+          "internal/cdp/inspector_mutations_test.go#TestInspectorShadowAttachmentAndChildUpdates",
+          "internal/cdp/inspector_mutations_test.go#TestInspectorChildFrameNotificationsAndSerialization",
+          "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles",
+          "internal/cdp/inspector_performance_test.go#TestInspectorWideTreeInputPreservesBindings",
+          "internal/cdp/inspector_performance_test.go#TestInspectorChildDiffPreservesRelativeOrder"
+        ]
       }
     },
     {
@@ -2584,7 +2702,17 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "On-demand notifications for requested frontend nodes reflect canonical state at completed Page turns, including frame/shadow ownership. Mutation bursts are coalesced; exact native per-mutation delivery ordering, distributed nodes and UA shadow events are incomplete.",
+        "tests": [
+          "internal/cdp/inspector_test.go#TestInspectorDOMNotificationsAndCleanup",
+          "internal/cdp/inspector_mutations_test.go#TestInspectorShadowAttachmentAndChildUpdates",
+          "internal/cdp/inspector_mutations_test.go#TestInspectorChildFrameNotificationsAndSerialization",
+          "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles",
+          "internal/cdp/inspector_performance_test.go#TestInspectorWideTreeInputPreservesBindings",
+          "internal/cdp/inspector_performance_test.go#TestInspectorChildDiffPreservesRelativeOrder"
+        ]
       }
     },
     {
@@ -2643,10 +2771,12 @@
       ],
       "support": {
         "status": "partial",
-        "notes": "Canonical node IDs, metadata, attributes, children and depth traversal. Shadow piercing, whitespace modes, distributed nodes and full frontend node lifecycle are incomplete.",
+        "notes": "Canonical document, child-frame and closed/open shadow-root inspection with Page-owned int32 handles. Old document/frame handles reject after navigation or detachment. Frontend bindings are allocated on request and released on disable/disconnect. Whitespace modes, distributed nodes and UA shadow trees are not modeled.",
         "tests": [
           "internal/cdp/dom_query_test.go#TestDOMQueryInitialDocumentBootstrapsRealm",
-          "compatibility/cdp_automation.mjs#dom.selectors_element_evaluation"
+          "compatibility/cdp_automation.mjs#dom.selectors_element_evaluation",
+          "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles"
         ]
       }
     },
@@ -2679,7 +2809,11 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "On-demand CSS selector and case-insensitive tag/attribute/text search across canonical documents and shadow roots. At most eight searches and 100000 handles per search; discard, document replacement, disable and disconnect release results. XPath and UA shadow searches are unsupported.",
+        "tests": [
+          "internal/cdp/inspector_css_ranges_test.go#TestInspectorDOMSearchAndRelease"
+        ]
       }
     },
     {
@@ -2709,9 +2843,15 @@
       "returns": [],
       "support": {
         "status": "partial",
-        "notes": "DOM-enabled sessions receive the inspected top document invalidation after canonical DOMContentLoaded; child-frame parsing does not invalidate the entire frontend tree. A refreshed getDocument projects the new canonical tree. Full frontend node remapping (document-local IDs may be reused), BFCache restoration and zero-document transitions are not modeled.",
+        "notes": "Top-level replacement is notified once per canonical Document across commit and parsing completion. On-demand notifications for requested frontend nodes reflect canonical state at completed Page turns, including frame/shadow ownership. Mutation bursts are coalesced; exact native per-mutation delivery ordering, distributed nodes and UA shadow events are incomplete.",
         "tests": [
-          "internal/cdp/document_projection_test.go#TestDocumentUpdatedAndFrameSecurityProjection"
+          "internal/cdp/document_projection_test.go#TestDocumentUpdatedAndFrameSecurityProjection",
+          "internal/cdp/inspector_test.go#TestInspectorDOMNotificationsAndCleanup",
+          "internal/cdp/inspector_mutations_test.go#TestInspectorShadowAttachmentAndChildUpdates",
+          "internal/cdp/inspector_mutations_test.go#TestInspectorChildFrameNotificationsAndSerialization",
+          "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorSearchWithoutTreeInvalidatesOnNavigation"
         ]
       }
     },
@@ -2749,9 +2889,12 @@
       "returns": [],
       "support": {
         "status": "partial",
-        "notes": "Canonical focus shared with trusted input/isolated worlds; full browser focusability/shadow focus is incomplete.",
+        "notes": "Live canonical DOM edits and focus, including frame/shadow ownership. Character-data edits validate node type. Attribute text uses the document fragment parser. No inspector undo journal or special XML editing contract.",
         "tests": [
-          "internal/browser/input_test.go#TestProtocolInputSharesFocusAndFormStateAcrossWorlds"
+          "internal/browser/input_test.go#TestProtocolInputSharesFocusAndFormStateAcrossWorlds",
+          "internal/cdp/inspector_editing_test.go#TestInspectorElementsEditingCommands",
+          "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles"
         ]
       }
     },
@@ -2809,9 +2952,11 @@
       ],
       "support": {
         "status": "partial",
-        "notes": "Alternating canonical attribute names/values for live elements; full DOM frontend lifecycle is not modeled.",
+        "notes": "Canonical document, child-frame and closed/open shadow-root inspection with Page-owned int32 handles. Old document/frame handles reject after navigation or detachment. Frontend bindings are allocated on request and released on disable/disconnect. Whitespace modes, distributed nodes and UA shadow trees are not modeled.",
         "tests": [
-          "compatibility/cdp_automation.mjs#dom.selectors_element_evaluation"
+          "compatibility/cdp_automation.mjs#dom.selectors_element_evaluation",
+          "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles"
         ]
       }
     },
@@ -2832,11 +2977,12 @@
       ],
       "support": {
         "status": "partial",
-        "notes": "Same modeled rectangle/CSS edges as JS and hit testing. No complete layout/transforms/SVG quads or multiple inline fragments.",
+        "notes": "Same modeled rectangle/CSS edges as JS and hit testing. No complete layout/transforms/SVG quads or multiple inline fragments. Foreign Console wrappers retain their canonical frame/node owner; resolving into an explicit foreign execution context imports the same canonical reference.",
         "tests": [
           "internal/browser/input_test.go#TestDefaultControlGeometryMatchesChrome152",
           "compatibility/cdp_automation.py#input.pointer_click",
-          "compatibility/cdp_automation.mjs#input.pointer_click"
+          "compatibility/cdp_automation.mjs#input.pointer_click",
+          "internal/cdp/inspector_command_line_frames_test.go#TestInspectorCommandLineChildSelection"
         ]
       }
     },
@@ -2880,11 +3026,12 @@
       ],
       "support": {
         "status": "partial",
-        "notes": "Same modeled rectangle/CSS edges as JS and hit testing. No complete layout/transforms/SVG quads or multiple inline fragments.",
+        "notes": "Same modeled rectangle/CSS edges as JS and hit testing. No complete layout/transforms/SVG quads or multiple inline fragments. Foreign Console wrappers retain their canonical frame/node owner; resolving into an explicit foreign execution context imports the same canonical reference.",
         "tests": [
           "internal/browser/input_test.go#TestDefaultControlGeometryMatchesChrome152",
           "compatibility/cdp_automation.py#input.pointer_click",
-          "compatibility/cdp_automation.mjs#input.pointer_click"
+          "compatibility/cdp_automation.mjs#input.pointer_click",
+          "internal/cdp/inspector_command_line_frames_test.go#TestInspectorCommandLineChildSelection"
         ]
       }
     },
@@ -2919,10 +3066,12 @@
       ],
       "support": {
         "status": "partial",
-        "notes": "Canonical node IDs, metadata, attributes, children and depth traversal. Shadow piercing, whitespace modes, distributed nodes and full frontend node lifecycle are incomplete.",
+        "notes": "Canonical document, child-frame and closed/open shadow-root inspection with Page-owned int32 handles. Old document/frame handles reject after navigation or detachment. Frontend bindings are allocated on request and released on disable/disconnect. Whitespace modes, distributed nodes and UA shadow trees are not modeled.",
         "tests": [
           "internal/cdp/dom_query_test.go#TestDOMQueryInitialDocumentBootstrapsRealm",
-          "compatibility/cdp_automation.mjs#dom.selectors_element_evaluation"
+          "compatibility/cdp_automation.mjs#dom.selectors_element_evaluation",
+          "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles"
         ]
       }
     },
@@ -2995,9 +3144,11 @@
       ],
       "support": {
         "status": "partial",
-        "notes": "Returns the canonical iframe owner node for live child frames; detached frames and complete frontend node lifecycle behavior are not modeled.",
+        "notes": "Canonical document, child-frame and closed/open shadow-root inspection with Page-owned int32 handles. Old document/frame handles reject after navigation or detachment. Frontend bindings are allocated on request and released on disable/disconnect. Whitespace modes, distributed nodes and UA shadow trees are not modeled.",
         "tests": [
-          "internal/cdp/dom_query_test.go#TestDOMGetFrameOwnerReturnsEmbeddingNode"
+          "internal/cdp/dom_query_test.go#TestDOMGetFrameOwnerReturnsEmbeddingNode",
+          "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles"
         ]
       }
     },
@@ -3021,7 +3172,11 @@
         "nodeId"
       ],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Hit testing is available only with an explicitly active external Blink screencast. Presentation hits are translated to canonical Mimic frame/node handles; no renderer handle is exposed. Native Mimic compositor, UA shadow-node identities and pointer-events overrides are unsupported.",
+        "tests": [
+          "internal/cdp/screencast_test.go#TestInspectorBlinkScreencastLiveAndCleanup"
+        ]
       }
     },
     {
@@ -3079,9 +3234,11 @@
       ],
       "support": {
         "status": "partial",
-        "notes": "Serializes live nodeId/backendNodeId; objectId and includeShadowDOM are not implemented.",
+        "notes": "Serializes canonical owner-document nodes addressed by nodeId, backendNodeId or objectId; synthetic ShadowRoot addresses serialize their children. includeShadowDOM options are not implemented. Foreign Console wrappers retain their canonical frame/node owner; resolving into an explicit foreign execution context imports the same canonical reference.",
         "tests": [
-          "internal/cdp/dom_serialization_test.go#TestDOMOuterHTMLSerializesRequestedLiveNode"
+          "internal/cdp/dom_serialization_test.go#TestDOMOuterHTMLSerializesRequestedLiveNode",
+          "internal/cdp/inspector_mutations_test.go#TestInspectorChildFrameNotificationsAndSerialization",
+          "internal/cdp/inspector_command_line_frames_test.go#TestInspectorCommandLineChildSelection"
         ]
       }
     },
@@ -3135,7 +3292,12 @@
         "nodeIds"
       ],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "On-demand CSS selector and case-insensitive tag/attribute/text search across canonical documents and shadow roots. At most eight searches and 100000 handles per search; discard, document replacement, disable and disconnect release results. XPath and UA shadow searches are unsupported.",
+        "tests": [
+          "internal/cdp/inspector_css_ranges_test.go#TestInspectorDOMSearchAndRelease",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorSearchWithoutTreeInvalidatesOnNavigation"
+        ]
       }
     },
     {
@@ -3257,7 +3419,12 @@
         "resultCount"
       ],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "On-demand CSS selector and case-insensitive tag/attribute/text search across canonical documents and shadow roots. At most eight searches and 100000 handles per search; discard, document replacement, disable and disconnect release results. XPath and UA shadow searches are unsupported.",
+        "tests": [
+          "internal/cdp/inspector_css_ranges_test.go#TestInspectorDOMSearchAndRelease",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorSearchWithoutTreeInvalidatesOnNavigation"
+        ]
       }
     },
     {
@@ -3323,7 +3490,12 @@
         "nodeIds"
       ],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Canonical document, child-frame and closed/open shadow-root inspection with Page-owned int32 handles. Old document/frame handles reject after navigation or detachment. Frontend bindings are allocated on request and released on disable/disconnect. Whitespace modes, distributed nodes and UA shadow trees are not modeled.",
+        "tests": [
+          "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles"
+        ]
       }
     },
     {
@@ -3342,10 +3514,13 @@
       ],
       "support": {
         "status": "partial",
-        "notes": "Uses canonical page JavaScript selector engine and publishes matched ancestor paths before returning IDs to shallow frontend trees. Selector completeness follows that engine; full frontend node bookkeeping remains incomplete.",
+        "notes": "Canonical document, child-frame and closed/open shadow-root inspection with Page-owned int32 handles. Old document/frame handles reject after navigation or detachment. Frontend bindings are allocated on request and released on disable/disconnect. Whitespace modes, distributed nodes and UA shadow trees are not modeled. Already published ancestor child lists are not republished by queries, preserving frontend DOMNode selection identity.",
         "tests": [
           "internal/cdp/dom_query_test.go#TestDOMQueriesShareRealmSelectorEngine",
-          "internal/cdp/dom_query_projection_test.go#TestDOMQueriesPublishAncestorPathBeforeReply"
+          "internal/cdp/dom_query_projection_test.go#TestDOMQueriesPublishAncestorPathBeforeReply",
+          "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles",
+          "internal/cdp/inspector_mutations_test.go#TestInspectorQueriesPreservePublishedTreeIdentity"
         ]
       }
     },
@@ -3365,10 +3540,13 @@
       ],
       "support": {
         "status": "partial",
-        "notes": "Uses canonical page JavaScript selector engine and publishes matched ancestor paths before returning IDs to shallow frontend trees. Selector completeness follows that engine; full frontend node bookkeeping remains incomplete.",
+        "notes": "Canonical document, child-frame and closed/open shadow-root inspection with Page-owned int32 handles. Old document/frame handles reject after navigation or detachment. Frontend bindings are allocated on request and released on disable/disconnect. Whitespace modes, distributed nodes and UA shadow trees are not modeled. Already published ancestor child lists are not republished by queries, preserving frontend DOMNode selection identity.",
         "tests": [
           "internal/cdp/dom_query_test.go#TestDOMQueriesShareRealmSelectorEngine",
-          "internal/cdp/dom_query_projection_test.go#TestDOMQueriesPublishAncestorPathBeforeReply"
+          "internal/cdp/dom_query_projection_test.go#TestDOMQueriesPublishAncestorPathBeforeReply",
+          "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles",
+          "internal/cdp/inspector_mutations_test.go#TestInspectorQueriesPreservePublishedTreeIdentity"
         ]
       }
     },
@@ -3399,8 +3577,12 @@
       "returns": [],
       "support": {
         "status": "partial",
-        "notes": "Mutates canonical DOM through normal realm operations. Full CDP mutation notifications/frontend bookkeeping are incomplete.",
-        "tests": []
+        "notes": "Live canonical DOM edits and focus, including frame/shadow ownership. Character-data edits validate node type. Attribute text uses the document fragment parser. No inspector undo journal or special XML editing contract.",
+        "tests": [
+          "internal/cdp/inspector_editing_test.go#TestInspectorElementsEditingCommands",
+          "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles"
+        ]
       }
     },
     {
@@ -3416,8 +3598,12 @@
       "returns": [],
       "support": {
         "status": "partial",
-        "notes": "Mutates canonical DOM through normal realm operations. Full CDP mutation notifications/frontend bookkeeping are incomplete.",
-        "tests": []
+        "notes": "Live canonical DOM edits and focus, including frame/shadow ownership. Character-data edits validate node type. Attribute text uses the document fragment parser. No inspector undo journal or special XML editing contract.",
+        "tests": [
+          "internal/cdp/inspector_editing_test.go#TestInspectorElementsEditingCommands",
+          "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles"
+        ]
       }
     },
     {
@@ -3436,10 +3622,12 @@
       "returns": [],
       "support": {
         "status": "partial",
-        "notes": "Canonical node IDs, metadata, attributes, children and depth traversal. Shadow piercing, whitespace modes, distributed nodes and full frontend node lifecycle are incomplete.",
+        "notes": "Canonical document, child-frame and closed/open shadow-root inspection with Page-owned int32 handles. Old document/frame handles reject after navigation or detachment. Frontend bindings are allocated on request and released on disable/disconnect. Whitespace modes, distributed nodes and UA shadow trees are not modeled.",
         "tests": [
           "internal/cdp/dom_query_test.go#TestDOMQueryInitialDocumentBootstrapsRealm",
-          "compatibility/cdp_automation.mjs#dom.selectors_element_evaluation"
+          "compatibility/cdp_automation.mjs#dom.selectors_element_evaluation",
+          "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles"
         ]
       }
     },
@@ -3458,10 +3646,13 @@
       ],
       "support": {
         "status": "partial",
-        "notes": "Maps canonical nodes to realm/session handles and emits ancestor projections; complete frontend lifecycle is not verified.",
+        "notes": "Canonical document, child-frame and closed/open shadow-root inspection with Page-owned int32 handles. Old document/frame handles reject after navigation or detachment. Frontend bindings are allocated on request and released on disable/disconnect. Whitespace modes, distributed nodes and UA shadow trees are not modeled. Foreign Console wrappers retain their canonical frame/node owner; resolving into an explicit foreign execution context imports the same canonical reference.",
         "tests": [
           "internal/browser/debugger_test.go#TestDebuggerCanonicalNodeAndSessionIsolation",
-          "compatibility/cdp_automation.mjs#dom.selectors_element_evaluation"
+          "compatibility/cdp_automation.mjs#dom.selectors_element_evaluation",
+          "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles",
+          "internal/cdp/inspector_command_line_frames_test.go#TestInspectorCommandLineChildSelection"
         ]
       }
     },
@@ -3483,10 +3674,13 @@
       ],
       "support": {
         "status": "partial",
-        "notes": "Maps canonical nodes to realm/session handles and emits ancestor projections; complete frontend lifecycle is not verified.",
+        "notes": "Canonical document, child-frame and closed/open shadow-root inspection with Page-owned int32 handles. Old document/frame handles reject after navigation or detachment. Frontend bindings are allocated on request and released on disable/disconnect. Whitespace modes, distributed nodes and UA shadow trees are not modeled. Foreign Console wrappers retain their canonical frame/node owner; resolving into an explicit foreign execution context imports the same canonical reference.",
         "tests": [
           "internal/browser/debugger_test.go#TestDebuggerCanonicalNodeAndSessionIsolation",
-          "compatibility/cdp_automation.mjs#dom.selectors_element_evaluation"
+          "compatibility/cdp_automation.mjs#dom.selectors_element_evaluation",
+          "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles",
+          "internal/cdp/inspector_command_line_frames_test.go#TestInspectorCommandLineChildSelection"
         ]
       }
     },
@@ -3506,9 +3700,10 @@
       "returns": [],
       "support": {
         "status": "partial",
-        "notes": "Canonical element scroll operation; optional rect and full nested layout/scrolling are not implemented.",
+        "notes": "Canonical element scroll operation; optional rect and full nested layout/scrolling are not implemented. Foreign Console wrappers retain their canonical frame/node owner; resolving into an explicit foreign execution context imports the same canonical reference.",
         "tests": [
-          "compatibility/cdp_automation.mjs#input.pointer_click"
+          "compatibility/cdp_automation.mjs#input.pointer_click",
+          "internal/cdp/inspector_command_line_frames_test.go#TestInspectorCommandLineChildSelection"
         ]
       }
     },
@@ -3543,8 +3738,12 @@
       "returns": [],
       "support": {
         "status": "partial",
-        "notes": "Mutates canonical DOM through normal realm operations. Full CDP mutation notifications/frontend bookkeeping are incomplete.",
-        "tests": []
+        "notes": "Live canonical DOM edits and focus, including frame/shadow ownership. Character-data edits validate node type. Attribute text uses the document fragment parser. No inspector undo journal or special XML editing contract.",
+        "tests": [
+          "internal/cdp/inspector_editing_test.go#TestInspectorElementsEditingCommands",
+          "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles"
+        ]
       }
     },
     {
@@ -3562,7 +3761,13 @@
       ],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Live canonical DOM edits and focus, including frame/shadow ownership. Character-data edits validate node type. Attribute text uses the document fragment parser. No inspector undo journal or special XML editing contract.",
+        "tests": [
+          "internal/cdp/inspector_editing_test.go#TestInspectorElementsEditingCommands",
+          "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles"
+        ]
       }
     },
     {
@@ -3579,9 +3784,15 @@
       "returns": [],
       "support": {
         "status": "partial",
-        "notes": "Requested child/ancestor projection; full incremental frontend DOM mutation stream is absent.",
+        "notes": "On-demand notifications for requested frontend nodes reflect canonical state at completed Page turns, including frame/shadow ownership. Mutation bursts are coalesced; exact native per-mutation delivery ordering, distributed nodes and UA shadow events are incomplete. Already published ancestor child lists are not republished by queries, preserving frontend DOMNode selection identity.",
         "tests": [
-          "compatibility/cdp_automation.mjs#dom.selectors_element_evaluation"
+          "compatibility/cdp_automation.mjs#dom.selectors_element_evaluation",
+          "internal/cdp/inspector_test.go#TestInspectorDOMNotificationsAndCleanup",
+          "internal/cdp/inspector_mutations_test.go#TestInspectorShadowAttachmentAndChildUpdates",
+          "internal/cdp/inspector_mutations_test.go#TestInspectorChildFrameNotificationsAndSerialization",
+          "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles",
+          "internal/cdp/inspector_mutations_test.go#TestInspectorQueriesPreservePublishedTreeIdentity"
         ]
       }
     },
@@ -3616,7 +3827,12 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Retains up to five canonical selected wrappers per session for native V8 command-line evaluation ($0 through $4). Foreign-frame selections use the canonical cross-realm reference bridge; retired/unavailable selections are undefined. Retired realm selections are pruned; no author globals are installed.",
+        "tests": [
+          "internal/cdp/inspector_command_line_test.go#TestInspectorCommandLineSelectionAndGlobalSemantics",
+          "internal/cdp/inspector_command_line_frames_test.go#TestInspectorCommandLineChildSelection"
+        ]
       }
     },
     {
@@ -3666,8 +3882,12 @@
       "returns": [],
       "support": {
         "status": "partial",
-        "notes": "Mutates canonical DOM through normal realm operations. Full CDP mutation notifications/frontend bookkeeping are incomplete.",
-        "tests": []
+        "notes": "Live canonical DOM edits and focus, including frame/shadow ownership. Character-data edits validate node type. Attribute text uses the document fragment parser. No inspector undo journal or special XML editing contract.",
+        "tests": [
+          "internal/cdp/inspector_editing_test.go#TestInspectorElementsEditingCommands",
+          "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles"
+        ]
       }
     },
     {
@@ -3684,8 +3904,12 @@
       "returns": [],
       "support": {
         "status": "partial",
-        "notes": "Mutates canonical DOM through normal realm operations. Full CDP mutation notifications/frontend bookkeeping are incomplete.",
-        "tests": []
+        "notes": "Live canonical DOM edits and focus, including frame/shadow ownership. Character-data edits validate node type. Attribute text uses the document fragment parser. No inspector undo journal or special XML editing contract.",
+        "tests": [
+          "internal/cdp/inspector_editing_test.go#TestInspectorElementsEditingCommands",
+          "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles"
+        ]
       }
     },
     {
@@ -3717,7 +3941,15 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "On-demand notifications for requested frontend nodes reflect canonical state at completed Page turns, including frame/shadow ownership. Mutation bursts are coalesced; exact native per-mutation delivery ordering, distributed nodes and UA shadow events are incomplete.",
+        "tests": [
+          "internal/cdp/inspector_test.go#TestInspectorDOMNotificationsAndCleanup",
+          "internal/cdp/inspector_mutations_test.go#TestInspectorShadowAttachmentAndChildUpdates",
+          "internal/cdp/inspector_mutations_test.go#TestInspectorChildFrameNotificationsAndSerialization",
+          "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
+          "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles"
+        ]
       }
     },
     {
@@ -7014,10 +7246,13 @@
       "returns": [],
       "support": {
         "status": "partial",
-        "notes": "Trusted mouse/pointer/click events and form/link defaults using canonical modeled boxes. Wheel/pen reject. Drag/capture/precise layout/multi-click defaults and full enter/leave semantics are incomplete.",
+        "notes": "Canonical trusted mouse dispatch. During an explicitly active Blink screencast, hit testing uses inert presentation geometry and maps the hit back to its authoritative Mimic frame/node before dispatch. Ordinary protocol input keeps Mimic geometry. Full native compositor/drag/touch fidelity is unsupported.",
         "tests": [
           "internal/browser/input_test.go#TestProtocolSelectAndContentClickAcrossWorlds",
-          "compatibility/cdp_automation.mjs#input.pointer_click"
+          "compatibility/cdp_automation.mjs#input.pointer_click",
+          "internal/cdp/screencast_test.go#TestInspectorBlinkScreencastLiveAndCleanup",
+          "internal/cdp/screencast_test.go#TestInspectorBlinkWheelChangesVisiblePixels",
+          "internal/cdp/screencast_test.go#TestInspectorBlinkNestedScrollAndRasterResolution"
         ]
       }
     },
@@ -8344,10 +8579,11 @@
       "returns": [],
       "support": {
         "status": "partial",
-        "notes": "Per-session network stream; buffer sizing/durable messages/direct-socket options are not implemented.",
+        "notes": "Session network event subscription; POST/redirect inspector history is allocated only when needed and released on disable/disconnect. Loader state remains canonical. Extra-info events, durable messages and complete streaming/timing fidelity are unsupported.",
         "tests": [
           "internal/cdp/server_test.go#TestCDPProtocolProjectsActualTransportProtocol",
-          "compatibility/cdp_automation.py#network.response_body_extra_headers"
+          "compatibility/cdp_automation.py#network.response_body_extra_headers",
+          "internal/cdp/inspector_network_test.go#TestInspectorNetworkRedirectPostAndBodies"
         ]
       }
     },
@@ -8413,10 +8649,11 @@
       "returns": [],
       "support": {
         "status": "partial",
-        "notes": "Per-session network stream; buffer sizing/durable messages/direct-socket options are not implemented.",
+        "notes": "Session network event subscription; POST/redirect inspector history is allocated only when needed and released on disable/disconnect. Loader state remains canonical. Extra-info events, durable messages and complete streaming/timing fidelity are unsupported.",
         "tests": [
           "internal/cdp/server_test.go#TestCDPProtocolProjectsActualTransportProtocol",
-          "compatibility/cdp_automation.py#network.response_body_extra_headers"
+          "compatibility/cdp_automation.py#network.response_body_extra_headers",
+          "internal/cdp/inspector_network_test.go#TestInspectorNetworkRedirectPostAndBodies"
         ]
       }
     },
@@ -8563,7 +8800,13 @@
         "base64Encoded"
       ],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Network-enabled sessions retain nonempty post bodies on demand, limited to 128 entries, 4 MiB total and 1 MiB per body. Network.disable/disconnect release history; absent, evicted, empty or oversized bodies return an explicit unavailable-data error.",
+        "tests": [
+          "internal/cdp/inspector_network_test.go#TestInspectorNetworkRedirectPostAndBodies",
+          "internal/cdp/inspector_network_test.go#TestInspectorPostHistoryIsLazyAndBounded",
+          "internal/cdp/inspector_network_test.go#TestInspectorNetworkFailureAndMissingBodies"
+        ]
       }
     },
     {
@@ -8582,10 +8825,12 @@
       ],
       "support": {
         "status": "partial",
-        "notes": "Bounded completed loader bytes; invalid UTF-8 uses base64. Streaming/eviction/redirect-body error fidelity is incomplete.",
+        "notes": "Reads bounded completed loader bytes published before loadingFinished. Invalid UTF-8 uses base64; policy-denied/evicted bodies reject. Streaming, MIME-specific encoding and redirect-body error fidelity remain incomplete.",
         "tests": [
           "internal/cdp/response_body_test.go#TestResponseBodyPreservesBinaryBytes",
-          "compatibility/cdp_automation.py#network.response_body_extra_headers"
+          "compatibility/cdp_automation.py#network.response_body_extra_headers",
+          "internal/cdp/inspector_network_test.go#TestInspectorNetworkRedirectPostAndBodies",
+          "internal/cdp/inspector_network_test.go#TestInspectorNetworkFailureAndMissingBodies"
         ]
       }
     },
@@ -8668,7 +8913,8 @@
         "tests": [
           "internal/cdp/server_test.go#TestCDPProtocolProjectsActualTransportProtocol",
           "internal/cdp/server_test.go#TestCDPProjectsChildFrameTreeLifecycleAndExecutionContext",
-          "compatibility/cdp_automation.py#network.response_body_extra_headers"
+          "compatibility/cdp_automation.py#network.response_body_extra_headers",
+          "internal/cdp/inspector_network_test.go#TestInspectorNetworkFailureAndMissingBodies"
         ]
       }
     },
@@ -9468,7 +9714,11 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Session overlay controls allocate no renderer. Node highlighting and inspect picking operate only on an explicitly active Blink screencast, mapping stable snapshot markers back to canonical Mimic nodes. Highlight changes enqueue presentation work outside the Page turn. Advanced layout overlays are unsupported.",
+        "tests": [
+          "internal/cdp/inspector_boundaries_test.go#TestInspectorOverlayAndRendererBoundaries"
+        ]
       }
     },
     {
@@ -9481,7 +9731,11 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Session overlay controls allocate no renderer. Node highlighting and inspect picking operate only on an explicitly active Blink screencast, mapping stable snapshot markers back to canonical Mimic nodes. Highlight changes enqueue presentation work outside the Page turn. Advanced layout overlays are unsupported.",
+        "tests": [
+          "internal/cdp/inspector_boundaries_test.go#TestInspectorOverlayAndRendererBoundaries"
+        ]
       }
     },
     {
@@ -9550,7 +9804,11 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Session overlay controls allocate no renderer. Node highlighting and inspect picking operate only on an explicitly active Blink screencast, mapping stable snapshot markers back to canonical Mimic nodes. Highlight changes enqueue presentation work outside the Page turn. Advanced layout overlays are unsupported.",
+        "tests": [
+          "internal/cdp/inspector_boundaries_test.go#TestInspectorOverlayAndRendererBoundaries"
+        ]
       }
     },
     {
@@ -9588,7 +9846,11 @@
       ],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Session overlay controls allocate no renderer. Node highlighting and inspect picking operate only on an explicitly active Blink screencast, mapping stable snapshot markers back to canonical Mimic nodes. Highlight changes enqueue presentation work outside the Page turn. Advanced layout overlays are unsupported.",
+        "tests": [
+          "internal/cdp/inspector_boundaries_test.go#TestInspectorOverlayAndRendererBoundaries"
+        ]
       }
     },
     {
@@ -9674,7 +9936,11 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Active Blink view inspect-mode picking maps the presentation hit to its canonical owner-frame backend node handle; no independent renderer DOM handle is exported.",
+        "tests": [
+          "internal/cdp/screencast_test.go#TestInspectorBlinkScreencastLiveAndCleanup"
+        ]
       }
     },
     {
@@ -9751,7 +10017,11 @@
       ],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Session overlay controls allocate no renderer. Node highlighting and inspect picking operate only on an explicitly active Blink screencast, mapping stable snapshot markers back to canonical Mimic nodes. Highlight changes enqueue presentation work outside the Page turn. Advanced layout overlays are unsupported.",
+        "tests": [
+          "internal/cdp/inspector_boundaries_test.go#TestInspectorOverlayAndRendererBoundaries"
+        ]
       }
     },
     {
@@ -9796,7 +10066,11 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "unsupported",
+        "notes": "Frontend empty/reset controls are accepted without work. Nonempty layout overlays and enabled viewport-size overlay reject; no semantic layout-overlay support is claimed.",
+        "tests": [
+          "internal/cdp/inspector_boundaries_test.go#TestInspectorOverlayAndRendererBoundaries"
+        ]
       }
     },
     {
@@ -9856,7 +10130,11 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "unsupported",
+        "notes": "Frontend empty/reset controls are accepted without work. Nonempty layout overlays and enabled viewport-size overlay reject; no semantic layout-overlay support is claimed.",
+        "tests": [
+          "internal/cdp/inspector_boundaries_test.go#TestInspectorOverlayAndRendererBoundaries"
+        ]
       }
     },
     {
@@ -9871,7 +10149,11 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "unsupported",
+        "notes": "Frontend empty/reset controls are accepted without work. Nonempty layout overlays and enabled viewport-size overlay reject; no semantic layout-overlay support is claimed.",
+        "tests": [
+          "internal/cdp/inspector_boundaries_test.go#TestInspectorOverlayAndRendererBoundaries"
+        ]
       }
     },
     {
@@ -9931,7 +10213,11 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "unsupported",
+        "notes": "Frontend empty/reset controls are accepted without work. Nonempty layout overlays and enabled viewport-size overlay reject; no semantic layout-overlay support is claimed.",
+        "tests": [
+          "internal/cdp/inspector_boundaries_test.go#TestInspectorOverlayAndRendererBoundaries"
+        ]
       }
     },
     {
@@ -9991,7 +10277,11 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "unsupported",
+        "notes": "Frontend empty/reset controls are accepted without work. Nonempty layout overlays and enabled viewport-size overlay reject; no semantic layout-overlay support is claimed.",
+        "tests": [
+          "internal/cdp/inspector_boundaries_test.go#TestInspectorOverlayAndRendererBoundaries"
+        ]
       }
     },
     {
@@ -10006,7 +10296,11 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "unsupported",
+        "notes": "Frontend empty/reset controls are accepted without work. Nonempty layout overlays and enabled viewport-size overlay reject; no semantic layout-overlay support is claimed.",
+        "tests": [
+          "internal/cdp/inspector_boundaries_test.go#TestInspectorOverlayAndRendererBoundaries"
+        ]
       }
     },
     {
@@ -10452,9 +10746,10 @@
       "returns": [],
       "support": {
         "status": "partial",
-        "notes": "Per-session event subscription; experimental options and complete lifecycle vocabulary are not implemented.",
+        "notes": "Disables Page event subscription and joins an active on-demand screencast renderer before returning.",
         "tests": [
-          "internal/cdp/server_test.go#TestCDPTopLegacyLifecycleEventsPrecedeLifecycleEvents"
+          "internal/cdp/server_test.go#TestCDPTopLegacyLifecycleEventsPrecedeLifecycleEvents",
+          "internal/cdp/screencast_test.go#TestInspectorBlinkScreencastLiveAndCleanup"
         ]
       }
     },
@@ -11009,7 +11304,11 @@
         "base64Encoded"
       ],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Current-frame resource metadata/content reads the existing bounded completed response cache and captured request provenance. Resources from retired documents or other frames are excluded. Text is returned directly and invalid UTF-8 as base64. Resources evicted by configured retention policy, streamed/partial bodies and inspector content rewriting are unavailable.",
+        "tests": [
+          "internal/cdp/inspector_navigation_test.go#TestInspectorResourceTreeAndNavigationScope"
+        ]
       }
     },
     {
@@ -11024,7 +11323,11 @@
         "frameTree"
       ],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Current-frame resource metadata/content reads the existing bounded completed response cache and captured request provenance. Resources from retired documents or other frames are excluded. Text is returned directly and invalid UTF-8 as base64. Resources evicted by configured retention policy, streamed/partial bodies and inspector content rewriting are unavailable.",
+        "tests": [
+          "internal/cdp/inspector_navigation_test.go#TestInspectorResourceTreeAndNavigationScope"
+        ]
       }
     },
     {
@@ -11356,7 +11659,14 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Frames/visibility from an explicitly requested external Blink presentation, with ACK backpressure and real viewport/scroll metadata. Frames are generated only for changed immutable snapshots or overlay state; no independent site execution.",
+        "tests": [
+          "internal/cdp/screencast_test.go#TestInspectorBlinkScreencastLiveAndCleanup",
+          "internal/cdp/inspector_lifecycle_test.go#TestInspectorBlinkBackpressureAndDisconnect",
+          "internal/cdp/screencast_test.go#TestInspectorBlinkWheelChangesVisiblePixels",
+          "internal/cdp/screencast_test.go#TestInspectorBlinkNestedScrollAndRasterResolution"
+        ]
       }
     },
     {
@@ -11371,7 +11681,13 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Explicit on-demand external Chrome/Chromium Blink presentation of sanitized canonical Mimic DOM, CSS, form/shadow state and retained resources. Source scripts do not execute in the renderer; page requests outside the snapshot bundle are blocked. PNG/JPEG, quality and max dimensions; one unacknowledged frame, coalesced updates, no idle rendering timer. everyNthFrame values other than 1 reject. Stop, Page.disable, detach and disconnect join renderer teardown. Not a native Mimic graphics surface; canvas/video frames are not copied.",
+        "tests": [
+          "internal/cdp/screencast_test.go#TestInspectorBlinkScreencastLiveAndCleanup",
+          "internal/cdp/inspector_lifecycle_test.go#TestInspectorBlinkBackpressureAndDisconnect",
+          "internal/cdp/inspector_boundaries_test.go#TestInspectorOverlayAndRendererBoundaries"
+        ]
       }
     },
     {
@@ -11386,7 +11702,12 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Frames/visibility from an explicitly requested external Blink presentation, with ACK backpressure and real viewport/scroll metadata. Frames are generated only for changed immutable snapshots or overlay state; no independent site execution.",
+        "tests": [
+          "internal/cdp/screencast_test.go#TestInspectorBlinkScreencastLiveAndCleanup",
+          "internal/cdp/inspector_lifecycle_test.go#TestInspectorBlinkBackpressureAndDisconnect"
+        ]
       }
     },
     {
@@ -11715,7 +12036,18 @@
       ],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Explicit on-demand external Chrome/Chromium Blink presentation of sanitized canonical Mimic DOM, CSS, form/shadow state and retained resources. Source scripts do not execute in the renderer; page requests outside the snapshot bundle are blocked. PNG/JPEG, quality and max dimensions; one unacknowledged frame, coalesced updates, no idle rendering timer. everyNthFrame values other than 1 reject. Stop, Page.disable, detach and disconnect join renderer teardown. Not a native Mimic graphics surface; canvas/video frames are not copied. Viewport captures follow current document scroll coordinates. Canonical window and accessible element/frame scroll positions are restored after rebuild. Raster scale uses requested frame dimensions, capped at 2x when dimensions are supplied, and honors encoding/quality and dimension limits. Startup explicitly requests an initial frame; a capture timeout retries that pending frame once, with no periodic idle rendering. The presentation target is activated independently of host desktop focus.",
+        "tests": [
+          "internal/cdp/screencast_test.go#TestInspectorBlinkScreencastLiveAndCleanup",
+          "internal/cdp/inspector_lifecycle_test.go#TestInspectorBlinkBackpressureAndDisconnect",
+          "internal/cdp/inspector_boundaries_test.go#TestInspectorOverlayAndRendererBoundaries",
+          "internal/cdp/inspector_lifecycle_test.go#TestInspectorBlinkRestartAndTargetClose",
+          "internal/cdp/inspector_lifecycle_test.go#TestInspectorDirectConnectionTargetClose",
+          "internal/cdp/screencast_test.go#TestInspectorBlinkWheelChangesVisiblePixels",
+          "internal/cdp/screencast_test.go#TestInspectorBlinkNestedScrollAndRasterResolution",
+          "internal/cdp/screencast_retry_test.go#TestInspectorScreencastRetriesTimedOutCapture"
+        ]
       }
     },
     {
@@ -11745,7 +12077,14 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Explicit on-demand external Chrome/Chromium Blink presentation of sanitized canonical Mimic DOM, CSS, form/shadow state and retained resources. Source scripts do not execute in the renderer; page requests outside the snapshot bundle are blocked. PNG/JPEG, quality and max dimensions; one unacknowledged frame, coalesced updates, no idle rendering timer. everyNthFrame values other than 1 reject. Stop, Page.disable, detach and disconnect join renderer teardown. Not a native Mimic graphics surface; canvas/video frames are not copied.",
+        "tests": [
+          "internal/cdp/screencast_test.go#TestInspectorBlinkScreencastLiveAndCleanup",
+          "internal/cdp/inspector_lifecycle_test.go#TestInspectorBlinkBackpressureAndDisconnect",
+          "internal/cdp/inspector_boundaries_test.go#TestInspectorOverlayAndRendererBoundaries",
+          "internal/cdp/inspector_lifecycle_test.go#TestInspectorDirectConnectionTargetClose"
+        ]
       }
     },
     {
@@ -12457,12 +12796,15 @@
       ],
       "support": {
         "status": "partial",
-        "notes": "Realm/session-owned handles, by-value JSON, promises, unserializable arguments, exceptions and context/uniqueContextId selection. Deep serialization rejects. Previews, side-effect restrictions, REPL/CLI mode, userGesture and complete debugger options are not implemented. Unnamed evaluation origins and engine-direct function entry preserve author stacks and caller observations without debugger helper frames.",
+        "notes": "Canonical realm evaluation, object groups, exceptions and Promise waits. includeCommandLineAPI uses a temporary native V8 Inspector scope on demand, preserving global lexical declarations, selected-node identity, author property precedence and console-group last result ($_). No source rewriting or persistent helper globals. Native CLI support requires V8; Blink-specific DOM command-line helpers and side-effect/eager-evaluation fidelity are incomplete.",
         "tests": [
           "internal/browser/debugger_test.go#TestDebuggerRemoteValuesMatchChrome152",
           "internal/browser/debugger_test.go#TestDebuggerPreservesHandlesAndDescriptorSemantics",
           "internal/cdp/runtime_test.go#TestCDPAwaitPromiseAllowsSameSessionResolverAndMultipleWaiters",
-          "internal/browser/debugger_source_boundary_test.go#TestDebuggerSourceAndInvocationBoundary"
+          "internal/browser/debugger_source_boundary_test.go#TestDebuggerSourceAndInvocationBoundary",
+          "internal/cdp/inspector_command_line_test.go#TestInspectorCommandLineSelectionAndGlobalSemantics",
+          "internal/cdp/inspector_editing_test.go#TestInspectorConsoleObjectsPromisesAndExceptions",
+          "internal/cdp/inspector_command_line_frames_test.go#TestInspectorCommandLineChildSelection"
         ]
       }
     },
@@ -12608,7 +12950,11 @@
         "id"
       ],
       "support": {
-        "status": "unsupported"
+        "status": "unsupported",
+        "notes": "Explicitly rejects native isolate introspection; no synthetic realm token is presented as a native isolate identifier.",
+        "tests": [
+          "internal/cdp/inspector_lifecycle_test.go#TestInspectorInactiveAndIdleCost"
+        ]
       }
     },
     {
@@ -14471,12 +14817,14 @@
       ],
       "support": {
         "status": "implemented",
-        "notes": "Closes a live target and cancels its tasks including synchronous JavaScript. An accepted close survives requesting transport EOF. Nested sessions emit leaf-before-parent detach notifications so clients release closed child Pages.",
+        "notes": "Closes a live target and cancels its tasks including synchronous JavaScript. An accepted close survives requesting transport EOF. A direct requester receives its reply before its connection closes; other direct frontends disconnect during teardown. Nested sessions emit leaf-before-parent detach notifications so clients release closed child Pages.",
         "tests": [
           "internal/cdp/snapshot_boundary_test.go#TestCloseTargetCancelsBusyPumpBeforeLock",
           "internal/cdp/snapshot_boundary_test.go#TestCloseTargetCancelsUnboundedParserScript",
           "internal/cdp/target_detach_order_test.go#TestDetachNotifiesNestedSessionsBeforeParent",
-          "internal/cdp/accepted_close_test.go#TestAcceptedCloseSurvivesTransportEOF"
+          "internal/cdp/accepted_close_test.go#TestAcceptedCloseSurvivesTransportEOF",
+          "internal/cdp/inspector_lifecycle_test.go#TestInspectorBlinkRestartAndTargetClose",
+          "internal/cdp/inspector_lifecycle_test.go#TestInspectorDirectConnectionTargetClose"
         ]
       }
     },

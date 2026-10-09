@@ -302,12 +302,15 @@ func (r *Realm) installProtocolInput(host map[string]any) {
 	host["recordScrollPosition"] = r.transientFn(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
 		p := r.agent.Page()
 		p.mu.Lock()
-		if p.historyIndex >= 0 && p.historyIndex < len(p.history) {
+		if numarg(args, 2) == 0 && p.historyIndex >= 0 && p.historyIndex < len(p.history) {
 			if state := p.history[p.historyIndex].frames[r.agent.ContextID()]; state != nil && state.realmID == r.ID {
 				state.scrollX, state.scrollY = numarg(args, 0), numarg(args, 1)
 			}
 		}
 		p.mu.Unlock()
+		if p.turnObservers != nil {
+			p.inspectorViewEpoch++
+		}
 		return nil, nil
 	})
 	host["scrollParentFrame"] = r.transientFn(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
@@ -368,5 +371,35 @@ func (r *Realm) installProtocolInput(host map[string]any) {
 			allowed = allowed && response.Allowed
 		}
 		return r.val(allowed), nil
+	})
+}
+
+// DispatchPresentationMouse trusts a hit established by the active external
+// Blink presentation. It still delivers events and default actions through the
+// canonical Page input owner. Ordinary protocol hit testing is unchanged.
+func (p *Page) DispatchPresentationMouse(ctx context.Context, realmID string, nodeID int64, params map[string]any) error {
+	if p.inputIgnored {
+		return nil
+	}
+	var target *Realm
+	for _, frame := range p.frames {
+		if frame.RealmID() == realmID {
+			target = frame.Realm
+			break
+		}
+	}
+	if target == nil || target.closed || target.inactive {
+		return fmt.Errorf("Presentation document is no longer active")
+	}
+	if node, ok := target.document.Get(nodeID); !ok || node.Type != "element" {
+		return fmt.Errorf("Presentation node is no longer available")
+	}
+	payload, err := json.Marshal(params)
+	if err != nil {
+		return err
+	}
+	return target.scheduler.RunInline(ctx, func(ctx context.Context) error {
+		_, err := target.invokeInputWorld(ctx, target, nodeID, "presentationMouse", string(payload))
+		return err
 	})
 }

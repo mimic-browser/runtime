@@ -665,7 +665,333 @@ const constructedStyleSheets = (() => {
         current.splice(0, current.length, ...next);
       },
     });
+  // Inspector text and handles exist only while a CDP CSS consumer is active.
+  // The rules remain the same canonical objects used by the style resolver.
+  let inspector = null;
+  const inspect = (request) => {
+    if (request.method === 'status') return { active: inspector !== null };
+    if (request.method === 'view')
+      return {
+        styles: constructedStyleSheets.sources(document),
+        scroll: [windowScrollX, windowScrollY],
+        positions: compatibilityScrolling.snapshot(),
+      };
+    if (request.method === 'release') {
+      inspector = null;
+      return {};
+    }
+    inspector ||= { next: 0, ids: new Map(), sources: new Map() };
+    const active = new Set();
+    const roots = [
+      document,
+      ...Array.from(shadowHosts, (host) => elementShadows.get(host)).filter(Boolean),
+    ];
+    for (const root of roots)
+      for (const sheet of [...ownerCollection(root), ...adoption(root)]) active.add(sheet);
+    for (const sheet of inspector.ids.keys())
+      if (!active.has(sheet)) {
+        inspector.sources.delete(inspector.ids.get(sheet));
+        inspector.ids.delete(sheet);
+      }
+    const sheetSource = (sheet) => {
+      let id = inspector.ids.get(sheet);
+      if (!id) inspector.ids.set(sheet, (id = 'sheet-' + ++inspector.next));
+      let source = inspector.sources.get(id);
+      if (!source || source.revision !== revision) {
+        const text = requireSheet(sheet)
+          .rules.map((rule) => ruleText(rule, true))
+          .join('\n');
+        source = { sheet, text, revision };
+        inspector.sources.set(id, source);
+      }
+      return { id, ...source };
+    };
+    const position = (text, offset) => {
+      const lines = text.slice(0, offset).split('\n');
+      return { line: lines.length - 1, column: lines.at(-1).length };
+    };
+    const range = (text, start, end) => {
+      const a = position(text, start),
+        b = position(text, end);
+      return { startLine: a.line, startColumn: a.column, endLine: b.line, endColumn: b.column };
+    };
+    const offset = (text, line, column) => {
+      const lines = text.split('\n');
+      if (
+        !Number.isInteger(line) ||
+        !Number.isInteger(column) ||
+        line < 0 ||
+        line >= lines.length ||
+        column < 0 ||
+        column > lines[line].length
+      )
+        throw new Error('Invalid source range');
+      return lines.slice(0, line).reduce((sum, value) => sum + value.length + 1, 0) + column;
+    };
+    const style = (text, start, end, id) => {
+      const cssText = text.slice(start, end),
+        ast = parse(cssText, { context: 'declarationList', positions: true });
+      const cssProperties = [];
+      ast.children.forEach((declaration) => {
+        if (declaration.type !== 'Declaration') return;
+        const property = {
+          name: declaration.property,
+          value: generate(declaration.value).trim(),
+          important: !!declaration.important,
+          implicit: false,
+          disabled: false,
+          parsedOk: parseCSS(generate(declaration)).length > 0,
+          text: cssText.slice(declaration.loc.start.offset, declaration.loc.end.offset),
+          range: range(
+            text,
+            start + declaration.loc.start.offset,
+            start + declaration.loc.end.offset,
+          ),
+        };
+        cssProperties.push(property);
+      });
+      const result = {
+        cssProperties,
+        shorthandEntries: [],
+        cssText,
+        range: range(text, start, end),
+      };
+      if (id) result.styleSheetId = id;
+      return result;
+    };
+    const inline = (node) => {
+      const id = elementSlot(node)?.nodeId;
+      if (!id || elementSlot(node).type !== 'element') throw new Error('Node is not an element');
+      const text = host.getAttribute(id, 'style') || '';
+      return style(text, 0, text.length, 'inline-' + id);
+    };
+    const headers = Array.from(active, (sheet) => {
+      const source = sheetSource(sheet),
+        state = requireSheet(sheet),
+        end = position(source.text, source.text.length);
+      return {
+        styleSheetId: source.id,
+        inspectorText: source.text,
+        sourceURL: state.href || host.location(),
+        origin: 'regular',
+        title: '',
+        ownerNode: state.owner ? elementSlot(state.owner).nodeId : undefined,
+        disabled: state.disabled,
+        isInline: !!state.owner && !state.href,
+        isMutable: true,
+        isConstructed: !state.owner,
+        startLine: 0,
+        startColumn: 0,
+        length: source.text.length,
+        endLine: end.line,
+        endColumn: end.column,
+      };
+    });
+    if (request.method === 'headers') return { headers };
+    const node = request.nodeId ? wrap(request.nodeId) : null;
+    if (request.method === 'inline') return { inlineStyle: inline(node) };
+    const rootFor = (element) => {
+      for (let node = element; node; ) {
+        if (shadowSlots.has(node) || node === document) return node;
+        node = syntheticParents.get(node) || wrap(host.parentNode(elementSlot(node)?.nodeId || 0));
+      }
+      return document;
+    };
+    const matchRules = (element, pseudo = '') => {
+      const result = [];
+      for (const sheet of active) {
+        const scopes = roots.filter((root) =>
+          [...ownerCollection(root), ...adoption(root)].includes(sheet),
+        );
+        const scope = scopes.find(
+          (root) => root === rootFor(element) || root === elementShadows.get(element),
+        );
+        if (!scope) continue;
+        const state = requireSheet(sheet);
+        if (state.disabled || (state.media && !cssMediaMatches(state.media))) continue;
+        const source = sheetSource(sheet);
+        const ast = parse(source.text, { positions: true });
+        const visit = (items, media = []) =>
+          items.forEach((rule) => {
+            if (rule.type === 'Atrule') {
+              if (rule.name === 'media') {
+                const query = preludeText(rule.prelude);
+                if (!cssMediaMatches(query)) return;
+                if (rule.block)
+                  visit(rule.block.children, [...media, { text: query, source: 'mediaRule' }]);
+              } else if (rule.name === 'supports') {
+                if (!compatibilityCSSSupports.matches(preludeText(rule.prelude))) return;
+                if (rule.block) visit(rule.block.children, media);
+              } else if (rule.block && ['layer', 'container'].includes(rule.name)) {
+                if (rule.name === 'container') return; // no inspector container evaluator
+                visit(rule.block.children, media);
+              }
+              return;
+            }
+            if (rule.type !== 'Rule') return;
+            const selectors = Array.from(rule.prelude.children, (selector) =>
+              preludeText(selector),
+            );
+            const matchingSelectors = [];
+            selectors.forEach((selector, index) => {
+              try {
+                const selectorPseudo = /::?(before|after)$/.exec(selector)?.[1] || '';
+                if (selectorPseudo !== pseudo) return;
+                const matched = compatibilitySelectors.matchesStyle(
+                  element,
+                  selectorPseudo ? selector.replace(/::?(before|after)$/, '') : selector,
+                  scope === document ? null : scope,
+                );
+                if (matched) matchingSelectors.push(index);
+              } catch (error) {
+                if (error?.name !== 'SyntaxError') throw error;
+              }
+            });
+            if (!matchingSelectors.length) return;
+            result.push({
+              matchingSelectors,
+              rule: {
+                styleSheetId: source.id,
+                origin: 'regular',
+                selectorList: {
+                  text: preludeText(rule.prelude),
+                  selectors: selectors.map((text) => ({ text })),
+                  range: range(
+                    source.text,
+                    rule.prelude.loc.start.offset,
+                    rule.prelude.loc.end.offset,
+                  ),
+                },
+                style: style(
+                  source.text,
+                  rule.block.loc.start.offset + 1,
+                  rule.block.loc.end.offset - 1,
+                  source.id,
+                ),
+                media,
+              },
+            });
+          });
+        visit(ast.children);
+      }
+      return result;
+    };
+    if (request.method === 'matched') {
+      const inherited = [];
+      for (
+        let parent = cssFontParent(node);
+        elementSlot(parent)?.type === 'element';
+        parent = cssFontParent(parent)
+      )
+        inherited.push({ inlineStyle: inline(parent), matchedCSSRules: matchRules(parent) });
+      return {
+        inlineStyle: inline(node),
+        matchedCSSRules: matchRules(node),
+        inherited,
+        pseudoElements: ['before', 'after']
+          .map((pseudoType) => ({ pseudoType, matches: matchRules(node, pseudoType) }))
+          .filter((entry) => entry.matches.length),
+        inheritedPseudoElements: [],
+        cssKeyframesRules: [],
+      };
+    }
+    const id = request.styleSheetId;
+    let source;
+    if (id?.startsWith('inline-')) {
+      const element = wrap(Number(id.slice(7)));
+      if (!elementSlot(element)) throw new Error('No stylesheet with given id found');
+      source = { element, text: host.getAttribute(elementSlot(element).nodeId, 'style') || '' };
+    } else source = inspector.sources.get(id);
+    if (!source) throw new Error('No stylesheet with given id found');
+    if (request.method === 'text') return { text: source.text };
+    let text = String(request.text);
+    if (request.range) {
+      const r = request.range,
+        start = offset(source.text, r.startLine, r.startColumn),
+        end = offset(source.text, r.endLine, r.endColumn);
+      if (end < start) throw new Error('Invalid source range');
+      text = source.text.slice(0, start) + text + source.text.slice(end);
+    }
+    if (source.element) host.setAttribute(elementSlot(source.element).nodeId, 'style', text);
+    else {
+      const state = requireSheet(source.sheet);
+      if (request.range && request.method === 'editSelector') {
+        const ast = parse(source.text, { positions: true });
+        const start = offset(source.text, request.range.startLine, request.range.startColumn);
+        const end = offset(source.text, request.range.endLine, request.range.endColumn);
+        let target;
+        const find = (nodes, canonical) => {
+          let index = 0;
+          nodes.forEach((node) => {
+            if (node.type !== 'Rule' && node.type !== 'Atrule') return;
+            const rule = canonical[index++];
+            if (!rule) return;
+            if (
+              node.type === 'Rule' &&
+              node.prelude.loc.start.offset === start &&
+              node.prelude.loc.end.offset === end
+            )
+              target = rules.get(rule);
+            if (node.block) find(node.block.children, rules.get(rule).children);
+          });
+        };
+        find(ast.children, state.rules);
+        if (!target) throw new Error('Source range does not identify a selector');
+        target.node.prelude = parse(String(request.text), { context: 'selectorList' });
+      } else if (request.range && request.method === 'editStyle') {
+        const ast = parse(source.text, { positions: true });
+        const start = offset(source.text, request.range.startLine, request.range.startColumn);
+        const end = offset(source.text, request.range.endLine, request.range.endColumn);
+        let target;
+        const find = (nodes, canonical) => {
+          let index = 0;
+          nodes.forEach((node) => {
+            if (node.type !== 'Rule' && node.type !== 'Atrule') return;
+            const rule = canonical[index++];
+            if (!rule) return;
+            if (
+              node.block &&
+              start >= node.block.loc.start.offset + 1 &&
+              end <= node.block.loc.end.offset - 1
+            )
+              target = rules.get(rule);
+            if (node.block) find(node.block.children, rules.get(rule).children);
+          });
+        };
+        find(ast.children, state.rules);
+        if (!target) throw new Error('Source range does not identify a declaration block');
+        const nextAst = parse(text, { positions: true });
+        const nextStart = start,
+          nextEnd = start + String(request.text).length;
+        let block;
+        const findBlock = (nodes) =>
+          nodes.forEach((node) => {
+            if (
+              node.block &&
+              nextStart >= node.block.loc.start.offset + 1 &&
+              nextEnd <= node.block.loc.end.offset - 1
+            )
+              block = node.block;
+            if (node.block) findBlock(node.block.children);
+          });
+        findBlock(nextAst.children);
+        if (!block) throw new Error('Edited declaration block is invalid');
+        blockDeclarations.set(target.node.block, parseCSS(generate(block).slice(1, -1)));
+        editedDeclarationBlocks.add(target.node.block);
+      } else state.rules.splice(0, state.rules.length, ...parsedRules(text, source.sheet));
+      changed();
+      inspector.sources.set(id, { sheet: source.sheet, text, revision });
+    }
+    if (request.method === 'editStyle') {
+      const start = request.range
+        ? offset(text, request.range.startLine, request.range.startColumn)
+        : 0;
+      return { style: style(text, start, start + String(request.text).length, id) };
+    }
+    return {};
+  };
   return {
+    inspect,
     /* dev_preview_sources */
     revision: () => revision,
     nativeSources(root) {
@@ -810,13 +1136,51 @@ const blitzUnsupportedDeclaration = (node) => {
     ? 'system font requires per-Context CSS fallback'
     : '';
 };
+// Admission depends on declaration syntax, not DOM state or the environment.
+// Retain only the exact source and its scalar result, within a per-realm bound.
+let blitzInlineAdmissionCache = new Map(),
+  blitzInlineAdmissionBytes = 0;
+bootstrapRestoreHooks.push(() => {
+  blitzInlineAdmissionCache = new Map();
+  blitzInlineAdmissionBytes = 0;
+});
+const blitzInlineAdmission = (source) => {
+  if (blitzInlineAdmissionCache.has(source)) return blitzInlineAdmissionCache.get(source);
+  let unsupported = '';
+  try {
+    const block = mimicSelectorLibrary.parseStylesheet(source, { context: 'declarationList' });
+    block.children.forEach((node) => {
+      unsupported ||= blitzUnsupportedDeclaration(node);
+    });
+  } catch {
+    unsupported = 'native inline declaration admission failed';
+  }
+  if (source.length * 2 <= 1024 * 1024) {
+    if (
+      blitzInlineAdmissionCache.size >= 256 ||
+      blitzInlineAdmissionBytes + source.length * 2 > 1024 * 1024
+    ) {
+      blitzInlineAdmissionCache.clear();
+      blitzInlineAdmissionBytes = 0;
+    }
+    blitzInlineAdmissionCache.set(source, unsupported);
+    blitzInlineAdmissionBytes += source.length * 2;
+  }
+  return unsupported;
+};
 let blitzControlMembershipRevision,
   blitzControlMembership = [];
 bootstrapRestoreHooks.push(() => {
   blitzControlMembershipRevision = undefined;
   blitzControlMembership = [];
 });
-const readBlitzInputs = () => {
+let blitzSheetInputs = [],
+  blitzSheetInputRevision = 0;
+bootstrapRestoreHooks.push(() => {
+  blitzSheetInputs = [];
+  blitzSheetInputRevision = 0;
+});
+const readBlitzInputs = (knownSheetRevision = 0) => {
   if (document.compatMode === 'BackCompat')
     return JSON.stringify({ unsupported: 'quirks mode adapter pending' });
   if (styleObservationDynamic)
@@ -849,6 +1213,27 @@ const readBlitzInputs = () => {
     }
   }
   const inputs = constructedStyleSheets.nativeSources(document);
+  if (!inputs.unsupported) {
+    const current = inputs.sheets;
+    if (
+      !blitzSheetInputRevision ||
+      current.length !== blitzSheetInputs.length ||
+      current.some(
+        (sheet, i) =>
+          sheet.id !== blitzSheetInputs[i].id ||
+          sheet.text !== blitzSheetInputs[i].text ||
+          sheet.baseURL !== blitzSheetInputs[i].baseURL,
+      )
+    ) {
+      blitzSheetInputs = current;
+      blitzSheetInputRevision++;
+    }
+    inputs.sheetRevision = blitzSheetInputRevision;
+    if (knownSheetRevision === blitzSheetInputRevision) {
+      inputs.sheetsUnchanged = true;
+      delete inputs.sheets;
+    }
+  }
   const membershipRevision = canonicalDOMRevision();
   if (blitzControlMembershipRevision !== membershipRevision) {
     blitzControlMembership = compatibilitySelectors.query(
@@ -882,17 +1267,7 @@ const readBlitzInputs = () => {
   }
   if (!inputs.unsupported) {
     for (const inline of host.blitzInlineStyles()) {
-      let block;
-      try {
-        block = mimicSelectorLibrary.parseStylesheet(inline, { context: 'declarationList' });
-      } catch {
-        inputs.unsupported = 'native inline declaration admission failed';
-        break;
-      }
-      let unsupported = '';
-      block.children.forEach((node) => {
-        unsupported ||= blitzUnsupportedDeclaration(node);
-      });
+      const unsupported = blitzInlineAdmission(inline);
       if (unsupported) {
         inputs.unsupported = unsupported;
         break;

@@ -66,3 +66,26 @@ func TestFilteredSubscribersPreserveExplicitTraceCapture(t *testing.T) {
 	}
 	stopNetwork()
 }
+
+func TestFilteredSubscriptionsDoNotReconfigurePropertyObservation(t *testing.T) {
+	r := New()
+	var changes []bool
+	r.SetObservationChange(func(enabled, reset bool) { changes = append(changes, enabled) })
+	initial := len(changes)
+	stopNetwork := r.SubscribeKinds([]Kind{Network, Lifecycle}, func(Event) {})
+	stopNetwork()
+	if len(changes) != initial {
+		t.Fatal("non-property subscription reconfigured realm observation")
+	}
+	stopAPI := r.SubscribeKinds([]Kind{API}, func(Event) {})
+	stopSecond := r.SubscribeKinds([]Kind{API}, func(Event) {})
+	stopAPI()
+	if len(changes) != initial+1 || !changes[initial] {
+		t.Fatalf("shared property demand transitions: %v", changes)
+	}
+	stopSecond()
+	stopSecond() // Releasing an already removed subscription is a no-op.
+	if len(changes) != initial+2 || changes[initial+1] {
+		t.Fatalf("last property subscriber transitions: %v", changes)
+	}
+}

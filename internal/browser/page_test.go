@@ -2333,7 +2333,7 @@ func TestHistoryStateScrollRestorationAndLinkReflection(t *testing.T) {
 	}
 	m := v.(map[string]any)
 	initial := m["initial"].(map[string]any)
-	if initial["href"] != "" || initial["rel"] != "" || initial["as"] != "" || initial["crossOrigin"] != nil || m["tag"] != "[object HTMLLinkElement]" || m["href"] != "about:///asset.js" || m["rel"] != "modulepreload" || m["as"] != "script" || m["crossOrigin"] != "anonymous" || m["hrefAttr"] != "/asset.js" || m["state"] != int64(42) || m["automatic"] != "auto" || m["scrollRestoration"] != "manual" {
+	if initial["href"] != "" || initial["rel"] != "" || initial["as"] != "" || initial["crossOrigin"] != nil || m["tag"] != "[object HTMLLinkElement]" || m["href"] != "/asset.js" || m["rel"] != "modulepreload" || m["as"] != "script" || m["crossOrigin"] != "anonymous" || m["hrefAttr"] != "/asset.js" || m["state"] != int64(42) || m["automatic"] != "auto" || m["scrollRestoration"] != "manual" {
 		t.Fatalf("unexpected history/link semantics: %#v", m)
 	}
 }

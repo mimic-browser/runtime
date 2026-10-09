@@ -97,6 +97,7 @@ func (s *session) handleRuntime(ctx context.Context, method string, params map[s
 	options := browser.DebuggerOptions{ObjectGroup: stringValue(params["objectGroup"])}
 	options.ReturnByValue, _ = params["returnByValue"].(bool)
 	options.AwaitPromise, _ = params["awaitPromise"].(bool)
+	options.CommandLineAPI, _ = params["includeCommandLineAPI"].(bool)
 	if allow, ok := params["allowUnsafeEvalBlockedByCSP"].(bool); ok {
 		options.RespectCSP = !allow
 	}

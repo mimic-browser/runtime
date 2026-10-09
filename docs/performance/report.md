@@ -227,6 +227,67 @@ pressure, concurrent execution and memory retained after teardown. Explicit GC,
 instrumented profiles and destructive experiments are attribution tools; their
 numbers do not replace ordinary workload measurements.
 
+## Interactive runtime and inspector overhead
+
+Post-load CSS image discovery uses a resource-only native projection rather than
+serializing every computed property. Initial discovery shares the ordinary bulk
+projection while parsing, stylesheets and load state are changing. Hidden
+branches do not require computed-style readbacks. Unknown computed property
+names return the empty string without constructing layout. Scalar serialization
+resolves box state and logical axes only when its property requires them. Exact
+inline syntax admission has bounded retention. Canonical DOM, style mutation and
+Page ownership remain authoritative.
+
+Immutable stylesheet inputs use a validated acknowledgement. Changes to source,
+order, base URL or CSSOM declarations invalidate it. Replacing a derived native
+owner replays acknowledged programs. Navigation lookahead overlaps at most 64
+classic script fetches from an already received HTML response. Script execution
+remains on the parser's event loop. Templates, noscript, security, credentials
+and document cancellation still apply. Base, policy and foreign-content
+transitions stop the conservative scan. It does not scan streaming network bytes
+or speculate module dependencies.
+
+The Page pump subtracts time already accounted for by external execution from
+its wall-clock idle advance. A regression reproduces the former double count
+when a paused pump resumes after a long synchronous command. Both clock samples
+are taken inside the command boundary, preserving one canonical clock per Page.
+
+Three alternating fresh-process pairs on an interactive network workload used
+separate empty bootstrap caches. Control/candidate navigation medians were
+6.255/4.724 s (ranges 5.838-7.017/4.532-4.950 s), form detection medians were
+2.032/1.501 s (ranges 2.016-2.296/1.495-1.556 s), and the medians of per-run
+character insertion medians were 114.1/13.9 ms. Form detection includes the
+trusted click and polling until the form is observable; it is not a visual paint
+timestamp. A separate normal frozen Chrome 152 capture measured 3.35 s
+navigation, 284 ms form detection and approximately 1 ms per character. Live
+network conditions differ, so these samples establish neither a universal load
+speedup nor Chrome parity.
+
+The unchanged Wikipedia workflow passed all 12 executions in these three pairs.
+Control/candidate cold medians were 10.340/10.129 s (ranges
+10.019-10.450/9.528-10.361 s); warm medians were 7.104/7.069 s (ranges
+7.102-7.453/6.551-7.146 s). This establishes no material regression in the
+complete workflow, not a substantial Wikipedia speedup. More aggressive retained
+state and per-node projection experiments were rejected after full workflow
+regressions. These results must not be pooled with earlier checkpoints.
+The control executable SHA-256 is
+`66738652e8246db13f4d53f9adf67a5b03196ca8d5fd15a35ecef2f1655c07b3`;
+the candidate is
+`e8a78e59ec4e508c871962015bbcb005cf2c1bbeaf346d54f286973d990433a4`.
+
+On a 1000-row synthetic inspector fixture, median character insertion with DOM
+inspection enabled fell from 1599 to 5.0 ms in the final candidate after replacing
+repeated child-order searches with a linear diff. The optional view coalesces
+changes through its bounded queue and ACK backpressure without a fixed per-frame
+delay. Median input-to-frame latency was 83.6 ms in the final synthetic fixture,
+compared with 666.5 ms in the control. Full snapshot reconstruction and presentation remain material view costs.
+
+Focused parser, computed-style catalog, fallback geometry, image-resource,
+stylesheet replay, clock, inspector and presentation checks passed. Clock and
+inspector checks passed under the Go race detector, as did parser lookahead
+checks. The fresh-build fast gate passed all 24 semantic runs, four 10-Page
+concurrency waves and static/React teardown checks. No memory reduction is claimed.
+
 ## Remaining limits
 
 - Cold observation construction and mutation-driven style/geometry rebuilding

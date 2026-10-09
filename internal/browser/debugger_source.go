@@ -142,6 +142,8 @@ const debuggerFactorySource = `(() => {
     if(operation==='group')return envelope('group',get(p.objectId).group);
     if(operation==='node')return envelope('nodeId',node(get(p.objectId).value));
     if(operation==='resolve')return envelope('result',describe(node(p.nodeId,true),p.objectGroup||'',false));
+	if(operation==='resolveValue')return node(p.nodeId,true);
+	if(operation==='identity')return value;
     if(operation==='hold')return envelope('result',describe(value,p.objectGroup||'',!!p.returnByValue));
     if(operation==='console'){
       const args=array();for(let i=0;i<value.length;i++){
