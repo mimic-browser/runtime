@@ -39,7 +39,12 @@ import (
 	"unsafe"
 )
 
-type Owner struct{ handle *C.MimicBlitzHandle }
+type Owner struct {
+	handle *C.MimicBlitzHandle
+	// Like the native handle, scratch belongs to the document's serialized
+	// execution owner. It is never shared between Pages or exposed to callers.
+	styleBatchScratch []byte
+}
 
 // Refer to the generated archive digest from Go so a rebuilt static library
 // invalidates cgo's build cache and the executable links the new archive.
@@ -68,6 +73,7 @@ func (o *Owner) Close() {
 		C.mimic_blitz_drop(o.handle)
 		o.handle = nil
 	}
+	o.styleBatchScratch = nil
 }
 
 func check(status C.int32_t) error {

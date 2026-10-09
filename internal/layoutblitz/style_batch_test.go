@@ -49,4 +49,28 @@ func TestStyleBatchHiddenScalarParity(t *testing.T) {
 	if _, err = owner.Style(id, "display"); err != nil {
 		t.Fatalf("capacity retry poisoned owner: %v", err)
 	}
+	// Retained API results must not alias the next readback, even when the
+	// native response exceeds the retained scratch bound.
+	previous := values[0]
+	oversized := strings.Repeat("y", styleBatchScratchLimit+1)
+	if err := owner.Attribute(id, "", "style", "--long:"+oversized); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = owner.Resolve(0); err != nil {
+		t.Fatal(err)
+	}
+	values, err = owner.StyleBatch(id, []string{"--long"})
+	if err != nil || values[0] != oversized || previous != long {
+		t.Fatalf("readback ownership failed: %v", err)
+	}
+	if len(owner.styleBatchScratch) > styleBatchScratchLimit {
+		t.Fatal("one-off readback retained an oversized buffer")
+	}
+	if _, err = owner.StyleBatch(id, names); err != nil || values[0] != oversized {
+		t.Fatalf("subsequent batch changed retained result: %v", err)
+	}
+	owner.Close()
+	if owner.styleBatchScratch != nil {
+		t.Fatal("closed owner retained readback scratch")
+	}
 }

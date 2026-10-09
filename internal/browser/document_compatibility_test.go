@@ -113,6 +113,48 @@ func TestCanonicalDOMReadPublicationAcrossWorldsAndTeardown(t *testing.T) {
 	owner.document.InvalidateObservations()
 }
 
+func TestCanonicalStyleAttributeRowsAcrossWorlds(t *testing.T) {
+	parallelBrowserTest(t)
+	historyTestPages(t, func(t *testing.T, p *Page) {
+		d := NewDebugger(p)
+		defer d.Close()
+		debuggerEval(t, d, `
+document.head.innerHTML = '<style>#probe:dir(ltr) { color: red } #probe[data-state="before"] { width: 10px } #probe[data-state="after"] { width: 20px }</style>';
+document.body.innerHTML = '<div id="probe" data-state="before" data-empty=""></div>';
+document.getElementById('probe').setAttribute('__proto__', 'literal');
+`, DebuggerOptions{})
+		world, err := p.IsolatedWorld(context.Background(), p.Top.ID, "attribute-row")
+		if err != nil {
+			t.Fatal(err)
+		}
+		read := func(want string) {
+			t.Helper()
+			result, err := d.Evaluate(context.Background(), p.Top.ID, world, `(() => {
+  const element = document.getElementById('probe');
+  const width = getComputedStyle(element).width;
+  return JSON.stringify([
+    width,
+    element.getAttribute('data-state'),
+    element.getAttribute('data-empty'),
+    element.getAttribute('__proto__'),
+    element.getAttribute('constructor'),
+    element.getAttributeNames().includes('__proto__'),
+  ]);
+})()`, DebuggerOptions{ReturnByValue: true})
+			if err != nil || result["exceptionDetails"] != nil || result["result"].(map[string]any)["value"] != want {
+				t.Fatalf("canonical attribute row: %#v %v; want %s", result, err, want)
+			}
+		}
+		read(`["10px","before","","literal",null,true]`)
+		debuggerEval(t, d, `
+const element = document.getElementById('probe');
+element.setAttribute('data-state', 'after');
+element.removeAttribute('__proto__');
+`, DebuggerOptions{})
+		read(`["20px","after","",null,null,false]`)
+	})
+}
+
 func TestXMLDocumentFactoryChrome152(t *testing.T) {
 	parallelBrowserTest(t)
 	b, err := New(v8engine.Factory{}, chrome152.New())

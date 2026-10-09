@@ -1758,6 +1758,10 @@
       name = name.toLowerCase();
     const record = domReadRecord(node);
     if (!record) return host.getAttribute(elementSlot(node).nodeId, name);
+    if (record.observationState) {
+      const attributes = record.observationState.attributes;
+      return Object.hasOwn(attributes, name) ? attributes[name] : null;
+    }
     let cache = record.attributes;
     if (!cache) record.attributes = cache = new Map();
     if (!cache.has(name)) {
@@ -1774,8 +1778,10 @@
   const cachedDOMAttributeNames = (node) => {
     const record = domReadRecord(node);
     if (!record) return host.attributeNames(elementSlot(node).nodeId);
-    if (!Object.hasOwn(record, 'attributeNames'))
-      record.attributeNames = host.attributeNames(elementSlot(node).nodeId);
+    if (!record.attributeNames)
+      record.attributeNames = record.observationState
+        ? Object.keys(record.observationState.attributes)
+        : host.attributeNames(elementSlot(node).nodeId);
     return record.attributeNames;
   };
   // All geometry projections consult the same canonical parent/child snapshot.
@@ -1801,8 +1807,10 @@
     if (record) {
       record.observationState = value;
       record.parent = wrap(value.parent);
-      record.attributeNames = Object.keys(value.attributes);
-      record.attributes = new Map(Object.entries(value.attributes));
+      // The epoch-owned canonical row already contains every attribute. Avoid
+      // retaining another map and an eagerly enumerated name array per node.
+      record.attributeNames = null;
+      record.attributes = null;
     }
     return value;
   };

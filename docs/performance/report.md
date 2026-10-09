@@ -163,6 +163,57 @@ processes per build. This narrower workflow did not improve materially. Network
 conditions, polling and extraction costs differ from the historical live-site
 campaign; its older browser timings are not contemporaneous controls.
 
+## Style projection allocation
+
+Native style batches reuse document-owned readback scratch, retaining at most
+64 KiB and releasing it at owner teardown. Larger individual responses remain
+temporary. Public CSSOM results still own their strings. Packed observations
+intern borrowed UTF-8 values directly, avoiding a string array and duplicate
+strings for every element. Canonical attribute observations use their existing
+epoch-owned row; a second attribute map and an eagerly enumerated name array
+are no longer retained for each observed node.
+
+Three 100-iteration allocation samples measured style-batch readback at
+5256 versus 1200 bytes per call. A packed snapshot of 1000 repeated styled
+elements decreased from approximately 5.87 to 1.35 MB allocated per snapshot
+(77%), with median construction time decreasing from 4.406 to 3.489 ms.
+These are local producer measurements, not process-memory measurements.
+
+Three alternating fresh-process pairs with separate empty bootstrap caches
+passed all 12 complete unchanged Wikipedia executions:
+
+| Phase | Control median (range) | Candidate median (range) |
+| --- | ---: | ---: |
+| Cold | 16.741 s (16.660–16.988) | 16.758 s (16.613–16.854) |
+| Warm | 7.972 s (7.836–8.018) | 7.820 s (7.673–7.920) |
+
+The measurements show no material complete-workflow latency regression. They
+do not establish a substantial E2E speedup. Identical 50-ms process-tree
+sampling found cold peak RSS medians of 467.64 versus 470.33 MiB and warm peak
+RSS of 395.80 versus 405.16 MiB. A process RSS reduction is not established.
+The control executable SHA-256 is
+`29562f2ec2bfa19199d284b9ec690c5ba7d96adff15c4e3557641cd97e53bc15`;
+the candidate is
+`ae8406fd4058e6fb0a4ae82af46d587937e161147a0a855c131aec1b0bbd1bd9`.
+
+One separate diagnostic pair collected heap statistics immediately before
+leaving the first JavaScript article, after explicit V8 and Go collection.
+Go cumulative allocation decreased from 1778.84 to 1547.30 MiB, and V8
+cumulative allocation from 4914.66 to 4838.17 MiB. Live V8 heap decreased only
+from 119.62 to 118.77 MiB, and live Go heap from 64.90 to 64.61 MiB. These
+diagnostics establish lower allocation pressure and a modest live-heap saving;
+forced collection is not a production policy or a latency measurement.
+
+Three alternating measured static 50-Page waves per binary, after excluding
+one warmup wave each, passed all 300 measured sessions. Throughput through the
+last result was 185.73 versus 186.99 Pages/s. Active RSS was 829.50 versus
+835.76 MiB, with recovery RSS at 149.14 versus 151.73 MiB. Scaling remains
+effectively unchanged; these results also do not establish lower process RSS.
+Focused checks passed for hidden and large style values, output ownership,
+scratch teardown, canonical attribute invalidation and isolated-world reads.
+The fresh fast gate passed all six semantic workloads, its four 50-Page waves
+including warmup, and its static/React 10-Page memory checks.
+
 ## Architectural constraints
 
 Independent Pages retain independent execution owners. Immutable platform data

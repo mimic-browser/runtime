@@ -39,6 +39,14 @@ from the earlier native producer series and do not establish competitor parity.
 
 ## Attribution and rejected approaches
 
+The [style projection allocation checkpoint](report.md#style-projection-allocation)
+removes temporary native readback buffers and duplicate attribute projections.
+Three alternating fresh-process pairs passed all 12 complete executions:
+cold medians were 16.741/16.758 s and warm medians 7.972/7.820 s for the
+control/candidate. Allocation pressure decreased, while a process RSS reduction
+was not established. These matched results show no material E2E regression;
+they must not be pooled with the earlier 18.497-second checkpoint.
+
 - Warm utility callback work can dominate when Page owner wait and CDP
   serialization are small. Aggregate Go/V8 crossing counts alone do not identify
   the cause.

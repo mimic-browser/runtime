@@ -67,23 +67,25 @@ func (d *Document) packedStyles(ids []int64, resolveUndisplayed bool) ([]byte, e
 			}
 			continue
 		}
-		values, err := d.Owner.StyleBatch(uint64(id), ObservationProperties)
-		if err != nil {
-			return nil, err
-		}
-		for j, value := range values {
-			offset, exists := pool[value]
+		err = d.Owner.styleBatch(uint64(id), ObservationProperties, func(j int, value []byte) error {
+			// Lookup does not retain the borrowed buffer. Only a new pool entry
+			// needs its own string; repeated values reuse their existing offsets.
+			offset, exists := pool[string(value)]
 			if !exists {
 				if len(output)+len(value)+1 > 256*1024*1024 {
-					return nil, fmt.Errorf("blitz: string pool exceeds memory bound")
+					return fmt.Errorf("blitz: string pool exceeds memory bound")
 				}
 				offset = uint32(len(output))
-				pool[value] = offset
+				pool[string(value)] = offset
 				output = append(output, value...)
 				output = append(output, 0)
 			}
 			binary.LittleEndian.PutUint32(output[at+80+j*8:], offset)
 			binary.LittleEndian.PutUint32(output[at+84+j*8:], uint32(len(value)))
+			return nil
+		})
+		if err != nil {
+			return nil, err
 		}
 	}
 	return output, nil
