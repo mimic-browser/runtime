@@ -107,6 +107,62 @@ from successful results. The exact cause was not established; the subsequent
 complete gate with preserved process logs passed. The unresolved failure
 limits confidence in sustained density despite the successful checkpoint.
 
+## Canonical reads and deferred font resolution
+
+The style fallback previously resolved font sizes while constructing box state
+for every visibility candidate. A computed-style document batch therefore paid
+for font inheritance across thousands of nodes even when its consumers needed
+only display or visibility. Font resolution is now deferred until a geometry
+consumer needs it, with the existing recursive resolution boundary preserved.
+
+Isolated-world pseudo content uses bounded projections from the canonical style
+owner. Sparse candidate matching avoids resolving unrelated pseudo declarations;
+shadow documents and oversized projections retain scalar owner reads. Exact
+observation epochs reuse selector matches, and canonical availability reads no
+longer discard an otherwise valid isolated style observation.
+
+V8 realms receive a private native atomic DOM revision word after bootstrap
+capture/restoration. Every canonical arena write publishes before unlocking;
+live collections and bounded demand-loaded DOM readbacks validate that word
+without a Go callback. Publishers unsubscribe before realm teardown. Engines
+without the private word continue to read the canonical host directly.
+
+Two alternating fresh-process pairs passed all eight unchanged Wikipedia
+cold/warm executions. Control cold runs were 25.136 and 22.447 s; candidate
+cold runs were 19.210 and 17.783 s. Warm control runs were 14.672 and 13.180 s;
+candidate runs were 9.076 and 7.706 s. Cold medians improved from 23.792 to
+18.497 s (22.3% less time, 1.29x speed); warm medians improved from 13.926 to
+8.391 s (39.7% less time, 1.66x speed). This small paired series establishes
+a complete-workflow improvement, not a universal speedup or competitor parity.
+
+Focused checks passed for live collections, mutation/adoption, cross-world
+readbacks, UTF-16 character data, shared-word lifetime, snapshot restoration,
+teardown, pseudo content, recursive geometry, font invalidation, form state and
+relational selectors. The fresh iterative gate passed all six semantic
+workloads and all four 50-Page waves, including the excluded warmup.
+
+Seven rotating control/candidate samples per workload found DOM execution at
+170.559 versus 160.359 ms and React execution at 61.610 versus 49.143 ms;
+static execution remained effectively unchanged at 4.322 versus 4.378 ms.
+Three alternating measured 50-Page waves per build gave 163.06 versus
+165.06 Pages/s through the last result, with active RSS at 821.71 versus
+825.51 MiB. Recovery RSS was 145.38 versus 152.20 MiB. Scaling was effectively
+unchanged; a memory reduction is not established.
+
+The unpaired final gate measured warm navigation-through-result medians of
+39.926 ms for static, 181.183 ms for DOM and 100.317 ms for React. Its
+50-Page throughput through the last result was 127.13 Pages/s. Those absolute
+numbers are slower than the previous unpaired gate; the contemporaneous paired
+controls above are necessary to distinguish a code regression from differing
+measurement conditions. Do not pool the two series or claim an overall win
+against another runtime from them.
+
+The unchanged live Wikipedia text-traversal probe, run only on Mimic, gave
+control/candidate first-content medians of 1.834/1.822 s with three fresh
+processes per build. This narrower workflow did not improve materially. Network
+conditions, polling and extraction costs differ from the historical live-site
+campaign; its older browser timings are not contemporaneous controls.
+
 ## Architectural constraints
 
 Independent Pages retain independent execution owners. Immutable platform data

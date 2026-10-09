@@ -577,11 +577,11 @@ const compatibilityElementState = {};
   const canonicalChildren = (node) => {
     // Mutations from another Window do not advance this realm's JS revision.
     // The shared DOM arena is the authority for live child collections.
-    const revision = host.domRevision(),
+    const revision = canonicalDOMRevision(),
       previous = canonicalChildLists.get(node);
     if (previous?.revision === revision) return previous.values;
     const slot = elementSlot(node),
-      values = host.nodeChildren(node === document ? documentRootID : slot.nodeId).map(wrap);
+      values = host.childIDs(node === document ? documentRootID : slot.nodeId).map(wrap);
     canonicalChildLists.set(node, { revision, values });
     return values;
   };
@@ -1841,7 +1841,7 @@ const compatibilityElementState = {};
           ids = [];
         return cachedHTMLCollection(root, 'class', names, () => {
           if (!tokens.length) return [];
-          const current = host.domRevision();
+          const current = canonicalDOMRevision();
           if (current !== revision) {
             ids = host.classIDs(
               root === document ? documentRootID : elementSlot(root).nodeId,

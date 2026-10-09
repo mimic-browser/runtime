@@ -315,11 +315,26 @@ const cssBoxModel = (() => {
       edgesByBasis.set(basis, { ...out });
       return out;
     };
-    // Publish a complete recursive state before resolving font inheritance.
-    // Complex author selectors can re-enter geometry while font size walks the
-    // ancestor cascade; callers must never observe a half-built state object.
-    result.fontSize =
-      nativeDisplay !== null ? parseFloat(get('font-size')) : (cssComputedFontSize(element) ?? 16);
+    // Style-only observations need display/visibility without font metrics.
+    // Publish the complete recursive state before resolving the font on demand;
+    // reentrant geometry retains the same undefined/default basis as before.
+    let fontSize,
+      resolvingFont = false;
+    Object.defineProperty(result, 'fontSize', {
+      get() {
+        if (fontSize !== undefined || resolvingFont) return fontSize;
+        resolvingFont = true;
+        try {
+          fontSize =
+            nativeDisplay !== null
+              ? parseFloat(get('font-size'))
+              : (cssComputedFontSize(element) ?? 16);
+        } finally {
+          resolvingFont = false;
+        }
+        return fontSize;
+      },
+    });
     // Only style-derived data is retained. Sizes, positions, children, text flow
     // and availability are rebuilt in the current geometry graph after mutation.
     if (context && styleReadCache.retainable) context.value = result;

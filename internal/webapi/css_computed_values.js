@@ -226,13 +226,54 @@ const cssSerializeComputedContent = (element, value) => {
     return value;
   }
 };
+let foreignPseudoContent = null;
+bootstrapRestoreHooks.push(() => {
+  foreignPseudoContent = null;
+});
+const cssForeignPseudoValue = (element, name, pseudo) =>
+  withStyleReadCache(() => {
+    if (
+      name === 'content' &&
+      (pseudo === 'before' || pseudo === 'after') &&
+      styleReadCache.retainable &&
+      !referenceGet(element)
+    ) {
+      const { stableEpoch } = cssForeignComputedStyleEpoch();
+      if (foreignPseudoContent?.version !== stableEpoch) foreignPseudoContent = null;
+      const nodeID = elementSlot(element).nodeId;
+      const known = foreignPseudoContent?.rows.get(nodeID);
+      if (known) return known[pseudo === 'before' ? 0 : 1];
+      if (
+        !foreignPseudoContent?.unsupported &&
+        host.isConnected(nodeID) &&
+        cssObservationNodeState(element).ownerDocument === realmDocumentRootID
+      ) {
+        const projection = foreignCSSObservation(element, 'pseudoContent');
+        if (typeof projection === 'string' && projection.length <= 4 * 1024 * 1024) {
+          const rows = new Map(
+            JSON.parse(projection).map(([id, before, after]) => [id, [before, after]]),
+          );
+          foreignPseudoContent = { version: stableEpoch, rows };
+          const values = rows.get(nodeID);
+          if (values) return values[pseudo === 'before' ? 0 : 1];
+        } else {
+          foreignPseudoContent = { version: stableEpoch, rows: new Map(), unsupported: true };
+        }
+      }
+    }
+    const foreign = foreignCSSObservation(element, 'pseudoValue', JSON.stringify({ name, pseudo }));
+    return foreign ?? resolveCSSComputedValue(element, name, pseudo);
+  });
 const cssComputedValue = (element, name, pseudo = '') => {
   if (name.startsWith('--'))
     return withStyleReadCache(() => {
       const foreign = foreignCSSObservation(element, 'value', name);
       return foreign ?? cssCustomPropertyValue(element, name) ?? '';
     });
-  if (pseudo) return withStyleReadCache(() => resolveCSSComputedValue(element, name, pseudo));
+  if (pseudo)
+    return styleObservationIsolated
+      ? cssForeignPseudoValue(element, name, pseudo)
+      : withStyleReadCache(() => resolveCSSComputedValue(element, name, pseudo));
   const native = blitzStyleValue(element, name);
   if (
     name === 'font-size' &&

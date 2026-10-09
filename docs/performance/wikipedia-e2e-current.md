@@ -26,6 +26,17 @@ producer is an explicit semantic fallback/oracle rather than a user-selectable
 alternative performance mode. Canonical Go DOM state and realm ownership remain
 authoritative.
 
+## Current canonical-read checkpoint
+
+The [current performance summary](report.md#canonical-reads-and-deferred-font-resolution)
+records two alternating fresh-process pairs with the unchanged workload.
+All eight cold/warm executions passed. Cold medians were 23.792 s for the
+control and 18.497 s for the candidate; warm medians were 13.926 and 8.391 s.
+The candidate defers unused box-state font resolution and reuses canonical
+DOM/style observations. These matched results show a 22.3% cold and 39.7% warm
+latency reduction for the identified builds. They are a separate checkpoint
+from the earlier native producer series and do not establish competitor parity.
+
 ## Attribution and rejected approaches
 
 - Warm utility callback work can dominate when Page owner wait and CDP

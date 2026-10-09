@@ -1679,15 +1679,48 @@
     }
   };
   // Parentage, ownership and attributes are projections of the same canonical
-  // node. Keep their demand-loaded fields together only while the existing
-  // style/geometry observation owns a mutation-safe snapshot. Public getters
-  // outside that scope continue to cross the authoritative host on every read.
+  // node. The private atomic word publishes every canonical arena write before
+  // unlocking it, including writes from another realm. Demand-loaded readbacks
+  // survive only that exact epoch; engines without the word use host reads.
+  const readCanonicalRevision = typeof Atomics === 'undefined' ? null : Atomics.load,
+    CanonicalRevisionArray = typeof BigUint64Array === 'undefined' ? null : BigUint64Array;
+  let canonicalRevisionWord = null,
+    canonicalReadVersion = -1n,
+    canonicalReadRecords = new WeakMap(),
+    canonicalReadAdmissions = 0;
+  registerBootstrapCallback('installCanonicalDOMReads', (buffer) => {
+    canonicalRevisionWord = new CanonicalRevisionArray(buffer);
+    canonicalReadVersion = -1n;
+    canonicalReadRecords = new WeakMap();
+    canonicalReadAdmissions = 0;
+  });
+  const canonicalDOMRevision = () =>
+    canonicalRevisionWord ? readCanonicalRevision(canonicalRevisionWord, 0) : host.domRevision();
+  bootstrapRestoreHooks.push(() => {
+    canonicalRevisionWord = null;
+    canonicalReadRecords = new WeakMap();
+    canonicalReadAdmissions = 0;
+  });
   const domReadRecord = (node) => {
-    if (!styleReadCache) return null;
-    const records =
-      styleReadCache.domReadRecords || (styleReadCache.domReadRecords = new WeakMap());
+    let records;
+    if (styleReadCache)
+      records = styleReadCache.domReadRecords || (styleReadCache.domReadRecords = new WeakMap());
+    else {
+      if (!canonicalRevisionWord || referenceGet(node)) return null;
+      const version = readCanonicalRevision(canonicalRevisionWord, 0);
+      if (version !== canonicalReadVersion) {
+        canonicalReadVersion = version;
+        canonicalReadRecords = new WeakMap();
+        canonicalReadAdmissions = 0;
+      }
+      records = canonicalReadRecords;
+      if (!records.has(node) && canonicalReadAdmissions >= 32768) return null;
+    }
     let record = records.get(node);
-    if (!record) records.set(node, (record = {}));
+    if (!record) {
+      records.set(node, (record = {}));
+      if (!styleReadCache) canonicalReadAdmissions++;
+    }
     return record;
   };
   const cachedDOMParent = (node) => {
@@ -1706,10 +1739,14 @@
     return record.ownerDocument;
   };
   const cachedDOMChildren = (node) => {
-    const slot = elementSlot(node);
-    if (!styleReadCache) return host.nodeChildren(slot.nodeId).map(wrap);
+    const nodeID = node === document ? realmDocumentRootID : elementSlot(node).nodeId;
+    if (!styleReadCache) {
+      const record = domReadRecord(node);
+      if (!record) return host.childIDs(nodeID).map(wrap);
+      return record.children || (record.children = host.childIDs(nodeID).map(wrap));
+    }
     const cache = styleReadCache.domChildren || (styleReadCache.domChildren = new WeakMap());
-    if (!cache.has(node)) cache.set(node, host.nodeChildren(slot.nodeId).map(wrap));
+    if (!cache.has(node)) cache.set(node, host.childIDs(nodeID).map(wrap));
     return cache.get(node);
   };
   const cachedDOMAttribute = (node, name) => {
@@ -1719,16 +1756,24 @@
       (!data.namespaceURI && !data.qualifiedName)
     )
       name = name.toLowerCase();
-    if (!styleReadCache) return host.getAttribute(elementSlot(node).nodeId, name);
     const record = domReadRecord(node);
+    if (!record) return host.getAttribute(elementSlot(node).nodeId, name);
     let cache = record.attributes;
     if (!cache) record.attributes = cache = new Map();
-    if (!cache.has(name)) cache.set(name, host.getAttribute(elementSlot(node).nodeId, name));
+    if (!cache.has(name)) {
+      // Repeated attribute consumers benefit from one canonical row. Keep
+      // single-attribute observations cheap and demand-loaded.
+      if (!styleReadCache && cache.size >= 3) {
+        const attributes = cssObservationNodeState(node).attributes;
+        return Object.hasOwn(attributes, name) ? attributes[name] : null;
+      }
+      cache.set(name, host.getAttribute(elementSlot(node).nodeId, name));
+    }
     return cache.get(name);
   };
   const cachedDOMAttributeNames = (node) => {
-    if (!styleReadCache) return host.attributeNames(elementSlot(node).nodeId);
     const record = domReadRecord(node);
+    if (!record) return host.attributeNames(elementSlot(node).nodeId);
     if (!Object.hasOwn(record, 'attributeNames'))
       record.attributeNames = host.attributeNames(elementSlot(node).nodeId);
     return record.attributeNames;
@@ -2146,7 +2191,15 @@
       : null;
     if (owners?.get(element) === false) return null;
     const value = host.foreignComputedStyleFlatTree(elementSlot(element).nodeId, kind, name);
-    if (value !== null && styleReadCache && kind !== 'values' && kind !== 'documentValues')
+    if (
+      value !== null &&
+      styleReadCache &&
+      kind !== 'values' &&
+      kind !== 'documentValues' &&
+      kind !== 'pseudoContent' &&
+      kind !== '' &&
+      kind !== 'document'
+    )
       styleReadCache.retainable = false;
     owners?.set(element, value !== null);
     return value;
@@ -3292,7 +3345,13 @@
       }
       const slot = elementSlot(node);
       if (!slot) return node instanceof Document;
-      if (host.isConnected(slot.nodeId)) return true;
+      const record = domReadRecord(node);
+      let connected = record?.connected;
+      if (connected === undefined) {
+        connected = record?.observationState?.connected || host.isConnected(slot.nodeId);
+        if (record) record.connected = connected;
+      }
+      if (connected) return true;
       if (!shadowHosts.size) return false;
       node = cachedDOMParent(node);
     }
@@ -3920,6 +3979,7 @@
       return connected;
     });
   registerBootstrapCallback('installFrameViewport', readFrameViewport, frameHasLayout);
+  const pseudoContentRules = new WeakMap();
   registerBootstrapCallback('installComputedStyleFlatTree', (nodeID, kind, name) => {
     const element = wrap(nodeID);
     if (kind === 'protocolComputedStyle')
@@ -3980,39 +4040,80 @@
             values[property] = cssComputedValue(element, property);
           return JSON.stringify(values);
         })
-      : kind === 'documentValues'
+      : kind === 'pseudoContent'
         ? withStyleReadCache(() => {
-            const properties = JSON.parse(name),
-              rows = [];
-            for (const candidate of compatibilitySelectors.query(document, '*')) {
-              const values = {};
-              for (const property of properties)
-                values[property] = cssComputedValue(candidate, property);
-              rows.push([
-                elementSlot(candidate).nodeId,
-                values,
-                observeElementVisibility(candidate),
-              ]);
+            // Without shadow distribution every connected document element
+            // participates in the flat tree. A missing pseudo content rule
+            // computes to normal, so only possible content overrides need a
+            // cascade. Shadow documents use canonical scalar observations.
+            if (shadowHosts.size) return false;
+            const rules = styleSheetRules(document.documentElement);
+            let candidates = pseudoContentRules.get(rules);
+            if (!candidates) {
+              candidates = rules.filter(
+                (rule) =>
+                  rule.pseudo &&
+                  rule
+                    .declarations()
+                    .some((entry) => entry.name === 'content' || entry.name === 'all'),
+              );
+              pseudoContentRules.set(rules, candidates);
             }
-            return JSON.stringify(rows);
+            const active = host.documentActive();
+            const rows = [];
+            for (const candidate of compatibilitySelectors.query(document, '*')) {
+              if (rows.length === 32768) return false;
+              const values = ['before', 'after'].map((pseudo) =>
+                !active
+                  ? ''
+                  : compatibilitySelectors.matchingStyles(candidate, candidates, pseudo, false)
+                        .length
+                    ? cssComputedValue(candidate, 'content', pseudo)
+                    : 'normal',
+              );
+              rows.push([elementSlot(candidate).nodeId, ...values]);
+            }
+            const encoded = JSON.stringify(rows);
+            return encoded.length <= 4 * 1024 * 1024 ? encoded : false;
           })
-        : kind === 'innerText'
-          ? renderedInnerText(element)
-          : kind === 'scroll'
-            ? compatibilityScrolling.dispatch(element, JSON.parse(name))
-            : kind === 'visibility'
-              ? observeElementVisibility(element, JSON.parse(name))
-              : kind === 'box'
-                ? cssBoxModel.hasBox(element)
-                : kind === 'value'
-                  ? cssComputedValue(element, name)
-                  : kind === 'rect'
-                    ? clientRectFor(element)
-                    : kind === 'layout'
-                      ? layoutRectFor(element)
-                      : kind === 'document'
-                        ? computedStyleDocumentAvailable(element)
-                        : computedStyleAvailable(element);
+        : kind === 'pseudoValue'
+          ? (() => {
+              const request = JSON.parse(name);
+              return cssComputedValue(element, request.name, request.pseudo);
+            })()
+          : kind === 'documentValues'
+            ? withStyleReadCache(() => {
+                const properties = JSON.parse(name),
+                  rows = [];
+                for (const candidate of compatibilitySelectors.query(document, '*')) {
+                  const values = {};
+                  for (const property of properties)
+                    values[property] = cssComputedValue(candidate, property);
+                  rows.push([
+                    elementSlot(candidate).nodeId,
+                    values,
+                    observeElementVisibility(candidate),
+                  ]);
+                }
+                return JSON.stringify(rows);
+              })
+            : kind === 'innerText'
+              ? renderedInnerText(element)
+              : kind === 'scroll'
+                ? compatibilityScrolling.dispatch(element, JSON.parse(name))
+                : kind === 'visibility'
+                  ? observeElementVisibility(element, JSON.parse(name))
+                  : kind === 'box'
+                    ? cssBoxModel.hasBox(element)
+                    : kind === 'value'
+                      ? cssComputedValue(element, name)
+                      : kind === 'rect'
+                        ? clientRectFor(element)
+                        : kind === 'layout'
+                          ? layoutRectFor(element)
+                          : kind === 'document'
+                            ? computedStyleDocumentAvailable(element)
+                            : computedStyleAvailable(element);
   });
   registerBootstrapCallback('installProtocolBoxModel', (nodeID) =>
     withStyleReadCache(() => {
@@ -5123,6 +5224,7 @@
     collectionLoadingFinished = false;
   };
   const domCollectionVersion = () => {
+    if (canonicalRevisionWord) return canonicalDOMRevision() + ':' + domCollectionRevision;
     if (!collectionLoadingFinished) collectionLoadingFinished = host.readyState() !== 'loading';
     return collectionLoadingFinished ? domCollectionRevision : 'host:' + host.domRevision();
   };

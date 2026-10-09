@@ -75,6 +75,44 @@ func TestDOMReadMutationReparentAndAdoption(t *testing.T) {
 	}
 }
 
+func TestCanonicalDOMReadPublicationAcrossWorldsAndTeardown(t *testing.T) {
+	parallelBrowserTest(t)
+	p := bootstrapSnapshotPage(t)
+	d := NewDebugger(p)
+	defer d.Close()
+	debuggerEval(t, d, `document.body.innerHTML='<section id="box"><span data-state="before">old</span></section>'`, DebuggerOptions{})
+	owner := p.Top.Realm
+	if owner.domSharedRevision == nil || owner.domRevisionSubscription == nil {
+		t.Fatal("V8 realm did not install canonical revision publication")
+	}
+	world, err := p.IsolatedWorld(context.Background(), p.Top.ID, "canonical-reads")
+	if err != nil {
+		t.Fatal(err)
+	}
+	read := func(source string, want any) {
+		t.Helper()
+		result, err := d.Evaluate(context.Background(), p.Top.ID, world, source, DebuggerOptions{ReturnByValue: true})
+		if err != nil || result["exceptionDetails"] != nil || result["result"].(map[string]any)["value"] != want {
+			t.Fatalf("canonical read: %#v %v, want %v", result, err, want)
+		}
+	}
+	read(`globalThis.box=document.getElementById('box');globalThis.node=box.firstChild;globalThis.list=box.childNodes;node.getAttribute('data-state')==='before'&&node.parentNode===box&&node.ownerDocument===document&&node.isConnected&&list.length===1&&list[0]===node`, true)
+	debuggerEval(t, d, `const node=document.querySelector('span');node.setAttribute('data-state','after');node.setAttribute('data-extra','new');node.firstChild.data='\ud800updated';document.getElementById('box').append(document.createElement('i'));`, DebuggerOptions{})
+	read(`node.getAttribute('data-state')==='after'&&node.getAttributeNames().includes('data-extra')&&node.firstChild.data==='\ud800updated'&&list.length===2&&list[0]===node`, true)
+	debuggerEval(t, d, `document.querySelector('span').remove()`, DebuggerOptions{})
+	read(`node.parentNode===null&&!node.isConnected&&node.ownerDocument===document&&list.length===1`, true)
+	debuggerEval(t, d, `document.getElementById('box').prepend(node)`, DebuggerOptions{})
+	read(`node.parentNode===box&&node.isConnected&&list.length===2&&list[0]===node`, true)
+	if err := p.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if owner.domSharedRevision != nil || owner.domRevisionSubscription != nil {
+		t.Fatal("Page teardown retained the revision publisher")
+	}
+	// A retained canonical node arena may outlive its execution realm.
+	owner.document.InvalidateObservations()
+}
+
 func TestXMLDocumentFactoryChrome152(t *testing.T) {
 	parallelBrowserTest(t)
 	b, err := New(v8engine.Factory{}, chrome152.New())

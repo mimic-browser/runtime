@@ -219,6 +219,12 @@ type Realm struct {
 	memoryProjection              memoryProjection
 	documentEntry                 *Realm
 	ancestorOrigins               []string
+
+	// Native revision publication belongs to the realm and is disconnected
+	// before its V8 view and DOM owner are torn down.
+	canonicalDOMReadInstaller engine.Value
+	domRevisionSubscription   func()
+	domSharedRevision         engine.SharedRevision
 }
 
 // documentURL is the URL observed by this realm. For the top-level realm it
@@ -563,6 +569,16 @@ func (r *Realm) Close() error {
 		return nil
 	}
 	r.closed = true
+	var sharedRevisionCloseErr error
+	if r.domRevisionSubscription != nil {
+		r.domRevisionSubscription()
+		r.domRevisionSubscription = nil
+	}
+	if r.domSharedRevision != nil {
+		sharedRevisionCloseErr = r.domSharedRevision.Close()
+		r.domSharedRevision = nil
+	}
+	r.canonicalDOMReadInstaller = nil
 	r.runtimeGroup.remove(r)
 	releaseRuntimeValues(r.runtime, r.apiTraceSet)
 	r.apiTraceSet = nil
@@ -664,7 +680,7 @@ func (r *Realm) Close() error {
 		r.blitz.document.Close()
 		r.blitz = nil
 	}
-	return errors.Join(nativeCloseErr, runtimeCloseErr)
+	return errors.Join(nativeCloseErr, runtimeCloseErr, sharedRevisionCloseErr)
 }
 func (r *Realm) Evaluate(ctx context.Context, source, name string) (engine.Value, error) {
 	p := r.agent.Page()
@@ -1304,7 +1320,7 @@ func (r *Realm) installBindingsOnOwner() error {
 		// Style inputs and geometry resources have different lifetimes. Return
 		// both in one crossing so JS can retain selector/cascade work across
 		// image-only completions while invalidating boxes and used values.
-		return r.val(fmt.Sprintf("%d:%d:%d|%d:%d:%s:%t:%g:%t|%d", r.styleDocumentRevision(), owner.styleResourceRevision.Load(), r.selectorTargetID, w.ViewportWidth, w.ViewportHeight, preferences.ColorScheme, preferences.ReducedMotion, environment.Display.DeviceScaleFactor, owner.styleProjections.isDynamic(), owner.resourceRevision.Load())), nil
+		return r.val(fmt.Sprintf("%d:%d:%d|%d:%d:%s:%t:%g:%t|%d", r.styleDocumentRevision(), owner.styleResourceRevision.Load(), owner.selectorTargetID, w.ViewportWidth, w.ViewportHeight, preferences.ColorScheme, preferences.ReducedMotion, environment.Display.DeviceScaleFactor, owner.styleProjections.isDynamic(), owner.resourceRevision.Load())), nil
 	})
 	host["observationRevision"] = r.packedFn(func(_ engine.Value, _ []engine.Value) (engine.Value, error) {
 		return r.val(r.styleDocumentRevision()), nil
@@ -1593,6 +1609,10 @@ func (r *Realm) installBindingsOnOwner() error {
 	host["styleObservationState"] = r.packedFn(func(_ engine.Value, a []engine.Value) (engine.Value, error) {
 		return r.val(r.document.StyleObservationState(int64(numarg(a, 0)))), nil
 	}, "n")
+	host["installCanonicalDOMReads"] = r.fn(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
+		r.canonicalDOMReadInstaller = args[0]
+		return nil, nil
+	})
 	host["nodeData"] = r.transientFn(func(_ engine.Value, a []engine.Value) (engine.Value, error) {
 		n, ok := r.document.Get(int64(numarg(a, 0)))
 		if !ok {
@@ -1842,9 +1862,9 @@ func (r *Realm) installBindingsOnOwner() error {
 		// children on every ancestor read. wrap resolves uncached IDs lazily.
 		return r.val(n.ID), nil
 	}, "n")
-	host["isConnected"] = r.transientFn(func(_ engine.Value, a []engine.Value) (engine.Value, error) {
+	host["isConnected"] = r.packedFn(func(_ engine.Value, a []engine.Value) (engine.Value, error) {
 		return r.val(r.document.IsConnected(int64(numarg(a, 0)))), nil
-	})
+	}, "n")
 	host["sibling"] = r.packedFn(func(_ engine.Value, a []engine.Value) (engine.Value, error) {
 		n, ok := r.document.Sibling(int64(numarg(a, 0)), int(numarg(a, 1)))
 		if !ok {
@@ -2393,7 +2413,33 @@ func (r *Realm) installBindingsOnOwner() error {
 	if err == nil {
 		err = r.installDebuggerBindings()
 	}
+	if err == nil {
+		err = r.installCanonicalDOMReads()
+	}
 	return err
+}
+
+func (r *Realm) installCanonicalDOMReads() error {
+	native, ok := r.runtime.(engine.SharedRevisionRuntime)
+	if !ok || r.canonicalDOMReadInstaller == nil {
+		return nil
+	}
+	buffer, revision, err := native.NewSharedRevision()
+	if err != nil {
+		return err
+	}
+	defer releaseDebuggerValue(r, buffer)
+	unsubscribe := r.document.SubscribeRevision(revision.Publish)
+	value, err := r.runtime.Call(context.Background(), r.canonicalDOMReadInstaller, nil, buffer)
+	releaseDebuggerValue(r, value)
+	if err != nil {
+		unsubscribe()
+		_ = revision.Close()
+		return err
+	}
+	r.domRevisionSubscription = unsubscribe
+	r.domSharedRevision = revision
+	return nil
 }
 
 func (r *Realm) notifyPerformanceObservers(ctx context.Context) {

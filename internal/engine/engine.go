@@ -202,6 +202,18 @@ type PropertyObservationRuntime interface {
 	PropertyObservationFactory() Value
 }
 
+// SharedRevisionRuntime exposes an internal atomic revision word to JavaScript.
+// The counter is native memory, not a retained Go pointer. Its publisher must
+// be unsubscribed from canonical state before Close releases its native owner.
+type SharedRevisionRuntime interface {
+	NewSharedRevision() (Value, SharedRevision, error)
+}
+
+type SharedRevision interface {
+	Publish(uint64)
+	Close() error
+}
+
 // GeneratedLazyRuntime supplies one snapshot-portable native installer per
 // realm. Generated WebAPI member IDs are immutable catalog data; the callable
 // values and any later mutations remain local to the current V8 context.

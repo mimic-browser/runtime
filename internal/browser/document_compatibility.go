@@ -62,7 +62,7 @@ func (r *Realm) installDocumentCompatibility(host map[string]any) {
 			case "innerText":
 				// Inert/detached trees retain the local textContent fallback.
 				return r.val(nil), nil
-			case "value":
+			case "value", "pseudoValue":
 				return r.val(""), nil
 			case "values":
 				return r.val("{}"), nil
@@ -77,13 +77,13 @@ func (r *Realm) installDocumentCompatibility(host map[string]any) {
 		// A documentValues projection contains every element in the owner
 		// document. Keying it by the element that happened to request the batch
 		// makes each isolated world rebuild the same document-wide projection.
-		if kind == "documentValues" {
+		if kind == "documentValues" || kind == "pseudoContent" {
 			keyNode = root
 		}
 		key := styleProjectionKey{keyNode, kind, canonicalStyleProjectionProperty(kind, property)}
 		// Child viewport geometry can depend on the parent realm's style state.
 		// Until that dependency is represented, retain only top-document scalars.
-		cacheable := (kind == "value" || kind == "values" || kind == "documentValues" || kind == "document" || kind == "" || kind == "box" ||
+		cacheable := (kind == "value" || kind == "values" || kind == "documentValues" || kind == "pseudoContent" || kind == "pseudoValue" || kind == "document" || kind == "" || kind == "box" ||
 			(kind == "visibility" && !strings.Contains(property, `"contentVisibilityAuto":true`))) && len(property) <= 512 && owner == p.Top.Realm
 		epoch := owner.styleProjectionEpoch(kind)
 		if cacheable {

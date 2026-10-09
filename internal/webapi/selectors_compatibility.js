@@ -135,8 +135,7 @@ const compatibilitySelectors = (() => {
       if (styleReadCache && reads === styleReadCache.selectorReads)
         return cssObservationChildren(node);
       const slot = elementSlot(node);
-      if (node === document || slot)
-        return host.childIDs(node === document ? documentID : slot.nodeId).map(wrap);
+      if (node === document || slot) return cachedDOMChildren(node);
       return fragmentSlots.get(node)?.children.slice() || [];
     });
   const parent = (node) =>
@@ -145,21 +144,17 @@ const compatibilitySelectors = (() => {
         return cssObservationParent(node);
       if (syntheticParents.has(node)) return syntheticParents.get(node);
       const slot = elementSlot(node);
-      return slot ? wrap(host.parentNode(slot.nodeId)) : null;
+      return slot ? cachedDOMParent(node) : null;
     });
   const attribute = (node, name) =>
     styleReadCache && reads === styleReadCache.selectorReads
       ? (cssObservationAttribute(node, name) ?? undefined)
-      : memo(
-          node,
-          'attribute:' + name,
-          () => host.getAttribute(elementSlot(node).nodeId, name) ?? undefined,
-        );
+      : memo(node, 'attribute:' + name, () => cachedDOMAttribute(node, name) ?? undefined);
   const attributeNames = (node) =>
     memo(node, 'attributeNames', () =>
       styleReadCache && reads === styleReadCache.selectorReads
         ? Object.keys(cssObservationNodeState(node).attributes)
-        : host.attributeNames(elementSlot(node).nodeId),
+        : cachedDOMAttributeNames(node),
     );
   const adapter = {
     isTag: (node) => elementSlot(node)?.type === 'element',
@@ -589,10 +584,30 @@ const compatibilitySelectors = (() => {
     retainedStyleMatches = new WeakMap();
     retainedStyleMatchAdmissions = 0;
   });
-  const matchingStyles = (node, rules, pseudo = '') =>
+  const matchingStyles = (node, rules, pseudo = '', retainMatches = true) =>
     run(() => {
+      // The observation owns an exact DOM, state, stylesheet and environment
+      // epoch. Relational and state selectors need rematching after that epoch
+      // changes, but repeating them for every property in the same observation
+      // does not reveal new state. Keep this separate from cross-epoch static
+      // selector reuse, which still revalidates dynamic candidates below.
+      const observations =
+        retainMatches &&
+        styleReadCache &&
+        (styleReadCache.styleMatches || (styleReadCache.styleMatches = new WeakMap()));
+      let observed = observations ? observations.get(node) : null;
+      if (!observed && observations) observations.set(node, (observed = new WeakMap()));
+      let byPseudo = observed?.get(rules);
+      if (byPseudo?.has(pseudo)) return byPseudo.get(pseudo).slice();
+      const remember = (matched) => {
+        if (observed) {
+          if (!byPseudo) observed.set(rules, (byPseudo = new Map()));
+          byPseudo.set(pseudo, matched.slice());
+        }
+        return matched;
+      };
       let retained;
-      if (styleReadCache?.retainable) {
+      if (retainMatches && styleReadCache?.retainable) {
         const context = styleContext(node);
         const environment = styleReadCache.environmentVersion;
         retained = context.sheets.get(rules);
@@ -604,7 +619,7 @@ const compatibilitySelectors = (() => {
         if (previous) {
           const matched = previous.matches.slice();
           for (const rule of previous.dynamic) if (rule.matches(node)) matched.push(rule);
-          return matched.sort((a, b) => a.order - b.order);
+          return remember(matched.sort((a, b) => a.order - b.order));
         }
       }
       let index = styleIndexes.get(rules);
@@ -638,7 +653,7 @@ const compatibilitySelectors = (() => {
         styleIndexes.set(rules, index);
       }
       let retainedAcrossRevision;
-      if (index.reusable && styleReadCache?.retainable) {
+      if (retainMatches && index.reusable && styleReadCache?.retainable) {
         let byRules = retainedStyleMatches.get(node);
         retainedAcrossRevision = byRules?.get(rules)?.get(pseudo);
         if (retainedAcrossRevision?.environment === styleReadCache.environmentVersion) {
@@ -664,7 +679,7 @@ const compatibilitySelectors = (() => {
             const matched = retainedAcrossRevision.matches.slice();
             for (const rule of retainedAcrossRevision.dynamic)
               if (rule.matches(node)) matched.push(rule);
-            return matched.sort((a, b) => a.order - b.order);
+            return remember(matched.sort((a, b) => a.order - b.order));
           }
         }
       }
@@ -701,7 +716,7 @@ const compatibilitySelectors = (() => {
       // anew. Exact context and environment changes replace the entire record.
       if (retained) retained.pseudos.set(pseudo, { matches: staticMatches, dynamic });
       const sorted = matched.sort((a, b) => a.order - b.order);
-      if (index.reusable && styleReadCache?.retainable) {
+      if (retainMatches && index.reusable && styleReadCache?.retainable) {
         let byRules = retainedStyleMatches.get(node);
         let byPseudo = byRules?.get(rules);
         const admitted = byPseudo?.has(pseudo);
@@ -717,7 +732,7 @@ const compatibilitySelectors = (() => {
           });
         }
       }
-      return sorted;
+      return remember(sorted);
     }, true);
   function closest(node, selector) {
     selector = String(selector);

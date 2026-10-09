@@ -46,12 +46,36 @@ type Node struct {
 
 type arenaMutex struct {
 	sync.RWMutex
-	revision uint64
+	revision               uint64
+	revisionSubscribers    map[uint64]func(uint64)
+	nextRevisionSubscriber uint64
 }
 
 func (m *arenaMutex) Unlock() {
 	m.revision++
+	for _, publish := range m.revisionSubscribers {
+		publish(m.revision)
+	}
 	m.RWMutex.Unlock()
+}
+
+// SubscribeRevision publishes the arena epoch before each mutation unlocks.
+// Publishers must only store a scalar; they cannot reenter DOM or JavaScript.
+// Removing a publisher under the same arena lock completes every prior store.
+func (d *Document) SubscribeRevision(publish func(uint64)) func() {
+	d.mu.Lock()
+	if d.mu.revisionSubscribers == nil {
+		d.mu.revisionSubscribers = make(map[uint64]func(uint64))
+	}
+	d.mu.nextRevisionSubscriber++
+	id := d.mu.nextRevisionSubscriber
+	d.mu.revisionSubscribers[id] = publish
+	d.mu.Unlock()
+	return func() {
+		d.mu.Lock()
+		delete(d.mu.revisionSubscribers, id)
+		d.mu.Unlock()
+	}
 }
 
 type nodeArena struct {

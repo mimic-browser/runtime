@@ -122,6 +122,40 @@ func TestIsolatedStyleBatchesLargeStableDocument(t *testing.T) {
 	})
 }
 
+func TestIsolatedPseudoContentUsesCanonicalOwner(t *testing.T) {
+	serialBrowserTest(t)
+	t.Setenv("MIMIC_PROFILE_HOSTS", "1")
+	historyTestPages(t, func(t *testing.T, p *Page) {
+		d := NewDebugger(p)
+		defer d.Close()
+		debuggerEval(t, d, `document.head.innerHTML='<style>:root{--tail:"!"}.item::before{content:attr(data-label)}.item::after{content:var(--tail)}</style>';document.body.innerHTML=Array.from({length:160},(_,i)=>'<div class="item" data-label="row-'+i+'"></div>').join('')`, DebuggerOptions{})
+		world, err := p.IsolatedWorld(context.Background(), p.Top.ID, "pseudo-content")
+		if err != nil {
+			t.Fatal(err)
+		}
+		read := func(source string, want any) {
+			t.Helper()
+			result, err := d.Evaluate(context.Background(), p.Top.ID, world, source, DebuggerOptions{ReturnByValue: true})
+			if err != nil || result["exceptionDetails"] != nil || result["result"].(map[string]any)["value"] != want {
+				t.Fatalf("pseudo content: %#v %v, want %v", result, err, want)
+			}
+		}
+		read(`Array.from(document.querySelectorAll('.item'),(e,i)=>getComputedStyle(e,'::before').content==='"row-'+i+'"'&&getComputedStyle(e,'::after').content==='"!"').every(Boolean)`, true)
+		before := liveDiagnosticCost(t, p, "host:foreignComputedStyleFlatTree")
+		read(`Array.from(document.querySelectorAll('.item'),(e,i)=>getComputedStyle(e,'::before').content==='"row-'+i+'"'&&getComputedStyle(e,'::after').content==='"!"').every(Boolean)`, true)
+		if calls := liveDiagnosticCost(t, p, "host:foreignComputedStyleFlatTree") - before; calls != 0 {
+			t.Fatalf("retained pseudo values used %d owner crossings", calls)
+		}
+		debuggerEval(t, d, `document.querySelector('.item').setAttribute('data-label','new');document.documentElement.style.setProperty('--tail','"next"')`, DebuggerOptions{})
+		read(`JSON.stringify([getComputedStyle(document.querySelector('.item'),'::before').content,getComputedStyle(document.querySelector('.item'),'::after').content])`, `["\"new\"","\"next\""]`)
+		debuggerEval(t, d, `document.styleSheets[0].cssRules[1].style.content='"edited"'`, DebuggerOptions{})
+		read(`getComputedStyle(document.querySelector('.item'),'::before').content`, `"edited"`)
+		read(`globalThis.savedPseudoElement=document.querySelector('.item');true`, true)
+		debuggerEval(t, d, `document.querySelector('.item').remove()`, DebuggerOptions{})
+		read(`getComputedStyle(savedPseudoElement,'::before').content`, "")
+	})
+}
+
 func TestIsolatedStyleUsesElementReadsWhenRetentionIsDisabled(t *testing.T) {
 	parallelBrowserTest(t)
 	historyTestPages(t, func(t *testing.T, p *Page) {

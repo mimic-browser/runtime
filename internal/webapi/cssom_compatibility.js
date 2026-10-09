@@ -586,7 +586,7 @@ const constructedStyleSheets = (() => {
       const values = () => {
         // Membership depends on canonical DOM writes; sheet availability and
         // CSSOM state are still rechecked even when membership is unchanged.
-        const current = host.domRevision();
+        const current = canonicalDOMRevision();
         if (current !== domVersion) {
           candidates = compatibilitySelectors.query(root, 'style,link', false, false);
           domVersion = current;
@@ -849,7 +849,7 @@ const readBlitzInputs = () => {
     }
   }
   const inputs = constructedStyleSheets.nativeSources(document);
-  const membershipRevision = host.domRevision();
+  const membershipRevision = canonicalDOMRevision();
   if (blitzControlMembershipRevision !== membershipRevision) {
     blitzControlMembership = compatibilitySelectors.query(
       document,
