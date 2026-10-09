@@ -65,7 +65,13 @@ const cryptoRun = (request) => {
 };
 const cryptoResult = (callback) => {
   try {
-    return platformPromiseResolve(callback());
+    const result = callback();
+    // A retained Window can still expose SubtleCrypto after its Document is
+    // inactive, but successful operations started there cannot deliver a
+    // completion. Operations started before removal keep their settled promise.
+    // Workers have no Document lifecycle.
+    if (host.documentActive && !host.documentActive()) return new platformPromise(() => {});
+    return platformPromiseResolve(result);
   } catch (error) {
     return platformPromiseReject(error);
   }

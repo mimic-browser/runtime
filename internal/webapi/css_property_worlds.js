@@ -1,6 +1,7 @@
 // A Document's registration authority belongs to its main realm. Isolated
 // worlds register through it and observe the same computed-style projection.
 (() => {
+  if (!globalThis.CSS || typeof CSS.registerProperty !== 'function') return;
   const register = CSS.registerProperty;
   registerBootstrapCallback('installCSSPropertyRegistration', (encoded) => {
     try {
