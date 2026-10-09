@@ -49,7 +49,9 @@ retargeting or arbitrary visual clipping. Visibility supports box presence,
 ancestor display/content-visibility hiding and optional visibility/opacity checks;
 offscreen `content-visibility:auto` skipping is not modeled. File chooser
 interception remains explicitly unsupported (this CLI tolerates that error).
-Screenshot, video and PDF rendering remain unsupported.
+Approximate PNG screenshots are available through the standard CDP
+`Page.captureScreenshot` command; see [their scope and limitations](approximate-screenshots.md).
+Video and rendered PDFs remain unsupported.
 
 ## Generated schema and semantic scope
 
@@ -127,10 +129,11 @@ untrusted, and inline event handlers pass through the canonical CSP policy.
 Default Windows form-control dimensions were measured against the same Chrome.
 They use the existing text shaper and the same modeled rectangle used by
 `getBoundingClientRect`, iterable `getClientRects`, CDP quads and hit testing.
-This adds consistent automation observations without a renderer or layout
-engine; arbitrary CSS flow, occlusion, fragments and rich editing remain outside
-the current claim. Screenshots, PDF rendering, screencast and visual/media output
-remain unsupported.
+This adds consistent automation observations without a full layout engine;
+arbitrary CSS flow, occlusion, fragments and rich editing remain outside the
+current claim. `Page.captureScreenshot` returns an approximate PNG from the
+current Page snapshot, independent of the modeled geometry. PDF rendering,
+screencast and video output remain unsupported.
 
 ## Updating and checking coverage
 

@@ -29,8 +29,9 @@ and pointer overlay. Discovery and WebSocket reconnection recover automatically
 after a local server restart.
 
 The viewer displays the current DOM as an ordinary styled website, using the
-viewer's browser for rendering. Mimic does not gain a renderer, GPU requirement,
-or Chromium runtime dependency. This is a visual DOM mirror, not a screenshot
+viewer's browser for rendering. It does not invoke Mimic's separate
+[approximate screenshot renderer](approximate-screenshots.md), require a GPU,
+or add a Chromium runtime dependency. This visual DOM mirror is not a screenshot
 or proof that Mimic's geometry matches the viewer browser's layout.
 
 The implementation reuses the existing canonical DOM snapshot projection,

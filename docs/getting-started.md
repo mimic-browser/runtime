@@ -291,7 +291,7 @@ Historical observations and small before/after captures are retained under
 `docs/` and `compatibility/captures/`; optional site-oriented tools live in
 `compatibility/research/` and are never loaded by production code.
 
-Known gaps include rendering, complete CSS layout, Canvas/WebGL pixels, media,
+Known gaps include pixel-accurate rendering, complete CSS layout, Canvas/WebGL pixels, media,
 full DOM/Web API algorithms, full CDP object handles, cookie/CORS completeness,
 Streams backpressure/BYOB and complete fallback microtask semantics. Do not infer
 full Chrome compatibility from a passing focused suite.
