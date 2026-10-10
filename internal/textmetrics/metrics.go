@@ -77,14 +77,14 @@ type Engine struct {
 	fallbackSelections     map[fallbackSelectionKey]resource
 	fallbackSelectionOrder []fallbackSelectionKey
 	spoolDir               string
-	coverage               map[string]font.Cmap
+	coverage               map[string]func() font.Cmap
 }
 
 type systemCatalog struct {
 	once       sync.Once
 	catalog    []resource
 	localNames map[string]resource
-	coverage   map[string]font.Cmap
+	coverage   map[string]func() font.Cmap
 }
 
 var systemCatalogs sync.Map
@@ -243,10 +243,10 @@ func (e *Engine) scan() {
 	}
 }
 
-func scanFontDirectories(dirs []string) ([]resource, map[string]resource, map[string]font.Cmap) {
+func scanFontDirectories(dirs []string) ([]resource, map[string]resource, map[string]func() font.Cmap) {
 	catalog := []resource{}
 	localNames := map[string]resource{}
-	coverage := map[string]font.Cmap{}
+	coverage := map[string]func() font.Cmap{}
 	var scratch []byte
 	for _, dir := range dirs {
 		// Linux distributions arrange fonts in nested family/format directories.
@@ -270,15 +270,7 @@ func scanFontDirectories(dirs []string) ([]resource, map[string]resource, map[st
 					d, scratch = font.Describe(loader, scratch)
 					d.Aspect.SetDefaults()
 					if d.Family != "" {
-						os2Raw, _ := loader.RawTable(ot.MustNewTag("OS/2"))
-						os2, _, _ := tables.ParseOs2(os2Raw)
-						if raw, err := loader.RawTable(ot.MustNewTag("cmap")); err == nil {
-							if table, _, err := tables.ParseCmap(raw); err == nil {
-								if cmap, _, err := font.ProcessCmap(table, os2.FontPage()); err == nil {
-									coverage[fmt.Sprintf("%s#%d", path, index)] = cmap
-								}
-							}
-						}
+						coverage[fmt.Sprintf("%s#%d", path, index)] = deferredFontCoverage(path, index)
 						catalog = append(catalog, resource{path, index, strings.ToLower(d.Family), d.Aspect})
 						if raw, err := loader.RawTable(ot.MustNewTag("name")); err == nil {
 							if names, _, err := tables.ParseName(raw); err == nil {

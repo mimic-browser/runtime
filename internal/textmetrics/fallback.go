@@ -142,8 +142,10 @@ func (e *Engine) fallbackFace(primary *loaded, cluster []rune, families string, 
 		// Reject using immutable nominal coverage before decoding outlines and
 		// shaping tables. This must not change candidate order or replace the
 		// final variation-selector / color-glyph check on the selected face.
-		if cmap := e.coverage[key]; cmap != nil && !nominalCoverage(cmap, cluster) && !nominalCoverage(cmap, []rune(norm.NFC.String(clusterText))) {
-			return nil, nil
+		if lookup := e.coverage[key]; lookup != nil {
+			if cmap := lookup(); cmap != nil && !nominalCoverage(cmap, cluster) && !nominalCoverage(cmap, []rune(norm.NFC.String(clusterText))) {
+				return nil, nil
+			}
 		}
 		coverage := coverageKey{key, clusterText}
 		if _, missing := e.missingCoverage[coverage]; missing {

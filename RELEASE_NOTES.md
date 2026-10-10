@@ -1,12 +1,13 @@
-# Mimic v0.2.4
+# Mimic v0.2.5 — Public Beta
 
-Changes since v0.2.3:
+This release reduces bootstrap and installed-font memory retention while preserving native callable behavior, lazy operation identity, and Page isolation.
 
-- Keep internal snapshot preparation contexts and pages out of browser automation discovery. Creating and closing application contexts now produces a stable public context list while the runtime prepares its cache.
-- Wait for internal snapshot preparation and page cleanup during shutdown, preventing overlapping preparation from retaining resources or using a closed realm.
-- Complete accepted page, context and browser close commands even when the automation client immediately disconnects, while still cancelling ordinary session work on disconnect.
-- Add PNG screenshots through the standard CDP `Page.captureScreenshot` command. They reflect the current DOM after script interactions, but visual accuracy is not guaranteed; the separate renderer does not represent Mimic's script-visible layout. See [approximate screenshots](docs/approximate-screenshots.md) for the supported scope.
-- Improve approximate painting of SVG, CSS grid sidebars, styled controls and literal `::before`/`::after` text. The screenshot renderer now uses a maintained, static-only `go-webengine` fork without its browser, JavaScript or module-bundling packages.
-- Preserve resource timing order when separate fetch starts resolve to the same exposed `startTime`.
+- Avoid redundant JavaScript wrappers around native platform operations.
+- Publish generated lazy operations after reflective bootstrap finalization.
+- Preserve snapshot function state without retaining compiled installation bytecode; invalidate snapshots created with the previous policy.
+- Decode immutable installed-font coverage once per resource on demand, keeping shaping faces and author fonts owned by each Page.
+- Prevent CDP Pages from auto-attaching to their own targets and reject unsafe Console eager evaluations.
 
-Mimic remains a public beta for Windows and Linux amd64. Browser automation support follows the documented CDP scope. Full source changes: [v0.2.3...v0.2.4](https://github.com/mimic-browser/runtime/compare/v0.2.3...v0.2.4).
+The [memory checkpoint](benchmark/runs/14-memory-20261010/public-summary.md) measured 40.95 MiB ready RSS and 719.06 MiB active RSS for 50 static Pages: reductions of 16.4% and 12.7% from the previous local control. Relative to saved September Chrome 152 observations, these are 9.27× and 5.70× lower. All 120 single-Page attempts and 2,910 density sessions passed.
+
+This checkpoint covers memory rather than the full performance benchmark. Snapshot bytecode clearing reduced static batch throughput by approximately 7% in a separate paired diagnostic; Wikipedia workflow checks showed no material slowdown. Compatibility remains workload-dependent.

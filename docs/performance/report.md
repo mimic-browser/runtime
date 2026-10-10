@@ -24,6 +24,59 @@ The [Wikipedia E2E reference](wikipedia-e2e-current.md) records the complete
 unchanged Playwright workflow and its acceptance criteria. A faster isolated
 CDP call, DOM operation or synthetic click is not an E2E result.
 
+## Bootstrap and font memory retention
+
+Native platform operations now retain one native gate without an intermediate
+JavaScript facade. Generated lazy operations are published after the reflective
+bootstrap finalizers, so descriptor normalization does not eagerly materialize
+them. Snapshots preserve function identity and lexical state without keeping
+compiled installation bytecode; their artifact identity includes that policy.
+Installed-font names and candidate order remain eager, while immutable nominal
+coverage is decoded once per resource on demand. Shaping faces and author fonts
+remain Page-owned.
+
+A Windows memory-only measurement reused the frozen local fixtures, Job Object
+accounting and 50 ms sampler. All 120 measured warm single-Page attempts and
+2,910 density sessions passed. Each of the six workloads had 20 warm samples;
+static, CPU and React density completed 1/5/10/25/50/100 Pages with an excluded
+warmup and `max(5, ceil(20/N))` measured waves per fresh process. Active Pages
+were held until the wave ended, followed by the existing 250 ms recovery wait.
+The adapter's 120 s wave guard was not reached. No cold latency matrix or live
+Chrome comparison was run.
+
+| Process-tree RSS | October 10 control | Current source |
+| --- | ---: | ---: |
+| Ready, ten fresh processes | 49.00 MiB | 40.95 MiB |
+| Static, 50 active Pages | 823.99 MiB | 719.06 MiB |
+| CPU, 50 active Pages | 1324.79 MiB | 1206.30 MiB |
+| React, 50 active Pages | 1094.36 MiB | 984.02 MiB |
+
+The measured executable SHA-256 is
+`27a564b0e5bd5087a838eb380ac1b6b7b64fde6bd975ae45f0ae750091a5b627`.
+Against the saved September 29 Chrome observations, current ready RSS is
+9.27 times smaller and completed static 50-Page active RSS is 5.70 times smaller.
+These cross-date memory comparisons retain the workstation/cache limitations of
+the published checkpoint; they do not replace its full benchmark. September
+CPU/React density and static 100-Page diagnostic rows are not successful Chrome
+references. Completion of React at 100 Pages here does not establish that an
+earlier isolated timeout's cause has been fixed.
+
+Focused callable/source, snapshot/lifecycle, lazy mutation/freeze and frozen font
+checks passed. Concurrent coverage initialization passed the focused race check.
+Separate paired diagnostics reduced live V8 heap by approximately 0.51 MiB per
+Page when removing the intermediate facade, and another 0.36 MiB when delaying
+lazy-slot publication. Those forced-collection observations are not ordinary RSS.
+
+Snapshot bytecode clearing reduced paired static 50-Page RSS from 771.51 to
+741.19 MiB, with approximately 7% lower batch throughput. Two alternating
+Wikipedia pairs passed all four complete workflows, with control/candidate
+median durations of 9.698/9.478 s. Three clean alternating pairs for deferred
+font coverage passed all six complete workflows at 8.970/9.008 s. The latter
+change did not establish a Wikipedia peak-RSS reduction (352.14/356.73 MiB).
+These memory changes are not a universal speed improvement. RSS sums working
+sets and can count shared pages repeatedly; sampling can miss short peaks, and
+recovery/cache retention does not prove leak absence.
+
 ## Bootstrap optimization checkpoint
 
 Bootstrap preparation now uses generated immutable metadata from the frozen

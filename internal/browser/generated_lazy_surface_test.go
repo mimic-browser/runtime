@@ -60,6 +60,14 @@ func TestGeneratedLazyOperationFreezeBeforeFirstRead(t *testing.T) {
 	if value := bootstrapSnapshotEvaluate(t, page, probe); value != "ok" {
 		t.Fatalf("freeze before generated operation read: %v", value)
 	}
+	bootstrapSnapshotWarm(t, page)
+	restored, err := page.ctx.NewPage()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if value := bootstrapSnapshotEvaluate(t, restored, probe); value != "ok" {
+		t.Fatalf("restored freeze before generated operation read: %v", value)
+	}
 }
 
 func TestGeneratedLazyOperationMutationBeforeFirstRead(t *testing.T) {
@@ -77,6 +85,14 @@ func TestGeneratedLazyOperationMutationBeforeFirstRead(t *testing.T) {
 })()`
 	if value := bootstrapSnapshotEvaluate(t, page, probe); value != "ok" {
 		t.Fatalf("mutation before generated operation read: %v", value)
+	}
+	bootstrapSnapshotWarm(t, page)
+	restored, err := page.ctx.NewPage()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if value := bootstrapSnapshotEvaluate(t, restored, probe); value != "ok" {
+		t.Fatalf("restored mutation before generated operation read: %v", value)
 	}
 }
 

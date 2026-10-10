@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/readme-hero.png" alt="Mimic — Browser automation without Chromium. The blue Mimic mascot starts a simple web-to-JavaScript-to-data automation flow." width="1200">
+  <img src="docs/assets/readme-hero.png" alt="Mimic вЂ” Browser automation without Chromium. The blue Mimic mascot starts a simple web-to-JavaScript-to-data automation flow." width="1200">
 </p>
 
 <p align="center">
@@ -15,10 +15,10 @@
 </p>
 
 <p align="center">
-  <a href="#quick-start">Quick start</a> ·
-  <a href="#benchmarks">Benchmarks</a> ·
-  <a href="https://github.com/mimic-browser/runtime/releases/latest">Download</a> ·
-  <a href="docs/getting-started.md">Documentation</a> ·
+  <a href="#quick-start">Quick start</a> В·
+  <a href="#benchmarks">Benchmarks</a> В·
+  <a href="https://github.com/mimic-browser/runtime/releases/latest">Download</a> В·
+  <a href="docs/getting-started.md">Documentation</a> В·
   <a href="docs/cdp-compatibility.md">CDP support</a>
 </p>
 
@@ -78,7 +78,7 @@ and start its local endpoint (`mimic.exe` on Windows):
 ./mimic -listen 127.0.0.1:9222
 ```
 
-Connect through Playwright’s `chromium.connectOverCDP()`, Puppeteer’s
+Connect through PlaywrightвЂ™s `chromium.connectOverCDP()`, PuppeteerвЂ™s
 `puppeteer.connect()`, or another CDP client. No SDK is required for this path.
 See the [direct Playwright example](examples/playwright.mjs) and
 [CDP support](docs/cdp-compatibility.md).
@@ -94,23 +94,23 @@ mimic optimize --name shop -- node scraper.js
 mimic --profile shop
 ```
 
-[How Optimize works](docs/optimize/index.md) ·
-[Runnable examples](examples/README.md) ·
+[How Optimize works](docs/optimize/index.md) В·
+[Runnable examples](examples/README.md) В·
 [Profile and proxy options](docs/environment-profiles.md)
 
 ## Benchmarks
 
-<p align="center">
-  <a href="benchmark/runs/13-rss-20260929/public-summary.md"><img src="docs/assets/benchmark-story.png" alt="September 29, 2026 local benchmark against Chrome 152: 8.3 times less ready RSS; at 50 static Pages, 6.0 times throughput and 5.5 times less active RSS." width="1200"></a>
-</p>
+The October 10, 2026 memory checkpoint used **9.27× less ready RSS**
+(40.95 vs. 379.54 MiB) and **5.70× less active RSS** at 50 static Pages
+(719.06 vs. 4,102.04 MiB), compared with saved September 29 Chrome 152
+measurements on the same machine. All 120 measured single-Page attempts and
+2,910 density sessions passed, including 100-Page static, CPU and React series.
+This was a memory-only run; throughput and cold latency were not re-certified.
+Snapshot bytecode clearing traded approximately 7% static batch throughput for
+lower memory in a separate paired diagnostic.
 
-At the September 29, 2026 checkpoint, Mimic used **8.3× less ready RSS**.
-In the completed 50-Page static series it delivered **6.0× throughput** with
-**5.5× less active RSS** than Chrome 152. All 12 correctness gates and 360
-measured single-Page attempts passed. These are controlled, machine-specific
-fixtures; Chrome is faster in some other workloads.
-
-[Results and methodology](benchmark/runs/13-rss-20260929/public-summary.md) ·
+[Current memory results and methodology](benchmark/runs/14-memory-20261010/public-summary.md) ·
+[September full benchmark and throughput](benchmark/runs/13-rss-20260929/public-summary.md) ·
 [Reproduce](benchmark/README.md) ·
 [Current performance notes](docs/performance/report.md)
 
@@ -122,9 +122,9 @@ Chromium/Web API surface. Test your workload against the
 [compatibility notes](docs/compatibility.md); keep the
 unauthenticated CDP endpoint on a trusted local interface.
 
-[Getting started](docs/getting-started.md) ·
-[Architecture](docs/architecture.md) ·
-[Contributing](CONTRIBUTING.md) ·
+[Getting started](docs/getting-started.md) В·
+[Architecture](docs/architecture.md) В·
+[Contributing](CONTRIBUTING.md) В·
 [Website](https://mimic.boo)
 
 ## License

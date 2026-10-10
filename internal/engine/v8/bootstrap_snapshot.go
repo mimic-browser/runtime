@@ -32,7 +32,7 @@ func (Factory) BootstrapSnapshotIdentity() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return build + "; bootstrap-layout=bare-default+platform-context" + "\x00" + runtimeVersion + "\x00" + nativeIdentity, nil
+	return build + "; bootstrap-layout=bare-default+platform-context; function-code=clear" + "\x00" + runtimeVersion + "\x00" + nativeIdentity, nil
 }
 
 func (Factory) LoadBootstrapSnapshot(data []byte) (engine.BootstrapSnapshot, error) {
@@ -247,7 +247,10 @@ func buildBootstrapSnapshot(ctx context.Context, sources ...string) (blob *gov8.
 	}
 	// Serialization is a bounded native phase. Cancellation is checked again
 	// after it finishes; never terminate the serializer midway through cleanup.
-	blob, err = creator.CreateBlob(gov8.FunctionCodeKeep)
+	// The seed executes installation code that most Pages never call again.
+	// Keep its functions and lexical state, but let each consumer compile only
+	// the algorithms it actually uses instead of retaining seed bytecode too.
+	blob, err = creator.CreateBlob(gov8.FunctionCodeClear)
 	consumed = true // CreateBlob consumes its creator, including native failures.
 	if err != nil {
 		return nil, err

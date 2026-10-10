@@ -9726,6 +9726,12 @@
     const wrappers = new WeakMap();
     const normalize = (fn, name, length, operation) => {
       if (typeof fn !== 'function') return fn;
+      if (operation && typeof host.createReceiverDispatch === 'function') {
+        // The native gate already has no [[Construct]]. Wrapping its private
+        // implementation in a second JS facade retains an extra function and
+        // closure context for every operation in each restored Page.
+        fn = platformOperation(fn, name || fn.name, length ?? fn.length);
+      }
       if (operation && Object.prototype.hasOwnProperty.call(fn, 'prototype')) {
         let wrapper = wrappers.get(fn);
         if (!wrapper) {
