@@ -19,19 +19,19 @@ These experiments identify retained costs in the current implementation; they ar
 
 | Metric | October control Mimic | Final Mimic | September Chrome |
 |---|---:|---:|---:|
-| rss MiB | 49.00 | 40.95 | 379.54 |
-| private MiB | 104.36 | 96.11 | 174.33 |
+| rss MiB | 49.00 | 40.97 | 379.54 |
+| private MiB | 104.36 | 95.99 | 174.33 |
 
 ## Warm single-Page sampled peaks
 
 | Workload | Control RSS MiB | Final RSS MiB | September Chrome RSS MiB | Final private MiB | September Chrome private MiB |
 |---|---:|---:|---:|---:|---:|
-| static | 139.09 | 117.35 | 1211.70 | 150.07 | 599.05 |
-| cpu | 135.39 | 119.19 | 1403.35 | 160.61 | 778.80 |
-| dom | 155.68 | 138.74 | 1415.14 | 178.17 | 776.44 |
-| async | 136.54 | 122.83 | 1251.86 | 163.87 | 638.58 |
-| react | 138.81 | 120.45 | 1412.52 | 161.70 | 803.89 |
-| wasm | 128.69 | 111.43 | 1291.15 | 152.46 | 630.81 |
+| static | 139.09 | 106.07 | 1211.70 | 149.92 | 599.05 |
+| cpu | 135.39 | 119.97 | 1403.35 | 162.69 | 778.80 |
+| dom | 155.68 | 140.14 | 1415.14 | 180.93 | 776.44 |
+| async | 136.54 | 120.23 | 1251.86 | 160.26 | 638.58 |
+| react | 138.81 | 121.67 | 1412.52 | 161.51 | 803.89 |
+| wasm | 128.69 | 111.87 | 1291.15 | 152.17 | 630.81 |
 
 ## Active density memory
 
@@ -39,24 +39,24 @@ An absent historical Chrome comparison means its series was not completed succes
 
 | Workload | Pages | Control RSS MiB | Final RSS MiB | September Chrome RSS MiB | Final private MiB | Final recovery RSS MiB | Valid / attempts |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| static | 1 | 122.03 | 106.74 | 1210.81 | 150.63 | 88.87 | 20 / 20 |
-| static | 5 | 186.54 | 149.11 | 1373.74 | 208.24 | 85.27 | 25 / 25 |
-| static | 10 | 254.73 | 221.79 | 1682.53 | 294.28 | 100.34 | 50 / 50 |
-| static | 25 | 467.03 | 407.45 | 2571.97 | 521.16 | 113.32 | 125 / 125 |
-| static | 50 | 823.99 | 719.06 | 4102.04 | 901.34 | 134.84 | 250 / 250 |
-| static | 100 | 1513.99 | 1317.69 | — | 1633.38 | 169.59 | 500 / 500 |
-| cpu | 1 | 139.41 | 129.53 | — | 170.66 | 101.63 | 20 / 20 |
-| cpu | 5 | 239.70 | 202.09 | — | 262.07 | 105.28 | 25 / 25 |
-| cpu | 10 | 359.96 | 327.49 | — | 405.82 | 108.64 | 50 / 50 |
-| cpu | 25 | 723.24 | 661.75 | — | 793.89 | 124.31 | 125 / 125 |
-| cpu | 50 | 1324.79 | 1206.30 | — | 1433.83 | 143.16 | 250 / 250 |
-| cpu | 100 | 2519.11 | 2299.24 | — | 2716.16 | 178.47 | 500 / 500 |
-| react | 1 | 136.44 | 121.50 | — | 161.81 | 98.68 | 20 / 20 |
-| react | 5 | 214.79 | 195.18 | — | 253.54 | 109.38 | 25 / 25 |
-| react | 10 | 319.49 | 282.80 | — | 356.23 | 121.47 | 50 / 50 |
-| react | 25 | 610.68 | 565.27 | — | 692.27 | 160.99 | 125 / 125 |
-| react | 50 | 1094.36 | 984.02 | — | 1187.68 | 207.49 | 250 / 250 |
-| react | 100 | — | 1832.55 | — | 2193.56 | 297.55 | 500 / 500 |
+| static | 1 | 122.03 | 108.12 | 1210.81 | 151.41 | 90.42 | 20 / 20 |
+| static | 5 | 186.54 | 143.99 | 1373.74 | 201.27 | 79.10 | 25 / 25 |
+| static | 10 | 254.73 | 208.90 | 1682.53 | 282.64 | 100.61 | 50 / 50 |
+| static | 25 | 467.03 | 408.42 | 2571.97 | 519.20 | 110.09 | 125 / 125 |
+| static | 50 | 823.99 | 714.91 | 4102.04 | 897.42 | 132.27 | 250 / 250 |
+| static | 100 | 1513.99 | 1322.40 | — | 1637.14 | 168.25 | 500 / 500 |
+| cpu | 1 | 139.41 | 128.00 | — | 170.80 | 100.56 | 20 / 20 |
+| cpu | 5 | 239.70 | 204.97 | — | 263.97 | 93.03 | 25 / 25 |
+| cpu | 10 | 359.96 | 313.02 | — | 392.32 | 106.30 | 50 / 50 |
+| cpu | 25 | 723.24 | 661.27 | — | 794.28 | 123.53 | 125 / 125 |
+| cpu | 50 | 1324.79 | 1209.24 | — | 1434.86 | 141.03 | 250 / 250 |
+| cpu | 100 | 2519.11 | 2305.17 | — | 2709.32 | 181.36 | 500 / 500 |
+| react | 1 | 136.44 | 117.47 | — | 157.59 | 95.07 | 20 / 20 |
+| react | 5 | 214.79 | 179.85 | — | 236.29 | 95.45 | 25 / 25 |
+| react | 10 | 319.49 | 290.53 | — | 363.49 | 128.07 | 50 / 50 |
+| react | 25 | 610.68 | 559.96 | — | 681.43 | 162.70 | 125 / 125 |
+| react | 50 | 1094.36 | 985.65 | — | 1185.25 | 210.69 | 250 / 250 |
+| react | 100 | — | 1828.22 | — | 2183.93 | 294.54 | 500 / 500 |
 
 ## Validation and tradeoffs
 
@@ -68,6 +68,9 @@ For deferred font coverage, three clean alternating Wikipedia pairs passed all s
 
 No forced Go/V8 collection was used in the memory matrix. Forced-GC heap snapshots are separate diagnostic artifacts. Recovery/cache retention does not prove leak absence. Background applications, OS caches and sampling variation remain factors.
 
+
+One earlier remeasurement ended during the React 50-Page warmup after correct workload results but before teardown. Its rows are excluded from successful comparisons. The complete repeat reported here passed, including React at 50 and 100 Pages; this does not prove the intermittent process-exit cause is fixed.
+
 ## Provenance
 
-Measured executable SHA-256: `27a564b0e5bd5087a838eb380ac1b6b7b64fde6bd975ae45f0ae750091a5b627`. Chrome reference: [September checkpoint](../13-rss-20260929/public-summary.md). This memory-only checkpoint passed 120/120 measured single-Page attempts and 2,910/2,910 density sessions. Numerical results: [public-results.json](public-results.json). Detailed diagnostic artifacts remain private.
+Measured executable SHA-256: `d3dbba851da61ebda85619f5b44c8be60c80dcc66257cba02629820a6af833ee`. Production source matches `0fbe2dd11f8a0fc54127472177f49dd79fe0c43a`. Chrome reference: [September checkpoint](../13-rss-20260929/public-summary.md). This memory-only checkpoint passed 120/120 measured single-Page attempts and 2,910/2,910 density sessions. Numerical results: [public-results.json](public-results.json). Detailed diagnostic artifacts remain private.

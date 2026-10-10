@@ -29,7 +29,8 @@ CDP call, DOM operation or synthetic click is not an E2E result.
 Native platform operations now retain one native gate without an intermediate
 JavaScript facade. Generated lazy operations are published after the reflective
 bootstrap finalizers, so descriptor normalization does not eagerly materialize
-them. Snapshots preserve function identity and lexical state without keeping
+them. Navigator semantic installers consume staged IDL metadata directly,
+without requiring fallback materialization. Snapshots preserve function identity and lexical state without keeping
 compiled installation bytecode; their artifact identity includes that policy.
 Installed-font names and candidate order remain eager, while immutable nominal
 coverage is decoded once per resource on demand. Shaping faces and author fonts
@@ -46,15 +47,15 @@ Chrome comparison was run.
 
 | Process-tree RSS | October 10 control | Current source |
 | --- | ---: | ---: |
-| Ready, ten fresh processes | 49.00 MiB | 40.95 MiB |
-| Static, 50 active Pages | 823.99 MiB | 719.06 MiB |
-| CPU, 50 active Pages | 1324.79 MiB | 1206.30 MiB |
-| React, 50 active Pages | 1094.36 MiB | 984.02 MiB |
+| Ready, ten fresh processes | 49.00 MiB | 40.97 MiB |
+| Static, 50 active Pages | 823.99 MiB | 714.91 MiB |
+| CPU, 50 active Pages | 1324.79 MiB | 1209.24 MiB |
+| React, 50 active Pages | 1094.36 MiB | 985.65 MiB |
 
 The measured executable SHA-256 is
-`27a564b0e5bd5087a838eb380ac1b6b7b64fde6bd975ae45f0ae750091a5b627`.
+`d3dbba851da61ebda85619f5b44c8be60c80dcc66257cba02629820a6af833ee`.
 Against the saved September 29 Chrome observations, current ready RSS is
-9.27 times smaller and completed static 50-Page active RSS is 5.70 times smaller.
+9.26 times smaller and completed static 50-Page active RSS is 5.74 times smaller.
 These cross-date memory comparisons retain the workstation/cache limitations of
 the published checkpoint; they do not replace its full benchmark. September
 CPU/React density and static 100-Page diagnostic rows are not successful Chrome
@@ -76,6 +77,8 @@ change did not establish a Wikipedia peak-RSS reduction (352.14/356.73 MiB).
 These memory changes are not a universal speed improvement. RSS sums working
 sets and can count shared pages repeatedly; sampling can miss short peaks, and
 recovery/cache retention does not prove leak absence.
+
+One earlier remeasurement ended during the React 50-Page warmup after correct workload results but before teardown. Its rows are excluded from successful comparisons. The complete repeat reported here passed, including React at 50 and 100 Pages; this does not prove the intermittent process-exit cause is fixed.
 
 ## Bootstrap optimization checkpoint
 
