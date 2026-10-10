@@ -161,8 +161,6 @@ func independentControlCommand(method string) bool {
 		"Network.continueInterceptedRequest", "Mimic.startTrace", "Mimic.stopTrace", "Mimic.getTrace",
 		"Mimic.getStatus", "Mimic.getDiagnostics", "Mimic.cancelExecution", "Page.stopLoading", "Target.closeTarget":
 		return true
-	case "Page.screencastFrameAck", "Page.stopScreencast":
-		return true
 	default:
 		return false
 	}

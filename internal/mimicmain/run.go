@@ -46,7 +46,6 @@ func Run() {
 	resourcePolicyPath := flag.String("resource-policy", "", "JSON resource policy for new contexts")
 	profilePath := flag.String("profile", "", "named workload profile or .mprofile artifact")
 	devPreview := flag.Bool("dev-preview", false, "enable the visual debug viewer at /debug/preview/")
-	devToolsChrome := flag.String("devtools-chrome", "", "optional Chrome/Chromium executable for on-demand DevTools page viewing")
 	workloadControl := flag.String("workload-control", "", "experimental loopback workload runner control address")
 	workloadCapture := flag.String("workload-capture", "", "experimental binary transport capture output")
 	workloadReplay := flag.String("workload-replay", "", "experimental offline binary transport capture input")
@@ -216,7 +215,6 @@ func Run() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	s.DevToolsChrome = *devToolsChrome
 	if experiment != nil {
 		s.SetConnectionOpened(experiment.ObserveCDPConnection)
 	}

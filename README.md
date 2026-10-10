@@ -32,8 +32,8 @@ framework objects. You can also start the binary yourself and connect with an
 ordinary CDP client.
 
 For interactive DOM/CSS editing, Console and Network inspection, connect
-[Chrome DevTools](docs/devtools.md). Its optional page view starts an external
-Blink renderer on demand; ordinary Mimic execution requires no Chromium process.
+[Chrome DevTools](docs/devtools.md). Inspection uses canonical runtime state
+without an external browser. Visual page presentation is unsupported.
 
 ## Quick start
 

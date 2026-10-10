@@ -51,10 +51,10 @@ func (s *session) releaseInspectorTurn() {
 		s.removeInspectorTurn()
 		s.removeInspectorTurn = nil
 	}
-	if s.domInspector == nil && !s.domainEnabled("CSS") && !s.domainEnabled("DOM") && s.castState() == nil {
+	if s.domInspector == nil && !s.domainEnabled("CSS") && !s.domainEnabled("DOM") {
 		for _, client := range s.server.clientSnapshot() {
 			for _, other := range client.snapshot() {
-				if other != s && other.page == s.page && other.ctx.Err() == nil && (other.domInspector != nil || other.domainEnabled("CSS") || other.domainEnabled("DOM") || other.castState() != nil) {
+				if other != s && other.page == s.page && other.ctx.Err() == nil && (other.domInspector != nil || other.domainEnabled("CSS") || other.domainEnabled("DOM")) {
 					return
 				}
 			}

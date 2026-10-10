@@ -208,7 +208,6 @@ func (s *Server) closePageFrom(page *browser.Page, requester *connection) bool {
 			if ss.page == page && ss.id != "" && !ss.browserSession {
 				conn.detach(ss, true)
 			} else if ss.page == page && ss.id == "" && !ss.browserSession && ss.targetType == "page" {
-				ss.stopScreencast()
 				if conn != requester {
 					conn.cancel()
 					_ = conn.conn.Close()

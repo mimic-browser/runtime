@@ -277,13 +277,13 @@ the candidate is
 
 On a 1000-row synthetic inspector fixture, median character insertion with DOM
 inspection enabled fell from 1599 to 5.0 ms in the final candidate after replacing
-repeated child-order searches with a linear diff. The optional view coalesces
-changes through its bounded queue and ACK backpressure without a fixed per-frame
-delay. Median input-to-frame latency was 83.6 ms in the final synthetic fixture,
-compared with 666.5 ms in the control. Full snapshot reconstruction and presentation remain material view costs.
+repeated child-order searches with a linear diff. External Blink presentation
+and screencast delivery have been removed from the current runtime: their
+reconstruction and frame delivery costs do not meet lightweight browser
+requirements. Inspection continues directly against canonical state.
 
 Focused parser, computed-style catalog, fallback geometry, image-resource,
-stylesheet replay, clock, inspector and presentation checks passed. Clock and
+stylesheet replay, clock, inspector checks passed. Clock and
 inspector checks passed under the Go race detector, as did parser lookahead
 checks. The fresh-build fast gate passed all 24 semantic runs, four 10-Page
 concurrency waves and static/React teardown checks. No memory reduction is claimed.

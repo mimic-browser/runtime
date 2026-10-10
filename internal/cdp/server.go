@@ -28,9 +28,6 @@ import (
 )
 
 type Server struct {
-	// DevToolsChrome selects an optional external Blink presentation executable.
-	// It is resolved and launched only by Page.startScreencast.
-	DevToolsChrome    string
 	connectionOpened  func()
 	certificateMu     sync.Mutex
 	networkIDMu       sync.Mutex
@@ -168,8 +165,6 @@ type message struct {
 type session struct {
 	documentUpdatedDocument *dom.Document
 	styleTracking           *computedStyleTracking
-	screencast              *screencast
-	inspectMode             string
 	domInspector            *domInspector
 	removeInspectorTurn     func()
 	styleSheets             map[string]inspectorSheet
@@ -245,7 +240,6 @@ func (s *session) bindPage(page *browser.Page) {
 	s.server.ensurePump(page)
 }
 func (s *session) unbindPage() {
-	s.stopScreencast()
 	s.bindMu.Lock()
 	defer s.bindMu.Unlock()
 	// Release paused requests before waiting for their owning Page turn.
@@ -628,14 +622,7 @@ func (s *session) handleCommand(m message) (afterUnlock func()) {
 			return
 		}
 	}
-	if value, handled, err := s.handleScreencast(m.Method, p); handled {
-		s.reply(m.ID, value, err)
-		return
-	}
-	if m.Method == "Page.disable" {
-		s.stopScreencast()
-	}
-	if value, handled, err := s.handlePresentationInput(m.Method, p); handled {
+	if value, handled, err := s.handlePresentationBoundary(m.Method); handled {
 		s.reply(m.ID, value, err)
 		return
 	}

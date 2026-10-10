@@ -17,12 +17,12 @@
     "types": 611,
     "methods": {
       "implemented": 9,
-      "partial": 145,
-      "unsupported": 511
+      "partial": 136,
+      "unsupported": 520
     },
     "events": {
-      "partial": 43,
-      "unsupported": 191
+      "partial": 40,
+      "unsupported": 194
     }
   },
   "entries": [
@@ -3172,10 +3172,10 @@
         "nodeId"
       ],
       "support": {
-        "status": "partial",
-        "notes": "Hit testing is available only with an explicitly active external Blink screencast. Presentation hits are translated to canonical Mimic frame/node handles; no renderer handle is exposed. Native Mimic compositor, UA shadow-node identities and pointer-events overrides are unsupported.",
+        "status": "unsupported",
+        "notes": "Visual page presentation, rendering and node picking are unsupported. Harmless frontend initialization and stop/ACK controls may be acknowledged without visual behavior.",
         "tests": [
-          "internal/cdp/screencast_test.go#TestInspectorBlinkScreencastLiveAndCleanup"
+          "internal/cdp/inspector_boundaries_test.go#TestInspectorOverlayAndRendererBoundaries"
         ]
       }
     },
@@ -7246,13 +7246,10 @@
       "returns": [],
       "support": {
         "status": "partial",
-        "notes": "Canonical trusted mouse dispatch. During an explicitly active Blink screencast, hit testing uses inert presentation geometry and maps the hit back to its authoritative Mimic frame/node before dispatch. Ordinary protocol input keeps Mimic geometry. Full native compositor/drag/touch fidelity is unsupported.",
+        "notes": "Canonical trusted mouse dispatch using Mimic geometry. Native compositor, drag and touch fidelity are unsupported.",
         "tests": [
           "internal/browser/input_test.go#TestProtocolSelectAndContentClickAcrossWorlds",
-          "compatibility/cdp_automation.mjs#input.pointer_click",
-          "internal/cdp/screencast_test.go#TestInspectorBlinkScreencastLiveAndCleanup",
-          "internal/cdp/screencast_test.go#TestInspectorBlinkWheelChangesVisiblePixels",
-          "internal/cdp/screencast_test.go#TestInspectorBlinkNestedScrollAndRasterResolution"
+          "compatibility/cdp_automation.mjs#input.pointer_click"
         ]
       }
     },
@@ -9714,8 +9711,8 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "partial",
-        "notes": "Session overlay controls allocate no renderer. Node highlighting and inspect picking operate only on an explicitly active Blink screencast, mapping stable snapshot markers back to canonical Mimic nodes. Highlight changes enqueue presentation work outside the Page turn. Advanced layout overlays are unsupported.",
+        "status": "unsupported",
+        "notes": "Visual page presentation, rendering and node picking are unsupported. Harmless frontend initialization and stop/ACK controls may be acknowledged without visual behavior.",
         "tests": [
           "internal/cdp/inspector_boundaries_test.go#TestInspectorOverlayAndRendererBoundaries"
         ]
@@ -9731,8 +9728,8 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "partial",
-        "notes": "Session overlay controls allocate no renderer. Node highlighting and inspect picking operate only on an explicitly active Blink screencast, mapping stable snapshot markers back to canonical Mimic nodes. Highlight changes enqueue presentation work outside the Page turn. Advanced layout overlays are unsupported.",
+        "status": "unsupported",
+        "notes": "Visual page presentation, rendering and node picking are unsupported. Harmless frontend initialization and stop/ACK controls may be acknowledged without visual behavior.",
         "tests": [
           "internal/cdp/inspector_boundaries_test.go#TestInspectorOverlayAndRendererBoundaries"
         ]
@@ -9804,8 +9801,8 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "partial",
-        "notes": "Session overlay controls allocate no renderer. Node highlighting and inspect picking operate only on an explicitly active Blink screencast, mapping stable snapshot markers back to canonical Mimic nodes. Highlight changes enqueue presentation work outside the Page turn. Advanced layout overlays are unsupported.",
+        "status": "unsupported",
+        "notes": "Visual page presentation, rendering and node picking are unsupported. Harmless frontend initialization and stop/ACK controls may be acknowledged without visual behavior.",
         "tests": [
           "internal/cdp/inspector_boundaries_test.go#TestInspectorOverlayAndRendererBoundaries"
         ]
@@ -9846,8 +9843,8 @@
       ],
       "returns": [],
       "support": {
-        "status": "partial",
-        "notes": "Session overlay controls allocate no renderer. Node highlighting and inspect picking operate only on an explicitly active Blink screencast, mapping stable snapshot markers back to canonical Mimic nodes. Highlight changes enqueue presentation work outside the Page turn. Advanced layout overlays are unsupported.",
+        "status": "unsupported",
+        "notes": "Visual page presentation, rendering and node picking are unsupported. Harmless frontend initialization and stop/ACK controls may be acknowledged without visual behavior.",
         "tests": [
           "internal/cdp/inspector_boundaries_test.go#TestInspectorOverlayAndRendererBoundaries"
         ]
@@ -9936,10 +9933,10 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "partial",
-        "notes": "Active Blink view inspect-mode picking maps the presentation hit to its canonical owner-frame backend node handle; no independent renderer DOM handle is exported.",
+        "status": "unsupported",
+        "notes": "Visual page presentation, rendering and node picking are unsupported. Harmless frontend initialization and stop/ACK controls may be acknowledged without visual behavior.",
         "tests": [
-          "internal/cdp/screencast_test.go#TestInspectorBlinkScreencastLiveAndCleanup"
+          "internal/cdp/inspector_boundaries_test.go#TestInspectorOverlayAndRendererBoundaries"
         ]
       }
     },
@@ -10017,8 +10014,8 @@
       ],
       "returns": [],
       "support": {
-        "status": "partial",
-        "notes": "Session overlay controls allocate no renderer. Node highlighting and inspect picking operate only on an explicitly active Blink screencast, mapping stable snapshot markers back to canonical Mimic nodes. Highlight changes enqueue presentation work outside the Page turn. Advanced layout overlays are unsupported.",
+        "status": "unsupported",
+        "notes": "Visual page presentation, rendering and node picking are unsupported. Harmless frontend initialization and stop/ACK controls may be acknowledged without visual behavior.",
         "tests": [
           "internal/cdp/inspector_boundaries_test.go#TestInspectorOverlayAndRendererBoundaries"
         ]
@@ -10746,10 +10743,9 @@
       "returns": [],
       "support": {
         "status": "partial",
-        "notes": "Disables Page event subscription and joins an active on-demand screencast renderer before returning.",
+        "notes": "Disables Page event subscription.",
         "tests": [
-          "internal/cdp/server_test.go#TestCDPTopLegacyLifecycleEventsPrecedeLifecycleEvents",
-          "internal/cdp/screencast_test.go#TestInspectorBlinkScreencastLiveAndCleanup"
+          "internal/cdp/server_test.go#TestCDPTopLegacyLifecycleEventsPrecedeLifecycleEvents"
         ]
       }
     },
@@ -11659,13 +11655,10 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "partial",
-        "notes": "Frames/visibility from an explicitly requested external Blink presentation, with ACK backpressure and real viewport/scroll metadata. Frames are generated only for changed immutable snapshots or overlay state; no independent site execution.",
+        "status": "unsupported",
+        "notes": "Visual page presentation, rendering and node picking are unsupported. Harmless frontend initialization and stop/ACK controls may be acknowledged without visual behavior.",
         "tests": [
-          "internal/cdp/screencast_test.go#TestInspectorBlinkScreencastLiveAndCleanup",
-          "internal/cdp/inspector_lifecycle_test.go#TestInspectorBlinkBackpressureAndDisconnect",
-          "internal/cdp/screencast_test.go#TestInspectorBlinkWheelChangesVisiblePixels",
-          "internal/cdp/screencast_test.go#TestInspectorBlinkNestedScrollAndRasterResolution"
+          "internal/cdp/inspector_boundaries_test.go#TestInspectorOverlayAndRendererBoundaries"
         ]
       }
     },
@@ -11681,11 +11674,9 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "partial",
-        "notes": "Explicit on-demand external Chrome/Chromium Blink presentation of sanitized canonical Mimic DOM, CSS, form/shadow state and retained resources. Source scripts do not execute in the renderer; page requests outside the snapshot bundle are blocked. PNG/JPEG, quality and max dimensions; one unacknowledged frame, coalesced updates, no idle rendering timer. everyNthFrame values other than 1 reject. Stop, Page.disable, detach and disconnect join renderer teardown. Not a native Mimic graphics surface; canvas/video frames are not copied.",
+        "status": "unsupported",
+        "notes": "Visual page presentation, rendering and node picking are unsupported. Harmless frontend initialization and stop/ACK controls may be acknowledged without visual behavior.",
         "tests": [
-          "internal/cdp/screencast_test.go#TestInspectorBlinkScreencastLiveAndCleanup",
-          "internal/cdp/inspector_lifecycle_test.go#TestInspectorBlinkBackpressureAndDisconnect",
           "internal/cdp/inspector_boundaries_test.go#TestInspectorOverlayAndRendererBoundaries"
         ]
       }
@@ -11702,11 +11693,10 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "partial",
-        "notes": "Frames/visibility from an explicitly requested external Blink presentation, with ACK backpressure and real viewport/scroll metadata. Frames are generated only for changed immutable snapshots or overlay state; no independent site execution.",
+        "status": "unsupported",
+        "notes": "Visual page presentation, rendering and node picking are unsupported. Harmless frontend initialization and stop/ACK controls may be acknowledged without visual behavior.",
         "tests": [
-          "internal/cdp/screencast_test.go#TestInspectorBlinkScreencastLiveAndCleanup",
-          "internal/cdp/inspector_lifecycle_test.go#TestInspectorBlinkBackpressureAndDisconnect"
+          "internal/cdp/inspector_boundaries_test.go#TestInspectorOverlayAndRendererBoundaries"
         ]
       }
     },
@@ -12036,17 +12026,10 @@
       ],
       "returns": [],
       "support": {
-        "status": "partial",
-        "notes": "Explicit on-demand external Chrome/Chromium Blink presentation of sanitized canonical Mimic DOM, CSS, form/shadow state and retained resources. Source scripts do not execute in the renderer; page requests outside the snapshot bundle are blocked. PNG/JPEG, quality and max dimensions; one unacknowledged frame, coalesced updates, no idle rendering timer. everyNthFrame values other than 1 reject. Stop, Page.disable, detach and disconnect join renderer teardown. Not a native Mimic graphics surface; canvas/video frames are not copied. Viewport captures follow current document scroll coordinates. Canonical window and accessible element/frame scroll positions are restored after rebuild. Raster scale uses requested frame dimensions, capped at 2x when dimensions are supplied, and honors encoding/quality and dimension limits. Startup explicitly requests an initial frame; a capture timeout retries that pending frame once, with no periodic idle rendering. The presentation target is activated independently of host desktop focus.",
+        "status": "unsupported",
+        "notes": "Visual page presentation, rendering and node picking are unsupported. Harmless frontend initialization and stop/ACK controls may be acknowledged without visual behavior.",
         "tests": [
-          "internal/cdp/screencast_test.go#TestInspectorBlinkScreencastLiveAndCleanup",
-          "internal/cdp/inspector_lifecycle_test.go#TestInspectorBlinkBackpressureAndDisconnect",
-          "internal/cdp/inspector_boundaries_test.go#TestInspectorOverlayAndRendererBoundaries",
-          "internal/cdp/inspector_lifecycle_test.go#TestInspectorBlinkRestartAndTargetClose",
-          "internal/cdp/inspector_lifecycle_test.go#TestInspectorDirectConnectionTargetClose",
-          "internal/cdp/screencast_test.go#TestInspectorBlinkWheelChangesVisiblePixels",
-          "internal/cdp/screencast_test.go#TestInspectorBlinkNestedScrollAndRasterResolution",
-          "internal/cdp/screencast_retry_test.go#TestInspectorScreencastRetriesTimedOutCapture"
+          "internal/cdp/inspector_boundaries_test.go#TestInspectorOverlayAndRendererBoundaries"
         ]
       }
     },
@@ -12077,13 +12060,10 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "partial",
-        "notes": "Explicit on-demand external Chrome/Chromium Blink presentation of sanitized canonical Mimic DOM, CSS, form/shadow state and retained resources. Source scripts do not execute in the renderer; page requests outside the snapshot bundle are blocked. PNG/JPEG, quality and max dimensions; one unacknowledged frame, coalesced updates, no idle rendering timer. everyNthFrame values other than 1 reject. Stop, Page.disable, detach and disconnect join renderer teardown. Not a native Mimic graphics surface; canvas/video frames are not copied.",
+        "status": "unsupported",
+        "notes": "Visual page presentation, rendering and node picking are unsupported. Harmless frontend initialization and stop/ACK controls may be acknowledged without visual behavior.",
         "tests": [
-          "internal/cdp/screencast_test.go#TestInspectorBlinkScreencastLiveAndCleanup",
-          "internal/cdp/inspector_lifecycle_test.go#TestInspectorBlinkBackpressureAndDisconnect",
-          "internal/cdp/inspector_boundaries_test.go#TestInspectorOverlayAndRendererBoundaries",
-          "internal/cdp/inspector_lifecycle_test.go#TestInspectorDirectConnectionTargetClose"
+          "internal/cdp/inspector_boundaries_test.go#TestInspectorOverlayAndRendererBoundaries"
         ]
       }
     },
@@ -14823,7 +14803,6 @@
           "internal/cdp/snapshot_boundary_test.go#TestCloseTargetCancelsUnboundedParserScript",
           "internal/cdp/target_detach_order_test.go#TestDetachNotifiesNestedSessionsBeforeParent",
           "internal/cdp/accepted_close_test.go#TestAcceptedCloseSurvivesTransportEOF",
-          "internal/cdp/inspector_lifecycle_test.go#TestInspectorBlinkRestartAndTargetClose",
           "internal/cdp/inspector_lifecycle_test.go#TestInspectorDirectConnectionTargetClose"
         ]
       }
