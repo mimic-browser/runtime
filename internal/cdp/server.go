@@ -563,27 +563,43 @@ func (s *session) handle(m message) {
 	}
 	defer m.order.release()
 	afterUnlock := s.handleCommand(m)
-	// Navigation starts in arrival order, but its asynchronous commit reply must
-	// not block later page commands, interception or replacement navigation.
-	m.order.release()
 	if afterUnlock != nil {
 		afterUnlock()
 	}
+	s.transport.flush()
 }
 
 // A command may defer its reply until browser work completes. That wait stays
 // in the original transport worker, after the session and Page locks unwind.
 func (s *session) handleCommand(m message) (afterUnlock func()) {
+	// Handler results are detached protocol values. Encode and enqueue the
+	// response after Page/session locks unwind, while retaining arrival order.
+	var sendReply func()
+	reply := func(id int64, result any, err error) {
+		sendReply = func() { s.reply(id, result, err) }
+	}
+	defer func() {
+		if sendReply != nil {
+			next := afterUnlock
+			afterUnlock = func() {
+				sendReply()
+				if next != nil {
+					s.transport.flush()
+					next()
+				}
+			}
+		}
+	}()
 	if value, handled, err := s.handleMediaProfile(m); handled {
-		s.reply(m.ID, value, err)
+		reply(m.ID, value, err)
 		return
 	}
 	if value, handled, err := s.handleResourcePolicy(m); handled {
-		s.reply(m.ID, value, err)
+		reply(m.ID, value, err)
 		return
 	}
 	if value, handled, err := s.handleProfile(m); handled {
-		s.reply(m.ID, value, err)
+		reply(m.ID, value, err)
 		return
 	}
 	commandData := map[string]any{"method": m.Method, "sessionId": s.id}
@@ -594,7 +610,7 @@ func (s *session) handleCommand(m message) (afterUnlock func()) {
 	s.page.Trace().Add(trace.CDP, "method", commandData)
 	if !strings.HasPrefix(m.Method, "Mimic.") {
 		if err := validateCommand(m.Method, m.Params); err != nil {
-			s.reply(m.ID, nil, err)
+			reply(m.ID, nil, err)
 			return
 		}
 	}
@@ -602,14 +618,14 @@ func (s *session) handleCommand(m message) (afterUnlock func()) {
 	params := bytes.TrimSpace(m.Params)
 	if len(params) > 0 && string(params) != "null" && (params[0] == '{' || strings.HasPrefix(m.Method, "Mimic.")) {
 		if err := json.Unmarshal(m.Params, &p); err != nil {
-			s.reply(m.ID, nil, fmt.Errorf("invalid command parameters: %w", err))
+			reply(m.ID, nil, fmt.Errorf("invalid command parameters: %w", err))
 			return
 		}
 	}
 	if strings.HasPrefix(m.Method, "Target.") || strings.HasPrefix(m.Method, "Browser.") {
 		if result, handled, err := s.handleTarget(m, p); handled {
 			if err != errReplySent {
-				s.reply(m.ID, result, err)
+				reply(m.ID, result, err)
 			}
 			if m.Method == "Target.closeTarget" && err == nil && s.id == "" && !s.browserSession {
 				if value, ok := result.(map[string]any); ok && value["success"] == true && stringValue(p["targetId"]) == s.targetID {
@@ -623,18 +639,18 @@ func (s *session) handleCommand(m message) (afterUnlock func()) {
 		}
 	}
 	if value, handled, err := s.handlePresentationBoundary(m.Method); handled {
-		s.reply(m.ID, value, err)
+		reply(m.ID, value, err)
 		return
 	}
 	if m.Method == "Page.close" {
 		// Match Target.closeTarget's browser-owned lifetime. Cleanup cannot run
 		// under the Page command mutex, and must remain joined by this accepted
 		// transport worker even if the client has already disconnected.
-		s.reply(m.ID, map[string]any{}, nil)
+		reply(m.ID, map[string]any{}, nil)
 		return func() { s.server.closePage(s.page) }
 	}
 	if value, handled, cookieErr := s.handleStorageCookies(m.Method, p); handled {
-		s.reply(m.ID, value, cookieErr)
+		reply(m.ID, value, cookieErr)
 		return
 	}
 	control := independentControlCommand(m.Method)
@@ -679,10 +695,13 @@ func (s *session) handleCommand(m message) (afterUnlock func()) {
 	var result any = map[string]any{}
 	var err error
 	if s.ctx.Err() != nil {
-		s.reply(m.ID, nil, fmt.Errorf("Session closed"))
+		reply(m.ID, nil, fmt.Errorf("Session closed"))
 		return
 	}
 	runtimeCtx := s.ctx
+	if m.Method == "Runtime.evaluate" && os.Getenv("MIMIC_PROFILE_CDP") == "1" {
+		runtimeCtx = trace.WithCorrelation(s.ctx, fmt.Sprintf("evaluate:%s:%d", s.id, m.ID), time.Now(), s.page.Trace())
+	}
 	finishRuntimeCall := func() {}
 	if m.Method == "Runtime.callFunctionOn" && os.Getenv("MIMIC_PROFILE_CDP") == "1" {
 		callID := fmt.Sprintf("CF#%d", callFunctionSequence.Add(1))
@@ -701,31 +720,31 @@ func (s *session) handleCommand(m message) (afterUnlock func()) {
 	}
 	if value, handled, runtimeErr := s.handleRuntime(runtimeCtx, m.Method, p); handled {
 		finishRuntimeCall()
-		s.reply(m.ID, value, runtimeErr)
+		reply(m.ID, value, runtimeErr)
 		return
 	}
 	if value, handled, domErr := s.handleDOM(s.ctx, m.Method, p); handled {
-		s.reply(m.ID, value, domErr)
+		reply(m.ID, value, domErr)
 		return
 	}
 	if value, handled, cssErr := s.handleCSS(s.ctx, m.Method, p); handled {
-		s.reply(m.ID, value, cssErr)
+		reply(m.ID, value, cssErr)
 		return
 	}
 	if value, handled, err := s.handleOverlay(s.ctx, m.Method, p); handled {
-		s.reply(m.ID, value, err)
+		reply(m.ID, value, err)
 		return
 	}
 	if value, handled, pageErr := s.handlePage(s.ctx, m.Method, p); handled {
-		s.reply(m.ID, value, pageErr)
+		reply(m.ID, value, pageErr)
 		return
 	}
 	if value, handled, emuErr := s.handleEmulation(m.Method, p); handled {
-		s.reply(m.ID, value, emuErr)
+		reply(m.ID, value, emuErr)
 		return
 	}
 	if value, handled, browserErr := s.handleBrowserWindow(m.Method, p); handled {
-		s.reply(m.ID, value, browserErr)
+		reply(m.ID, value, browserErr)
 		return
 	}
 	switch m.Method {
@@ -815,6 +834,8 @@ func (s *session) handleCommand(m message) (afterUnlock func()) {
 		})
 		if err == nil {
 			return func() {
+				// A commit wait is asynchronous browser work, not a retained turn.
+				m.order.release()
 				select {
 				case commitErr := <-committed:
 					if commitErr != nil {
@@ -1022,7 +1043,7 @@ func (s *session) handleCommand(m message) (afterUnlock func()) {
 			err = &protocolError{Code: -32601, Message: "'" + m.Method + "' wasn't found"}
 		}
 	}
-	s.reply(m.ID, result, err)
+	reply(m.ID, result, err)
 	return nil
 }
 func targetInfo(page *browser.Page, attached bool) map[string]any {

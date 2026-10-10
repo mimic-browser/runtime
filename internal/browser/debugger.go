@@ -160,11 +160,19 @@ func (d *Debugger) state(ctx context.Context, frameID, realmID string) (*debugge
 	}
 	d.Prune()
 	if deferred, ok := r.runtime.(*deferredRuntime); ok {
+		started := time.Now()
 		if _, err := deferred.ready(); err != nil {
 			return nil, err
 		}
+		if trace.CorrelationID(ctx) != "" {
+			trace.Record(ctx, trace.CDP, "evaluatePhase", map[string]any{"phase": "runtimeInitialization", "durationNs": time.Since(started).Nanoseconds()})
+		}
 	}
+	started := time.Now()
 	prefix := r.val(d.id + "." + r.ID)
+	if trace.CorrelationID(ctx) != "" {
+		trace.Record(ctx, trace.CDP, "evaluatePhase", map[string]any{"phase": "stateValue", "durationNs": time.Since(started).Nanoseconds()})
+	}
 	defer releaseDebuggerValue(r, prefix)
 	bridge, err := r.runtime.Call(ctx, r.debuggerFactory, nil, r.frameNodeDescribe, prefix)
 	if err != nil {
@@ -229,16 +237,32 @@ func (d *Debugger) enter() func() {
 }
 
 func (d *Debugger) Evaluate(ctx context.Context, frameID, realmID, source string, options DebuggerOptions) (map[string]any, error) {
+	phase := func(name string) func() {
+		if trace.CorrelationID(ctx) == "" {
+			return func() {}
+		}
+		started := time.Now()
+		return func() {
+			trace.Record(ctx, trace.CDP, "evaluatePhase", map[string]any{"phase": name, "durationNs": time.Since(started).Nanoseconds()})
+		}
+	}
 	defer d.enter()()
+	finishPhase := phase("state")
 	state, err := d.state(ctx, frameID, realmID)
+	finishPhase()
 	if err != nil {
 		return nil, err
 	}
-	if err := state.realm.syncShadowSnapshots(ctx); err != nil {
+	finishPhase = phase("shadowSnapshots")
+	err = state.realm.syncShadowSnapshots(ctx)
+	finishPhase()
+	if err != nil {
 		return nil, err
 	}
 	var value engine.Value
+	finishPhase = phase("inline")
 	err = state.realm.debuggerInline(ctx, !options.RespectCSP, func(ctx context.Context) error {
+		defer phase("execution")()
 		var err error
 		if options.CommandLineAPI {
 			native, ok := state.realm.runtime.(engine.CommandLineRuntime)
@@ -277,10 +301,12 @@ func (d *Debugger) Evaluate(ctx context.Context, frameID, realmID, source string
 		}
 		return err
 	})
+	finishPhase()
 	if err != nil {
 		return d.exception(ctx, state, err, options, false)
 	}
 	defer releaseDebuggerValue(state.realm, value)
+	defer phase("finish")()
 	return d.finish(ctx, state, value, options)
 }
 
@@ -441,6 +467,12 @@ func (d *Debugger) finish(ctx context.Context, state *debuggerRealm, value engin
 		}
 		releaseDebuggerValue(state.realm, state.lastConsole)
 		state.lastConsole = retained
+	}
+	if trace.CorrelationID(ctx) != "" {
+		started := time.Now()
+		defer func() {
+			trace.Record(ctx, trace.CDP, "evaluatePhase", map[string]any{"phase": "remoteObject", "durationNs": time.Since(started).Nanoseconds()})
+		}()
 	}
 	return state.json(ctx, "hold", map[string]any{"objectGroup": options.ObjectGroup, "returnByValue": options.ReturnByValue}, value)
 }

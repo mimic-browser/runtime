@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/moreveal/mimic/internal/monotime"
+	"github.com/moreveal/mimic/internal/trace"
 )
 
 type Source string
@@ -303,7 +304,11 @@ func (s *Scheduler) RunReady(ctx context.Context, maxTasks int) error {
 // same boundaries as queued tasks. Like RunReady, it must not be called from a
 // callback already running on this scheduler.
 func (s *Scheduler) RunInline(ctx context.Context, callback Callback) error {
+	started := time.Now()
 	s.runMu.Lock()
+	if trace.CorrelationID(ctx) != "" {
+		trace.Record(ctx, trace.JS, "scheduler.inlineWait", map[string]any{"durationNs": time.Since(started).Nanoseconds()})
+	}
 	defer s.runMu.Unlock()
 	if err := ctx.Err(); err != nil {
 		return err
@@ -315,7 +320,11 @@ func (s *Scheduler) RunInline(ctx context.Context, callback Callback) error {
 		err = callback(ctx)
 	}
 	if s.checkpoint != nil {
+		started := time.Now()
 		err = errors.Join(err, s.checkpoint(ctx))
+		if trace.CorrelationID(ctx) != "" {
+			trace.Record(ctx, trace.JS, "scheduler.inlineCheckpoint", map[string]any{"durationNs": time.Since(started).Nanoseconds()})
+		}
 	}
 	return err
 }

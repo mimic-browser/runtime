@@ -167,6 +167,14 @@ answers. The same observable model applies to ordinary application code.
   users must serialize Page/DOM command access too; a Page is not a concurrently
   callable JavaScript engine. Worker JS may run on its separate agent, never on
   the Window runtime. Cross-agent delivery always queues a receiving-agent task.
+  Detached command responses are encoded after releasing Page/session ownership.
+  Events are encoded at their originating turn, then one connection-owned writer
+  sends events and responses in FIFO order. Socket backpressure never owns a Page
+  turn. The outbound queue holds at most 256 waiting messages and 32 MiB,
+  counting the in-flight payload toward the byte limit; one larger response is
+  admitted only on an empty wire.
+  Queue overflow or a write exceeding ten seconds closes that connection with a
+  diagnostic error. Terminal acknowledgments are flushed before transport teardown.
 - Scheduler runMu serializes a task and its complete checkpoint. V8 uses explicit
   microtasks on its thread-affine owner. Do not restore V8 automatic checkpoints.
 - Network goroutines perform external work and enqueue completion; fetch/XHR and

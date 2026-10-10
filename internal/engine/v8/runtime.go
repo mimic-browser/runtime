@@ -377,7 +377,15 @@ func (a *adapter) EvalWithOrigin(ctx context.Context, source, name string, lineO
 		}
 		return value, err
 	}
+	started := time.Now()
 	return a.runContext(ctx, func(s *state, realm *gov8.Context, scope *gov8.Scope) (engine.Value, error) {
+		if trace.CorrelationID(ctx) != "" {
+			trace.Record(ctx, trace.JS, "runtime.Eval.entry", map[string]any{"durationNs": time.Since(started).Nanoseconds()})
+			executionStarted := time.Now()
+			defer func() {
+				trace.Record(ctx, trace.JS, "runtime.Eval.execution", map[string]any{"durationNs": time.Since(executionStarted).Nanoseconds()})
+			}()
+		}
 		return a.evalScopedCode(s.isolate, realm, scope, source, name, false, lineOffset, columnOffset)
 	})
 }

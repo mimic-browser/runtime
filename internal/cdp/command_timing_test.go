@@ -46,6 +46,26 @@ func TestCommandTimingSeparatesPageWait(t *testing.T) {
 			if _, ok := event.Data["expression"]; ok {
 				t.Fatal("diagnostics retained command parameters")
 			}
+			phases := map[string]bool{}
+			for _, detail := range s.Page.Trace().Events() {
+				if detail.Data["callID"] != "evaluate::2" {
+					continue
+				}
+				if detail.Name == "evaluatePhase" {
+					phases[detail.Data["phase"].(string)] = true
+				}
+				if detail.Name == "runtime.Eval.entry" || detail.Name == "runtime.Eval.execution" {
+					phases[detail.Name] = true
+				}
+				if detail.Data["expression"] != nil {
+					t.Fatal("diagnostics retained expression")
+				}
+			}
+			for _, phase := range []string{"state", "shadowSnapshots", "inline", "execution", "finish", "remoteObject", "runtime.Eval.entry", "runtime.Eval.execution"} {
+				if !phases[phase] {
+					t.Fatalf("missing %s: %v", phase, phases)
+				}
+			}
 			return
 		}
 		if time.Now().After(deadline) {

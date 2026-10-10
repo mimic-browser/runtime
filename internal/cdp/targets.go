@@ -328,6 +328,7 @@ func (s *session) handleTarget(m message, p map[string]any) (any, bool, error) {
 	case "Browser.close":
 		// Acknowledge before shutting down the transport carrying the reply.
 		s.reply(m.ID, empty, nil)
+		s.transport.flush()
 		go func() { _ = s.server.Close(context.Background()) }()
 		return nil, true, errReplySent
 	case "Target.getBrowserContexts":

@@ -22,15 +22,20 @@ type discoveryTarget struct {
 
 func runningServer(t *testing.T) (*Server, string) {
 	t.Helper()
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return runningServerOnListener(t, l)
+}
+
+func runningServerOnListener(t *testing.T, l net.Listener) (*Server, string) {
+	t.Helper()
 	b, err := browser.New(v8engine.Factory{}, chrome152.New())
 	if err != nil {
 		t.Fatal(err)
 	}
 	s, err := New(b)
-	if err != nil {
-		t.Fatal(err)
-	}
-	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}

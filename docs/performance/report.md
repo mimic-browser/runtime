@@ -3,6 +3,22 @@
 Mimic's performance claims describe specific measured workloads. They do not
 establish a universal speedup over Chrome or complete website compatibility.
 
+## CDP transport backpressure
+
+CDP response encoding and socket writes no longer retain Page/session ownership.
+A bounded connection-owned FIFO writer preserves event/response order while
+other frontends can continue using the same Page. Stalled sockets have a write
+deadline; overflow closes the affected connection with a diagnostic error.
+Focused tests cover blocked writes, ordered commands, Promise yielding,
+disconnect cancellation and retained queue cleanup. This is an isolation fix,
+not a claim of a universal evaluation speedup. Local receive timeouts do not
+cancel synchronous JavaScript in either Mimic or Chrome.
+
+The [sequential evaluation probe](../../tools/performance/evaluate-series.md)
+separates ordered dispatch, Page/session wait, engine entry/execution,
+microtask checkpoints, RemoteObject processing and wire backpressure.
+Instrumented attribution must be kept separate from passive latency controls.
+
 ## Published measurements
 
 The [current public memory checkpoint](../../benchmark/runs/14-memory-20261010/public-summary.md) measured the following against frozen Chrome 152 reference observations:

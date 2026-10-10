@@ -25,6 +25,11 @@ type connection struct {
 	ctx             context.Context
 	cancel          context.CancelFunc
 	writeMu         sync.Mutex
+	outMu           sync.Mutex
+	outbox          chan wirePacket
+	outBytes        int
+	outTail         <-chan struct{}
+	writerDone      chan struct{}
 	mu              sync.RWMutex
 	root            *session
 	sessions        map[string]*session
@@ -49,6 +54,8 @@ func (s *Server) ws(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	c := &connection{server: s, conn: conn, ctx: ctx, cancel: cancel, sessions: make(map[string]*session), contexts: make(map[string]bool), profileCommands: os.Getenv("MIMIC_PROFILE_CDP") == "1"}
+	c.outbox = make(chan wirePacket, 256)
+	c.writerDone = make(chan struct{})
 	s.lifecycleMu.Lock()
 	if s.closed {
 		s.lifecycleMu.Unlock()
@@ -65,9 +72,11 @@ func (s *Server) ws(w http.ResponseWriter, r *http.Request) {
 	}
 	defer s.workers.Done()
 	c.root = c.newSession(page, "", nil, false, isBrowser)
+	go c.writeLoop()
 	defer func() {
 		cancel()
 		_ = conn.Close()
+		<-c.writerDone
 		for _, ss := range c.snapshot() {
 			ss.interceptor.Close()
 		}
@@ -256,20 +265,118 @@ func (c *connection) writeTimed(v any, timing *commandTiming) {
 		timing.serialize += time.Since(started)
 	}
 	if err != nil {
+		c.failWriter(err)
 		return
 	}
+	c.enqueueWire(payload, timing)
+}
+
+type wirePacket struct {
+	payload []byte
+	timing  *commandTiming
+	queued  time.Time
+	done    chan struct{}
+}
+
+const maxQueuedWireBytes = 32 << 20
+
+// Encoding freezes event payloads at their Page turn. Socket backpressure must
+// never own that turn. Limit both queued messages and bytes, including the
+// in-flight write; a single oversized response is admitted only on an empty wire.
+func (c *connection) enqueueWire(payload []byte, timing *commandTiming) {
+	packet := wirePacket{payload: payload, timing: timing, done: make(chan struct{})}
 	if timing != nil {
-		started = time.Now()
+		packet.queued = time.Now()
 	}
-	c.writeMu.Lock()
-	if timing != nil {
-		timing.writeWait += time.Since(started)
-		started = time.Now()
+	c.outMu.Lock()
+	if c.ctx.Err() != nil {
+		c.outMu.Unlock()
+		return
 	}
-	defer c.writeMu.Unlock()
-	_ = c.conn.WriteMessage(websocket.TextMessage, payload)
-	if timing != nil {
-		timing.write += time.Since(started)
+	if c.outBytes != 0 && len(payload) > maxQueuedWireBytes-c.outBytes {
+		c.outMu.Unlock()
+		c.failWriter(fmt.Errorf("CDP outbound byte limit exceeded"))
+		return
+	}
+	select {
+	case c.outbox <- packet:
+		c.outBytes += len(payload)
+		c.outTail = packet.done
+		c.outMu.Unlock()
+	default:
+		c.outMu.Unlock()
+		c.failWriter(fmt.Errorf("CDP outbound message limit exceeded"))
+	}
+}
+
+// Flush only outside Page/session ownership. FIFO completion joins diagnostic
+// writes and lets terminal replies reach the socket before lifecycle teardown.
+func (c *connection) flush() {
+	c.outMu.Lock()
+	tail := c.outTail
+	c.outMu.Unlock()
+	if tail != nil {
+		select {
+		case <-tail:
+		case <-c.writerDone:
+		}
+	}
+}
+
+func (c *connection) failWriter(err error) {
+	// Trace subscribers may themselves send events. Cancel before reporting so
+	// those sends cannot recursively overload the same connection.
+	c.cancel()
+	_ = c.conn.Close()
+	if c.root != nil {
+		c.root.page.Trace().Add(trace.Error, "cdpWriter", map[string]any{"error": err.Error()})
+	}
+}
+
+func (c *connection) writeLoop() {
+	defer close(c.writerDone)
+	defer func() {
+		c.outMu.Lock()
+		defer c.outMu.Unlock()
+		for {
+			select {
+			case packet := <-c.outbox:
+				c.outBytes -= len(packet.payload)
+				close(packet.done)
+			default:
+				return
+			}
+		}
+	}()
+	for {
+		select {
+		case <-c.ctx.Done():
+			return
+		case packet := <-c.outbox:
+			c.writeMu.Lock()
+			started := time.Now()
+			if packet.timing != nil {
+				packet.timing.writeWait += started.Sub(packet.queued)
+			}
+			// A stalled socket cannot retain a worker or prevent connection teardown
+			// indefinitely. Writes and deadline changes have one owning goroutine.
+			err := c.conn.SetWriteDeadline(started.Add(10 * time.Second))
+			if err == nil {
+				err = c.conn.WriteMessage(websocket.TextMessage, packet.payload)
+			}
+			if packet.timing != nil {
+				packet.timing.write += time.Since(started)
+			}
+			c.writeMu.Unlock()
+			c.outMu.Lock()
+			c.outBytes -= len(packet.payload)
+			c.outMu.Unlock()
+			close(packet.done)
+			if err != nil {
+				c.failWriter(err)
+				return
+			}
+		}
 	}
 }
 
