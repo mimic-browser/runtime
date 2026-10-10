@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/readme-hero.png" alt="Mimic вЂ” Browser automation without Chromium. The blue Mimic mascot starts a simple web-to-JavaScript-to-data automation flow." width="1200">
+  <img src="docs/assets/readme-hero.png" alt="Mimic — Browser automation without Chromium. The blue Mimic mascot starts a simple web-to-JavaScript-to-data automation flow." width="1200">
 </p>
 
 <p align="center">
@@ -15,10 +15,10 @@
 </p>
 
 <p align="center">
-  <a href="#quick-start">Quick start</a> В·
-  <a href="#benchmarks">Benchmarks</a> В·
-  <a href="https://github.com/mimic-browser/runtime/releases/latest">Download</a> В·
-  <a href="docs/getting-started.md">Documentation</a> В·
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#benchmarks">Benchmarks</a> ·
+  <a href="https://github.com/mimic-browser/runtime/releases/latest">Download</a> ·
+  <a href="docs/getting-started.md">Documentation</a> ·
   <a href="docs/cdp-compatibility.md">CDP support</a>
 </p>
 
@@ -94,8 +94,8 @@ mimic optimize --name shop -- node scraper.js
 mimic --profile shop
 ```
 
-[How Optimize works](docs/optimize/index.md) В·
-[Runnable examples](examples/README.md) В·
+[How Optimize works](docs/optimize/index.md) ·
+[Runnable examples](examples/README.md) ·
 [Profile and proxy options](docs/environment-profiles.md)
 
 ## Benchmarks
@@ -122,9 +122,9 @@ Chromium/Web API surface. Test your workload against the
 [compatibility notes](docs/compatibility.md); keep the
 unauthenticated CDP endpoint on a trusted local interface.
 
-[Getting started](docs/getting-started.md) В·
-[Architecture](docs/architecture.md) В·
-[Contributing](CONTRIBUTING.md) В·
+[Getting started](docs/getting-started.md) ·
+[Architecture](docs/architecture.md) ·
+[Contributing](CONTRIBUTING.md) ·
 [Website](https://mimic.boo)
 
 ## License
