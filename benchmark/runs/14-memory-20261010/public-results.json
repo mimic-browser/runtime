@@ -316,6 +316,19 @@
     "binary_production_source_revision": "0fbe2dd11f8a0fc54127472177f49dd79fe0c43a",
     "single_valid": 120,
     "density_valid": 2910,
-    "limitations": "One earlier remeasurement ended during the React 50-Page warmup after correct workload results but before teardown. Its rows are excluded from successful comparisons. The complete repeat reported here passed, including React at 50 and 100 Pages; this does not prove the intermittent process-exit cause is fixed."
+    "limitations": "One earlier remeasurement ended during the React 50-Page warmup after correct workload results but before teardown. Its rows are excluded from successful comparisons. The complete repeat reported here passed, including React at 50 and 100 Pages; this does not prove the intermittent process-exit cause is fixed.",
+    "harness_sha256": "ce1fce42fa9b9e03f105900601db4d6d7fa9b0d9cda51d5096322357277673e7",
+    "fixture_sha256": {
+      "workload.js": "484019063e33e131756f67ab6f3076ad2c18e3959072fbae42f540455448c214",
+      "vendor\\react-dom.production.min.js": "35f4f974f4b2bcd44da73963347f8952e341f83909e4498227d4e26b98f66f0d",
+      "vendor\\REACT-LICENSE.txt": "52412d7bc7ce4157ea628bbaacb8829e0a9cb3c58f57f99176126bc8cf2bfc85",
+      "vendor\\react.production.min.js": "d949f1c3687aedadcedac85261865f29b17cd273997e7f6b2bfc53b2f9d4c4dd"
+    },
+    "os": "Windows-11-10.0.26200-SP0",
+    "cpu": "{\"Name\":\"Intel(R) Core(TM) i7-14700KF\",\"NumberOfCores\":20,\"NumberOfLogicalProcessors\":28}",
+    "logical_cpus": 28,
+    "physical_cpus": 20,
+    "total_ram": 34177138688,
+    "chrome_sha256": "ea36dd818a90176f1a70616f0363d9be527229389a6c073a0b1688b9e73f67e9"
   }
 }
