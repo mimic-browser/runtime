@@ -1557,14 +1557,14 @@ func (a *adapter) localCallback(value engine.Value) (gov8.Value, error) {
 			return gov8.Value{}, errors.New("packed string escaped its V8 callback")
 		}
 		callback := a.onCallback()
-		return callbackValue(callback.scope, callback.ctx, callback.result, text.text)
+		return a.callbackValue(callback.scope, callback.ctx, callback.result, text.text)
 	}
 	if number, ok := value.(*packedNumberValue); ok {
 		if number.runtime != a || a.onCallback() == nil {
 			return gov8.Value{}, errors.New("packed number escaped its V8 callback")
 		}
 		callback := a.onCallback()
-		return callbackValue(callback.scope, callback.ctx, callback.result, number.number)
+		return a.callbackValue(callback.scope, callback.ctx, callback.result, number.number)
 	}
 	if host, ok := value.(*hostValue); ok {
 		if host.runtime != a {
@@ -1574,7 +1574,7 @@ func (a *adapter) localCallback(value engine.Value) (gov8.Value, error) {
 		if callback == nil {
 			return gov8.Value{}, errors.New("host value escaped its V8 callback")
 		}
-		return callbackValue(callback.scope, callback.ctx, callback.result, host.host)
+		return a.callbackValue(callback.scope, callback.ctx, callback.result, host.host)
 	}
 	v, ok := value.(*runtimeValue)
 	if !ok || v == nil || v.runtime != a {
@@ -1585,7 +1585,7 @@ func (a *adapter) localCallback(value engine.Value) (gov8.Value, error) {
 		if callback == nil {
 			return gov8.Value{}, errors.New("host value escaped its V8 callback")
 		}
-		return callbackValue(callback.scope, callback.ctx, callback.result, v.host)
+		return a.callbackValue(callback.scope, callback.ctx, callback.result, v.host)
 	}
 	callback := a.onCallback()
 	if callback == nil {
@@ -1817,7 +1817,7 @@ func (a *adapter) makeFunction(scope *gov8.Scope, realm *gov8.Context, function 
 			return
 		}
 		if host, ok := hostPayload(result); ok {
-			local, valueErr := callbackValue(cs, realm, rv, host)
+			local, valueErr := a.callbackValue(cs, realm, rv, host)
 			if valueErr != nil {
 				exception, _ := cs.NewError(valueErr.Error())
 				_ = cs.ThrowException(exception)
@@ -1854,6 +1854,12 @@ func marshalPrimitive(scope *gov8.Scope, value any) (gov8.Value, bool, error) {
 	case int:
 		v, e := scope.Number(float64(value))
 		return v, true, e
+	case int8:
+		v, e := scope.Int32(int32(value))
+		return v, true, e
+	case int16:
+		v, e := scope.Int32(int32(value))
+		return v, true, e
 	case int32:
 		v, e := scope.Int32(value)
 		return v, true, e
@@ -1862,6 +1868,12 @@ func marshalPrimitive(scope *gov8.Scope, value any) (gov8.Value, bool, error) {
 		return v, true, e
 	case uint:
 		v, e := scope.Number(float64(value))
+		return v, true, e
+	case uint8:
+		v, e := scope.Uint32(uint32(value))
+		return v, true, e
+	case uint16:
+		v, e := scope.Uint32(uint32(value))
 		return v, true, e
 	case uint32:
 		v, e := scope.Uint32(value)
@@ -1887,7 +1899,7 @@ func (a *adapter) marshalCallback(scope *gov8.CallbackScope, value any) (gov8.Va
 	if callback == nil {
 		return gov8.Value{}, errors.New("not in V8 callback")
 	}
-	return callbackValue(scope, callback.ctx, callback.result, value)
+	return a.callbackValue(scope, callback.ctx, callback.result, value)
 	/*
 		rv := reflect.ValueOf(value)
 		if rv.Kind() == reflect.Map && rv.Type().Key().Kind() == reflect.String {
@@ -2018,11 +2030,17 @@ func localResultString(value gov8.Value, realm *gov8.Context) string {
 	return result
 }
 
-func callbackValue(scope *gov8.CallbackScope, realm *gov8.Context, result gov8.ReturnValue, value any) (gov8.Value, error) {
-	return callbackValueWithJSON(scope, realm, result, value, true)
+func (a *adapter) callbackValue(scope *gov8.CallbackScope, realm *gov8.Context, result gov8.ReturnValue, value any) (gov8.Value, error) {
+	return a.callbackValueWithJSON(scope, realm, result, value, true)
 }
 
-func callbackValueWithJSON(scope *gov8.CallbackScope, realm *gov8.Context, result gov8.ReturnValue, value any, allowJSON bool) (gov8.Value, error) {
+func (a *adapter) callbackValueWithJSON(scope *gov8.CallbackScope, realm *gov8.Context, result gov8.ReturnValue, value any, allowJSON bool) (gov8.Value, error) {
+	// A host record can contain native Values at any depth. Resolve them through
+	// the owning adapter, preserving identity and callback lifetime checks rather
+	// than treating the Go wrapper as a record to serialize.
+	if native, ok := value.(engine.Value); ok {
+		return a.localCallback(native)
+	}
 	if buffer, ok := value.(engine.BinaryBuffer); ok {
 		return marshalBinaryBuffer(scope.Scope(), realm, buffer)
 	}
@@ -2057,7 +2075,7 @@ func callbackValueWithJSON(scope *gov8.CallbackScope, realm *gov8.Context, resul
 			// The input was produced by encoding/json, so a parse exception is a
 			// transient native failure rather than malformed input. Preserve the
 			// callback result by using the equivalent recursive conversion.
-			return callbackValueWithJSON(scope, realm, result, value, false)
+			return a.callbackValueWithJSON(scope, realm, result, value, false)
 		}
 		// Non-finite numbers and unsupported values retain the recursive path.
 	}
@@ -2074,12 +2092,20 @@ func callbackValueWithJSON(scope *gov8.CallbackScope, realm *gov8.Context, resul
 		_ = result.SetBool(value)
 	case int:
 		_ = result.SetFloat64(float64(value))
+	case int8:
+		_ = result.SetInt32(int32(value))
+	case int16:
+		_ = result.SetInt32(int32(value))
 	case int32:
 		_ = result.SetInt32(value)
 	case int64:
 		_ = result.SetFloat64(float64(value))
 	case uint:
 		_ = result.SetFloat64(float64(value))
+	case uint8:
+		_ = result.SetUint32(uint32(value))
+	case uint16:
+		_ = result.SetUint32(uint32(value))
 	case uint32:
 		_ = result.SetUint32(value)
 	case uint64:
@@ -2097,7 +2123,7 @@ func callbackValueWithJSON(scope *gov8.CallbackScope, realm *gov8.Context, resul
 			}
 			iter := rv.MapRange()
 			for iter.Next() {
-				member, err := callbackValueWithJSON(scope, realm, result, iter.Value().Interface(), allowJSON)
+				member, err := a.callbackValueWithJSON(scope, realm, result, iter.Value().Interface(), allowJSON)
 				if err != nil {
 					return gov8.Value{}, err
 				}
@@ -2120,7 +2146,7 @@ func callbackValueWithJSON(scope *gov8.CallbackScope, realm *gov8.Context, resul
 			elements := make([]gov8.Value, rv.Len())
 			for i := range elements {
 				var err error
-				elements[i], err = callbackValueWithJSON(scope, realm, result, rv.Index(i).Interface(), allowJSON)
+				elements[i], err = a.callbackValueWithJSON(scope, realm, result, rv.Index(i).Interface(), allowJSON)
 				if err != nil {
 					return gov8.Value{}, err
 				}
@@ -2137,7 +2163,8 @@ func callbackValueWithJSON(scope *gov8.CallbackScope, realm *gov8.Context, resul
 // Do not let JSON silently serialize engine values, custom structs or marshalers
 // that the recursive engine conversion does not support.
 func callbackJSONEligible(value any) bool {
-	if _, ok := value.(engine.BinaryBuffer); ok {
+	switch value.(type) {
+	case engine.BinaryBuffer, engine.Value:
 		return false
 	}
 	switch value.(type) {
@@ -2277,7 +2304,7 @@ func goTypeOf(value any) string {
 		return "boolean"
 	case string:
 		return "string"
-	case int, int32, int64, uint, uint32, uint64, float32, float64:
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
 		return "number"
 	}
 	return "object"
