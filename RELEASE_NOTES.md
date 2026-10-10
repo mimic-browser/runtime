@@ -1,13 +1,12 @@
-# Mimic v0.2.6 — Public Beta
+# Mimic v0.2.7 — Public Beta
 
 This release reduces bootstrap and installed-font memory retention while preserving native callable behavior, lazy operation identity, and Page isolation.
 
 - Avoid redundant JavaScript wrappers around native platform operations.
-- Publish generated lazy operations after reflective bootstrap finalization.
 - Preserve snapshot function state without retaining compiled installation bytecode; invalidate snapshots created with the previous policy.
 - Decode immutable installed-font coverage once per resource on demand, keeping shaping faces and author fonts owned by each Page.
 - Prevent CDP Pages from auto-attaching to their own targets and reject unsafe Console eager evaluations.
 
-The [memory checkpoint](benchmark/runs/14-memory-20261010/public-summary.md) documents measured reductions in ready and active process-tree RSS, with the saved September Chrome 152 reference and workload-specific limits. Semantic Navigator methods are installed directly from staged IDL metadata before lazy fallback publication; camera/WebRTC and ordinary/restored realm regression checks cover this boundary.
+The [memory checkpoint](benchmark/runs/14-memory-20261010/public-summary.md) documents measured reductions in ready and active process-tree RSS, with the saved September Chrome 152 reference and workload-specific limits. Generated lazy operations retain the established publication order required by semantic installers; Navigator, SVG, camera/WebRTC and ordinary/restored realm checks cover these boundaries.
 
 This checkpoint covers memory rather than the full performance benchmark. Snapshot bytecode clearing reduced static batch throughput by approximately 7% in a separate paired diagnostic; Wikipedia workflow checks showed no material slowdown. Compatibility remains workload-dependent.

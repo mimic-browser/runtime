@@ -52,18 +52,14 @@ const installNavigatorCapabilities = () => {
   const method = (type, name, implementation, async = false) => {
     const proto = globalThis[type]?.prototype,
       d = proto && Object.getOwnPropertyDescriptor(proto, name);
-    const staged = generatedLazyOperationIndex.get(type + '\0' + name);
-    if (!d || (typeof d.value !== 'function' && !(d.value === undefined && staged))) return;
-    // Unmaterialized generated operations still carry the captured IDL arity.
-    // Installing semantics must not require reading a fallback callable first.
-    const requiredLength = typeof d.value === 'function' ? d.value.length : staged.length;
+    if (!d || typeof d.value !== 'function') return;
     const fn = {
       [name](...args) {
         const run = () => {
           const slot = check(this, type);
-          if (args.length < requiredLength)
+          if (args.length < d.value.length)
             throw new TypeError(
-              `Failed to execute '${name}' on '${type}': ${requiredLength} argument${requiredLength === 1 ? '' : 's'} required, but only ${args.length} present.`,
+              `Failed to execute '${name}' on '${type}': ${d.value.length} argument${d.value.length === 1 ? '' : 's'} required, but only ${args.length} present.`,
             );
           return implementation.call(this, slot, ...args);
         };
@@ -77,7 +73,7 @@ const installNavigatorCapabilities = () => {
         return async ? platformPromiseResolve().then(run) : run();
       },
     }[name];
-    Object.defineProperty(fn, 'length', { value: requiredLength, configurable: true });
+    Object.defineProperty(fn, 'length', { value: d.value.length, configurable: true });
     native(fn, name);
     Object.defineProperty(proto, name, { ...d, value: fn });
   };
