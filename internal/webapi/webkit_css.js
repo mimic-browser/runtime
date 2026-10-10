@@ -83,7 +83,8 @@ const normalizeCSSValue = (name, value, inputName = name) => {
       .replace(/\s*,\s*/g, ', ');
   }
   const parser = cssShorthandParsers.get(name) || cssLonghandParsers.get(name);
-  if (parser && cssWideValue(value.toLowerCase())) return value.toLowerCase();
+  if ((parser || cssInitialValues.has(name)) && cssWideValue(value.toLowerCase()))
+    return value.toLowerCase();
   if (parser && !cssWideValue(value.toLowerCase()) && !/^var\(/.test(value)) {
     const parsed = parser(value);
     return parsed === null

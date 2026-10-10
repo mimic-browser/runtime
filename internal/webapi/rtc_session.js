@@ -43,7 +43,7 @@ const rtcSessionModel = (() => {
   const transceivers = new WeakMap(),
     senders = new WeakMap(),
     receivers = new WeakMap(),
-    tracks = globalThis.__mimicMediaTrackSlots || new WeakMap();
+    tracks = sharedMediaTrackSlots;
   const make = (type, map, state) => {
     const object = Object.create(globalThis[type].prototype);
     map.set(object, state);
@@ -323,4 +323,3 @@ const rtcSessionModel = (() => {
     transceivers,
   };
 })();
-delete globalThis.__mimicMediaTrackSlots;

@@ -59,15 +59,17 @@ func parseWindowExposure(raw []byte) compatibility.RealmExposure {
 }
 
 var windowSecureOnce = sync.OnceValue(func() compatibility.RealmExposure {
-	exposure := parseOrderedWindowExposure(windowSecureJSON, windowSecureOrderJSON)
-	if err := json.Unmarshal(windowSecureMemberOrderJSON, &exposure); err != nil {
-		panic("invalid Chrome 152 member order: " + err.Error())
-	}
-	return exposure
+	return parseOrderedWindowExposure(windowSecureJSON, windowSecureOrderJSON)
 })
 
 func parseOrderedWindowExposure(raw, order []byte) compatibility.RealmExposure {
 	exposure := parseWindowExposure(raw)
+	// Frozen Window member order is invariant across secure and insecure
+	// contexts. The installer filters unavailable members in each exposure;
+	// security gating must not leave handwritten class installation order visible.
+	if err := json.Unmarshal(windowSecureMemberOrderJSON, &exposure); err != nil {
+		panic("invalid Chrome 152 member order: " + err.Error())
+	}
 	if err := json.Unmarshal(order, &exposure.PropertyOrder); err != nil {
 		panic(err)
 	}

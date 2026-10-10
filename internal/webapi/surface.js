@@ -101,6 +101,9 @@
   const lazyDomainState = new Map();
   const lazyBehaviorCells = new Map();
   const lazySingletons = new Map();
+  // Audio materializes after RTC installation. Both domains must retain the
+  // same realm-owned track slots without publishing a bootstrap handoff global.
+  const sharedMediaTrackSlots = new WeakMap();
   const nativeEval = globalThis.eval;
   const lazyKey = (interfaceName, member, side = 'value') =>
     interfaceName + '\0' + member + '\0' + side;
@@ -3858,7 +3861,15 @@
         host.semanticMissingAt('surface.js/clientRectFor', 'CSS.clientRectTransform', raw);
         continue;
       }
-      const origin = String(get('transform-origin') || '50% 50%').split(/\s+/),
+      // The fallback declaration projection retains CSS-wide tokens. Resolve
+      // them through the same used-value path as getComputedStyle; treating
+      // "initial" or "unset" as a length would discard the entire transform.
+      const originValue = get('transform-origin'),
+        origin = String(
+          cssWideValue(originValue)
+            ? cssComputedValue(node, 'transform-origin')
+            : originValue || '50% 50%',
+        ).split(/\s+/),
         ox = nativeProduct
           ? nativeProduct[16]
           : len(keywords[origin[0]] || origin[0], bounds.width),

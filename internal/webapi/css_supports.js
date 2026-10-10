@@ -26,6 +26,16 @@ const compatibilityCSSSupports = {};
   const declaration = (property, value, allowEmptyCustom = false) => {
     const name = cssName(property);
     if (/^--[\w-]+$/.test(name)) return customPropertyValue(String(value), allowEmptyCustom);
+    // Chrome's ordinary declaration query accepts a terminal priority marker;
+    // custom-property queries retain their separate token-stream grammar.
+    value = String(value)
+      .replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\/\*[\s\S]*?(?:\*\/|$)/g, (token) =>
+        token.startsWith('/*') ? ' ' : token,
+      )
+      .replace(/\s*!\s*important\s*$/i, '');
+    // These longhands already have canonical declarations and initial values.
+    // CSS-wide values do not require a property-specific value parser.
+    if (cssInitialValues.has(name) && cssWideValue(value.trim().toLowerCase())) return true;
     if (cssShorthandParsers.has(name) || cssLonghandParsers.has(name)) {
       const normalized = normalizeCSSValue(name, value, property);
       return normalized !== null && normalized !== '';

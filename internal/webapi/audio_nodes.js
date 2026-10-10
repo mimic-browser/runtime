@@ -275,9 +275,7 @@ method('BaseAudioContext', 'createPanner', function createPanner() {
 // observable objects with one live audio track; source nodes render silence
 // until a future media decoder supplies PCM to the same graph model.
 const audioMediaElements = new WeakMap(),
-  audioStreams = new WeakMap(),
-  sharedMediaTrackSlots = new WeakMap();
-globalThis.__mimicMediaTrackSlots = sharedMediaTrackSlots;
+  audioStreams = new WeakMap();
 const mediaTrackDescriptor = (name) =>
   typeof MediaStreamTrack === 'function'
     ? Object.getOwnPropertyDescriptor(MediaStreamTrack.prototype, name)
