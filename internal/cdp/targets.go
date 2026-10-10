@@ -418,7 +418,10 @@ func (s *session) handleTarget(m message, p map[string]any) (any, bool, error) {
 		s.autoFlat = flat
 		s.autoFilter = filter
 		s.stateMu.Unlock()
-		if auto && (s.browserSession || s.id == "") {
+		// A page endpoint already owns its page. Only a browser session
+		// enumerates top-level targets; reattaching the page duplicates frontend
+		// models and Console messages. Tab sessions attach their page below.
+		if auto && s.browserSession {
 			for _, page := range s.server.pages() {
 				for _, typ := range []string{"tab", "page"} {
 					if targetMatches(filter, typ) {

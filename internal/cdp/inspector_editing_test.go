@@ -1,6 +1,9 @@
 package cdp
 
-import "testing"
+import (
+	"github.com/gorilla/websocket"
+	"testing"
+)
 
 func TestInspectorElementsEditingCommands(t *testing.T) {
 	for _, test := range []struct {
@@ -108,5 +111,65 @@ func TestInspectorEagerEvaluationDoesNotExecute(t *testing.T) {
 	event := w.event(t, "Runtime.consoleAPICalled")
 	if event["args"].([]any)[0].(map[string]any)["value"] != "hi" {
 		t.Fatalf("console event: %v", event)
+	}
+}
+
+func TestInspectorExplicitConsoleEvaluationEmitsOnce(t *testing.T) {
+	s, addr := runningServer(t)
+	w, id := inspectorSession(t, s, addr)
+	w.call(t, id, "Runtime.enable", map[string]any{})
+	w.call(t, id, "Runtime.evaluate", map[string]any{"expression": "globalThis.consoleExecutions=0"})
+	for _, cli := range []bool{false, true} {
+		result := w.call(t, id, "Runtime.evaluate", map[string]any{"expression": "++consoleExecutions; console.log('test')", "includeCommandLineAPI": cli})
+		if result["exceptionDetails"] != nil {
+			t.Fatal(result)
+		}
+	}
+	result := w.call(t, id, "Runtime.evaluate", map[string]any{"expression": "consoleExecutions", "returnByValue": true})
+	if value := result["result"].(map[string]any)["value"]; value != float64(2) {
+		t.Fatalf("execution count: %v", value)
+	}
+	count := 0
+	for {
+		select {
+		case event := <-w.events:
+			if event["method"] == "Runtime.consoleAPICalled" {
+				count++
+			}
+		default:
+			if count != 2 {
+				t.Fatalf("console event count: got %d want 2", count)
+			}
+			return
+		}
+	}
+}
+
+func TestInspectorPageAutoAttachDoesNotAttachItself(t *testing.T) {
+	s, addr := runningServer(t)
+	conn, _, err := websocket.DefaultDialer.Dial("ws://"+addr+"/devtools/page/"+s.Page.ID, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := inspectorWireConnection(t, conn)
+	w.call(t, "", "Runtime.enable", map[string]any{})
+	w.call(t, "", "Target.setAutoAttach", map[string]any{"autoAttach": true, "flatten": true, "waitForDebuggerOnStart": false})
+	w.call(t, "", "Runtime.evaluate", map[string]any{"expression": "console.log('test')", "includeCommandLineAPI": true})
+	count := 0
+	for {
+		select {
+		case event := <-w.events:
+			if event["method"] == "Target.attachedToTarget" {
+				t.Fatalf("page attached its own target hierarchy: %v", event)
+			}
+			if event["method"] == "Runtime.consoleAPICalled" {
+				count++
+			}
+		default:
+			if count != 1 {
+				t.Fatalf("console events: %d", count)
+			}
+			return
+		}
 	}
 }

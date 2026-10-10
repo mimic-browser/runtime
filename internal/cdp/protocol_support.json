@@ -984,7 +984,9 @@
     "notes": "Live remote-object arguments in emitting context; no historical replay or full async stacks.",
     "tests": [
       "internal/cdp/runtime_test.go#TestCDPConsoleArgumentsHaveObjectHandles",
-      "compatibility/cdp_automation.py#runtime.console_arguments"
+      "compatibility/cdp_automation.py#runtime.console_arguments",
+      "internal/cdp/inspector_editing_test.go#TestInspectorPageAutoAttachDoesNotAttachItself",
+      "internal/cdp/inspector_editing_test.go#TestInspectorExplicitConsoleEvaluationEmitsOnce"
     ]
   },
   "Runtime.disable": {
@@ -1272,10 +1274,12 @@
   },
   "Target.setAutoAttach": {
     "status": "partial",
-    "notes": "Nested/flattened browser-tab-page attachment, type filters and start-paused navigation. No worker/OOPIF/prerender graph.",
+    "notes": "Nested/flattened browser-tab-page attachment, type filters and start-paused navigation. No worker/OOPIF/prerender graph. Browser sessions enumerate top-level targets; tab sessions attach their page. A direct page session never auto-attaches its own top-level target hierarchy.",
     "tests": [
       "internal/cdp/transport_test.go#TestFlattenedSessionsKeepIndependentPagesAndDuplicateCommandIDs",
-      "compatibility/cdp_automation.mjs#page.create"
+      "compatibility/cdp_automation.mjs#page.create",
+      "internal/cdp/inspector_editing_test.go#TestInspectorPageAutoAttachDoesNotAttachItself",
+      "internal/cdp/inspector_editing_test.go#TestInspectorExplicitConsoleEvaluationEmitsOnce"
     ]
   },
   "Target.setDiscoverTargets": {
