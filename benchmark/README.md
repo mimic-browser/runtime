@@ -1,10 +1,6 @@
 # Reproducible benchmark: Mimic V8 and Chrome 152
 
-Latest measured checkpoint: [September 29, 2026 summary](runs/13-rss-20260929/public-summary.md)
-and [full measured report](runs/13-rss-20260929/report.md). The headline uses
-the completed static 50-Page series; the report shows the status of every
-attempted level.
-The original `results/` baseline and earlier runs remain historical records.
+Current public checkpoint: [October 10, 2026 memory results](runs/14-memory-20261010/public-summary.md). The completed static 50-Page series and ready RSS supply the public memory claims. React-100 failed and is excluded; throughput and cold latency were not re-certified. Frozen archives remain evidence, not current benchmark claims.
 
 From the repository root on Windows x64:
 
@@ -94,13 +90,13 @@ the English reporting variant with the same calculations.
 
 Generate the README benchmark image from a completed, integrity-checked
 checkpoint. The image follows the website palette; every displayed number is
-read from `raw.json` and `summary.json`, whose hashes are validated against the
-checkpoint manifest. The default output path stays the same for future
+read from the current checkpoint. Memory checkpoints use `public-results.json`;
+full checkpoints validate `raw.json` and `summary.json` against their manifest. The default output path stays the same for future
 checkpoints, so the README always uses the newly generated image:
 
 ```powershell
 .build/benchmark-venv/Scripts/python.exe tools/performance/benchmark_story.py `
-  benchmark/runs/13-rss-20260929
+  benchmark/runs/14-memory-20261010
 ```
 
 The generator also writes `docs/assets/benchmark-story.receipt.json` with

@@ -5,20 +5,14 @@ establish a universal speedup over Chrome or complete website compatibility.
 
 ## Published measurements
 
-The [public benchmark checkpoint](../../benchmark/runs/13-rss-20260929/public-summary.md)
-uses an unchanged frozen harness. All 12 correctness gates and 360 measured
-single-Page attempts passed. The completed static 50-Page series measured:
+The [current public memory checkpoint](../../benchmark/runs/14-memory-20261010/public-summary.md) measured the following against frozen Chrome 152 reference observations:
 
 | Metric | Mimic | Chrome |
 | --- | ---: | ---: |
-| Active process-tree RSS | 748.11 MiB | 4102.04 MiB |
-| Throughput | 108.67 sessions/s | 18.09 sessions/s |
-| Ready process-tree RSS | 45.79 MiB | 379.54 MiB |
+| Active process-tree RSS, 50 static Pages | 727.78 MiB | 4102.04 MiB |
+| Ready process-tree RSS | 40.80 MiB | 379.54 MiB |
 
-The 100-Page schedule stopped at a conservative available-memory guard, not an
-out-of-memory event. Its stopped rows are not successful measurements. Later
-CPU and React density results are absent. The linked checkpoint retains the
-methodology, source and binary identity, sample scope and limitations.
+All 120 measured single-Page attempts passed. Static and CPU completed 100 Pages; React completed 50 Pages. React-100 failed in the final wave and is excluded from successful memory comparisons (2,810/2,910 density attempts valid). This memory-only checkpoint does not certify throughput or cold latency. The methodology retains exact binary and reference provenance.
 
 The [Wikipedia E2E reference](wikipedia-e2e-current.md) records the complete
 unchanged Playwright workflow and its acceptance criteria. A faster isolated

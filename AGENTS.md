@@ -198,3 +198,5 @@ the current behavioral reference.
 - Keep experimental rewrites, including Rust spikes, separate from the
   production implementation until they have been evaluated against equivalent
   correctness and workload requirements.
+
+- Replacing the public benchmark means updating every current presentation together: runtime README, benchmark entry point, performance summary, website home and comparison pages, charts/images, downloads and methodology links. Present only the latest measured checkpoint; remove previous checkpoint links and stale speed/CPU claims from current surfaces. A memory-only update publishes memory results only. Preserve frozen historical evidence and exact reference provenance in the current methodology; do not present archived results as current claims.

@@ -4,7 +4,7 @@ Current source with three memory changes, compared with the unchanged October 10
 
 The Windows Job Object runner, frozen local fixtures and 50 ms sampler are reused. Each workload has 20 measured warm single-Page attempts after one excluded warmup. Static, CPU and React density use 1/5/10/25/50/100 Pages, one excluded warmup per process, and max(5, ceil(20/N)) measured waves. Active Pages remain alive until the wave ends. Recovery is 250 ms. RSS sums working sets and can count shared pages more than once.
 
-The memory adapter has a 120 s wave guard rather than the full harness's 180 s guard; this guard was not reached. Per-Page CDP timeout remains 30 s. These memory observations do not replace the published full benchmark or establish general website compatibility.
+The memory adapter has a 120 s wave guard rather than the full harness's 180 s guard; this guard was not reached. Per-Page CDP timeout remains 30 s. This is the current public benchmark. Its scope is memory; it does not certify throughput, cold latency or general website compatibility.
 
 ## Retained-cost changes
 
@@ -16,14 +16,14 @@ These experiments identify retained costs in the current implementation; they ar
 
 ## Ready memory
 
-| Metric | October control Mimic | Final Mimic | September Chrome |
+| Metric | October control Mimic | Final Mimic | Chrome 152 reference |
 |---|---:|---:|---:|
 | rss MiB | 49.00 | 40.80 | 379.54 |
 | private MiB | 104.36 | 95.95 | 174.33 |
 
 ## Warm single-Page sampled peaks
 
-| Workload | Control RSS MiB | Final RSS MiB | September Chrome RSS MiB | Final private MiB | September Chrome private MiB |
+| Workload | Control RSS MiB | Final RSS MiB | Chrome 152 reference RSS MiB | Final private MiB | Chrome 152 reference private MiB |
 |---|---:|---:|---:|---:|---:|
 | static | 139.09 | 145.39 | 1211.70 | 172.38 | 599.05 |
 | cpu | 135.39 | 121.07 | 1403.35 | 163.77 | 778.80 |
@@ -34,9 +34,9 @@ These experiments identify retained costs in the current implementation; they ar
 
 ## Active density memory
 
-An absent historical Chrome comparison means its series was not completed successfully. Diagnostic and failed rows are not used as successful reference measurements.
+An absent Chrome reference comparison means its series was not completed successfully. Diagnostic and failed rows are not used as successful reference measurements.
 
-| Workload | Pages | Control RSS MiB | Final RSS MiB | September Chrome RSS MiB | Final private MiB | Final recovery RSS MiB | Valid / attempts |
+| Workload | Pages | Control RSS MiB | Final RSS MiB | Chrome 152 reference RSS MiB | Final private MiB | Final recovery RSS MiB | Valid / attempts |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | static | 1 | 122.03 | 106.44 | 1210.81 | 150.71 | 88.05 | 20 / 20 |
 | static | 5 | 186.54 | 148.94 | 1373.74 | 206.35 | 85.48 | 25 / 25 |
@@ -72,6 +72,6 @@ React at 100 Pages is not certified: four measured waves passed, then a native a
 
 ## Provenance
 
-Measured executable SHA-256: `fd0fca18f8be20a64ce684b59d21a9b50479cf759bf1761cc148c7d17f298c00`. Production source matches `0480233219982ef79162b147565067216e7bef38`. Chrome reference: [September checkpoint](../13-rss-20260929/public-summary.md). This memory-only checkpoint passed 120/120 measured single-Page attempts and 2,810/2,910 density attempts; failed React-100 rows are excluded from successful comparisons. Numerical results: [public-results.json](public-results.json). Detailed diagnostic artifacts remain private.
+Measured executable SHA-256: `fd0fca18f8be20a64ce684b59d21a9b50479cf759bf1761cc148c7d17f298c00`. Production source matches `0480233219982ef79162b147565067216e7bef38`. Chrome reference captured September 29, 2026; its hashes and fixture identity are preserved in the numerical results provenance. This memory-only checkpoint passed 120/120 measured single-Page attempts and 2,810/2,910 density attempts; failed React-100 rows are excluded from successful comparisons. Numerical results: [public-results.json](public-results.json). Detailed diagnostic artifacts remain private.
 
 Two subsequent alternating control/candidate pairs completed all ten measured React-100 waves for each binary. The native failure was not reproduced or attributed; these focused repeats do not replace the failed full memory-series record.

@@ -1,6 +1,6 @@
 """Render the README benchmark image from a completed benchmark checkpoint.
 
-Only raw.json and summary.json supply measurements. The visual follows the
+Only checkpoint JSON supplies measurements. The visual follows the
 Mimic site's navy, periwinkle and restrained comparison-bar design.
 """
 
@@ -98,7 +98,10 @@ def comparison_bar(draw, x, y, width, mimic_value, chrome_value, font_set, unit)
 
 
 def render(checkpoint, output):
-    raw, summary = validate_checkpoint(checkpoint)
+    memory_path = checkpoint / "public-results.json"
+    memory = load_json(memory_path) if memory_path.exists() else None
+    if memory is None:
+        raw, summary = validate_checkpoint(checkpoint)
     fs = fonts()
     canvas = Image.new("RGB", (2000, 1125), BG)
     glow = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
@@ -108,17 +111,30 @@ def render(checkpoint, output):
     canvas = Image.alpha_composite(canvas.convert("RGBA"), glow.filter(ImageFilter.GaussianBlur(145))).convert("RGB")
     draw = ImageDraw.Draw(canvas)
 
-    date = raw["metadata"]["date"][:10]
-    mimic_ready = startup(raw, "mimic", "cdp_ready_ms")
-    chrome_ready = startup(raw, "chrome", "cdp_ready_ms")
-    mimic_rss = startup(raw, "mimic", "rss_mib")
-    chrome_rss = startup(raw, "chrome", "rss_mib")
-    mc, cc = concurrency(summary, "mimic"), concurrency(summary, "chrome")
-    levels = sorted(set(mc) & set(cc))
-    if not levels:
-        raise ValueError("no common successful static concurrency level")
-    level = max(n for n in levels if n <= 50) if any(n <= 50 for n in levels) else max(levels)
-    mrow, crow = mc[level], cc[level]
+    if memory is not None:
+        date = memory["methodology"]["date"]
+        mimic_rss = memory["ready"]["final_mimic"]
+        chrome_rss = memory["ready"]["september_chrome"]
+        level = 50
+        row = next(
+            r for r in memory["density"]
+            if r["workload"] == "static" and r["n"] == level
+            and not r["failure"] and r["valid"] == r["attempts"]
+        )
+        mrow = {"rss_mib": row["active_rss_mib"]}
+        crow = {"rss_mib": row["september_chrome_rss_mib"]}
+    else:
+        date = raw["metadata"]["date"][:10]
+        mimic_ready = startup(raw, "mimic", "cdp_ready_ms")
+        chrome_ready = startup(raw, "chrome", "cdp_ready_ms")
+        mimic_rss = startup(raw, "mimic", "rss_mib")
+        chrome_rss = startup(raw, "chrome", "rss_mib")
+        mc, cc = concurrency(summary, "mimic"), concurrency(summary, "chrome")
+        levels = sorted(set(mc) & set(cc))
+        if not levels:
+            raise ValueError("no common successful static concurrency level")
+        level = max(n for n in levels if n <= 50) if any(n <= 50 for n in levels) else max(levels)
+        mrow, crow = mc[level], cc[level]
 
     draw.rounded_rectangle((88, 57, 302, 101), radius=22, fill="#273765", outline="#596fb5", width=2)
     text(draw, (195, 79), "BENCHMARK", fs["eyebrow"], BLUE_BRIGHT, anchor="mm")
@@ -131,14 +147,14 @@ def render(checkpoint, output):
     cards = [
         (
             90, 510, 660, 967, "01 / START LIGHT",
-            f"{chrome_rss / mimic_rss:.1f}×", "less ready RSS",
+            f"{chrome_rss / mimic_rss:.2f}×", "less ready RSS",
             mimic_rss, chrome_rss, "MiB",
-            f"CDP ready: {mimic_ready:.0f} vs {chrome_ready:.0f} ms",
+            "Ready process-tree memory" if memory else f"CDP ready: {mimic_ready:.0f} vs {chrome_ready:.0f} ms",
         ),
         (
             715, 510, 1285, 967, f"02 / {level} STATIC PAGES",
-            f"{mrow['throughput'] / crow['throughput']:.1f}×", "more throughput",
-            mrow["throughput"], crow["throughput"], "pages/s",
+            "" if memory else f"{mrow['throughput'] / crow['throughput']:.1f}×", "more throughput",
+            0 if memory else mrow["throughput"], 0 if memory else crow["throughput"], "pages/s",
             "Completed static concurrency series",
         ),
         (
@@ -148,6 +164,19 @@ def render(checkpoint, output):
             f"Measured with {level} live static Pages",
         ),
     ]
+    if memory is not None:
+        cards[1] = (
+            715, 510, 1285, 967, "02 / 50 STATIC PAGES",
+            f"{crow['rss_mib'] / mrow['rss_mib']:.2f}×", "less active RSS",
+            mrow["rss_mib"], crow["rss_mib"], "MiB",
+            f"{row['valid']} / {row['attempts']} measured attempts passed",
+        )
+        cards[2] = (
+            1340, 510, 1910, 967, "03 / READY FOOTPRINT",
+            f"{(1 - mimic_rss / chrome_rss) * 100:.0f}%", "less ready memory",
+            mimic_rss, chrome_rss, "MiB",
+            "Memory-only checkpoint",
+        )
     for x1, y1, x2, y2, heading, metric, label, mimic, chrome, unit, note in cards:
         draw.rounded_rectangle((x1, y1, x2, y2), radius=23, fill=SURFACE, outline=LINE, width=2)
         text(draw, (x1 + 34, y1 + 38), heading, fs["eyebrow"], BLUE_BRIGHT)
@@ -156,7 +185,7 @@ def render(checkpoint, output):
         comparison_bar(draw, x1 + 37, y1 + 292, 235, mimic, chrome, fs, unit)
         text(draw, (x1 + 37, y1 + 411), note, fs["small"], QUIET)
 
-    text(draw, (90, 1025), "10 fresh starts · 20 warm samples/workload · process-tree RSS", fs["tiny"], MUTED)
+    text(draw, (90, 1025), f"{memory['methodology']['single_valid']} / {memory['methodology']['single_attempts']} single-page attempts passed · React-100 excluded" if memory else "10 fresh starts · 20 warm samples/workload · process-tree RSS", fs["tiny"], MUTED)
     text(draw, (90, 1063), "Controlled fixtures; results are workload and machine specific.", fs["tiny"], QUIET)
     text(draw, (1910, 1063), "METHOD + RAW DATA IN REPOSITORY", fs["tiny_bold"], BLUE_BRIGHT, anchor="ra")
 
@@ -164,8 +193,10 @@ def render(checkpoint, output):
     canvas.save(output, optimize=True)
     receipt = {
         "checkpoint": date,
-        "raw_sha256": hashlib.sha256((checkpoint / "raw.json").read_bytes()).hexdigest(),
-        "summary_sha256": hashlib.sha256((checkpoint / "summary.json").read_bytes()).hexdigest(),
+        "source_sha256": {
+            path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+            for path in ([memory_path] if memory else [checkpoint / "raw.json", checkpoint / "summary.json"])
+        },
         "generator_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         "output_sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
         "concurrency_level": level,

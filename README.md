@@ -100,9 +100,11 @@ mimic --profile shop
 
 ## Benchmarks
 
+![Current memory benchmark](docs/assets/benchmark-story.png)
+
 The October 10, 2026 memory checkpoint used **9.30× less ready RSS**
 (40.80 vs. 379.54 MiB) and **5.64× less active RSS** at 50 static Pages
-(727.78 vs. 4,102.04 MiB), compared with saved September 29 Chrome 152
+(727.78 vs. 4,102.04 MiB), compared with frozen Chrome 152 reference
 measurements on the same machine. All 120 measured single-Page attempts passed.
 Static and CPU completed 100-Page series; React completed 50 Pages. The React-100
 series failed in its last wave (native access violation) and is excluded from
@@ -112,7 +114,6 @@ Snapshot bytecode clearing traded approximately 7% static batch throughput for
 lower memory in a separate paired diagnostic.
 
 [Current memory results and methodology](benchmark/runs/14-memory-20261010/public-summary.md) ·
-[September full benchmark and throughput](benchmark/runs/13-rss-20260929/public-summary.md) ·
 [Reproduce](benchmark/README.md) ·
 [Current performance notes](docs/performance/report.md)
 
