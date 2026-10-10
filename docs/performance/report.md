@@ -358,3 +358,5 @@ control/candidate builds against the same observations.
 This document contains current technical conclusions and supported measurements.
 Private investigations and intermediate activity logs are not public project
 documentation.
+
+Two subsequent alternating control/candidate pairs completed all ten measured React-100 waves for each binary. The native failure was not reproduced or attributed; these focused repeats do not replace the failed full memory-series record.

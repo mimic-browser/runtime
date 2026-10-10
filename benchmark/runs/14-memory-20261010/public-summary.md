@@ -73,3 +73,5 @@ React at 100 Pages is not certified: four measured waves passed, then a native a
 ## Provenance
 
 Measured executable SHA-256: `fd0fca18f8be20a64ce684b59d21a9b50479cf759bf1761cc148c7d17f298c00`. Production source matches `0480233219982ef79162b147565067216e7bef38`. Chrome reference: [September checkpoint](../13-rss-20260929/public-summary.md). This memory-only checkpoint passed 120/120 measured single-Page attempts and 2,810/2,910 density attempts; failed React-100 rows are excluded from successful comparisons. Numerical results: [public-results.json](public-results.json). Detailed diagnostic artifacts remain private.
+
+Two subsequent alternating control/candidate pairs completed all ten measured React-100 waves for each binary. The native failure was not reproduced or attributed; these focused repeats do not replace the failed full memory-series record.
