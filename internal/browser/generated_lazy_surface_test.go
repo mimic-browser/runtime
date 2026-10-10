@@ -125,3 +125,36 @@ func TestGeneratedConstructorNativeParityAfterSnapshotRestore(t *testing.T) {
 		t.Fatal("generated constructor probe did not use a restored realm")
 	}
 }
+
+// Semantic installers must replace staged fallback slots even before a callable
+// exists, both in an ordinary realm and in the serialized bootstrap graph.
+func TestGeneratedLazyOperationsKeepNavigatorSemantics(t *testing.T) {
+	page := bootstrapSnapshotPage(t)
+	page.ctx.browser.cameraProvider = &fixtureCameraProvider{}
+	page.ctx.browser.microphoneProvider = emptyMicrophoneProvider{}
+	probe := `(async()=>{
+   const devices = await navigator.mediaDevices.enumerateDevices();
+   if (!Array.isArray(devices) || devices.length !== 1) return 'devices:'+JSON.stringify(devices);
+   const permissions = await navigator.permissions.query({name:'camera'});
+   if (!(permissions instanceof PermissionStatus)) return 'permission';
+   try { await navigator.mediaDevices.getUserMedia(); return 'accepted'; }
+   catch(error) { if (!(error instanceof TypeError)) return error.name; }
+   return 'ok';
+ })()`
+	navigateCapabilityFixture(t, page)
+	if err := page.ctx.SetPermission(originOf(page.URL()), "camera", "granted"); err != nil {
+		t.Fatal(err)
+	}
+	if value := bootstrapSnapshotEvaluate(t, page, probe); value != "ok" {
+		t.Fatalf("ordinary navigator semantics: %v", value)
+	}
+	bootstrapSnapshotWarm(t, page)
+	restored, err := page.ctx.NewPage()
+	if err != nil {
+		t.Fatal(err)
+	}
+	navigateCapabilityFixture(t, restored)
+	if value := bootstrapSnapshotEvaluate(t, restored, probe); value != "ok" {
+		t.Fatalf("restored navigator semantics: %v", value)
+	}
+}
