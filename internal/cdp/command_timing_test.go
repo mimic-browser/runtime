@@ -74,3 +74,24 @@ func TestCommandTimingSeparatesPageWait(t *testing.T) {
 		time.Sleep(time.Millisecond)
 	}
 }
+
+func TestInputTimingCorrelatesRuntimeCalls(t *testing.T) {
+	t.Setenv("MIMIC_PROFILE_CDP", "1")
+	s, addr := runningServer(t)
+	s.Page.Trace().Start()
+	c, _, err := websocket.DefaultDialer.Dial("ws://"+addr+"/devtools/page/"+s.Page.ID, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	_ = c.WriteJSON(map[string]any{"id": 1, "method": "Input.dispatchMouseEvent", "params": map[string]any{"type": "mouseMoved", "x": 20, "y": 20}})
+	if reply := readReply(t, c, 1); reply["error"] != nil {
+		t.Fatal(reply)
+	}
+	for _, event := range s.Page.Trace().Events() {
+		if event.Name == "runtime.Call.outer.end" && event.Data["callID"] == "input:1" {
+			return
+		}
+	}
+	t.Fatal("input V8 call has no command correlation")
+}

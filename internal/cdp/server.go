@@ -699,6 +699,9 @@ func (s *session) handleCommand(m message) (afterUnlock func()) {
 		return
 	}
 	runtimeCtx := s.ctx
+	if strings.HasPrefix(m.Method, "Input.") && os.Getenv("MIMIC_PROFILE_CDP") == "1" {
+		runtimeCtx = trace.WithCorrelation(s.ctx, fmt.Sprintf("input:%d", m.ID), time.Now(), s.page.Trace())
+	}
 	if m.Method == "Runtime.evaluate" && os.Getenv("MIMIC_PROFILE_CDP") == "1" {
 		runtimeCtx = trace.WithCorrelation(s.ctx, fmt.Sprintf("evaluate:%s:%d", s.id, m.ID), time.Now(), s.page.Trace())
 	}
@@ -749,7 +752,7 @@ func (s *session) handleCommand(m message) (afterUnlock func()) {
 	}
 	switch m.Method {
 	case "Input.dispatchKeyEvent", "Input.insertText", "Input.dispatchMouseEvent", "Input.setIgnoreInputEvents":
-		err = s.page.DispatchProtocolInput(s.ctx, m.Method, p)
+		err = s.page.DispatchProtocolInput(runtimeCtx, m.Method, p)
 	case "Page.enable", "Network.enable", "DOM.enable", "Log.enable", "Performance.enable", "Security.enable", "Inspector.enable":
 		s.setDomain(strings.SplitN(m.Method, ".", 2)[0], true)
 	case "Page.disable", "Network.disable", "DOM.disable", "Log.disable", "Performance.disable", "Security.disable", "Inspector.disable":

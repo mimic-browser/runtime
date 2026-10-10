@@ -1589,9 +1589,9 @@
     // The canonical epoch includes viewport and media preferences, so checking
     // it does not require separate host calls for each environment input.
     const version = canonicalVersion + ':' + constructedStyleSheets.revision();
-    const retain =
-      windowRelations.self === windowRelations.top &&
-      !(styleObservationIsolated && canonicalVersion.endsWith(':true'));
+    // Child epochs include their resolved viewport and ancestor observations.
+    // They can retain the same canonical projections as the top document.
+    const retain = !(styleObservationIsolated && canonicalVersion.endsWith(':true'));
     if (!checkpointStyleRules || checkpointStyleVersion !== version) {
       checkpointStyleRules = new WeakMap();
       checkpointStyleVersion = version;

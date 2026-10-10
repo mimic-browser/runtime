@@ -345,6 +345,23 @@ inspector checks passed under the Go race detector, as did parser lookahead
 checks. The fresh-build fast gate passed all 24 semantic runs, four 10-Page
 concurrency waves and static/React teardown checks. No memory reduction is claimed.
 
+## Frame observation reuse
+
+Frame style and geometry observations now survive Page checkpoints while their
+canonical inputs remain unchanged. The observation epoch includes the resolved
+child viewport and ancestor document, style, resource and selector revisions.
+This allows the existing realm-owned weak caches to serve repeated observations
+without rebuilding the frame's cascade and geometry graph. Parent resizing,
+media-query changes and local mutations invalidate the retained values.
+
+Focused tests verify reuse across 64 reads, viewport and mutation invalidation,
+iframe input routing and trusted event ordering. Opt-in CDP input diagnostics
+correlate runtime calls with the input command, alongside queue and Page wait
+timings. The native frame layout admission boundary remains unchanged; complex
+frame hit testing and resource discovery can still require substantial JavaScript
+work. This change does not establish Chrome input latency parity or a memory
+reduction.
+
 ## Remaining limits
 
 - Cold observation construction and mutation-driven style/geometry rebuilding

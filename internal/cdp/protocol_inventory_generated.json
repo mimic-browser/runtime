@@ -7246,9 +7246,12 @@
       "returns": [],
       "support": {
         "status": "partial",
-        "notes": "Canonical trusted mouse dispatch using Mimic geometry. Native compositor, drag and touch fidelity are unsupported.",
+        "notes": "Canonical trusted mouse dispatch using Mimic geometry and frame coordinates. Opt-in CDP diagnostics correlate input commands with V8 calls. Native compositor, drag and touch fidelity are unsupported.",
         "tests": [
           "internal/browser/input_test.go#TestProtocolSelectAndContentClickAcrossWorlds",
+          "internal/browser/input_test.go#TestProtocolMouseInputRoutesThroughIframeCoordinates",
+          "internal/browser/frame_geometry_epoch_test.go#TestFrameGeometryEpochTracksAncestorChanges",
+          "internal/cdp/command_timing_test.go#TestInputTimingCorrelatesRuntimeCalls",
           "compatibility/cdp_automation.mjs#input.pointer_click"
         ]
       }

@@ -1281,46 +1281,40 @@ func (r *Realm) installBindingsOnOwner() error {
 		if detached {
 			return r.val(map[string]any{"width": 0, "height": 0, "outerWidth": 0, "outerHeight": 0, "screenX": w.X, "screenY": w.Y}), nil
 		}
-		if isFrame && frame.auxiliaryOpener != nil {
-			w.ViewportWidth, w.ViewportHeight = frame.auxiliaryWidth, frame.auxiliaryHeight
-			w.OuterWidth, w.OuterHeight = frame.auxiliaryWidth, frame.auxiliaryHeight
-		}
-		if frame, ok := r.agent.(*Frame); ok && frame.parent != nil && frame.parent.Realm != nil {
-			parent := frame.parent.Realm
-			if parent.frameViewportRead != nil {
-				var size []any
-				err := parent.runOnOwner(context.Background(), func(ctx context.Context) error {
-					v, e := parent.runtime.Call(ctx, parent.frameViewportRead, nil, parent.val(frame.elementID))
-					if e == nil {
-						size, _ = v.Export().([]any)
-					}
-					return e
-				})
-				if err != nil {
-					return nil, err
-				}
-				if len(size) == 2 {
-					w.ViewportWidth = int(numberValue(size[0]))
-					w.ViewportHeight = int(numberValue(size[1]))
-				}
-			}
+		w, err := r.observationWindow()
+		if err != nil {
+			return nil, err
 		}
 		return r.val(map[string]any{"width": w.ViewportWidth, "height": w.ViewportHeight, "outerWidth": w.OuterWidth, "outerHeight": w.OuterHeight, "screenX": w.X, "screenY": w.Y}), nil
 	})
 	host["observationVersion"] = r.transientFn(func(engine.Value, []engine.Value) (engine.Value, error) {
 		environment := p.environmentView()
-		w := environment.Window
+		w, err := r.observationWindow()
+		if err != nil {
+			return nil, err
+		}
 		owner := r
 		if r.mainWorld != nil {
 			owner = r.mainWorld
 		}
 		preferences := environment.Preferences
+		// Local geometry can survive a Page checkpoint only while the containing
+		// frame tree is unchanged. Ancestor styles and resources can affect frame
+		// availability even when its resolved viewport dimensions stay the same.
+		frameEpoch := ""
+		if frame, ok := r.agent.(*Frame); ok {
+			for ancestor := frame.parent; ancestor != nil; ancestor = ancestor.parent {
+				if parent := ancestor.Realm; parent != nil {
+					frameEpoch += fmt.Sprintf(":%s:%d:%d:%d:%d", parent.ID, parent.styleDocumentRevision(), parent.styleResourceRevision.Load(), parent.resourceRevision.Load(), parent.selectorTargetID)
+				}
+			}
+		}
 		// The suffix is the environment-only epoch used by retained selector
 		// matches; unrelated DOM mutations must not discard their rule programs.
 		// Style inputs and geometry resources have different lifetimes. Return
 		// both in one crossing so JS can retain selector/cascade work across
 		// image-only completions while invalidating boxes and used values.
-		return r.val(fmt.Sprintf("%d:%d:%d|%d:%d:%s:%t:%g:%t|%d", r.styleDocumentRevision(), owner.styleResourceRevision.Load(), owner.selectorTargetID, w.ViewportWidth, w.ViewportHeight, preferences.ColorScheme, preferences.ReducedMotion, environment.Display.DeviceScaleFactor, owner.styleProjections.isDynamic(), owner.resourceRevision.Load())), nil
+		return r.val(fmt.Sprintf("%d:%d:%d|%d:%d:%s:%t:%g%s:%t|%d", r.styleDocumentRevision(), owner.styleResourceRevision.Load(), owner.selectorTargetID, w.ViewportWidth, w.ViewportHeight, preferences.ColorScheme, preferences.ReducedMotion, environment.Display.DeviceScaleFactor, frameEpoch, owner.styleProjections.isDynamic(), owner.resourceRevision.Load())), nil
 	})
 	host["observationRevision"] = r.packedFn(func(_ engine.Value, _ []engine.Value) (engine.Value, error) {
 		return r.val(r.styleDocumentRevision()), nil
