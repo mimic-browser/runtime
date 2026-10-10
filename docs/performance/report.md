@@ -10,9 +10,10 @@ The [current public memory checkpoint](../../benchmark/runs/14-memory-20261010/p
 | Metric | Mimic | Chrome |
 | --- | ---: | ---: |
 | Active process-tree RSS, 50 static Pages | 727.78 MiB | 4102.04 MiB |
-| Ready process-tree RSS | 40.80 MiB | 379.54 MiB |
+| Throughput, 50 static Pages | 164.62 Pages/s | 22.11 Pages/s |
+| CPU per Page, same batch | 69.94 ms | 133.38 ms |
 
-All 120 measured single-Page attempts passed. Static and CPU completed 100 Pages; React completed 50 Pages. React-100 failed in the final wave and is excluded from successful memory comparisons (2,810/2,910 density attempts valid). This memory-only checkpoint does not certify throughput or cold latency. The methodology retains exact binary and reference provenance.
+All 120 measured single-Page attempts passed. Static and CPU completed 100 Pages; React completed 50 Pages. React-100 failed in the final wave and is excluded from successful memory comparisons (2,810/2,910 density attempts valid). The saved current capture also provides CPU, warm latency and batch throughput; timing uses a saved October 10 Chrome reference with documented instrumentation differences. Startup metrics are excluded. Optimize acquired 98.1% fewer body bytes in a separate Books SSR workload. The methodology retains exact binary and reference provenance.
 
 The [Wikipedia E2E reference](wikipedia-e2e-current.md) records the complete
 unchanged Playwright workflow and its acceptance criteria. A faster isolated
@@ -39,13 +40,12 @@ No cold latency matrix or live Chrome comparison was run.
 
 | Process-tree RSS | October 10 control | Current source |
 | --- | ---: | ---: |
-| Ready, ten fresh processes | 49.00 MiB | 40.80 MiB |
 | Static, 50 active Pages | 823.99 MiB | 727.78 MiB |
 | CPU, 50 active Pages | 1324.79 MiB | 1225.69 MiB |
 | React, 50 active Pages | 1094.36 MiB | 1013.87 MiB |
 
 Measured executable SHA-256: `fd0fca18f8be20a64ce684b59d21a9b50479cf759bf1761cc148c7d17f298c00`.
-Saved September Chrome observations give 9.30 times lower ready RSS and 5.64
+Frozen Chrome reference observations give 5.64
 times lower static 50-Page RSS. CPU/React density and static 100-Page historical
 Chrome diagnostics are not successful reference series.
 

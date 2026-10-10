@@ -1,9 +1,4 @@
 {
-  "ready": {
-    "before_mimic": 49.00390625,
-    "final_mimic": 40.8046875,
-    "september_chrome": 379.544921875
-  },
   "single": [
     {
       "workload": "static",
@@ -14,7 +9,13 @@
       "before_rss_mib": 139.08984375,
       "september_chrome_rss_mib": 1211.6953125,
       "before_private_mib": 178.82421875,
-      "september_chrome_private_mib": 599.046875
+      "september_chrome_private_mib": 599.046875,
+      "cpu_per_page_ms": 31.25,
+      "completion_p50_ms": 32.054349999270926,
+      "completion_p95_ms": 35.020739999617945,
+      "chrome_cpu_per_page_ms": 140.625,
+      "chrome_completion_p50_ms": 18.443199999637727,
+      "chrome_completion_p95_ms": 22.06878000006327
     },
     {
       "workload": "cpu",
@@ -25,7 +26,13 @@
       "before_rss_mib": 135.392578125,
       "september_chrome_rss_mib": 1403.3515625,
       "before_private_mib": 177.642578125,
-      "september_chrome_private_mib": 778.8046875
+      "september_chrome_private_mib": 778.8046875,
+      "cpu_per_page_ms": 62.5,
+      "completion_p50_ms": 59.471650000887166,
+      "completion_p95_ms": 65.825145000872,
+      "chrome_cpu_per_page_ms": 234.375,
+      "chrome_completion_p50_ms": 45.59259999996357,
+      "chrome_completion_p95_ms": 52.13981999995668
     },
     {
       "workload": "dom",
@@ -36,7 +43,13 @@
       "before_rss_mib": 155.677734375,
       "september_chrome_rss_mib": 1415.140625,
       "before_private_mib": 196.06640625,
-      "september_chrome_private_mib": 776.4375
+      "september_chrome_private_mib": 776.4375,
+      "cpu_per_page_ms": 187.5,
+      "completion_p50_ms": 155.72774999964167,
+      "completion_p95_ms": 163.2979449999766,
+      "chrome_cpu_per_page_ms": 210.9375,
+      "chrome_completion_p50_ms": 48.281349999797385,
+      "chrome_completion_p95_ms": 66.57260499996482
     },
     {
       "workload": "async",
@@ -47,7 +60,13 @@
       "before_rss_mib": 136.5390625,
       "september_chrome_rss_mib": 1251.859375,
       "before_private_mib": 176.279296875,
-      "september_chrome_private_mib": 638.580078125
+      "september_chrome_private_mib": 638.580078125,
+      "cpu_per_page_ms": 85.9375,
+      "completion_p50_ms": 71.3861000003817,
+      "completion_p95_ms": 82.74295500104927,
+      "chrome_cpu_per_page_ms": 203.125,
+      "chrome_completion_p50_ms": 50.98364999957994,
+      "chrome_completion_p95_ms": 55.15496000039093
     },
     {
       "workload": "react",
@@ -58,7 +77,13 @@
       "before_rss_mib": 138.810546875,
       "september_chrome_rss_mib": 1412.515625,
       "before_private_mib": 178.634765625,
-      "september_chrome_private_mib": 803.89453125
+      "september_chrome_private_mib": 803.89453125,
+      "cpu_per_page_ms": 93.75,
+      "completion_p50_ms": 66.32889999946201,
+      "completion_p95_ms": 69.22831500114626,
+      "chrome_cpu_per_page_ms": 250.0,
+      "chrome_completion_p50_ms": 44.95139999971798,
+      "chrome_completion_p95_ms": 51.904379999587036
     },
     {
       "workload": "wasm",
@@ -69,7 +94,13 @@
       "before_rss_mib": 128.685546875,
       "september_chrome_rss_mib": 1291.15234375,
       "before_private_mib": 168.53125,
-      "september_chrome_private_mib": 630.80859375
+      "september_chrome_private_mib": 630.80859375,
+      "cpu_per_page_ms": 46.875,
+      "completion_p50_ms": 30.96410000034666,
+      "completion_p95_ms": 37.60691999932533,
+      "chrome_cpu_per_page_ms": 179.6875,
+      "chrome_completion_p50_ms": 23.132900000291556,
+      "chrome_completion_p95_ms": 30.593924999357114
     }
   ],
   "density": [
@@ -84,7 +115,17 @@
       "valid": 20,
       "attempts": 20,
       "before_rss_mib": 122.029296875,
-      "september_chrome_rss_mib": 1210.8125
+      "september_chrome_rss_mib": 1210.8125,
+      "throughput_pages_s": 16.873009512127876,
+      "cpu_per_page_ms": 38.28125,
+      "latency_p50_ms": 41.878949999954784,
+      "latency_p95_ms": 45.044405000044215,
+      "batch_elapsed_s": 1.1853250000021944,
+      "chrome_throughput_pages_s": 8.63139034695162,
+      "chrome_cpu_per_page_ms": 222.65625,
+      "chrome_latency_p50_ms": 63.11240000059115,
+      "chrome_latency_p95_ms": 81.43173499965997,
+      "chrome_timing_attempts": 20
     },
     {
       "workload": "static",
@@ -97,7 +138,17 @@
       "valid": 25,
       "attempts": 25,
       "before_rss_mib": 186.53515625,
-      "september_chrome_rss_mib": 1373.7421875
+      "september_chrome_rss_mib": 1373.7421875,
+      "throughput_pages_s": 80.55314880740995,
+      "cpu_per_page_ms": 51.875,
+      "latency_p50_ms": 46.97590000068885,
+      "latency_p95_ms": 49.015500000678,
+      "batch_elapsed_s": 0.3103540999964025,
+      "chrome_throughput_pages_s": 22.151157371390717,
+      "chrome_cpu_per_page_ms": 130.625,
+      "chrome_latency_p50_ms": 185.6911000004402,
+      "chrome_latency_p95_ms": 192.26589999998396,
+      "chrome_timing_attempts": 25
     },
     {
       "workload": "static",
@@ -110,7 +161,17 @@
       "valid": 50,
       "attempts": 50,
       "before_rss_mib": 254.7265625,
-      "september_chrome_rss_mib": 1682.53125
+      "september_chrome_rss_mib": 1682.53125,
+      "throughput_pages_s": 79.79001820458552,
+      "cpu_per_page_ms": 61.875,
+      "latency_p50_ms": 53.770699999404314,
+      "latency_p95_ms": 57.71684999963327,
+      "batch_elapsed_s": 0.6266448000023956,
+      "chrome_throughput_pages_s": 24.19103720139187,
+      "chrome_cpu_per_page_ms": 126.5625,
+      "chrome_latency_p50_ms": 348.3071499995276,
+      "chrome_latency_p95_ms": 369.20581000031234,
+      "chrome_timing_attempts": 50
     },
     {
       "workload": "static",
@@ -123,7 +184,17 @@
       "valid": 125,
       "attempts": 125,
       "before_rss_mib": 467.03125,
-      "september_chrome_rss_mib": 2571.97265625
+      "september_chrome_rss_mib": 2571.97265625,
+      "throughput_pages_s": 164.27435025530193,
+      "cpu_per_page_ms": 59.125,
+      "latency_p50_ms": 94.65529999943101,
+      "latency_p95_ms": 106.77599999980885,
+      "batch_elapsed_s": 0.760922200001005,
+      "chrome_throughput_pages_s": 25.02978995541035,
+      "chrome_cpu_per_page_ms": 123.25,
+      "chrome_latency_p50_ms": 860.1420000004509,
+      "chrome_latency_p95_ms": 898.8652999996702,
+      "chrome_timing_attempts": 125
     },
     {
       "workload": "static",
@@ -136,7 +207,17 @@
       "valid": 250,
       "attempts": 250,
       "before_rss_mib": 823.9921875,
-      "september_chrome_rss_mib": 4102.04296875
+      "september_chrome_rss_mib": 4102.04296875,
+      "throughput_pages_s": 164.62449974768018,
+      "cpu_per_page_ms": 69.9375,
+      "latency_p50_ms": 161.3337999997384,
+      "latency_p95_ms": 197.39449500020783,
+      "batch_elapsed_s": 1.5186074999965058,
+      "chrome_throughput_pages_s": 22.10504602584165,
+      "chrome_cpu_per_page_ms": 133.375,
+      "chrome_latency_p50_ms": 1853.2336999996915,
+      "chrome_latency_p95_ms": 2382.799415000227,
+      "chrome_timing_attempts": 250
     },
     {
       "workload": "static",
@@ -149,7 +230,17 @@
       "valid": 500,
       "attempts": 500,
       "before_rss_mib": 1513.98828125,
-      "september_chrome_rss_mib": null
+      "september_chrome_rss_mib": null,
+      "throughput_pages_s": 170.1521946725177,
+      "cpu_per_page_ms": 75.625,
+      "latency_p50_ms": 345.4069500003243,
+      "latency_p95_ms": 401.80169999948697,
+      "batch_elapsed_s": 2.938545699997121,
+      "chrome_throughput_pages_s": 21.66961055549295,
+      "chrome_cpu_per_page_ms": 136.40625,
+      "chrome_latency_p50_ms": 3983.93064999982,
+      "chrome_latency_p95_ms": 4150.744814999553,
+      "chrome_timing_attempts": 500
     },
     {
       "workload": "cpu",
@@ -162,7 +253,17 @@
       "valid": 20,
       "attempts": 20,
       "before_rss_mib": 139.4140625,
-      "september_chrome_rss_mib": null
+      "september_chrome_rss_mib": null,
+      "throughput_pages_s": 9.187376122583414,
+      "cpu_per_page_ms": 81.25,
+      "latency_p50_ms": 69.8693500007721,
+      "latency_p95_ms": 73.03795499965418,
+      "batch_elapsed_s": 2.1769001000011485,
+      "chrome_throughput_pages_s": 8.656428016734154,
+      "chrome_cpu_per_page_ms": 234.375,
+      "chrome_latency_p50_ms": 70.43724999994083,
+      "chrome_latency_p95_ms": 83.92201999940882,
+      "chrome_timing_attempts": 20
     },
     {
       "workload": "cpu",
@@ -175,7 +276,17 @@
       "valid": 25,
       "attempts": 25,
       "before_rss_mib": 239.6953125,
-      "september_chrome_rss_mib": null
+      "september_chrome_rss_mib": null,
+      "throughput_pages_s": 43.21574961698288,
+      "cpu_per_page_ms": 87.5,
+      "latency_p50_ms": 72.17230000060226,
+      "latency_p95_ms": 87.6377800006594,
+      "batch_elapsed_s": 0.578492799999367,
+      "chrome_throughput_pages_s": 20.8856466567905,
+      "chrome_cpu_per_page_ms": 161.875,
+      "chrome_latency_p50_ms": 176.7232000001968,
+      "chrome_latency_p95_ms": 181.67604000009305,
+      "chrome_timing_attempts": 25
     },
     {
       "workload": "cpu",
@@ -188,7 +299,17 @@
       "valid": 50,
       "attempts": 50,
       "before_rss_mib": 359.9609375,
-      "september_chrome_rss_mib": null
+      "september_chrome_rss_mib": null,
+      "throughput_pages_s": 74.81724764999963,
+      "cpu_per_page_ms": 97.1875,
+      "latency_p50_ms": 88.30269999998563,
+      "latency_p95_ms": 101.77575000025172,
+      "batch_elapsed_s": 0.6682951000002504,
+      "chrome_throughput_pages_s": 26.85239934243022,
+      "chrome_cpu_per_page_ms": 170.3125,
+      "chrome_latency_p50_ms": 296.4858999994249,
+      "chrome_latency_p95_ms": 325.9060300000783,
+      "chrome_timing_attempts": 50
     },
     {
       "workload": "cpu",
@@ -201,7 +322,17 @@
       "valid": 125,
       "attempts": 125,
       "before_rss_mib": 723.23828125,
-      "september_chrome_rss_mib": null
+      "september_chrome_rss_mib": null,
+      "throughput_pages_s": 95.82193371733055,
+      "cpu_per_page_ms": 142.875,
+      "latency_p50_ms": 158.0560999991576,
+      "latency_p95_ms": 173.36707999929786,
+      "batch_elapsed_s": 1.3045029999993858,
+      "chrome_throughput_pages_s": 29.177932752796675,
+      "chrome_cpu_per_page_ms": 159.5,
+      "chrome_latency_p50_ms": 709.2760000005001,
+      "chrome_latency_p95_ms": 797.104620000573,
+      "chrome_timing_attempts": 125
     },
     {
       "workload": "cpu",
@@ -214,7 +345,17 @@
       "valid": 250,
       "attempts": 250,
       "before_rss_mib": 1324.79296875,
-      "september_chrome_rss_mib": null
+      "september_chrome_rss_mib": null,
+      "throughput_pages_s": 111.25238185779199,
+      "cpu_per_page_ms": 147.375,
+      "latency_p50_ms": 295.5629500002033,
+      "latency_p95_ms": 338.12905999975555,
+      "batch_elapsed_s": 2.2471429000015632,
+      "chrome_throughput_pages_s": 29.499666075576773,
+      "chrome_cpu_per_page_ms": 154.5,
+      "chrome_latency_p50_ms": 1448.3964500000184,
+      "chrome_latency_p95_ms": 1509.623474999853,
+      "chrome_timing_attempts": 250
     },
     {
       "workload": "cpu",
@@ -227,7 +368,17 @@
       "valid": 500,
       "attempts": 500,
       "before_rss_mib": 2519.10546875,
-      "september_chrome_rss_mib": null
+      "september_chrome_rss_mib": null,
+      "throughput_pages_s": 108.19863468901833,
+      "cpu_per_page_ms": 157.28125,
+      "latency_p50_ms": 601.8584499997814,
+      "latency_p95_ms": 707.7202699993904,
+      "batch_elapsed_s": 4.621130400000766,
+      "chrome_throughput_pages_s": 19.13771869819415,
+      "chrome_cpu_per_page_ms": 194.75,
+      "chrome_latency_p50_ms": 4558.452750000015,
+      "chrome_latency_p95_ms": 5248.123735000718,
+      "chrome_timing_attempts": 500
     },
     {
       "workload": "react",
@@ -240,7 +391,17 @@
       "valid": 20,
       "attempts": 20,
       "before_rss_mib": 136.4375,
-      "september_chrome_rss_mib": null
+      "september_chrome_rss_mib": null,
+      "throughput_pages_s": 9.217705331508599,
+      "cpu_per_page_ms": 103.90625,
+      "latency_p50_ms": 74.7792499996649,
+      "latency_p95_ms": 89.40689500077497,
+      "batch_elapsed_s": 2.169737400005033,
+      "chrome_throughput_pages_s": 6.8681733790743,
+      "chrome_cpu_per_page_ms": 319.53125,
+      "chrome_latency_p50_ms": 102.37659999984317,
+      "chrome_latency_p95_ms": 120.6699850001769,
+      "chrome_timing_attempts": 20
     },
     {
       "workload": "react",
@@ -253,7 +414,17 @@
       "valid": 25,
       "attempts": 25,
       "before_rss_mib": 214.7890625,
-      "september_chrome_rss_mib": null
+      "september_chrome_rss_mib": null,
+      "throughput_pages_s": 43.63879852270154,
+      "cpu_per_page_ms": 121.25,
+      "latency_p50_ms": 89.65100000023085,
+      "latency_p95_ms": 97.69706000006408,
+      "batch_elapsed_s": 0.572884699999122,
+      "chrome_throughput_pages_s": 5.890504567897037,
+      "chrome_cpu_per_page_ms": 230.625,
+      "chrome_latency_p50_ms": 211.86370000032184,
+      "chrome_latency_p95_ms": 1187.4956799998472,
+      "chrome_timing_attempts": 25
     },
     {
       "workload": "react",
@@ -266,7 +437,17 @@
       "valid": 50,
       "attempts": 50,
       "before_rss_mib": 319.48828125,
-      "september_chrome_rss_mib": null
+      "september_chrome_rss_mib": null,
+      "throughput_pages_s": 56.40630681181281,
+      "cpu_per_page_ms": 143.125,
+      "latency_p50_ms": 121.6260000001057,
+      "latency_p95_ms": 129.34245500000543,
+      "batch_elapsed_s": 0.8864256999986537,
+      "chrome_throughput_pages_s": 8.647834761186894,
+      "chrome_cpu_per_page_ms": 186.875,
+      "chrome_latency_p50_ms": 1064.2902499998854,
+      "chrome_latency_p95_ms": 1086.5463549996093,
+      "chrome_timing_attempts": 50
     },
     {
       "workload": "react",
@@ -279,7 +460,17 @@
       "valid": 125,
       "attempts": 125,
       "before_rss_mib": 610.68359375,
-      "september_chrome_rss_mib": null
+      "september_chrome_rss_mib": null,
+      "throughput_pages_s": 75.9611793405139,
+      "cpu_per_page_ms": 174.5,
+      "latency_p50_ms": 225.49740000067686,
+      "latency_p95_ms": 242.37366000015754,
+      "batch_elapsed_s": 1.6455773999987287,
+      "chrome_throughput_pages_s": 24.76401724106319,
+      "chrome_cpu_per_page_ms": 157.25,
+      "chrome_latency_p50_ms": 874.7223999998823,
+      "chrome_latency_p95_ms": 891.9263600002523,
+      "chrome_timing_attempts": 125
     },
     {
       "workload": "react",
@@ -292,7 +483,17 @@
       "valid": 250,
       "attempts": 250,
       "before_rss_mib": 1094.35546875,
-      "september_chrome_rss_mib": null
+      "september_chrome_rss_mib": null,
+      "throughput_pages_s": 83.25854218498179,
+      "cpu_per_page_ms": 180.8125,
+      "latency_p50_ms": 450.4690499998105,
+      "latency_p95_ms": 483.54116500067903,
+      "batch_elapsed_s": 3.0026948999966407,
+      "chrome_throughput_pages_s": 17.08490491109143,
+      "chrome_cpu_per_page_ms": 194.625,
+      "chrome_latency_p50_ms": 2503.5839000001943,
+      "chrome_latency_p95_ms": 3199.3963400000666,
+      "chrome_timing_attempts": 250
     },
     {
       "workload": "react",
@@ -306,12 +507,21 @@
       "attempts": 500,
       "before_rss_mib": null,
       "september_chrome_rss_mib": null,
-      "diagnostic_active_rss_mib": 1860.33984375
+      "diagnostic_active_rss_mib": 1860.33984375,
+      "throughput_pages_s": null,
+      "cpu_per_page_ms": null,
+      "latency_p50_ms": null,
+      "latency_p95_ms": null,
+      "chrome_throughput_pages_s": 16.574389856102158,
+      "chrome_cpu_per_page_ms": 212.4375,
+      "chrome_latency_p50_ms": 4911.930949999714,
+      "chrome_latency_p95_ms": 5679.772944999786,
+      "chrome_timing_attempts": 500
     }
   ],
   "methodology": {
     "date": "2026-10-10",
-    "scope": "memory-only",
+    "scope": "active memory, warm latency/CPU and fixed-concurrency batch throughput; separate Optimize acquisition evidence",
     "chrome_reference": "2026-09-29 frozen Chrome 152",
     "binary_sha256": "fd0fca18f8be20a64ce684b59d21a9b50479cf759bf1761cc148c7d17f298c00",
     "binary_production_source_revision": "0480233219982ef79162b147565067216e7bef38",
@@ -332,6 +542,32 @@
     "logical_cpus": 28,
     "physical_cpus": 20,
     "total_ram": 34177138688,
-    "chrome_sha256": "ea36dd818a90176f1a70616f0363d9be527229389a6c073a0b1688b9e73f67e9"
+    "chrome_sha256": "ea36dd818a90176f1a70616f0363d9be527229389a6c073a0b1688b9e73f67e9",
+    "candidate_raw_sha256": "07d8de3e97227aea67ae411f0f23936e4c4428ca30dbb143fa1d7039e1253bb3",
+    "chrome_timing_raw_sha256": "0629d63dee20a5978479969b0eb07050ea5d7d65bfe40fd4ae2c8b3c3772a204",
+    "chrome_timing_reference_date": "2026-10-10T06:47:26.549083+04:00",
+    "aggregation": "Throughput = total valid pages / total measured wave duration. CPU = summed process-tree wave user+kernel time / successes. Latency quantiles use linear interpolation. Excluded warmups and failed series are not successes.",
+    "timing_boundary": "Page create to final teardown; server setup and 250 ms recovery excluded. Same frozen execute, fixture, navigation barrier and 50 ms completion polling. Candidate adapter includes the initial Job Object snapshot in elapsed time; reference starts immediately after it and includes the final snapshot. This small instrumentation difference remains in the comparison. Guard is 120 s versus 180 s, neither reached; runs are not paired and background load can vary.",
+    "adapter_sha256": {
+      "memory_matrix_logged.py": "bc34eebef721705bed9a9249771ba77f7f8bd906c0fd94fd7d38b38c724613ce",
+      "concurrency_scaling.py": "fd7a374e4dd10785d1fa9d4b13015a749c1af0c34fbad166f61969e9c78d392a"
+    },
+    "projector_sha256": "2001f662e111a8f57c38f99110374d53b1b16ffc84de1c6e0572c277ebe24d1d",
+    "optimize_report_sha256": "856a3d74216372a5f1e1413bf2647ba5dcc69895a867ead7e9c7b60f1b62fa4b"
+  },
+  "optimize": {
+    "workload": "Books SSR extraction",
+    "date": "2026-10-05",
+    "baseline": "Mimic Default, Optimize disabled",
+    "optimized": "Mimic installed Auto profile",
+    "baseline_encoded_body_bytes": 284591,
+    "optimized_encoded_body_bytes": 5276,
+    "reduction_percent": 98.14611143711501,
+    "baseline_responses": 29,
+    "optimized_responses": 1,
+    "valid": 5,
+    "attempts": 5,
+    "limitations": "Encoded acquired HTTP body bytes, not physical wire traffic. One recorded state; Manual ties Auto. Training and validation took 27.1 seconds.",
+    "methodology": "docs/performance/workload-optimization-feature.md#books-ssr"
   }
 }

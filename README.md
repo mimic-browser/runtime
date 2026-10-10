@@ -100,20 +100,26 @@ mimic --profile shop
 
 ## Benchmarks
 
-![Current memory benchmark](docs/assets/benchmark-story.png)
+![Current workload benchmark](docs/assets/benchmark-story.png)
 
-The October 10, 2026 memory checkpoint used **9.30× less ready RSS**
-(40.80 vs. 379.54 MiB) and **5.64× less active RSS** at 50 static Pages
-(727.78 vs. 4,102.04 MiB), compared with frozen Chrome 152 reference
-measurements on the same machine. All 120 measured single-Page attempts passed.
-Static and CPU completed 100-Page series; React completed 50 Pages. The React-100
-series failed in its last wave (native access violation) and is excluded from
-successful memory comparisons; 2,810 of 2,910 density attempts were valid.
-This was a memory-only run; throughput and cold latency were not re-certified.
-Snapshot bytecode clearing traded approximately 7% static batch throughput for
-lower memory in a separate paired diagnostic.
+At **50 concurrent static Pages**, Mimic used **5.64× less active RSS**
+(727.78 vs. 4,102.04 MiB) and processed **7.45× more Pages per second**
+(164.62 vs. 22.11) than frozen Chrome 152 reference observations.
+CPU cost was **69.94 vs. 133.38 ms per Page**. The current executable and
+saved reference captures are identified in the methodology; timing observations
+are separate, unpaired runs with a small instrumentation-boundary difference.
 
-[Current memory results and methodology](benchmark/runs/14-memory-20261010/public-summary.md) ·
+**Optimize acquired 98.1% fewer HTTP body bytes** on Books SSR extraction:
+284,591 → 5,276 bytes, compared with Mimic without Optimize (5/5 passes).
+This is a separate recorded workload, not physical wire traffic or a general savings guarantee.
+
+All 120 measured warm single-Page attempts passed. Static and CPU completed
+100-Page series; React completed 50 Pages. React-100 failed in its last wave
+and is excluded from successful comparisons (2,810/2,910 density attempts valid).
+Batch throughput does not imply lower single-Page latency; detailed results
+include slower workloads, CPU, p50/p95 and memory after teardown.
+
+[Current results and methodology](benchmark/runs/14-memory-20261010/public-summary.md) ·
 [Reproduce](benchmark/README.md) ·
 [Current performance notes](docs/performance/report.md)
 

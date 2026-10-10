@@ -19,7 +19,7 @@ The [reproducible Windows benchmark](../benchmark/README.md) compares the V8 bac
 with exact Chrome 152.0.7977.82 using local correctness-gated workloads, process-tree
 CPU/memory accounting and cold, warm and concurrent sessions. See the
 [latest measured checkpoint](../benchmark/runs/14-memory-20261010/public-summary.md)
-for current memory results and limitations.
+for current workload results and limitations.
 
 ## Build and run
 

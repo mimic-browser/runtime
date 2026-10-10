@@ -1,6 +1,6 @@
 # Reproducible benchmark: Mimic V8 and Chrome 152
 
-Current public checkpoint: [October 10, 2026 memory results](runs/14-memory-20261010/public-summary.md). The completed static 50-Page series and ready RSS supply the public memory claims. React-100 failed and is excluded; throughput and cold latency were not re-certified. Frozen archives remain evidence, not current benchmark claims.
+Current public checkpoint: [October 10, 2026 workload results](runs/14-memory-20261010/public-summary.md). The completed static 50-Page series supplies active-memory and fixed-concurrency throughput claims. CPU and warm latency are recovered from saved captures; Optimize acquisition is a separate workload. React-100 failed and is excluded. Startup observations remain private. Frozen archives remain evidence, not current benchmark claims.
 
 From the repository root on Windows x64:
 
@@ -88,11 +88,19 @@ The historical `benchmark/report.py` remains byte-for-byte frozen because it is
 part of the measurement harness fingerprint. `tools/report_benchmark.py` provides
 the English reporting variant with the same calculations.
 
-Generate the README benchmark image from a completed, integrity-checked
-checkpoint. The image follows the website palette; every displayed number is
-read from the current checkpoint. Memory checkpoints use `public-results.json`;
-full checkpoints validate `raw.json` and `summary.json` against their manifest. The default output path stays the same for future
-checkpoints, so the README always uses the newly generated image:
+Project workload metrics from completed saved captures. The exporter verifies
+capture hashes against each manifest and checks the frozen harness and fixture
+identities before recovering CPU, latency and fixed-concurrency throughput.
+The output retains existing frozen active-memory and separately sourced Optimize
+observations. Startup metrics are excluded from the public projection.
+
+```powershell
+python tools/performance/public_workload_metrics.py <candidate-capture> <chrome-reference-capture> <current-public-results.json>
+```
+
+Generate the README image from the resulting `public-results.json`. Every
+number is read from that file. The stable output path replaces the current
+public image, and its receipt records source, generator and output hashes:
 
 ```powershell
 .build/benchmark-venv/Scripts/python.exe tools/performance/benchmark_story.py `
