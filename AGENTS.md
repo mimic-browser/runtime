@@ -129,6 +129,13 @@ the current behavioral reference.
 
 ## Changes
 
+- Choose one release version from the last published release. Fix candidate CI
+  failures with commits, not additional release versions or intermediate semantic
+  version tags. Complete the required CI checks on the final source revision
+  before creating its release tag. Then validate that tag's CI build and package
+  its verified binaries before publication. Do not move published release tags
+  or relabel binaries built for another version. See `tools/release/README.md`.
+
 - Public repositories, websites, documentation and release notes present the
   project and its current user-facing behavior. Never publish private issue
   tracker identifiers, links, exported tasks, internal task relationships or

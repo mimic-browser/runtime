@@ -6,6 +6,26 @@ CI workflow uploads verified archives and receipts. Download both artifacts into
 `.build/releases/VERSION/` before publishing. The receipts identify both the
 binary source revision and the packaging commit.
 
+## Release version lifecycle
+
+Choose one intended version from the last **published release**, not from failed
+candidate tags. A CI failure does not constitute a release and must not consume
+another patch version. Iterate on candidate commits without creating intermediate
+semantic version tags.
+
+Finish the code and required CI checks on its exact source revision first. Only
+after those checks are green, create and push the single intended release tag.
+Run the tag build, require it to pass, and package its verified Windows and Linux
+binaries unchanged. Publish only after package verification succeeds. A failed
+tag check blocks publication; it is not a reason to create the next release
+version automatically.
+
+The tag must exist before the release binaries are built so Go embeds the correct
+version. This requirement does not justify tagging unfinished candidate code.
+Never move a published release tag or relabel an existing binary with a different
+version. Release documentation and the website must identify the one version
+actually published.
+
 ## Prepare
 
 Requirements: Go 1.26.4+, a platform C compiler, Python 3.12+, Node.js 22+, and
