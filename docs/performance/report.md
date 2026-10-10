@@ -26,59 +26,50 @@ CDP call, DOM operation or synthetic click is not an E2E result.
 
 ## Bootstrap and font memory retention
 
-Native platform operations now retain one native gate without an intermediate
-JavaScript facade. Generated lazy operations are published after the reflective
-bootstrap finalizers, so descriptor normalization does not eagerly materialize
-them. Navigator semantic installers consume staged IDL metadata directly,
-without requiring fallback materialization. Snapshots preserve function identity and lexical state without keeping
-compiled installation bytecode; their artifact identity includes that policy.
+Native platform operations retain one native gate without an intermediate
+JavaScript facade. Snapshots preserve function identity and lexical state without
+keeping compiled installation bytecode; artifact identity includes this policy.
 Installed-font names and candidate order remain eager, while immutable nominal
 coverage is decoded once per resource on demand. Shaping faces and author fonts
-remain Page-owned.
+remain Page-owned. Generated lazy operations retain the established publication
+order: semantic installers require callable descriptors before finalization.
 
-A Windows memory-only measurement reused the frozen local fixtures, Job Object
-accounting and 50 ms sampler. All 120 measured warm single-Page attempts and
-2,910 density sessions passed. Each of the six workloads had 20 warm samples;
-static, CPU and React density completed 1/5/10/25/50/100 Pages with an excluded
-warmup and `max(5, ceil(20/N))` measured waves per fresh process. Active Pages
-were held until the wave ended, followed by the existing 250 ms recovery wait.
-The adapter's 120 s wave guard was not reached. No cold latency matrix or live
-Chrome comparison was run.
+A Windows memory-only checkpoint reused frozen local fixtures, Job Object
+accounting and the 50 ms sampler. All 120 warm single-Page attempts passed.
+Density measured 1/5/10/25/50/100 Pages with an excluded warmup and
+`max(5, ceil(20/N))` waves per fresh process, then 250 ms recovery without forced
+collection. Static and CPU completed 100 Pages; React completed 50 Pages.
+React-100 failed in its final wave with a native access violation; 2,810/2,910
+density attempts were valid. Failed series do not supply successful comparisons.
+No cold latency matrix or live Chrome comparison was run.
 
 | Process-tree RSS | October 10 control | Current source |
 | --- | ---: | ---: |
-| Ready, ten fresh processes | 49.00 MiB | 40.97 MiB |
-| Static, 50 active Pages | 823.99 MiB | 714.91 MiB |
-| CPU, 50 active Pages | 1324.79 MiB | 1209.24 MiB |
-| React, 50 active Pages | 1094.36 MiB | 985.65 MiB |
+| Ready, ten fresh processes | 49.00 MiB | 40.80 MiB |
+| Static, 50 active Pages | 823.99 MiB | 727.78 MiB |
+| CPU, 50 active Pages | 1324.79 MiB | 1225.69 MiB |
+| React, 50 active Pages | 1094.36 MiB | 1013.87 MiB |
 
-The measured executable SHA-256 is
-`d3dbba851da61ebda85619f5b44c8be60c80dcc66257cba02629820a6af833ee`.
-Against the saved September 29 Chrome observations, current ready RSS is
-9.26 times smaller and completed static 50-Page active RSS is 5.74 times smaller.
-These cross-date memory comparisons retain the workstation/cache limitations of
-the published checkpoint; they do not replace its full benchmark. September
-CPU/React density and static 100-Page diagnostic rows are not successful Chrome
-references. Completion of React at 100 Pages here does not establish that an
-earlier isolated timeout's cause has been fixed.
+Measured executable SHA-256: `fd0fca18f8be20a64ce684b59d21a9b50479cf759bf1761cc148c7d17f298c00`.
+Saved September Chrome observations give 9.30 times lower ready RSS and 5.64
+times lower static 50-Page RSS. CPU/React density and static 100-Page historical
+Chrome diagnostics are not successful reference series.
 
-Focused callable/source, snapshot/lifecycle, lazy mutation/freeze and frozen font
-checks passed. Concurrent coverage initialization passed the focused race check.
-Separate paired diagnostics reduced live V8 heap by approximately 0.51 MiB per
-Page when removing the intermediate facade, and another 0.36 MiB when delaying
-lazy-slot publication. Those forced-collection observations are not ordinary RSS.
+Focused callable/source, snapshot/lifecycle, lazy mutation/freeze, Navigator,
+SVG, camera/WebRTC and frozen font checks passed. Concurrent font coverage
+initialization passed the focused race check. Removing the intermediate facade
+reduced diagnostic live V8 heap by approximately 0.51 MiB per Page; forced-GC
+heap observations are distinct from ordinary RSS.
 
 Snapshot bytecode clearing reduced paired static 50-Page RSS from 771.51 to
 741.19 MiB, with approximately 7% lower batch throughput. Two alternating
-Wikipedia pairs passed all four complete workflows, with control/candidate
-median durations of 9.698/9.478 s. Three clean alternating pairs for deferred
-font coverage passed all six complete workflows at 8.970/9.008 s. The latter
-change did not establish a Wikipedia peak-RSS reduction (352.14/356.73 MiB).
-These memory changes are not a universal speed improvement. RSS sums working
-sets and can count shared pages repeatedly; sampling can miss short peaks, and
-recovery/cache retention does not prove leak absence.
-
-One earlier remeasurement ended during the React 50-Page warmup after correct workload results but before teardown. Its rows are excluded from successful comparisons. The complete repeat reported here passed, including React at 50 and 100 Pages; this does not prove the intermittent process-exit cause is fixed.
+Wikipedia pairs passed all four complete workflows at control/candidate medians
+of 9.698/9.478 s. Three clean font-coverage pairs passed all six workflows at
+8.970/9.008 s; no Wikipedia peak-RSS reduction was established (352.14/356.73
+MiB). These memory changes are not a universal speed improvement. RSS can count
+shared pages repeatedly, sampling can miss short peaks, and recovery/cache
+retention does not prove leak absence. See the [memory checkpoint](../../benchmark/runs/14-memory-20261010/public-summary.md)
+for the full result scope and limitations.
 
 ## Bootstrap optimization checkpoint
 
