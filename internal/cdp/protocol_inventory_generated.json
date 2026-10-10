@@ -12632,12 +12632,13 @@
       ],
       "support": {
         "status": "partial",
-        "notes": "Realm/session-owned handles, by-value JSON, promises, unserializable arguments, exceptions and context/uniqueContextId selection. Deep serialization rejects. Previews, side-effect restrictions, REPL/CLI mode, userGesture and complete debugger options are not implemented. Unnamed evaluation origins and engine-direct function entry preserve author stacks and caller observations without debugger helper frames.",
+        "notes": "Realm/session-owned handles, by-value JSON, promises, unserializable arguments, exceptions and context/uniqueContextId selection. Deep serialization rejects. Previews, side-effect restrictions, REPL/CLI mode, userGesture and complete debugger options are not implemented. Unnamed evaluation origins and engine-direct function entry preserve author stacks and caller observations without debugger helper frames. Requests with throwOnSideEffect=true explicitly reject without executing author code; eager preview is unavailable.",
         "tests": [
           "internal/browser/debugger_test.go#TestDebuggerRemoteValuesMatchChrome152",
           "internal/browser/debugger_test.go#TestDebuggerPreservesHandlesAndDescriptorSemantics",
           "internal/cdp/runtime_test.go#TestCDPAwaitPromiseAllowsSameSessionResolverAndMultipleWaiters",
-          "internal/browser/debugger_source_boundary_test.go#TestDebuggerSourceAndInvocationBoundary"
+          "internal/browser/debugger_source_boundary_test.go#TestDebuggerSourceAndInvocationBoundary",
+          "internal/cdp/inspector_editing_test.go#TestInspectorEagerEvaluationDoesNotExecute"
         ]
       }
     },
@@ -12776,7 +12777,7 @@
       ],
       "support": {
         "status": "partial",
-        "notes": "Canonical realm evaluation, object groups, exceptions and Promise waits. includeCommandLineAPI uses a temporary native V8 Inspector scope on demand, preserving global lexical declarations, selected-node identity, author property precedence and console-group last result ($_). No source rewriting or persistent helper globals. Native CLI support requires V8; Blink-specific DOM command-line helpers and side-effect/eager-evaluation fidelity are incomplete.",
+        "notes": "Canonical realm evaluation, object groups, exceptions and Promise waits. includeCommandLineAPI uses a temporary native V8 Inspector scope on demand, preserving global lexical declarations, selected-node identity, author property precedence and console-group last result ($_). No source rewriting or persistent helper globals. Native CLI support requires V8; Blink-specific DOM command-line helpers and side-effect/eager-evaluation fidelity are incomplete. Requests with throwOnSideEffect=true explicitly reject without executing author code; eager preview is unavailable.",
         "tests": [
           "internal/browser/debugger_test.go#TestDebuggerRemoteValuesMatchChrome152",
           "internal/browser/debugger_test.go#TestDebuggerPreservesHandlesAndDescriptorSemantics",
@@ -12784,7 +12785,8 @@
           "internal/browser/debugger_source_boundary_test.go#TestDebuggerSourceAndInvocationBoundary",
           "internal/cdp/inspector_command_line_test.go#TestInspectorCommandLineSelectionAndGlobalSemantics",
           "internal/cdp/inspector_editing_test.go#TestInspectorConsoleObjectsPromisesAndExceptions",
-          "internal/cdp/inspector_command_line_frames_test.go#TestInspectorCommandLineChildSelection"
+          "internal/cdp/inspector_command_line_frames_test.go#TestInspectorCommandLineChildSelection",
+          "internal/cdp/inspector_editing_test.go#TestInspectorEagerEvaluationDoesNotExecute"
         ]
       }
     },

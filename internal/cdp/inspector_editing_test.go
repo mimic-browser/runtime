@@ -83,3 +83,30 @@ func TestInspectorConsoleObjectsPromisesAndExceptions(t *testing.T) {
 		t.Fatalf("console object retained after discard: %v", response)
 	}
 }
+
+func TestInspectorEagerEvaluationDoesNotExecute(t *testing.T) {
+	s, addr := runningServer(t)
+	w, id := inspectorSession(t, s, addr)
+	w.call(t, id, "Runtime.enable", map[string]any{})
+	w.call(t, id, "Runtime.evaluate", map[string]any{"expression": "globalThis.eagerEffects = 0"})
+	for _, method := range []string{"Runtime.evaluate", "Runtime.callFunctionOn"} {
+		params := map[string]any{"throwOnSideEffect": true, "expression": "console.log('hi'); ++eagerEffects", "functionDeclaration": "function(){console.log('hi'); return ++eagerEffects}"}
+		for i := 0; i < 3; i++ {
+			if reply := w.request(t, id, method, params); reply["error"] == nil {
+				t.Fatalf("unsafe eager evaluation accepted: %s", method)
+			}
+		}
+	}
+	value := w.call(t, id, "Runtime.evaluate", map[string]any{"expression": "eagerEffects", "returnByValue": true})["result"].(map[string]any)["value"]
+	if value != float64(0) {
+		t.Fatalf("preview executed author code: %v", value)
+	}
+	value = w.call(t, id, "Runtime.evaluate", map[string]any{"expression": "console.log('hi'); ++eagerEffects", "throwOnSideEffect": false, "returnByValue": true})["result"].(map[string]any)["value"]
+	if value != float64(1) {
+		t.Fatalf("explicit execution count: %v", value)
+	}
+	event := w.event(t, "Runtime.consoleAPICalled")
+	if event["args"].([]any)[0].(map[string]any)["value"] != "hi" {
+		t.Fatalf("console event: %v", event)
+	}
+}

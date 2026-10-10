@@ -85,6 +85,11 @@ func (s *session) handleRuntime(ctx context.Context, method string, params map[s
 	default:
 		return nil, false, nil
 	}
+	// DevTools eagerly evaluates the prompt before Enter. Without engine-level
+	// side-effect checking, executing this request would mutate the real Page.
+	if (method == "Runtime.evaluate" || method == "Runtime.callFunctionOn") && params["throwOnSideEffect"] == true {
+		return nil, true, fmt.Errorf("Side-effect-free evaluation is unsupported")
+	}
 	var cancel context.CancelFunc
 	if timeout, ok := params["timeout"].(float64); ok && timeout > 0 {
 		ctx, cancel = context.WithTimeout(ctx, time.Duration(timeout*float64(time.Millisecond)))

@@ -52,6 +52,9 @@ resource and interaction requirements.
   bodies from Mimic's loader. POST history is retained only for enabled sessions,
   with limits of 128 entries, 4 MiB total and 1 MiB per body. Resource content is
   scoped to its current frame/document and the existing bounded response cache.
+Console eager preview is unavailable: requests requiring side-effect-free
+evaluation reject without executing author code. Press Enter to evaluate.
+
 Breakpoints, pause/step, source debugging and profiler controls are unsupported.
 Other material boundaries include undo/redo, XPath inspector search, UA stylesheet
 and shadow-tree inventory, forced CSS pseudo states, native font/animation
