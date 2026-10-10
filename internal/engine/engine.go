@@ -142,6 +142,12 @@ type ModuleRuntime interface {
 	EvalModule(context.Context, string, string, ModuleLoader) (Value, error)
 }
 
+// ModuleSourceURLRuntime separates module-map identity (the requested URL)
+// from the response URL used for relative imports, diagnostics and import.meta.
+type ModuleSourceURLRuntime interface {
+	SetModuleSourceURL(identity, sourceURL string) error
+}
+
 // PreparedModuleRuntime separates native parsing from linking, allowing browser
 // network waits between Page tasks. Completion must be invoked on that Page's
 // event loop, after the native dynamic-import callback has returned.

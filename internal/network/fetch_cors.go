@@ -16,9 +16,10 @@ var corsSimpleRange = regexp.MustCompile(`^bytes=[0-9]+-[0-9]*$`)
 // the Fetch CORS algorithm while retaining its own initiator and lifecycle.
 // Remaining Fetch boundaries: preflight caching,
 // the aggregate 1024-byte safelist limit, and the no-cors author-header guard.
-// Element/module CORS has separate consumers and is not routed here.
+// Executable module consumers opt in through EnforceCORS and retain raw response
+// headers. Document element consumers keep their separate admission path.
 func fetchCrossOrigin(r Request) bool {
-	return (r.Initiator == Fetch || r.Initiator == XHR) && r.initiatingURL() != nil && r.URL != nil &&
+	return (r.Initiator == Fetch || r.Initiator == XHR || r.EnforceCORS) && r.initiatingURL() != nil && r.URL != nil &&
 		(r.URL.Scheme == "http" || r.URL.Scheme == "https") &&
 		(r.OpaqueOrigin || r.chainSite() != "same-origin")
 }
@@ -86,7 +87,7 @@ func corsSafeHeader(name, value string) bool {
 func CORSSafelistedRequestHeader(name, value string) bool { return corsSafeHeader(name, value) }
 
 func (l *Loader) prepareFetchCORS(ctx context.Context, r *Request) error {
-	if r.Initiator != Fetch && r.Initiator != XHR || r.corsPreflight {
+	if r.Initiator != Fetch && r.Initiator != XHR && !r.EnforceCORS || r.corsPreflight {
 		return nil
 	}
 	// Capture author fields before the loader installs its own browser headers.

@@ -6559,6 +6559,52 @@
   class Worker extends EventTarget {
     constructor(scriptURL, options = {}) {
       super();
+      const url = trustedConvert(
+        scriptURL,
+        'TrustedScriptURL',
+        'Worker constructor',
+        "Failed to construct 'Worker': ",
+      );
+      if (options == null) options = {};
+      if (typeof options !== 'object' && typeof options !== 'function')
+        throw new TypeError(
+          "Failed to construct 'Worker': The provided value is not of type 'WorkerOptions'.",
+        );
+      // Web IDL dictionary members are converted in lexicographic order.
+      // Keep each read separate: getters and abrupt completions are observable.
+      const optionString = (key, fallback) => {
+        const value = options[key];
+        if (value === undefined) return fallback;
+        if (typeof value === 'symbol')
+          throw new TypeError(
+            "Failed to construct 'Worker': Failed to read the '" +
+              key +
+              "' property from 'WorkerOptions': Cannot convert a Symbol value to a string",
+          );
+        return bindingString(value);
+      };
+      const optionEnum = (key, fallback, values, enumName) => {
+        const value = optionString(key, fallback);
+        if (!values.includes(value))
+          throw new TypeError(
+            "Failed to construct 'Worker': Failed to read the '" +
+              key +
+              "' property from 'WorkerOptions': The provided value '" +
+              value +
+              "' is not a valid enum value of type " +
+              enumName +
+              '.',
+          );
+        return value;
+      };
+      const credentials = optionEnum(
+        'credentials',
+        'same-origin',
+        ['omit', 'same-origin', 'include'],
+        'RequestCredentials',
+      );
+      const name = optionString('name', '');
+      const type = optionEnum('type', 'classic', ['classic', 'module'], 'WorkerType');
       const state = { id: 0, onmessage: null, onmessageerror: null, onerror: null };
       workerSlots.set(this, state);
       const deliver = (data) =>
@@ -6567,15 +6613,11 @@
       state.id = host.createWorker(
         deliver,
         report,
-        trustedConvert(
-          scriptURL,
-          'TrustedScriptURL',
-          'Worker constructor',
-          "Failed to construct 'Worker': ",
-        ),
+        url,
         '',
-        String(options.type || 'classic'),
-        String(options.name || ''),
+        type,
+        domStringJSONEncode(name),
+        credentials,
       );
     }
     postMessage(message) {

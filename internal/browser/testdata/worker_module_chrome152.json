@@ -1,0 +1,77 @@
+{
+  "captureMetadata": {
+    "schemaVersion": 1,
+    "chromeVersion": "152.0.7977.82",
+    "chromiumRevision": 1669021,
+    "chromiumCommit": "d04cdb24d67b081f6cf80200ffc5233f44b61109",
+    "v8Version": "15.2.124.21",
+    "platform": "windows-x64",
+    "browserMode": "headful",
+    "commandLineFeatureOverrides": [],
+    "environmentProfileId": "chrome-152-windows-x64-headful-controlled-v1",
+    "profileFreshness": "fresh-controlled-profile-and-browser-context",
+    "requestedWindowStyle": "Hidden",
+    "viewport": {
+      "width": 1272,
+      "height": 709,
+      "deviceScaleFactor": 1
+    },
+    "window": {
+      "left": 0,
+      "top": 0,
+      "width": 0,
+      "height": 0
+    },
+    "secureContextState": true,
+    "isolationState": false,
+    "origin": "http://127.0.0.1:53404",
+    "visibilityState": "hidden",
+    "hasFocus": true,
+    "webdriver": false,
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+    "languages": [
+      "ru-RU"
+    ],
+    "webdriverDescriptor": {
+      "getterSource": "function get webdriver() { [native code] }",
+      "enumerable": true,
+      "configurable": true
+    }
+  },
+  "probeSHA256": "8860afbecb28ace203aca29f0be8137dae1d4ea55407afd0267feee029c237fc",
+  "result": {
+    "result": {
+      "type": "object",
+      "value": {
+        "graph": [
+          {
+            "value": 42,
+            "cycleValue": 7,
+            "dynamic": 9,
+            "sameNamespace": true,
+            "evaluations": 1,
+            "dependencyURL": true,
+            "entryURL": true,
+            "resolve": true,
+            "topThis": true,
+            "lexicalGlobal": false,
+            "importScriptsError": true
+          }
+        ],
+        "awaitOrder": [
+          "start,message",
+          "start,message,await"
+        ],
+        "mime": [
+          "error"
+        ],
+        "missing": [
+          "error"
+        ],
+        "throwing": [
+          "error"
+        ]
+      }
+    }
+  }
+}

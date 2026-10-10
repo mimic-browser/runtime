@@ -36,10 +36,17 @@ type DedicatedWorker struct {
 	errorCallback       engine.Value
 	messageReceiver     engine.Value
 	url                 *url.URL
+	nameJSON            string // JSON string spelling preserves every UTF-16 code unit across agents.
+	scriptType          string
+	credentials         string
+	messageReady        bool
+	modules             *workerModules // Owned exclusively by the worker event loop.
+	moduleEvaluation    engine.Value
 	topLevelURL         *url.URL
 	cookieContext       network.CookieContext
 	securityURL         *url.URL // inherited creator URL for blob workers; independent of URL base
 	closed              bool
+	terminated          bool
 	started             bool
 	pending             []any
 	cancel              context.CancelFunc
@@ -65,6 +72,11 @@ func (r *Realm) hostCreateWorker(_ engine.Value, args []engine.Value) (engine.Va
 		return nil, err
 	}
 	w := &DedicatedWorker{id: id, parent: r, deliverCallback: args[0], errorCallback: args[1], url: workerURL, securityURL: r.documentURL(), topLevelURL: r.requestTopLevelURL(), done: make(chan struct{}), wake: make(chan struct{}, 1), performanceOrigin: r.scheduler.Now()}
+	w.nameJSON = strarg(args, 5)
+	w.scriptType, w.credentials = strarg(args, 4), strarg(args, 6)
+	if w.nameJSON == "" {
+		w.nameJSON = `""`
+	}
 	if workerURL.Scheme == "blob" || workerURL.Scheme == "data" {
 		w.policy = append(csp.PolicySet(nil), r.contentPolicy()...)
 	}
@@ -158,6 +170,7 @@ func (w *DedicatedWorker) run(ctx context.Context, source string) {
 		w.runtime, w.scheduler, w.messageReceiver = nil, nil, nil
 		w.pending = nil
 		w.performance = nil
+		w.modules, w.moduleEvaluation = nil, nil
 		w.mu.Unlock()
 	}()
 	workerScheduler.SetObserver(func(t scheduler.Transition) {
@@ -222,6 +235,9 @@ func (w *DedicatedWorker) run(ctx context.Context, source string) {
 	workerToken := uuid.NewString()
 	host["token"] = runtime.Function(func(engine.Value, []engine.Value) (engine.Value, error) {
 		return runtime.Value(workerToken), nil
+	})
+	host["nameJSON"] = runtime.Function(func(engine.Value, []engine.Value) (engine.Value, error) {
+		return runtime.Value(w.nameJSON), nil
 	})
 	host["postMessage"] = transientRuntimeFunction(runtime, func(_ engine.Value, args []engine.Value) (engine.Value, error) {
 		w.deliverToParent(arg(args, 0), strarg(args, 1))
@@ -306,6 +322,9 @@ func (w *DedicatedWorker) run(ctx context.Context, source string) {
 		return runtime.Value(map[string]any{"href": href, "origin": origin, "protocol": w.url.Scheme + ":", "host": w.url.Host, "hostname": w.url.Hostname(), "port": w.url.Port(), "pathname": pathname, "search": prefixed(w.url.RawQuery, "?"), "hash": prefixed(w.url.Fragment, "#")}), nil
 	})
 	host["importScripts"] = runtime.Function(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
+		if w.scriptType == "module" {
+			return runtime.Value(map[string]any{"name": "TypeError", "message": "Module scripts don't support importScripts()."}), nil
+		}
 		for _, raw := range stringSlice(arg(args, 0)) {
 			target, err := w.url.Parse(raw)
 			if err != nil {
@@ -440,10 +459,14 @@ func (w *DedicatedWorker) run(ctx context.Context, source string) {
 		_ = w.reportError(err)
 		return
 	}
+	if err := w.installModules(ctx); err != nil {
+		_ = w.reportError(err)
+		return
+	}
 	w.mu.Lock()
 	w.messageReceiver = runtime.Get("__deliver")
 	w.mu.Unlock()
-	if _, err := runtime.Eval(ctx, `delete globalThis.__deliver;delete globalThis.__workerHost;delete globalThis.__mimicEvalSourceResolver`, "mimic:hide-worker-internals"); err != nil {
+	if _, err := runtime.Eval(ctx, `delete globalThis.__deliver;delete globalThis.__workerHost;delete globalThis.__mimicEvalSourceResolver;delete globalThis.__mimicImportMetaResolveFactory`, "mimic:hide-worker-internals"); err != nil {
 		_ = w.reportError(err)
 		return
 	}
@@ -452,6 +475,10 @@ func (w *DedicatedWorker) run(ctx context.Context, source string) {
 		// Worker lifecycle is not a Page lifecycle event in CDP. Keep it in the
 		// structured JS trace so protocol subscribers do not misroute it.
 		p.trace.Add(trace.JS, "workerStart", map[string]any{"url": w.url.String(), "worker": w.id})
+		if w.scriptType == "module" {
+			w.startModule(ctx, source)
+			return nil
+		}
 		if source == "" {
 			res, loadErr := p.loader.Load(taskContext, w.parent.withResourceTiming(network.Request{ContextID: w.parent.agent.ContextID(), URL: w.url, Referrer: w.securityURL, SourceURL: w.securityURL, TopLevelURL: w.topLevelURL, HasCrossSiteAncestor: w.cookieContext.HasCrossSiteAncestor, Initiator: network.Worker, OmitClientHints: true}))
 			if loadErr != nil {
@@ -471,13 +498,7 @@ func (w *DedicatedWorker) run(ctx context.Context, source string) {
 		if err != nil {
 			return err
 		}
-		w.mu.Lock()
-		pending := append([]any(nil), w.pending...)
-		w.pending = nil
-		w.mu.Unlock()
-		for _, data := range pending {
-			w.postMessageReady(data)
-		}
+		w.enableMessages()
 		return nil
 	})
 	last := monotime.Now()
@@ -490,6 +511,7 @@ func (w *DedicatedWorker) run(ctx context.Context, source string) {
 		if err := workerScheduler.RunReady(ctx, 10000); err != nil && ctx.Err() == nil {
 			_ = w.reportError(err)
 		}
+		w.checkModuleEvaluation()
 		if w.isClosed() {
 			return
 		}
@@ -509,13 +531,24 @@ func (w *DedicatedWorker) PostMessage(data any, traceJSON string) {
 		w.mu.Unlock()
 		return
 	}
-	if w.runtime == nil {
+	if !w.messageReady {
 		w.pending = append(w.pending, data)
 		w.mu.Unlock()
 		return
 	}
 	w.mu.Unlock()
 	w.postMessageReady(data)
+}
+
+func (w *DedicatedWorker) enableMessages() {
+	w.mu.Lock()
+	w.messageReady = true
+	pending := w.pending
+	w.pending = nil
+	w.mu.Unlock()
+	for _, data := range pending {
+		w.postMessageReady(data)
+	}
 }
 
 func (w *DedicatedWorker) postMessageReady(data any) {
@@ -576,7 +609,10 @@ func (w *DedicatedWorker) reportError(cause error) error {
 	}
 	w.parent.agent.Page().trace.Add(trace.Error, "worker", map[string]any{"url": w.url.String(), "worker": w.id, "error": message})
 	w.parent.scheduler.Post(scheduler.DOM, 0, func(ctx context.Context) error {
-		if w.isClosed() || w.parent.resourceContext.Err() != nil {
+		w.mu.Lock()
+		terminated := w.terminated
+		w.mu.Unlock()
+		if terminated || w.parent.resourceContext.Err() != nil {
 			return nil
 		}
 		runtime := w.parent.runtime
@@ -603,6 +639,7 @@ func (w *DedicatedWorker) reportError(cause error) error {
 func (w *DedicatedWorker) Close() error {
 	w.mu.Lock()
 	w.closed = true
+	w.terminated = true
 	cancel, started := w.cancel, w.started
 	w.mu.Unlock()
 	if cancel != nil {
@@ -630,6 +667,7 @@ func (w *DedicatedWorker) isClosed() bool {
 func (w *DedicatedWorker) markClosed() {
 	w.mu.Lock()
 	w.closed = true
+	w.terminated = true
 	w.mu.Unlock()
 }
 

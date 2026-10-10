@@ -186,6 +186,7 @@ type adapter struct {
 	modules                     []*gov8.Module
 	moduleCache                 map[string]*gov8.Module
 	moduleNames                 map[*gov8.Module]string
+	moduleSourceURLs            map[string]string
 	importMetaResolveFactory    engine.Value
 	moduleNamespaceFactory      engine.Value
 	dynamicModuleHandler        engine.DynamicModuleHandler
@@ -519,7 +520,7 @@ func (a *adapter) EvalModule(ctx context.Context, source, name string, loader en
 			if cached := a.moduleCache[resourceName]; cached != nil {
 				return cached, nil
 			}
-			module, compileErr := realm.CompileModule(scope, moduleSource, resourceName, tc)
+			module, compileErr := realm.CompileModule(scope, moduleSource, a.moduleSourceURL(resourceName), tc)
 			if compileErr != nil {
 				return nil, compileErr
 			}
@@ -542,6 +543,7 @@ func (a *adapter) EvalModule(ctx context.Context, source, name string, loader en
 			if !ok {
 				return errors.New("import.meta module has no resource name")
 			}
+			resourceName = a.moduleSourceURL(resourceName)
 			value, err := cs.NewString(resourceName)
 			if err != nil {
 				return err
@@ -1349,6 +1351,7 @@ func (a *adapter) Close() error {
 		a.modules = nil
 		a.moduleCache = nil
 		a.moduleNames = nil
+		a.moduleSourceURLs = nil
 		if a.packedStore != nil {
 			_ = a.packedStore.Close()
 			a.packedStore = nil

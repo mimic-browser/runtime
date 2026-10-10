@@ -69,6 +69,23 @@ XHR/module consumers are outside this Fetch enforcement path. Cache/referrer
 options, Worker Resource Timing and nested workers also remain incomplete. See
 the [audit follow-up](compatibility/audit-fixes-2026-09-11.md).
 
+Dedicated Worker construction converts `WorkerOptions` in Web IDL member order,
+including enum validation and observable getter failures. The worker global's
+replaceable `name` preserves the constructor's UTF-16 code units across agents.
+The [Chrome 152 oracle](../internal/browser/testdata/worker_options_chrome152.json)
+covers conversions, accessor behavior and replacement.
+
+V8 Dedicated Workers execute classic and module scripts. Module workers load
+static and dynamic import graphs on their own event loop, support cycles,
+top-level await and `import.meta.url`/`resolve`, and retain module identity and
+failed loads in a worker-local module map. Redirect response URLs provide import
+bases without merging distinct requested module identities. Script loading
+checks JavaScript MIME types, HTTP status, credentials, CORS and CSP; termination
+cancels outstanding graph fetches. `importScripts()` throws a TypeError in module
+workers. Messages can run while module evaluation is suspended on top-level
+await, matching the retained [module oracle](../internal/browser/testdata/worker_module_chrome152.json)
+and [redirect/error oracle](../internal/browser/testdata/worker_module_edges_chrome152.json).
+
 Document streaming uses a persistent HTML5 tree builder over canonical DOM node
 handles. `document.open()` retains the Document, Window and application globals,
 clears listeners in the old connected tree, and starts a new input stream.

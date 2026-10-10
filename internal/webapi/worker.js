@@ -543,7 +543,10 @@
         ),
       );
       const error = host.importScripts(values);
-      if (error) throw platformDOMException(error.message, error.name);
+      if (error) {
+        if (error.name === 'TypeError') throw new TypeError(error.message);
+        throw platformDOMException(error.message, error.name);
+      }
     },
     queueMicrotask,
     addEventListener: (...args) => EventTarget.prototype.addEventListener.apply(globalThis, args),
@@ -625,6 +628,22 @@
       markNative = () => {};
     const expose = (name, value) =>
       Object.defineProperty(globalThis, name, { value, writable: true, configurable: true });
+    globalThis.__mimicImportMetaResolveFactory = (base) => {
+      const resolve = {
+        resolve(specifier) {
+          const text = `${specifier}`;
+          if (!/^(?:[A-Za-z][A-Za-z0-9+.-]*:|\/|\.\.?\/)/.test(text))
+            throw new TypeError('Failed to resolve module specifier ' + JSON.stringify(text));
+          try {
+            return host.urlParts(text, base).href;
+          } catch {
+            throw new TypeError('Failed to resolve module specifier ' + JSON.stringify(text));
+          }
+        },
+      }.resolve;
+      markNative(resolve, 'resolve');
+      return resolve;
+    };
     const dispatchTrusted = (target, event) => dispatchWorkerEvent(target, event, true);
     /* shared_worker_fetch */
     cloneCodec = createStructuredCloneCodec((value) => {
@@ -770,6 +789,26 @@
       });
     }
     for (const name of Object.keys(operations)) delete globalThis[name];
+    // Worker.name is [Replaceable], unlike a writable string data property.
+    // Decode in the destination JS realm rather than through Go's Unicode strings.
+    const creationName = JSON.parse(host.nameJSON());
+    Object.defineProperty(globalThis, 'name', {
+      get() {
+        if (this !== globalThis) throw new TypeError('Illegal invocation');
+        return creationName;
+      },
+      set(value) {
+        if (this !== globalThis) throw new TypeError('Illegal invocation');
+        Object.defineProperty(this, 'name', {
+          value,
+          writable: true,
+          enumerable: true,
+          configurable: true,
+        });
+      },
+      enumerable: true,
+      configurable: true,
+    });
     // A top-level `onmessage = fn` assignment is handled by the ECMAScript
     // global environment, which does not reliably perform [[Set]] through a
     // host-installed prototype accessor in every embeddable engine. Keep the

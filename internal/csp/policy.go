@@ -28,6 +28,13 @@ func (set PolicySet) AllowsResource(directive string, documentURL, target *url.U
 			continue
 		}
 		sources, present := policy.directives[directive]
+		if !present && directive == "worker-src" {
+			for _, fallback := range []string{"child-src", "script-src"} {
+				if sources, present = policy.directives[fallback]; present {
+					break
+				}
+			}
+		}
 		if !present {
 			sources, present = policy.directives["default-src"]
 		}

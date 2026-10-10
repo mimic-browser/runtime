@@ -1,0 +1,288 @@
+{
+  "captureMetadata": {
+    "schemaVersion": 1,
+    "chromeVersion": "152.0.7977.82",
+    "chromiumRevision": 1669021,
+    "chromiumCommit": "d04cdb24d67b081f6cf80200ffc5233f44b61109",
+    "v8Version": "15.2.124.21",
+    "platform": "windows-x64",
+    "browserMode": "headful",
+    "commandLineFeatureOverrides": [],
+    "environmentProfileId": "chrome-152-windows-x64-headful-controlled-v1",
+    "profileFreshness": "fresh-controlled-profile-and-browser-context",
+    "requestedWindowStyle": "Hidden",
+    "viewport": {
+      "width": 1272,
+      "height": 709,
+      "deviceScaleFactor": 1
+    },
+    "window": {
+      "left": 0,
+      "top": 0,
+      "width": 0,
+      "height": 0
+    },
+    "secureContextState": true,
+    "isolationState": false,
+    "origin": "http://127.0.0.1:11960",
+    "visibilityState": "hidden",
+    "hasFocus": true,
+    "webdriver": false,
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+    "languages": [
+      "ru-RU"
+    ],
+    "webdriverDescriptor": {
+      "getterSource": "function get webdriver() { [native code] }",
+      "enumerable": true,
+      "configurable": true
+    }
+  },
+  "probeSHA256": "5b99e6084caed7ed67708c6dd1944fc2375d4ff6a7ff0cb08544e781af5acc36",
+  "result": {
+    "result": {
+      "type": "object",
+      "value": {
+        "name.default": {
+          "initial": "",
+          "units": [],
+          "own": true,
+          "descriptor": {
+            "enumerable": true,
+            "configurable": true,
+            "getter": "function",
+            "setter": "function"
+          },
+          "invalidReceiver": [
+            "TypeError",
+            "Illegal invocation"
+          ],
+          "replaced": "local replacement",
+          "replacement": {
+            "value": "local replacement",
+            "writable": true,
+            "enumerable": true,
+            "configurable": true
+          }
+        },
+        "name.empty": {
+          "initial": "",
+          "units": [],
+          "own": true,
+          "descriptor": {
+            "enumerable": true,
+            "configurable": true,
+            "getter": "function",
+            "setter": "function"
+          },
+          "invalidReceiver": [
+            "TypeError",
+            "Illegal invocation"
+          ],
+          "replaced": "local replacement",
+          "replacement": {
+            "value": "local replacement",
+            "writable": true,
+            "enumerable": true,
+            "configurable": true
+          }
+        },
+        "name.zero": {
+          "initial": "0",
+          "units": [
+            48
+          ],
+          "own": true,
+          "descriptor": {
+            "enumerable": true,
+            "configurable": true,
+            "getter": "function",
+            "setter": "function"
+          },
+          "invalidReceiver": [
+            "TypeError",
+            "Illegal invocation"
+          ],
+          "replaced": "local replacement",
+          "replacement": {
+            "value": "local replacement",
+            "writable": true,
+            "enumerable": true,
+            "configurable": true
+          }
+        },
+        "name.false": {
+          "initial": "false",
+          "units": [
+            102,
+            97,
+            108,
+            115,
+            101
+          ],
+          "own": true,
+          "descriptor": {
+            "enumerable": true,
+            "configurable": true,
+            "getter": "function",
+            "setter": "function"
+          },
+          "invalidReceiver": [
+            "TypeError",
+            "Illegal invocation"
+          ],
+          "replaced": "local replacement",
+          "replacement": {
+            "value": "local replacement",
+            "writable": true,
+            "enumerable": true,
+            "configurable": true
+          }
+        },
+        "name.null": {
+          "initial": "null",
+          "units": [
+            110,
+            117,
+            108,
+            108
+          ],
+          "own": true,
+          "descriptor": {
+            "enumerable": true,
+            "configurable": true,
+            "getter": "function",
+            "setter": "function"
+          },
+          "invalidReceiver": [
+            "TypeError",
+            "Illegal invocation"
+          ],
+          "replaced": "local replacement",
+          "replacement": {
+            "value": "local replacement",
+            "writable": true,
+            "enumerable": true,
+            "configurable": true
+          }
+        },
+        "name.unicode": {
+          "initial": "\u0420\u0430\u0431\u043e\u0447\u0438\u0439 \ud83d\ude00",
+          "units": [
+            1056,
+            1072,
+            1073,
+            1086,
+            1095,
+            1080,
+            1081,
+            32,
+            55357,
+            56832
+          ],
+          "own": true,
+          "descriptor": {
+            "enumerable": true,
+            "configurable": true,
+            "getter": "function",
+            "setter": "function"
+          },
+          "invalidReceiver": [
+            "TypeError",
+            "Illegal invocation"
+          ],
+          "replaced": "local replacement",
+          "replacement": {
+            "value": "local replacement",
+            "writable": true,
+            "enumerable": true,
+            "configurable": true
+          }
+        },
+        "name.surrogate": {
+          "initial": "\ud800A\udfff",
+          "units": [
+            55296,
+            65,
+            57343
+          ],
+          "own": true,
+          "descriptor": {
+            "enumerable": true,
+            "configurable": true,
+            "getter": "function",
+            "setter": "function"
+          },
+          "invalidReceiver": [
+            "TypeError",
+            "Illegal invocation"
+          ],
+          "replaced": "local replacement",
+          "replacement": {
+            "value": "local replacement",
+            "writable": true,
+            "enumerable": true,
+            "configurable": true
+          }
+        },
+        "options.null": "accepted",
+        "options.undefined": "accepted",
+        "options.boolean": [
+          "TypeError",
+          "Failed to construct 'Worker': The provided value is not of type 'WorkerOptions'."
+        ],
+        "options.number": [
+          "TypeError",
+          "Failed to construct 'Worker': The provided value is not of type 'WorkerOptions'."
+        ],
+        "options.string": [
+          "TypeError",
+          "Failed to construct 'Worker': The provided value is not of type 'WorkerOptions'."
+        ],
+        "options.function": "accepted",
+        "options.symbol": [
+          "TypeError",
+          "Failed to construct 'Worker': The provided value is not of type 'WorkerOptions'."
+        ],
+        "options.emptyType": [
+          "TypeError",
+          "Failed to construct 'Worker': Failed to read the 'type' property from 'WorkerOptions': The provided value '' is not a valid enum value of type WorkerType."
+        ],
+        "options.nullType": [
+          "TypeError",
+          "Failed to construct 'Worker': Failed to read the 'type' property from 'WorkerOptions': The provided value 'null' is not a valid enum value of type WorkerType."
+        ],
+        "options.falseType": [
+          "TypeError",
+          "Failed to construct 'Worker': Failed to read the 'type' property from 'WorkerOptions': The provided value 'false' is not a valid enum value of type WorkerType."
+        ],
+        "options.invalidType": [
+          "TypeError",
+          "Failed to construct 'Worker': Failed to read the 'type' property from 'WorkerOptions': The provided value 'invalid' is not a valid enum value of type WorkerType."
+        ],
+        "options.invalidCredentials": [
+          "TypeError",
+          "Failed to construct 'Worker': Failed to read the 'credentials' property from 'WorkerOptions': The provided value 'invalid' is not a valid enum value of type RequestCredentials."
+        ],
+        "options.symbolName": [
+          "TypeError",
+          "Failed to construct 'Worker': Failed to read the 'name' property from 'WorkerOptions': Cannot convert a Symbol value to a string"
+        ],
+        "conversion": "accepted",
+        "conversionOrder": [
+          "url",
+          "credentials",
+          "name",
+          "name-string",
+          "type"
+        ],
+        "abruptIdentity": true,
+        "abruptReads": [
+          "credentials"
+        ]
+      }
+    }
+  },
+  "fixtureSHA256": "7235a69a674c190f7b57657932a9ad388f076cbb56e02f777bc1ad1f1ddc8db8",
+  "fixtureTransform": "Formatting only: the probeSHA256 identifies the preserved original capture source; fixtureSHA256 identifies its formatted regression fixture."
+}

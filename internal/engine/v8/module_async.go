@@ -41,7 +41,7 @@ func (a *adapter) PrepareModule(ctx context.Context, source, name string) ([]str
 				return nil, err
 			}
 			defer catcher.Close()
-			module, err = realm.CompileModule(scope, source, name, catcher)
+			module, err = realm.CompileModule(scope, source, a.moduleSourceURL(name), catcher)
 			if err != nil {
 				return nil, a.evalError(catcher, scope, realm, name, err)
 			}
@@ -59,6 +59,24 @@ func (a *adapter) PrepareModule(ctx context.Context, source, name string) ([]str
 		return nil, nil
 	})
 	return imports, err
+}
+
+func (a *adapter) SetModuleSourceURL(identity, sourceURL string) error {
+	_, err := a.run(func(_ *state, _ *gov8.Context, _ *gov8.Scope) (engine.Value, error) {
+		if a.moduleSourceURLs == nil {
+			a.moduleSourceURLs = make(map[string]string)
+		}
+		a.moduleSourceURLs[identity] = sourceURL
+		return nil, nil
+	})
+	return err
+}
+
+func (a *adapter) moduleSourceURL(identity string) string {
+	if sourceURL := a.moduleSourceURLs[identity]; sourceURL != "" {
+		return sourceURL
+	}
+	return identity
 }
 
 func (a *adapter) importModuleAsync(request gov8.DynamicImportRequest, specifier, referrer string) (gov8.Promise, error) {

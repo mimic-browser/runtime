@@ -1,0 +1,63 @@
+{
+  "captureMetadata": {
+    "schemaVersion": 1,
+    "chromeVersion": "152.0.7977.82",
+    "chromiumRevision": 1669021,
+    "chromiumCommit": "d04cdb24d67b081f6cf80200ffc5233f44b61109",
+    "v8Version": "15.2.124.21",
+    "platform": "windows-x64",
+    "browserMode": "headful",
+    "commandLineFeatureOverrides": [],
+    "environmentProfileId": "chrome-152-windows-x64-headful-controlled-v1",
+    "profileFreshness": "fresh-controlled-profile-and-browser-context",
+    "requestedWindowStyle": "Hidden",
+    "viewport": {
+      "width": 1272,
+      "height": 709,
+      "deviceScaleFactor": 1
+    },
+    "window": {
+      "left": 0,
+      "top": 0,
+      "width": 0,
+      "height": 0
+    },
+    "secureContextState": true,
+    "isolationState": false,
+    "origin": "http://127.0.0.1:22762",
+    "visibilityState": "hidden",
+    "hasFocus": true,
+    "webdriver": false,
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+    "languages": [
+      "ru-RU"
+    ],
+    "webdriverDescriptor": {
+      "getterSource": "function get webdriver() { [native code] }",
+      "enumerable": true,
+      "configurable": true
+    }
+  },
+  "probeSHA256": "47b7ac116b1f8137f9cb865313b774471b7f985daba0ff956f815091ed9cc7dc",
+  "result": {
+    "result": {
+      "type": "object",
+      "value": {
+        "redirect": {
+          "first": 1,
+          "second": 2,
+          "value": 42,
+          "entryURL": true,
+          "location": true,
+          "firstURL": true,
+          "secondURL": true
+        },
+        "failedImports": [
+          true,
+          true
+        ],
+        "asyncThrow": "error"
+      }
+    }
+  }
+}

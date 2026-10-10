@@ -101,6 +101,9 @@ type Request struct {
 	// CORSPreflightRequired is the consumer's Fetch preflight flag, such as
 	// XHR upload listeners. It does not change the request's initiator.
 	CORSPreflightRequired bool
+	// EnforceCORS enables Fetch policy for executable module consumers without
+	// changing their resource initiator or exposing filtered response headers.
+	EnforceCORS bool
 	// Redirect is the Fetch redirect mode; the empty value means follow.
 	Redirect string
 	// PerformanceInitiatorType is the Resource Timing projection. It is kept
