@@ -362,6 +362,37 @@ frame hit testing and resource discovery can still require substantial JavaScrip
 work. This change does not establish Chrome input latency parity or a memory
 reduction.
 
+## Canvas coverage and input scheduling
+
+Canvas rasterization runs on its Page's JavaScript executor. A long animation
+turn can therefore delay a CDP input command before its event handler starts;
+command work time alone does not identify this bottleneck. The input correlation
+and Page-wait trace distinguish that delay from socket and event-handler costs.
+
+Immutable convex fill and clip snapshots now cache bounded scanline intervals.
+Interior pixels avoid repeated polygon clipping; ambiguous edge samples keep
+the original coverage predicate. Stroke snapshots select nearby segments once
+per pixel while retaining the original distance arithmetic and subpixel grid.
+Opaque, fully covered RGBA8 source-over/copy pixels also avoid redundant blend
+arithmetic. Compound paths, self-intersections and unsupported numeric ranges
+retain their existing fallback. Mutable path hit testing remains independent
+of these snapshot caches.
+
+`tools/performance/canvas_input.py` supplies a local animation/input diagnostic,
+records each response, binary/workload hashes and presentation provenance, and
+rejects inactive animations. Its controls are instrumented local probes, not
+live-server acceptance evidence. One matched 12-command local control/candidate
+pair reduced mean input latency from 1223.4 to 176.8 ms and maximum latency from
+1401.3 to 198.3 ms; both animations processed all four clicks. This narrow sample
+does not establish a general input distribution. The control executable SHA-256
+is `de1ca5d7197ae17d5182dba0f66e946ab2d0955ca32c6d4e6c63f05801e2b69e`;
+the candidate is `3015d57cbb9535ad3d65d8d178fb6816e1d364ced878d306f5c8d2bff9bfeca9`.
+Focused tests compare accelerated coverage
+exactly with the prior predicates and retain the frozen Chrome canvas readback
+expectations, including cold and restored bootstrap contexts. Pure JavaScript
+rasterization of large backing stores remains a material input-latency cost;
+these changes do not establish Chrome parity or a memory reduction.
+
 ## Remaining limits
 
 - Cold observation construction and mutation-driven style/geometry rebuilding

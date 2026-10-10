@@ -32,8 +32,79 @@ const containsPath = (path, x, y, rule) => {
   }
   return rule === 'evenodd' ? !!(Math.abs(winding) % 2) : winding !== 0;
 };
+// Only immutable operation/clip snapshots use this accelerator. A simple
+// convex polygon has one interval on each scanline. Keep ambiguous boundary
+// points on the original winding predicate, including its floating rounding.
+const convexScanlines = (path) => {
+  const subpaths = path.filter((sub) => sub.points.length > 1);
+  if (subpaths.length !== 1) return null;
+  let points = subpaths[0].points.filter(
+    (p, i, ps) => !i || p[0] !== ps[i - 1][0] || p[1] !== ps[i - 1][1],
+  );
+  if (points.length > 3 && points[0][0] === points.at(-1)[0] && points[0][1] === points.at(-1)[1])
+    points = points.slice(0, -1);
+  if (points.length < 3 || points.length > 256) return null;
+  const seen = new Set();
+  let sign = 0,
+    scale = 1;
+  for (let i = 0; i < points.length; i++) {
+    const a = points[i],
+      b = points[(i + 1) % points.length],
+      c = points[(i + 2) % points.length];
+    if (!a.every(Number.isFinite)) return null;
+    const key = a[0] + ':' + a[1];
+    if (seen.has(key)) return null;
+    seen.add(key);
+    scale = Math.max(scale, Math.abs(a[0]), Math.abs(a[1]));
+    if (scale > 1e9) return null;
+    const turn = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]);
+    if (turn) {
+      if (sign && sign !== Math.sign(turn)) return null;
+      sign = Math.sign(turn);
+    }
+  }
+  if (!sign) return null;
+  // Equal local turns alone also admit self-intersecting stars. Verify every
+  // edge's half-plane before using convexity to skip coverage work.
+  for (let i = 0; i < points.length; i++) {
+    const a = points[i],
+      b = points[(i + 1) % points.length];
+    for (const p of points)
+      if (sign * ((b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0])) < 0) return null;
+  }
+  return { points, epsilon: 1e-7 + Number.EPSILON * 64 * scale, rows: new Map() };
+};
+const scanlineInterval = (scan, y) => {
+  if (scan.rows.has(y)) return scan.rows.get(y);
+  let left = Infinity,
+    right = -Infinity;
+  const points = scan.points;
+  for (let i = 0; i < points.length; i++) {
+    const a = points[i],
+      b = points[(i + 1) % points.length];
+    if ((a[1] <= y && b[1] > y) || (a[1] > y && b[1] <= y)) {
+      const x = a[0] + ((y - a[1]) * (b[0] - a[0])) / (b[1] - a[1]);
+      left = Math.min(left, x);
+      right = Math.max(right, x);
+    }
+  }
+  const row = left < right ? { left, right } : null;
+  if (scan.rows.size < 4096) scan.rows.set(y, row);
+  return row;
+};
 const clipContains = (clips, x, y) =>
-  !clips || clips.every((clip) => containsPath(clip.path, x, y, clip.rule));
+  !clips ||
+  clips.every((clip) => {
+    if (clip.scan === undefined) clip.scan = convexScanlines(clip.path);
+    if (clip.scan) {
+      const row = scanlineInterval(clip.scan, y),
+        epsilon = clip.scan.epsilon;
+      if (!row) return false;
+      if (x > row.left + epsilon && x < row.right - epsilon) return true;
+      if (x < row.left - epsilon || x > row.right + epsilon) return false;
+    }
+    return containsPath(clip.path, x, y, clip.rule);
+  });
 const strokeContains = (path, x, y, width) => {
   const radius = width / 2;
   for (const sub of path) {
@@ -50,6 +121,57 @@ const strokeContains = (path, x, y, width) => {
       if (t < 0 || t > 1) continue;
       if ((x - a[0] - t * dx) ** 2 + (y - a[1] - t * dy) ** 2 <= radius * radius) return true;
     }
+  }
+  return false;
+};
+// Immutable stroke snapshots can select the same segments once per pixel,
+// rather than walking the entire path for each of its 64 coverage samples.
+const strokePixelEdges = (op, x, y) => {
+  const radius = op.width / 2;
+  if (!Number.isFinite(radius) || radius > 1e9) return null;
+  if (op.strokeEdges === null) return null;
+  if (!op.strokeEdges) {
+    if (
+      op.path.some((sub) =>
+        sub.points.some((p) => p.some((v) => !Number.isFinite(v) || Math.abs(v) > 1e9)),
+      )
+    ) {
+      op.strokeEdges = null;
+      return null;
+    }
+    op.strokeEdges = [];
+    for (const sub of op.path) {
+      const ps = sub.points;
+      for (let i = 1; i < ps.length + (sub.closed ? 1 : 0); i++) {
+        const a = ps[i - 1],
+          b = ps[i % ps.length];
+        const dx = b[0] - a[0],
+          dy = b[1] - a[1],
+          length = dx * dx + dy * dy;
+        if (length)
+          op.strokeEdges.push({
+            a,
+            dx,
+            dy,
+            length,
+            left: Math.min(a[0], b[0]) - radius - 1e-5,
+            right: Math.max(a[0], b[0]) + radius + 1e-5,
+            top: Math.min(a[1], b[1]) - radius - 1e-5,
+            bottom: Math.max(a[1], b[1]) + radius + 1e-5,
+          });
+      }
+    }
+  }
+  return op.strokeEdges.filter(
+    (e) => x + 1 >= e.left && x <= e.right && y + 1 >= e.top && y <= e.bottom,
+  );
+};
+const strokeEdgesContain = (edges, x, y, width) => {
+  const radius = width / 2;
+  for (const { a, dx, dy, length } of edges) {
+    const t = ((x - a[0]) * dx + (y - a[1]) * dy) / length;
+    if (t < 0 || t > 1) continue;
+    if ((x - a[0] - t * dx) ** 2 + (y - a[1] - t * dy) ** 2 <= radius * radius) return true;
   }
   return false;
 };
@@ -254,6 +376,17 @@ const blendRGB = (source, destination, mode) => {
   });
 };
 const compositePixel = (p, i, rgba, opacity, mode, opaque, coverage = 1) => {
+  if (
+    p instanceof Uint8ClampedArray &&
+    coverage === 1 &&
+    opacity === 1 &&
+    rgba[3] === 255 &&
+    (mode === 'source-over' || mode === 'copy')
+  ) {
+    for (let k = 0; k < 3; k++) canvasStore(p, i + k, rgba[k]);
+    p[i + 3] = 255;
+    return;
+  }
   const sa = (rgba[3] / 255) * opacity,
     da = p[i + 3] / 255;
   let fa = 1,
@@ -496,9 +629,70 @@ const pathPixelCoverage = (op, x, y) => {
     }
     op.coveragePolygon = convex ? paths[0].points : null;
   }
-  if (op.coveragePolygon) return Math.min(1, Math.abs(polygonPixelArea(op.coveragePolygon, x, y)));
+  if (op.scan === undefined) op.scan = op.stroke ? null : convexScanlines(op.path);
+  if (op.coveragePolygon) {
+    if (op.scan) {
+      const top = scanlineInterval(op.scan, y),
+        bottom = scanlineInterval(op.scan, y + 1);
+      if (
+        top &&
+        bottom &&
+        x > Math.max(top.left, bottom.left) + op.scan.epsilon &&
+        x + 1 < Math.min(top.right, bottom.right) - op.scan.epsilon
+      )
+        return 1;
+    }
+    return Math.min(1, Math.abs(polygonPixelArea(op.coveragePolygon, x, y)));
+  }
+  if (
+    op.scan &&
+    op.clips.every((clip) => {
+      if (clip.scan === undefined) clip.scan = convexScanlines(clip.path);
+      return !!clip.scan;
+    })
+  ) {
+    if (!op.sampleRows) op.sampleRows = new Map();
+    let row = op.sampleRows.get(y);
+    if (!row) {
+      let innerLeft = -Infinity,
+        innerRight = Infinity;
+      let outerLeft = Infinity,
+        outerRight = -Infinity;
+      let epsilon = op.scan.epsilon;
+      const scans = [op.scan, ...op.clips.map((clip) => clip.scan)];
+      for (const scan of scans) epsilon = Math.max(epsilon, scan.epsilon);
+      for (let i = 0; i < 8; i++) {
+        let left = -Infinity,
+          right = Infinity;
+        for (const scan of scans) {
+          const interval = scanlineInterval(scan, y + (i + 0.5) / 8);
+          if (!interval) {
+            left = Infinity;
+            right = -Infinity;
+            break;
+          }
+          left = Math.max(left, interval.left);
+          right = Math.min(right, interval.right);
+        }
+        innerLeft = Math.max(innerLeft, left);
+        innerRight = Math.min(innerRight, right);
+        if (left < right) {
+          outerLeft = Math.min(outerLeft, left);
+          outerRight = Math.max(outerRight, right);
+        }
+      }
+      row = { innerLeft, innerRight, outerLeft, outerRight, epsilon };
+      if (op.sampleRows.size < 4096) op.sampleRows.set(y, row);
+    }
+    if (x + 0.0625 > row.innerLeft + row.epsilon && x + 0.9375 < row.innerRight - row.epsilon)
+      return 1;
+    if (x + 0.9375 < row.outerLeft - row.epsilon || x + 0.0625 > row.outerRight + row.epsilon)
+      return 0;
+  }
   // Intersect clips and compound winding/strokes at a bounded common subpixel
   // grid, rather than multiplying independent coverage fractions.
+  const edges = op.stroke ? strokePixelEdges(op, x, y) : null;
+  if (edges && !edges.length) return 0;
   let count = 0;
   for (let yy = 0; yy < 8; yy++)
     for (let xx = 0; xx < 8; xx++) {
@@ -507,7 +701,9 @@ const pathPixelCoverage = (op, x, y) => {
       if (
         clipContains(op.clips, px, py) &&
         (op.stroke
-          ? strokeContains(op.path, px, py, op.width)
+          ? edges
+            ? strokeEdgesContain(edges, px, py, op.width)
+            : strokeContains(op.path, px, py, op.width)
           : containsPath(op.path, px, py, op.rule))
       )
         count++;
