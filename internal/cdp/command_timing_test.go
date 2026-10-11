@@ -46,6 +46,14 @@ func TestCommandTimingSeparatesPageWait(t *testing.T) {
 			if _, ok := event.Data["expression"]; ok {
 				t.Fatal("diagnostics retained command parameters")
 			}
+			var previous time.Time
+			for _, name := range []string{"receivedAt", "queuedAt", "startedAt", "executionStartedAt", "executionEndedAt", "replyQueuedAt", "writeStartedAt", "sentAt"} {
+				value, ok := event.Data[name].(time.Time)
+				if !ok || value.IsZero() || value.Before(previous) {
+					t.Fatalf("invalid boundary %s: %v", name, event.Data)
+				}
+				previous = value
+			}
 			phases := map[string]bool{}
 			for _, detail := range s.Page.Trace().Events() {
 				if detail.Data["callID"] != "evaluate::2" {

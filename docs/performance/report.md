@@ -9,10 +9,26 @@ CDP response encoding and socket writes no longer retain Page/session ownership.
 A bounded connection-owned FIFO writer preserves event/response order while
 other frontends can continue using the same Page. Stalled sockets have a write
 deadline; overflow closes the affected connection with a diagnostic error.
+Session arrival order ends after the detached reply enters the FIFO, before
+waiting for socket completion. A slow response therefore does not delay later
+accepted commands on that session. The response still waits for the socket;
+FIFO order, byte/message limits and disconnect cancellation remain enforced.
+Five deterministic local writer-stall trials made the second command's state
+visible after 300.5–301.6 ms before this change and 0.52–1.56 ms afterward,
+with a 300 ms writer gate. This measures execution isolation, not round-trip
+delivery to a slow reader, CPU savings or memory savings.
 Focused tests cover blocked writes, ordered commands, Promise yielding,
 disconnect cancellation and retained queue cleanup. This is an isolation fix,
 not a claim of a universal evaluation speedup. Local receive timeouts do not
 cancel synchronous JavaScript in either Mimic or Chrome.
+
+The loopback-only `tools/performance/cdp_queue_latency.py` probe compares retained
+response bodies, bounded synchronous JavaScript and input/microtask ordering.
+In eight-command loaded-body controls, a body request sent 40 ms into a 300 ms
+JavaScript task waited approximately 260 ms in both Mimic and headful frozen
+Chrome 152. The queue-isolation change preserves that task boundary. This
+synthetic result does not attribute latency in a live workload or establish a
+general performance distribution.
 
 The [sequential evaluation probe](../../tools/performance/evaluate-series.md)
 separates ordered dispatch, Page/session wait, engine entry/execution,
@@ -405,6 +421,36 @@ exactly with the prior predicates and retain the frozen Chrome canvas readback
 expectations, including cold and restored bootstrap contexts. Pure JavaScript
 rasterization of large backing stores remains a material input-latency cost;
 these changes do not establish Chrome parity or a memory reduction.
+
+Immutable compound fill and clip snapshots also cache the edges crossing each
+sampled row. They retain the scalar cross-product arithmetic and strict boundary
+tests for both winding rules; mutable hit testing still reads the current path.
+Each snapshot retains at most 4,096 rows and 16,384 crossings, with uncached
+evaluation after either limit. This avoids walking every contour edge for each
+coverage sample without changing the sampling grid or Page turn ownership.
+
+In two alternating offline replays of one retained canvas-heavy interactive
+workload, 40 `Runtime.evaluate` responses had median latency 196.5 ms before
+and 135.5 ms after this change (nearest-rank p95 214.7 and 149.2 ms).
+Fourteen original mouse events had median latency 210.1 and 151.1 ms (p95
+238.3 and 172.8 ms). Profiling was disabled for those measurements. All seven
+events per replay produced identical serialized answers across both binaries.
+The instrumented trace attributed warm evaluation latency primarily to Page
+wait: median 196.0 ms before and 130.5 ms after, versus 0.6 and 1.6 ms of
+handler work. A native CPU profile identified repeated winding predicates
+inside canvas coverage as the largest sampled cost.
+
+The replays fulfilled 13 requests from retained responses and blocked two
+unmatched requests to volatile logo hosts. They preserved origins and used
+the same 2,133 by 521 viewport; retained server responses and redacted cookies
+do not establish live acceptance. One separate resource pair measured 8.30
+and 6.22 process CPU seconds for the same timed command phase. End-of-phase
+working sets were 426.0 and 419.3 MiB, and one second after Page closure were
+306.3 and 306.8 MiB; this does not establish a memory reduction or long-term
+retention bound. Focused predicate, frozen readback, cache-limit and teardown
+tests passed, as did four unchanged Wikipedia E2E runs. The control binary
+SHA-256 is `d2bc91e42dab3ed91ca4a2d7c3fc4f87d5d764f832a2dc05d7c6f6410cc9650d`; the candidate is `c308a9e48bcd1e9921c22b5db696dfad03f1febb0474081bff783786d11be214`.
+Large JavaScript rasterization turns remain a material latency cost.
 
 ## Remaining limits
 

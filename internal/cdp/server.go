@@ -563,9 +563,16 @@ func (s *session) handle(m message) {
 	}
 	defer m.order.release()
 	afterUnlock := s.handleCommand(m)
+	if m.timing != nil {
+		m.timing.executed = time.Now()
+	}
 	if afterUnlock != nil {
 		afterUnlock()
 	}
+	// The reply has entered the FIFO wire queue and Page/session ownership has
+	// unwound. Socket completion must not retain the next command's turn.
+	// Deferred browser waits release their order explicitly while waiting.
+	m.order.release()
 	s.transport.flush()
 }
 
@@ -691,6 +698,9 @@ func (s *session) handleCommand(m message) (afterUnlock func()) {
 				defer page.UnlockCommands()
 			}
 		}
+	}
+	if m.timing != nil {
+		m.timing.executionStarted = time.Now()
 	}
 	var result any = map[string]any{}
 	var err error

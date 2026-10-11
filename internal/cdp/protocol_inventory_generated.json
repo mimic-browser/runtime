@@ -12782,7 +12782,7 @@
       ],
       "support": {
         "status": "partial",
-        "notes": "Canonical realm evaluation, object groups, exceptions and Promise waits. includeCommandLineAPI uses a temporary native V8 Inspector scope on demand, preserving global lexical declarations, selected-node identity, author property precedence and console-group last result ($_). No source rewriting or persistent helper globals. Native CLI support requires V8; Blink-specific DOM command-line helpers and side-effect/eager-evaluation fidelity are incomplete. Requests with throwOnSideEffect=true explicitly reject without executing author code; eager preview is unavailable. Detached protocol responses are encoded outside Page/session ownership and sent by a bounded connection-owned FIFO writer; slow clients do not retain the Page turn. Outbound overflow or a ten-second write deadline closes the connection with a diagnostic error. Client-side receive timeouts alone do not cancel execution.",
+        "notes": "Canonical realm evaluation, object groups, exceptions and Promise waits. includeCommandLineAPI uses a temporary native V8 Inspector scope on demand, preserving global lexical declarations, selected-node identity, author property precedence and console-group last result ($_). No source rewriting or persistent helper globals. Native CLI support requires V8; Blink-specific DOM command-line helpers and side-effect/eager-evaluation fidelity are incomplete. Requests with throwOnSideEffect=true explicitly reject without executing author code; eager preview is unavailable. Detached protocol responses are encoded outside Page/session ownership and sent by a bounded connection-owned FIFO writer; slow clients do not retain the Page turn or the arrival-order slot after reply admission to the FIFO. Outbound overflow or a ten-second write deadline closes the connection with a diagnostic error. Client-side receive timeouts alone do not cancel execution.",
         "tests": [
           "internal/browser/debugger_test.go#TestDebuggerRemoteValuesMatchChrome152",
           "internal/browser/debugger_test.go#TestDebuggerPreservesHandlesAndDescriptorSemantics",
@@ -12793,6 +12793,7 @@
           "internal/cdp/inspector_command_line_frames_test.go#TestInspectorCommandLineChildSelection",
           "internal/cdp/inspector_editing_test.go#TestInspectorEagerEvaluationDoesNotExecute",
           "internal/cdp/slow_writer_test.go#TestBlockedResponseWriterDoesNotOwnPage",
+          "internal/cdp/slow_writer_test.go#TestBlockedResponseWriterDoesNotOwnSessionOrder",
           "internal/cdp/slow_writer_test.go#TestUnreadRuntimeResponseDoesNotBlockAnotherClient",
           "internal/cdp/slow_writer_test.go#TestOutboundOverflowClosesConnectionAndReleasesQueue",
           "internal/cdp/command_timing_test.go#TestCommandTimingSeparatesPageWait",

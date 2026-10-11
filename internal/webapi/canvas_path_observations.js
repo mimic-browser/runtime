@@ -32,6 +32,52 @@ const containsPath = (path, x, y, rule) => {
   }
   return rule === 'evenodd' ? !!(Math.abs(winding) % 2) : winding !== 0;
 };
+// Immutable fill/clip snapshots reuse the edges crossing a sampled row. Keep
+// the scalar cross-product arithmetic and strict signs: interpolated crossing
+// positions can round differently at a path boundary. Mutable hit testing
+// continues to walk the current path above.
+const windingScanlines = (path) => {
+  const edges = [];
+  for (const sub of path) {
+    const points = sub.points;
+    for (let i = 0; i < points.length; i++) {
+      const a = points[i],
+        b = points[(i + 1) % points.length];
+      if (a.some((v) => !Number.isFinite(v) || Math.abs(v) > 1e9)) return null;
+      if (a[1] !== b[1]) edges.push({ a, b });
+    }
+  }
+  return { edges, rows: new Map(), cachedEdges: 0 };
+};
+const containsWindingSnapshot = (snapshot, x, y) => {
+  if (snapshot.winding === undefined) snapshot.winding = windingScanlines(snapshot.path);
+  const scan = snapshot.winding;
+  if (!scan || !Number.isFinite(y)) return containsPath(snapshot.path, x, y, snapshot.rule);
+  let row = scan.rows.get(y);
+  if (!row) {
+    row = [];
+    for (const { a, b } of scan.edges)
+      if ((a[1] <= y && b[1] > y) || (a[1] > y && b[1] <= y))
+        row.push({
+          x: a[0],
+          dy: b[1] - a[1],
+          crossY: (b[0] - a[0]) * (y - a[1]),
+        });
+    // Bound both empty rows and crossings retained by a compound path. Once
+    // full, uncached rows still use the same predicate, without retained state.
+    if (scan.rows.size < 4096 && scan.cachedEdges + row.length <= 16384) {
+      scan.rows.set(y, row);
+      scan.cachedEdges += row.length;
+    }
+  }
+  let winding = 0;
+  for (const edge of row) {
+    const cross = edge.crossY - (x - edge.x) * edge.dy;
+    if (edge.dy > 0 && cross > 0) winding++;
+    else if (edge.dy < 0 && cross < 0) winding--;
+  }
+  return snapshot.rule === 'evenodd' ? !!(Math.abs(winding) % 2) : winding !== 0;
+};
 // Only immutable operation/clip snapshots use this accelerator. A simple
 // convex polygon has one interval on each scanline. Keep ambiguous boundary
 // points on the original winding predicate, including its floating rounding.
@@ -103,7 +149,7 @@ const clipContains = (clips, x, y) =>
       if (x > row.left + epsilon && x < row.right - epsilon) return true;
       if (x < row.left - epsilon || x > row.right + epsilon) return false;
     }
-    return containsPath(clip.path, x, y, clip.rule);
+    return containsWindingSnapshot(clip, x, y);
   });
 const strokeContains = (path, x, y, width) => {
   const radius = width / 2;
@@ -704,7 +750,7 @@ const pathPixelCoverage = (op, x, y) => {
           ? edges
             ? strokeEdgesContain(edges, px, py, op.width)
             : strokeContains(op.path, px, py, op.width)
-          : containsPath(op.path, px, py, op.rule))
+          : containsWindingSnapshot(op, px, py))
       )
         count++;
     }

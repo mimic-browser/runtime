@@ -98,6 +98,10 @@ func (s *Server) ws(w http.ResponseWriter, r *http.Request) {
 		if err := conn.ReadJSON(&raw); err != nil {
 			return
 		}
+		var received time.Time
+		if c.profileCommands {
+			received = time.Now()
+		}
 		var m message
 		if err := json.Unmarshal(raw, &m); err != nil || m.Method == "" {
 			c.write(map[string]any{"id": m.ID, "error": map[string]any{"code": -32600, "message": "Invalid request"}})
@@ -112,6 +116,9 @@ func (s *Server) ws(w http.ResponseWriter, r *http.Request) {
 				c.write(map[string]any{"id": m.ID, "sessionId": m.SessionID, "error": map[string]any{"code": -32001, "message": "Session with given id not found."}})
 				continue
 			}
+		}
+		if c.profileCommands {
+			m.timing = &commandTiming{received: received}
 		}
 		c.dispatch(ss, m)
 	}
@@ -212,7 +219,10 @@ func browserOwnedClose(m message) bool {
 
 func (c *connection) dispatch(s *session, m message) {
 	if c.profileCommands {
-		m.timing = &commandTiming{queued: time.Now()}
+		if m.timing == nil {
+			m.timing = &commandTiming{received: time.Now()}
+		}
+		m.timing.queued = time.Now()
 		s.commandTimings.Store(m.ID, m.timing)
 	}
 	// A mutex inside the worker excludes concurrent execution but does not
@@ -287,6 +297,7 @@ func (c *connection) enqueueWire(payload []byte, timing *commandTiming) {
 	packet := wirePacket{payload: payload, timing: timing, done: make(chan struct{})}
 	if timing != nil {
 		packet.queued = time.Now()
+		timing.replyQueued = packet.queued
 	}
 	c.outMu.Lock()
 	if c.ctx.Err() != nil {
@@ -356,6 +367,7 @@ func (c *connection) writeLoop() {
 			c.writeMu.Lock()
 			started := time.Now()
 			if packet.timing != nil {
+				packet.timing.writeStarted = started
 				packet.timing.writeWait += started.Sub(packet.queued)
 			}
 			// A stalled socket cannot retain a worker or prevent connection teardown
@@ -366,6 +378,9 @@ func (c *connection) writeLoop() {
 			}
 			if packet.timing != nil {
 				packet.timing.write += time.Since(started)
+				if err == nil {
+					packet.timing.sent = time.Now()
+				}
 			}
 			c.writeMu.Unlock()
 			c.outMu.Lock()

@@ -1,6 +1,7 @@
 package cdp
 
 import (
+	"fmt"
 	"net"
 	"sync"
 	"testing"
@@ -178,5 +179,60 @@ func TestBlockedResponseWriterDoesNotOwnPage(t *testing.T) {
 	result := wireCall(t, second, 3, "Runtime.evaluate", map[string]any{"expression": "writerMarker", "returnByValue": true})
 	if result["result"].(map[string]any)["value"] != float64(42) {
 		t.Fatal(result)
+	}
+}
+
+func TestBlockedResponseWriterDoesNotOwnSessionOrder(t *testing.T) {
+	s, addr := runningServer(t)
+	wire := browserConnection(t, addr)
+	defer wire.Close()
+	wireCall(t, wire, 1, "Runtime.evaluate", map[string]any{"expression": "globalThis.wireOrder=[]"})
+	c := s.clientSnapshot()[0]
+	c.writeMu.Lock()
+	var unlock sync.Once
+	release := func() { unlock.Do(c.writeMu.Unlock) }
+	defer release()
+	const stall = 300 * time.Millisecond
+	timer := time.AfterFunc(stall, release)
+	defer timer.Stop()
+	started := time.Now()
+	for id := 2; id <= 3; id++ {
+		if err := wire.WriteJSON(map[string]any{"id": id, "method": "Runtime.evaluate", "params": map[string]any{"expression": fmt.Sprintf("wireOrder.push(%d)", id)}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Inspect through another connection: its Page access was already shown
+	// independent of socket writes. Both accepted commands on the first session
+	// must execute in order while their FIFO replies wait for that socket.
+	other, _, err := websocket.DefaultDialer.Dial("ws://"+addr+"/devtools/page/"+s.Page.ID, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer other.Close()
+	deadline := time.Now().Add(time.Second)
+	for {
+		result := wireCall(t, other, 10, "Runtime.evaluate", map[string]any{"expression": "JSON.stringify(wireOrder)", "returnByValue": true})
+		if result["result"].(map[string]any)["value"] == "[2,3]" {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("socket write retained session execution order: %v", result)
+		}
+		time.Sleep(time.Millisecond)
+	}
+	elapsed := time.Since(started)
+	t.Logf("second command state visible after %s with %s socket stall", elapsed, stall)
+	release()
+	for _, id := range []int{2, 3} {
+		var response map[string]any
+		if err := wire.ReadJSON(&response); err != nil {
+			t.Fatal(err)
+		}
+		if response["id"] != float64(id) || response["error"] != nil {
+			t.Fatalf("reply order changed: %v", response)
+		}
+	}
+	if elapsed >= stall {
+		t.Fatalf("session execution waited for socket completion: %s", elapsed)
 	}
 }

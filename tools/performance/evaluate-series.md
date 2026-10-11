@@ -39,6 +39,9 @@ The trace has command IDs and session IDs for wire timings and correlated
 | Observation | Boundary |
 | --- | --- |
 | commandTiming.queueMs | Admission through ordered command dispatch |
+| receivedAt / queuedAt / startedAt | Complete wire-message receipt / command admission / ordered worker entry |
+| executionStartedAt / executionEndedAt | Handler dispatch after ownership acquisition / handler return after ownership unwinds |
+| replyQueuedAt / writeStartedAt / sentAt | Reply admission to outbound FIFO / writer start / successful socket completion |
 | sessionWaitMs / pageWaitMs | Session mutex / Page command mutex |
 | evaluatePhase.state | Realm lookup, initial runtime admission and debugger bridge creation |
 | runtimeInitialization / stateValue | Lazy runtime materialization / bridge prefix value creation |
@@ -56,6 +59,26 @@ overlapping categories. Promise waiting belongs to `finish`, outside the
 RemoteObject phase. Timings are wall time, not CPU. Chrome's public CDP endpoint
 does not expose equivalent private queue/lock phases: compare round trips and
 use a separate Chrome tracing experiment when deeper attribution is needed.
+`totalMs` ends at the command's own socket completion, even if its worker joins
+later packets for lifecycle cleanup. Early control commands can omit the Page
+dispatch phase; zero timestamps indicate a boundary that was not reached.
+
+For a loopback-only busy-task/body/input comparison, install `websockets` and run:
+
+```powershell
+python tools/performance/cdp_queue_latency.py --binary .build/evaluate-series.exe --output .build/cdp-queue/mimic.json
+python tools/performance/cdp_queue_latency.py --binary compatibility/.chrome-for-testing/152.0.7977.82/chrome-win64/chrome.exe --output .build/cdp-queue/chrome.json
+```
+
+The probe directly launches Chrome headful with a dedicated fresh profile and
+records its unmodified webdriver descriptor, window, visibility, focus, binary
+hash and launch arguments. It asserts pointer-event/microtask ordering and exact
+retained body bytes. `--profile` adds Mimic's command-boundary trace; compare
+uninstrumented runs separately. All HTTP workload requests use loopback. The
+probe is a scripted diagnostic, not a passive live-site acceptance capture.
+Preserve each Chrome result and profile before trying another hypothesis.
+`TestBlockedResponseWriterDoesNotOwnSessionOrder` supplies the complementary
+deterministic writer-stall regression without depending on TCP buffer sizes.
 
 A client receive timeout sends no cancellation to either browser. An awaited
 Promise can yield the Page boundary while remaining pending; synchronous JS

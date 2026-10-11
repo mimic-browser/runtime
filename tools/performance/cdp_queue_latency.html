@@ -1,0 +1,11 @@
+<!doctype html>
+<button style="position: absolute; left: 0; top: 0; width: 100px; height: 100px">probe</button>
+<script>
+  globalThis.order = [];
+  for (const kind of ['mousedown', 'mouseup', 'click']) {
+    document.addEventListener(kind, () => {
+      order.push(kind);
+      queueMicrotask(() => order.push(kind + ':microtask'));
+    });
+  }
+</script>
