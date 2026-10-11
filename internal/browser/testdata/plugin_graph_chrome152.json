@@ -1,0 +1,518 @@
+{
+  "provenance": {
+    "existingBrowser": true,
+    "isolatedBrowserContext": true,
+    "syntheticSecureContext": false,
+    "localHeaderEcho": false,
+    "cookieEcho": false,
+    "fixture": "internal/browser/testdata/plugin_graph_oracle.js",
+    "fixtureHashNormalization": "LF",
+    "worker": false,
+    "browser": "Chrome/152.0.7977.82",
+    "launch": {
+      "arguments": [
+        "--remote-debugging-port=9343",
+        "--user-data-dir=E:\\GitHub\\mimic\\.build\\plugin-graph/chrome-profile",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--window-size=1280,800",
+        "about:blank"
+      ],
+      "profileFreshness": "new-dedicated-profile",
+      "sha256": "EA36DD818A90176F1A70616F0363D9BE527229389A6C073A0B1688B9E73F67E9",
+      "browserMode": "headful",
+      "executable": "E:\\GitHub\\mimic\\compatibility\\.chrome-for-testing\\152.0.7977.82\\chrome-win64\\chrome.exe"
+    },
+    "capturedProbeSHA256": "1939ce15b67277317881721d8f544955dd597fbb738c5283594293e0e01510ea",
+    "fixtureSHA256": "0d92b53636286a299685b67c96ab0c5eebf443b0198991352f54103e2de2b049",
+    "projection": "Captured control observations omitted from semantic comparison; fixture formatted without semantic changes.",
+    "control": {
+      "webdriver": false,
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+      "languages": [
+        "ru-RU"
+      ],
+      "outer": [
+        1280,
+        800
+      ],
+      "inner": [
+        1272,
+        653
+      ],
+      "visible": "visible",
+      "focus": true
+    }
+  },
+  "result": {
+    "result": {
+      "value": {
+        "collections": [
+          {
+            "tag": "[object PluginArray]",
+            "keys": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4"
+            ],
+            "own": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "PDF Viewer",
+              "Chrome PDF Viewer",
+              "Chromium PDF Viewer",
+              "Microsoft Edge PDF Viewer",
+              "WebKit built-in PDF"
+            ],
+            "descriptors": {
+              "0": {
+                "writable": false,
+                "enumerable": true,
+                "configurable": true,
+                "valueTag": "[object Plugin]"
+              },
+              "1": {
+                "writable": false,
+                "enumerable": true,
+                "configurable": true,
+                "valueTag": "[object Plugin]"
+              },
+              "2": {
+                "writable": false,
+                "enumerable": true,
+                "configurable": true,
+                "valueTag": "[object Plugin]"
+              },
+              "3": {
+                "writable": false,
+                "enumerable": true,
+                "configurable": true,
+                "valueTag": "[object Plugin]"
+              },
+              "4": {
+                "writable": false,
+                "enumerable": true,
+                "configurable": true,
+                "valueTag": "[object Plugin]"
+              },
+              "PDF Viewer": {
+                "writable": false,
+                "enumerable": false,
+                "configurable": true,
+                "valueTag": "[object Plugin]"
+              },
+              "Chrome PDF Viewer": {
+                "writable": false,
+                "enumerable": false,
+                "configurable": true,
+                "valueTag": "[object Plugin]"
+              },
+              "Chromium PDF Viewer": {
+                "writable": false,
+                "enumerable": false,
+                "configurable": true,
+                "valueTag": "[object Plugin]"
+              },
+              "Microsoft Edge PDF Viewer": {
+                "writable": false,
+                "enumerable": false,
+                "configurable": true,
+                "valueTag": "[object Plugin]"
+              },
+              "WebKit built-in PDF": {
+                "writable": false,
+                "enumerable": false,
+                "configurable": true,
+                "valueTag": "[object Plugin]"
+              }
+            },
+            "json": "{\"0\":{\"0\":{},\"1\":{}},\"1\":{\"0\":{},\"1\":{}},\"2\":{\"0\":{},\"1\":{}},\"3\":{\"0\":{},\"1\":{}},\"4\":{\"0\":{},\"1\":{}}}"
+          },
+          {
+            "tag": "[object MimeTypeArray]",
+            "keys": [
+              "0",
+              "1"
+            ],
+            "own": [
+              "0",
+              "1",
+              "application/pdf",
+              "text/pdf"
+            ],
+            "descriptors": {
+              "0": {
+                "writable": false,
+                "enumerable": true,
+                "configurable": true,
+                "valueTag": "[object MimeType]"
+              },
+              "1": {
+                "writable": false,
+                "enumerable": true,
+                "configurable": true,
+                "valueTag": "[object MimeType]"
+              },
+              "application/pdf": {
+                "writable": false,
+                "enumerable": false,
+                "configurable": true,
+                "valueTag": "[object MimeType]"
+              },
+              "text/pdf": {
+                "writable": false,
+                "enumerable": false,
+                "configurable": true,
+                "valueTag": "[object MimeType]"
+              }
+            },
+            "json": "{\"0\":{},\"1\":{}}"
+          }
+        ],
+        "plugins": [
+          {
+            "tag": "[object Plugin]",
+            "keys": [
+              "0",
+              "1"
+            ],
+            "own": [
+              "0",
+              "1",
+              "application/pdf",
+              "text/pdf"
+            ],
+            "descriptors": {
+              "0": {
+                "writable": false,
+                "enumerable": true,
+                "configurable": true,
+                "valueTag": "[object MimeType]"
+              },
+              "1": {
+                "writable": false,
+                "enumerable": true,
+                "configurable": true,
+                "valueTag": "[object MimeType]"
+              },
+              "application/pdf": {
+                "writable": false,
+                "enumerable": false,
+                "configurable": true,
+                "valueTag": "[object MimeType]"
+              },
+              "text/pdf": {
+                "writable": false,
+                "enumerable": false,
+                "configurable": true,
+                "valueTag": "[object MimeType]"
+              }
+            },
+            "json": "{\"0\":{},\"1\":{}}"
+          },
+          {
+            "tag": "[object Plugin]",
+            "keys": [
+              "0",
+              "1"
+            ],
+            "own": [
+              "0",
+              "1",
+              "application/pdf",
+              "text/pdf"
+            ],
+            "descriptors": {
+              "0": {
+                "writable": false,
+                "enumerable": true,
+                "configurable": true,
+                "valueTag": "[object MimeType]"
+              },
+              "1": {
+                "writable": false,
+                "enumerable": true,
+                "configurable": true,
+                "valueTag": "[object MimeType]"
+              },
+              "application/pdf": {
+                "writable": false,
+                "enumerable": false,
+                "configurable": true,
+                "valueTag": "[object MimeType]"
+              },
+              "text/pdf": {
+                "writable": false,
+                "enumerable": false,
+                "configurable": true,
+                "valueTag": "[object MimeType]"
+              }
+            },
+            "json": "{\"0\":{},\"1\":{}}"
+          },
+          {
+            "tag": "[object Plugin]",
+            "keys": [
+              "0",
+              "1"
+            ],
+            "own": [
+              "0",
+              "1",
+              "application/pdf",
+              "text/pdf"
+            ],
+            "descriptors": {
+              "0": {
+                "writable": false,
+                "enumerable": true,
+                "configurable": true,
+                "valueTag": "[object MimeType]"
+              },
+              "1": {
+                "writable": false,
+                "enumerable": true,
+                "configurable": true,
+                "valueTag": "[object MimeType]"
+              },
+              "application/pdf": {
+                "writable": false,
+                "enumerable": false,
+                "configurable": true,
+                "valueTag": "[object MimeType]"
+              },
+              "text/pdf": {
+                "writable": false,
+                "enumerable": false,
+                "configurable": true,
+                "valueTag": "[object MimeType]"
+              }
+            },
+            "json": "{\"0\":{},\"1\":{}}"
+          },
+          {
+            "tag": "[object Plugin]",
+            "keys": [
+              "0",
+              "1"
+            ],
+            "own": [
+              "0",
+              "1",
+              "application/pdf",
+              "text/pdf"
+            ],
+            "descriptors": {
+              "0": {
+                "writable": false,
+                "enumerable": true,
+                "configurable": true,
+                "valueTag": "[object MimeType]"
+              },
+              "1": {
+                "writable": false,
+                "enumerable": true,
+                "configurable": true,
+                "valueTag": "[object MimeType]"
+              },
+              "application/pdf": {
+                "writable": false,
+                "enumerable": false,
+                "configurable": true,
+                "valueTag": "[object MimeType]"
+              },
+              "text/pdf": {
+                "writable": false,
+                "enumerable": false,
+                "configurable": true,
+                "valueTag": "[object MimeType]"
+              }
+            },
+            "json": "{\"0\":{},\"1\":{}}"
+          },
+          {
+            "tag": "[object Plugin]",
+            "keys": [
+              "0",
+              "1"
+            ],
+            "own": [
+              "0",
+              "1",
+              "application/pdf",
+              "text/pdf"
+            ],
+            "descriptors": {
+              "0": {
+                "writable": false,
+                "enumerable": true,
+                "configurable": true,
+                "valueTag": "[object MimeType]"
+              },
+              "1": {
+                "writable": false,
+                "enumerable": true,
+                "configurable": true,
+                "valueTag": "[object MimeType]"
+              },
+              "application/pdf": {
+                "writable": false,
+                "enumerable": false,
+                "configurable": true,
+                "valueTag": "[object MimeType]"
+              },
+              "text/pdf": {
+                "writable": false,
+                "enumerable": false,
+                "configurable": true,
+                "valueTag": "[object MimeType]"
+              }
+            },
+            "json": "{\"0\":{},\"1\":{}}"
+          }
+        ],
+        "mimes": [
+          {
+            "tag": "[object MimeType]",
+            "keys": [],
+            "own": [],
+            "descriptors": {},
+            "json": "{}"
+          },
+          {
+            "tag": "[object MimeType]",
+            "keys": [],
+            "own": [],
+            "descriptors": {},
+            "json": "{}"
+          }
+        ],
+        "identity": [
+          [
+            [
+              false,
+              true
+            ],
+            [
+              false,
+              true
+            ]
+          ],
+          [
+            [
+              false,
+              false
+            ],
+            [
+              false,
+              false
+            ]
+          ],
+          [
+            [
+              false,
+              false
+            ],
+            [
+              false,
+              false
+            ]
+          ],
+          [
+            [
+              false,
+              false
+            ],
+            [
+              false,
+              false
+            ]
+          ],
+          [
+            [
+              false,
+              false
+            ],
+            [
+              false,
+              false
+            ]
+          ]
+        ],
+        "lookup": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          null,
+          "TypeError",
+          "TypeError"
+        ],
+        "brands": [
+          "TypeError",
+          "TypeError"
+        ],
+        "prototypes": [
+          {
+            "name": "Plugin",
+            "keys": [
+              "name",
+              "filename",
+              "description",
+              "length",
+              "item",
+              "namedItem",
+              "constructor",
+              "Symbol(Symbol.toStringTag)",
+              "Symbol(Symbol.iterator)"
+            ],
+            "iterator": true
+          },
+          {
+            "name": "PluginArray",
+            "keys": [
+              "length",
+              "item",
+              "namedItem",
+              "refresh",
+              "constructor",
+              "Symbol(Symbol.toStringTag)",
+              "Symbol(Symbol.iterator)"
+            ],
+            "iterator": true
+          },
+          {
+            "name": "MimeType",
+            "keys": [
+              "type",
+              "suffixes",
+              "description",
+              "enabledPlugin",
+              "constructor",
+              "Symbol(Symbol.toStringTag)"
+            ],
+            "iterator": false
+          },
+          {
+            "name": "MimeTypeArray",
+            "keys": [
+              "length",
+              "item",
+              "namedItem",
+              "constructor",
+              "Symbol(Symbol.toStringTag)",
+              "Symbol(Symbol.iterator)"
+            ],
+            "iterator": true
+          }
+        ]
+      }
+    }
+  }
+}

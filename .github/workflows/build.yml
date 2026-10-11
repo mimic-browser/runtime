@@ -125,6 +125,8 @@ jobs:
         run: go test -run '^$' ./...
       - name: Test Linux engines and portable components
         run: go test ./chrome/... ./cmd/... ./internal/engine/... ./internal/dom ./internal/network ./internal/profile ./internal/scheduler ./internal/state ./internal/textmetrics ./internal/camera ./internal/microphone ./internal/videocodec
+      - name: Test legacy Navigator collection semantics
+        run: go test ./internal/browser -run '^TestPluginGraph' -count=1
       - name: Install Linux font resources
         run: sudo apt-get install -y fonts-dejavu-core fonts-liberation
       - name: Verify Linux executable over CDP

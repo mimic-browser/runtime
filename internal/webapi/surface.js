@@ -5828,103 +5828,128 @@
       illegal('Navigator');
     }
   }
+  // Realm-local slots keep ownership cycles out of the observable property graph.
+  const mimeSlots = new WeakMap();
+  const pluginSlots = new WeakMap();
+  const pluginArraySlots = new WeakMap();
+  const mimeArraySlots = new WeakMap();
+  const legacySlot = (slots, receiver) => {
+    if (!slots.has(receiver)) throw new TypeError('Illegal invocation');
+    return slots.get(receiver);
+  };
+  const legacyIndex = (args) => {
+    if (!args.length) throw new TypeError('1 argument required');
+    return Number(args[0]) >>> 0;
+  };
+  const legacyName = (args) => {
+    if (!args.length) throw new TypeError('1 argument required');
+    return String(args[0]);
+  };
   class MimeType {
     constructor(token, type, suffixes, description) {
       if (token !== hostToken) illegal('MimeType');
-      this.__type = type;
-      this.__suffixes = suffixes;
-      this.__description = description;
-      this.__plugin = null;
+      mimeSlots.set(this, { type, suffixes, description, plugin: null });
     }
     get type() {
-      return this.__type;
+      return legacySlot(mimeSlots, this).type;
     }
     get suffixes() {
-      return this.__suffixes;
+      return legacySlot(mimeSlots, this).suffixes;
     }
     get description() {
-      return this.__description;
+      return legacySlot(mimeSlots, this).description;
     }
     get enabledPlugin() {
-      return this.__plugin;
+      return legacySlot(mimeSlots, this).plugin;
     }
   }
   class Plugin {
     constructor(token, name) {
       if (token !== hostToken) illegal('Plugin');
-      this.__name = name;
-      this.__mimes = [];
+      pluginSlots.set(this, { name, mimes: [] });
     }
     get name() {
-      return this.__name;
+      return legacySlot(pluginSlots, this).name;
     }
     get filename() {
+      legacySlot(pluginSlots, this);
       return 'internal-pdf-viewer';
     }
     get description() {
+      legacySlot(pluginSlots, this);
       return 'Portable Document Format';
     }
     get length() {
-      return this.__mimes.length;
+      return legacySlot(pluginSlots, this).mimes.length;
     }
-    item(index) {
-      return this.__mimes[Number(index)] || null;
+    item(...args) {
+      return legacySlot(pluginSlots, this).mimes[legacyIndex(args)] || null;
     }
-    namedItem(name) {
-      return this.__mimes.find((m) => m.type === String(name)) || null;
-    }
-    [Symbol.iterator]() {
-      return this.__mimes[Symbol.iterator]();
+    namedItem(...args) {
+      const name = legacyName(args);
+      return legacySlot(pluginSlots, this).mimes.find((m) => m.type === name) || null;
     }
   }
   class PluginArray {
     constructor(token, plugins) {
       if (token !== hostToken) illegal('PluginArray');
-      this.__plugins = plugins;
+      pluginArraySlots.set(this, plugins);
       plugins.forEach((plugin, index) => {
-        Object.defineProperty(this, index, { value: plugin, enumerable: true });
-        Object.defineProperty(this, plugin.name, { value: plugin, enumerable: false });
+        Object.defineProperty(this, index, { value: plugin, enumerable: true, configurable: true });
+        Object.defineProperty(this, plugin.name, {
+          value: plugin,
+          enumerable: false,
+          configurable: true,
+        });
       });
     }
     get length() {
-      return this.__plugins.length;
+      return legacySlot(pluginArraySlots, this).length;
     }
-    item(index) {
-      return this.__plugins[Number(index)] || null;
+    item(...args) {
+      return legacySlot(pluginArraySlots, this)[legacyIndex(args)] || null;
     }
-    namedItem(name) {
-      return this.__plugins.find((p) => p.name === String(name)) || null;
+    namedItem(...args) {
+      const name = legacyName(args);
+      return legacySlot(pluginArraySlots, this).find((p) => p.name === name) || null;
     }
-    refresh() {}
-    [Symbol.iterator]() {
-      return this.__plugins[Symbol.iterator]();
+    refresh() {
+      legacySlot(pluginArraySlots, this);
     }
   }
   class MimeTypeArray {
     constructor(token, mimes) {
       if (token !== hostToken) illegal('MimeTypeArray');
-      this.__mimes = mimes;
+      mimeArraySlots.set(this, mimes);
       mimes.forEach((mime, index) => {
-        Object.defineProperty(this, index, { value: mime, enumerable: true });
-        Object.defineProperty(this, mime.type, { value: mime, enumerable: false });
+        Object.defineProperty(this, index, { value: mime, enumerable: true, configurable: true });
+        Object.defineProperty(this, mime.type, {
+          value: mime,
+          enumerable: false,
+          configurable: true,
+        });
       });
     }
     get length() {
-      return this.__mimes.length;
+      return legacySlot(mimeArraySlots, this).length;
     }
-    item(index) {
-      return this.__mimes[Number(index)] || null;
+    item(...args) {
+      return legacySlot(mimeArraySlots, this)[legacyIndex(args)] || null;
     }
-    namedItem(name) {
-      return this.__mimes.find((m) => m.type === String(name)) || null;
-    }
-    [Symbol.iterator]() {
-      return this.__mimes[Symbol.iterator]();
+    namedItem(...args) {
+      const name = legacyName(args);
+      return legacySlot(mimeArraySlots, this).find((m) => m.type === name) || null;
     }
   }
   for (const ctor of [MimeType, Plugin, PluginArray, MimeTypeArray])
     Object.defineProperty(ctor.prototype, Symbol.toStringTag, {
       value: ctor.name,
+      configurable: true,
+    });
+  for (const ctor of [Plugin, PluginArray, MimeTypeArray])
+    Object.defineProperty(ctor.prototype, Symbol.iterator, {
+      value: Array.prototype.values,
+      writable: true,
       configurable: true,
     });
   const uaDataSlots = new WeakMap();
@@ -7321,14 +7346,25 @@
     new MimeType(hostToken, 'application/pdf', 'pdf', 'Portable Document Format'),
     new MimeType(hostToken, 'text/pdf', 'pdf', 'Portable Document Format'),
   ];
+  // Chrome exposes distinct MIME wrappers per plugin and in navigator.mimeTypes.
   for (const plugin of pdfPlugins) {
-    plugin.__mimes = pdfMimeTypes;
-    for (const [index, mime] of pdfMimeTypes.entries()) {
-      Object.defineProperty(plugin, index, { value: mime, enumerable: true });
-      Object.defineProperty(plugin, mime.type, { value: mime, enumerable: false });
+    const mimes = pdfMimeTypes.map((mime) => {
+      const data = mimeSlots.get(mime);
+      const owned = new MimeType(hostToken, data.type, data.suffixes, data.description);
+      mimeSlots.get(owned).plugin = plugin;
+      return owned;
+    });
+    pluginSlots.get(plugin).mimes = mimes;
+    for (const [index, mime] of mimes.entries()) {
+      Object.defineProperty(plugin, index, { value: mime, enumerable: true, configurable: true });
+      Object.defineProperty(plugin, mime.type, {
+        value: mime,
+        enumerable: false,
+        configurable: true,
+      });
     }
   }
-  for (const mime of pdfMimeTypes) mime.__plugin = pdfPlugins[0];
+  for (const mime of pdfMimeTypes) mimeSlots.get(mime).plugin = pdfPlugins[0];
   const pluginArray = new PluginArray(hostToken, pdfPlugins),
     mimeTypeArray = new MimeTypeArray(hostToken, pdfMimeTypes);
   def(Navigator.prototype, 'plugins', { get: () => pluginArray });
