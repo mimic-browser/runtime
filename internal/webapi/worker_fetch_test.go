@@ -29,7 +29,7 @@ func TestWorkerFetchSharedSemantics(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err := runtime.RunString(`const calls=[],canceled=[];
- const __workerHost={token:()=>1,navigator:()=>({}),location:()=>({href:'https://example.test/dir/worker.js'}),isSecureContext:()=>true,
+ const __workerHost={token:()=>1,nameJSON:()=>JSON.stringify('fetch-worker'),navigator:()=>({}),location:()=>({href:'https://example.test/dir/worker.js'}),isSecureContext:()=>true,
  intlEnvironment:()=>({locale:'en-US',timeZone:'UTC'}),
  performance:operation=>{if(operation==='worker')return true;throw Error('Unexpected Performance operation: '+operation)},performanceInstallBuffer:()=>{},
  urlParts:parseURL,abortFetch:id=>canceled.push(id),fetch:(...args)=>{calls.push(args);return Promise.resolve({status:200,url:args[0],headers:{'content-type':'text/plain'},bodyBytes:[65,66]})}};`)
@@ -41,6 +41,7 @@ func TestWorkerFetchSharedSemantics(t *testing.T) {
 		t.Fatal(err)
 	}
 	value, err := runtime.RunString(`(async()=>{
+ if(globalThis.name!=='fetch-worker')throw Error('worker creation name');
  const a=new AbortController(),b=new AbortController();let ae=0,be=0;
  a.signal.addEventListener('abort',()=>ae++,{once:true});b.signal.addEventListener('abort',()=>be++);
  const reason={custom:true};a.abort(reason);a.abort();
