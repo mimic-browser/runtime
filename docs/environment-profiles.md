@@ -66,7 +66,12 @@ const context = await cdp.send("Mimic.createContext", { profile });
 
 Manual mode explicitly warns against inconsistent surfaces. Known invalid values
 and relations fail; the warning is not an override. Only modeled fields work.
-Browser and network identity must retain the installed baseline. Graphics and
+Manual `identity.userAgent` accepts any nonempty string without CR, LF or NUL,
+including strings naming a different browser or version. The caller owns its
+consistency with other observations: this does not change the engine, platform,
+Client Hints or network wire behavior. Set the string before creating the Context;
+managed Contexts reject later UA mutation. Other identity fields and network wire
+behavior retain the installed baseline. Graphics and
 fonts may retain the baseline or exactly match one complete curated recipe;
 individual graphics/font edits and mixed recipes are rejected. Arbitrary
 hardware realism and every cross-surface relation are not yet certified.

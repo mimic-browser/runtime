@@ -1518,9 +1518,10 @@
   },
   "Mimic.importProfile": {
     "status": "partial",
-    "notes": "Current portable profile and runtime identity contract. Generation is limited to the installed Chrome 152 Windows behavior bundle; coherence and recipe validation remain authoritative.",
+    "notes": "Manual import accepts arbitrary nonempty userAgent strings without CR/LF/NUL, preserving installed platform and Client Hints metadata. UA does not select a different engine or wire recipe. Generated/imported Contexts remain immutable. Other coherence and recipe validation remains authoritative.",
     "tests": [
-      "internal/cdp/portable_profile_test.go#TestPortableProfilesCDP"
+      "internal/cdp/portable_profile_test.go#TestPortableProfilesCDP",
+      "internal/profile/generate_test.go#TestManualImportAllowsArbitraryUserAgent"
     ]
   },
   "Mimic.pause": {

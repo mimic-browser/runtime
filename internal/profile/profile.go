@@ -486,7 +486,7 @@ func (d Document) Validate(base state.Environment) error {
 		return failure("audio", "unsupported", "this release models stereo output with the installed latency recipe")
 	}
 	m := d.Identity.Metadata
-	if m.Mobile || m.Platform != "Windows" || d.Identity.Platform != "Win32" || m.FullVersion != base.Product.FullVersion || !strings.Contains(d.Identity.UserAgent, "Chrome/"+base.Product.Version) {
+	if m.Mobile || m.Platform != "Windows" || d.Identity.Platform != "Win32" || m.FullVersion != base.Product.FullVersion {
 		return failure("identity", "incoherent", "identity must retain the selected desktop Chrome implementation")
 	}
 	if d.Network.WireProfile != base.Network.WireProfile {

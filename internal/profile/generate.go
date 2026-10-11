@@ -232,12 +232,11 @@ func ImportManual(raw []byte, base state.Environment) (Document, Descriptor, err
 			return Document{}, Descriptor{}, failure("graphics", "unsupported", "use a complete supported GPU/font recipe")
 		}
 	}
-	for key, pair := range map[string][2]any{"identity": {d.Identity, baseline.Identity}} {
-		a, _ := json.Marshal(wire(reflect.ValueOf(pair[0])))
-		b, _ := json.Marshal(wire(reflect.ValueOf(pair[1])))
-		if string(a) != string(b) {
-			return Document{}, Descriptor{}, failure(key, "unsupported", "browser identity must remain the installed Chrome 152 recipe")
-		}
+	// The UA string is a caller-selected observation, not a backend selector.
+	identity := d.Identity
+	identity.UserAgent = baseline.Identity.UserAgent
+	if !reflect.DeepEqual(identity, baseline.Identity) {
+		return Document{}, Descriptor{}, failure("identity", "unsupported", "platform and client hints must remain the installed Chrome 152 recipe")
 	}
 	environment := d.Public()
 	delete(environment, "schemaVersion")
@@ -248,7 +247,7 @@ func ImportManual(raw []byte, base state.Environment) (Document, Descriptor, err
 
 func Warnings(mode string) []string {
 	if mode == "manual" {
-		return []string{"Manual mode: do not combine inconsistent surfaces. Known invalid combinations are rejected, but unmodeled cross-surface relationships cannot yet be certified.", "Manual graphics and fonts accept only the installed baseline or a complete supported GPU/font pair. Browser identity and wire behavior remain Chrome 152. A Context proxy does not route WebRTC or define locale/timezone."}
+		return []string{"Manual mode: do not combine inconsistent surfaces. Known invalid combinations are rejected, but unmodeled cross-surface relationships cannot yet be certified.", "Manual userAgent strings are caller-selected and do not change the engine, platform, Client Hints or wire behavior. Manual graphics and fonts accept only the installed baseline or a complete supported GPU/font pair. A Context proxy does not route WebRTC or define locale/timezone."}
 	}
 	return []string{"Generated profiles select one supported GPU/font observation recipe while retaining Chrome 152 identity and wire behavior. They also vary window geometry, preferences and audio output rate. Readbacks are stable modeled operations, not captured pixel hashes; this does not certify physical-GPU equivalence or route WebRTC through the Context proxy."}
 }
@@ -260,7 +259,7 @@ func ManualSchema(base state.Environment) map[string]any {
 	delete(properties, "schemaVersion")
 	delete(properties, "baseProfile")
 	delete(properties["network"].(map[string]any)["properties"].(map[string]any), "proxy")
-	properties["identity"].(map[string]any)["description"] = "Only unchanged installed Chrome 152 identity is accepted."
+	properties["identity"].(map[string]any)["description"] = "userAgent accepts any nonempty header-safe string; platform and Client Hints retain the installed Chrome 152 recipe."
 	for _, key := range []string{"graphics", "fonts"} {
 		properties[key].(map[string]any)["description"] = "Only the installed baseline or an exact complete generated GPU/font pair is accepted; individual field edits are rejected."
 	}

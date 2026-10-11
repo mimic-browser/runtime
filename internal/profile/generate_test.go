@@ -130,6 +130,37 @@ func TestManualImportChecksAndRoundtrip(t *testing.T) {
 	}
 }
 
+func TestManualImportAllowsArbitraryUserAgent(t *testing.T) {
+	base := testBase()
+	for _, ua := range []string{"Chrome/151.0.0.0", "Firefox/140.0", "CustomClient/1", base.Navigator().UserAgent + " Custom/1"} {
+		raw, _ := json.Marshal(map[string]any{"identity": map[string]any{"userAgent": ua}})
+		d, descriptor, err := ImportManual(raw, base)
+		if err != nil {
+			t.Fatalf("import %q: %v", ua, err)
+		}
+		restored, _, err := ResolveToken(descriptor.Token(), base)
+		if err != nil || restored.Identity.UserAgent != ua {
+			t.Fatalf("roundtrip %q: %v", ua, err)
+		}
+		e := d.Apply(base)
+		if e.Navigator().UserAgent != ua || e.RequestHeaders()["User-Agent"] != ua {
+			t.Fatalf("UA projection %q", ua)
+		}
+	}
+	for _, ua := range []string{"", "x\r", "x\n", "x\x00"} {
+		raw, _ := json.Marshal(map[string]any{"identity": map[string]any{"userAgent": ua}})
+		if _, _, err := ImportManual(raw, base); err == nil {
+			t.Fatalf("accepted invalid UA %q", ua)
+		}
+	}
+	if _, _, err := ImportManual([]byte(`{"identity":{"platform":"Linux"}}`), base); err == nil {
+		t.Fatal("accepted platform change")
+	}
+	if _, _, err := ImportManual([]byte(`{"identity":{"metadata":{"architecture":"arm"}}}`), base); err == nil {
+		t.Fatal("accepted Client Hints change")
+	}
+}
+
 func TestManualAudioUsesModeledOutputDevice(t *testing.T) {
 	base := testBase()
 	d, descriptor, err := ImportManual([]byte(`{"audio":{"sampleRate":44100}}`), base)
