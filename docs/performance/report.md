@@ -378,6 +378,19 @@ arithmetic. Compound paths, self-intersections and unsupported numeric ranges
 retain their existing fallback. Mutable path hit testing remains independent
 of these snapshot caches.
 
+Fully covered convex RGBA8 constant-fill interiors use scanline spans: opaque
+paints store packed pixels in bulk, while translucent source-over paints use
+per-paint byte lookup tables with the scalar path's arithmetic and rounding.
+Edges, clipped fills, strokes and floating-point stores retain the scalar path.
+Repeated image draws reuse decoded immutable bytes through a weak source cache;
+each draw still refreshes dimensions and origin metadata from authoritative host
+state. Opaque image pixels with matching color spaces bypass redundant blend
+and color conversion work. Bitmap snapshots retain independent copies.
+Focused scalar comparisons and image lifecycle tests cover these paths. Page
+turn ownership remains unchanged, so expensive animation turns can still delay
+input. Allocation, memory and teardown effects of the image cache have not been
+measured; no memory improvement is claimed.
+
 `tools/performance/canvas_input.py` supplies a local animation/input diagnostic,
 records each response, binary/workload hashes and presentation provenance, and
 rejects inactive animations. Its controls are instrumented local probes, not

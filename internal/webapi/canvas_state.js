@@ -25,9 +25,13 @@ const canvasCompatibilityState = (() => {
       ];
     }),
   );
+  const decodedSourceImages = new WeakMap();
   const sourceImage = (source) => {
     const data = host.imagePixels(elementSlot(source).nodeId);
-    if (!data) return null;
+    if (!data) {
+      decodedSourceImages.delete(source);
+      return null;
+    }
     if (data.vector) {
       host.semanticMissingAt(
         'canvas_state.js/sourceImage',
@@ -38,9 +42,12 @@ const canvasCompatibilityState = (() => {
       );
       fail('NotSupportedError', 'SVG image raster readback is unsupported');
     }
+    const cached = decodedSourceImages.get(source);
+    if (cached && cached.encoded === data.pixels) return { ...data, pixels: cached.pixels };
     const raw = atob(data.pixels),
       pixels = new Uint8ClampedArray(raw.length);
     for (let i = 0; i < raw.length; i++) pixels[i] = raw.charCodeAt(i);
+    decodedSourceImages.set(source, { encoded: data.pixels, pixels });
     return { ...data, pixels };
   };
   const imageBitmapArity = globalThis.createImageBitmap?.length;
@@ -948,6 +955,14 @@ const canvasCompatibilityState = (() => {
       const grayscaleAmount = grayscale
         ? Math.min(1, Number(grayscale[1]) / (grayscale[2] ? 100 : 1))
         : 0;
+      const directOpaque =
+        p instanceof Uint8ClampedArray &&
+        input instanceof Uint8ClampedArray &&
+        ga === 1 &&
+        !grayscaleAmount &&
+        (image.colorSpace || 'srgb') === (destination.colorSpace || 'srgb') &&
+        (c.draw.globalCompositeOperation === 'source-over' ||
+          c.draw.globalCompositeOperation === 'copy');
       for (let yy = Math.max(0, Math.ceil(dy)); yy < Math.min(destination.height, dy + dh); yy++)
         for (let xx = Math.max(0, Math.ceil(dx)); xx < Math.min(destination.width, dx + dw); xx++) {
           if (!clipContains(c.draw.clipPaths, xx + 0.5, yy + 0.5)) continue;
@@ -956,17 +971,24 @@ const canvasCompatibilityState = (() => {
           if (ix < 0 || iy < 0 || ix >= image.width || iy >= image.height) continue;
           const i = (iy * image.width + ix) * 4,
             j = (yy * destination.width + xx) * 4,
-            ia = input[i + 3],
-            rgba = canvasConvertColor(
-              [
-                ia ? (input[i] * 255) / ia : 0,
-                ia ? (input[i + 1] * 255) / ia : 0,
-                ia ? (input[i + 2] * 255) / ia : 0,
-                ia,
-                image.colorSpace || 'srgb',
-              ],
-              destination.colorSpace || 'srgb',
-            );
+            ia = input[i + 3];
+          if (directOpaque && ia === 255) {
+            p[j] = input[i];
+            p[j + 1] = input[i + 1];
+            p[j + 2] = input[i + 2];
+            p[j + 3] = 255;
+            continue;
+          }
+          const rgba = canvasConvertColor(
+            [
+              ia ? (input[i] * 255) / ia : 0,
+              ia ? (input[i + 1] * 255) / ia : 0,
+              ia ? (input[i + 2] * 255) / ia : 0,
+              ia,
+              image.colorSpace || 'srgb',
+            ],
+            destination.colorSpace || 'srgb',
+          );
           if (grayscaleAmount) {
             const gray = rgba[0] * 0.2126 + rgba[1] * 0.7152 + rgba[2] * 0.0722;
             for (let k = 0; k < 3; k++) rgba[k] += (gray - rgba[k]) * grayscaleAmount;

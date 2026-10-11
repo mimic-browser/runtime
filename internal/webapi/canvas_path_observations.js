@@ -737,8 +737,74 @@ const materializePath = (s, op) => {
       }
     materializeShadow(s, source, op.shadow, op.alpha, op.composite, op.clips);
   }
-  for (let y = top; y < bottom; y++)
+  // RGBA8 constant source-over interiors have exactly unit coverage. Select their
+  // scanline span once and store complete pixels in bulk; fractional edges keep
+  // the same coverage and compositing path below.
+  let solidPixels = null,
+    solidWord = 0,
+    solidScan = null,
+    solidTables = null;
+  if (
+    !unbounded &&
+    !op.stroke &&
+    !op.clear &&
+    !op.shadow &&
+    !op.clips.length &&
+    op.composite === 'source-over' &&
+    Array.isArray(op.paint) &&
+    op.paint.every(Number.isFinite) &&
+    s.pixels instanceof Uint8ClampedArray &&
+    s.pixels.byteOffset % 4 === 0
+  ) {
+    solidScan = convexScanlines(op.path);
+    if (solidScan) {
+      if (op.alpha === 1 && op.paint[3] === 255) {
+        const rgba = new Uint8ClampedArray(4);
+        for (let k = 0; k < 4; k++) rgba[k] = Math.round(op.paint[k]);
+        solidWord = new Uint32Array(rgba.buffer)[0];
+        solidPixels = new Uint32Array(s.pixels.buffer, s.pixels.byteOffset, s.pixels.length / 4);
+      } else {
+        // Destination channels are bytes. Precompute precisely the existing
+        // scalar arithmetic/rounding for each possible byte, once per paint.
+        const sa = (op.paint[3] / 255) * op.alpha,
+          fb = 1 - sa;
+        solidTables = Array.from({ length: 4 }, () => new Uint8ClampedArray(256));
+        for (let value = 0; value < 256; value++) {
+          for (let k = 0; k < 3; k++)
+            solidTables[k][value] = Math.round(op.paint[k] * sa + value * fb);
+          solidTables[3][value] = Math.round(
+            s.opaque ? 255 : Math.min(1, sa + (value / 255) * fb) * 255,
+          );
+        }
+        solidPixels = s.pixels;
+      }
+    }
+  }
+  for (let y = top; y < bottom; y++) {
+    let spanStart = right,
+      spanEnd = right;
+    if (solidPixels) {
+      const a = scanlineInterval(solidScan, y),
+        b = scanlineInterval(solidScan, y + 1);
+      if (a && b) {
+        spanStart = Math.max(left, Math.floor(Math.max(a.left, b.left) + solidScan.epsilon) + 1);
+        spanEnd = Math.min(right, Math.ceil(Math.min(a.right, b.right) - solidScan.epsilon) - 1);
+      }
+    }
     for (let x = left; x < right; x++) {
+      if (solidPixels && x === spanStart && spanEnd > spanStart) {
+        if (solidTables) {
+          const end = (y * s.width + spanEnd) * 4;
+          for (let i = (y * s.width + spanStart) * 4; i < end; i += 4) {
+            solidPixels[i] = solidTables[0][solidPixels[i]];
+            solidPixels[i + 1] = solidTables[1][solidPixels[i + 1]];
+            solidPixels[i + 2] = solidTables[2][solidPixels[i + 2]];
+            solidPixels[i + 3] = solidTables[3][solidPixels[i + 3]];
+          }
+        } else solidPixels.fill(solidWord, y * s.width + spanStart, y * s.width + spanEnd);
+        x = spanEnd - 1;
+        continue;
+      }
       const coverage = pathPixelCoverage(op, x, y);
       if (!coverage && !unbounded) continue;
       if (unbounded) {
@@ -762,6 +828,7 @@ const materializePath = (s, op) => {
           coverage,
         );
     }
+  }
 };
 const rectanglePath = (c, x, y, w, h) => [
   {
