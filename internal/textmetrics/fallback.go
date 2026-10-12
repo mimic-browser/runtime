@@ -117,14 +117,13 @@ func (e *Engine) fallbackFace(primary *loaded, cluster []rune, families string, 
 	if len(cluster) == 1 && unicode.IsControl(cluster[0]) && cluster[0] != 0x7f {
 		return primary, nil
 	}
-	// Try the author's remaining families before Windows fallback families.
-	// This is a profile-level preference, not a codepoint-specific substitution.
+	// Try the author's remaining families before platform fallback. Text-default
+	// symbols use the normal text fallback before color emoji; explicit VS16 and
+	// emoji-default characters prefer the emoji face. The author can still name
+	// Segoe UI Emoji earlier in the CSS family list.
 	names := strings.Split(families, ",")
-	for _, ch := range cluster {
-		if ch == 0xfe0e {
-			names = append(names, "serif")
-			break
-		}
+	if !defaultEmojiPresentation(cluster) {
+		names = append(names, "serif")
 	}
 	if len(e.fallbackFamilies) > 0 {
 		names = append(names, e.fallbackFamilies...)
