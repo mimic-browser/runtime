@@ -17,6 +17,27 @@ no command-line feature overrides
 
 ## Authority and provenance
 
+The semantic reference is Chrome without an attached debugger or automation
+client. Preserve its observable browser semantics and bugs. CDP/DevTools
+artifacts are evidence about tooling, not browser behavior to reproduce.
+Mimic can execute without a display while exposing the coherent headful
+Environment profile; implementation mode does not change that public contract.
+
+Passive attachment, Runtime enable/disable, remote-object descriptions, previews,
+property inspection and protocol serialization must not execute author code or
+change author-visible state. This includes getters, Proxy traps, coercions,
+lazy Error.stack materialization, Error.prepareStackTrace, exception formatting
+and task/microtask ordering. Unsafe inspection must reject explicitly. Explicit
+evaluation, function calls, installed bindings and requested browser mutations
+have their requested effects; their transport must add no implicit author calls.
+
+For tooling-sensitive probes, retain both unattached and attached controls.
+Synthetic fixtures can report through local HTTP without a debugger. Regressions
+must cover classes of effects, cold/restored realms and multiple sessions rather
+than assert agreement with an instrumented Chrome side effect. Existing attached
+captures remain valid evidence with their original provenance; they must not be
+relabeled as unattached browser expectations.
+
 Headful Chrome is authoritative whenever an observation can depend on window or
 display state, focus, visibility, geometry, graphics, media/devices, activation,
 permissions, rendering, browser UI integration, automation exposure, or

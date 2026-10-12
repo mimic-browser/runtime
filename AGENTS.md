@@ -10,6 +10,21 @@ the current behavioral reference.
   against frozen Chrome 152 rather than guessing from specifications or other
   browser implementations.
 
+- The behavioral reference is normal headful Chrome 152 with no debugger or
+  automation client attached. Preserve its browser semantics, including its
+  observable bugs. Do not reproduce artifacts introduced by CDP, DevTools,
+  automation, instrumentation, or the host's headless execution mechanism.
+  Mimic's execution mechanism does not select its public presentation profile.
+  Passive tooling must preserve author-visible state, lazy properties, object
+  identity, exceptions, and task/microtask ordering. Descriptions, previews,
+  property inspection, and protocol serialization must not invoke author
+  getters, coercions, Proxy traps, or Error stack formatting. Reject unsafe
+  inspection explicitly rather than executing author code. Explicitly requested
+  evaluation, function calls, bindings, and browser mutations retain their
+  requested effects; passive transport adds none. Cover each affected class
+  with attached-versus-unattached regressions, including cold/restored realms
+  and multiple sessions. See `docs/oracle-policy.md` and `docs/cdp-runtime.md`.
+
 - Preserve each successful frozen Chrome 152 capture and its provenance before
   changing instrumentation or testing another hypothesis. Reuse the saved trace
   and offline replay for iterative analysis; do not repeatedly launch live

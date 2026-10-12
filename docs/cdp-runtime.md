@@ -12,12 +12,33 @@ embedder roots, including evaluation results after the private table retains
 them. Navigation invalidates handles and prunes tables even when page-script
 references keep an old realm alive.
 
+Passive CDP tooling follows the unattached-browser contract in
+[the oracle policy](oracle-policy.md). Enabling Runtime, observing console
+arguments, inspecting properties and transporting results must not execute
+author getters, Proxy traps, coercions or lazy stack formatting, or introduce
+additional author microtasks. Ordinary console message-text conversion still
+runs as it does without an attached client. Error previews do not materialize
+Error.stack or invoke Error.prepareStackTrace.
+
 Primitive protocol values preserve undefined, null, NaN, infinities, negative
 zero, BigInt and symbols. Returning an object by value uses recursive property
 serialization rather than JSON.stringify on the user object: Date remains an
 empty object, user toJSON hooks are not called, and cycles or unsupported nested
-values produce protocol errors. These distinctions, descriptor flags and
-binding lifetime were measured against Chrome 152.0.7977.82.
+values produce protocol errors. Only own data properties are serialized;
+enumerable accessors, Proxy values and opaque foreign wrappers reject without
+executing author code. Array holes serialize as null without reading inherited
+properties. Proxy property inspection and traversal into Proxy prototypes also
+reject explicitly; ordinary accessor descriptors remain available without
+calling them. Goja Error descriptor lookup can materialize its lazy stack, so
+its Error property enumeration and by-value serialization reject explicitly.
+Goja constructs private descriptor records through pristine native intrinsics,
+because its ordinary descriptor intrinsic can consult author prototype setters
+while creating the record. This private metadata realm executes no author code
+or jobs and retains the original property values and accessor identities.
+Engines without safe native brand and Proxy classification cannot inspect
+opaque object values. Primitive encoding, descriptor flags and binding lifetime
+were measured against Chrome 152.0.7977.82; rejecting unsafe serialization is a
+deliberate departure from instrumented Chrome.
 
 An isolated world is a separate JavaScript runtime and wrapper set over the
 frame's authoritative DOM. It has its own globals and DOM expandos, and belongs
@@ -43,11 +64,22 @@ matching contexts. Removing a binding stops delivery to that session and leaves
 the JavaScript function installed, as Chrome does.
 
 The optional V8 command-line evaluator creates a native Inspector only for the
-requested evaluation and closes it before returning. Its result is transferred
-into the existing realm/session object table; native Inspector handles never
-escape. Selected-node wrappers and the console-group last result are bounded
+requested evaluation and closes it before returning. Native evaluation returns
+the raw value directly into the existing realm/session object table. It does
+not construct a native RemoteObject, including for the console-group last
+result: even idOnly native wrapping can execute lazy stack formatting. The Page
+runs microtasks after the temporary native command-line scope has closed, so
+unrequested jobs cannot observe its helpers.
+Selected-node wrappers and the console-group last result are bounded
 session/realm references. No command-line helpers are permanently installed on
 the author global. See [Chrome DevTools](devtools.md) for usage and limitations.
+
+Explicit evaluation, function calls, bindings and browser mutations keep their
+requested effects. Returning an accessor by value is not permission to execute
+it; clients can request an explicit function call when they intend to read it.
+Exception transport preserves the thrown object and uses engine-owned message
+metadata rather than calling its toString or stack getter. Promise rejection
+observation retains the rejection value without coercing it.
 
 The general Runtime object adapter remains a Mimic projection. Deep
 serialization is rejected explicitly. Object previews, debugger call-frame
