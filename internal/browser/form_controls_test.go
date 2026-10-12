@@ -65,6 +65,34 @@ func TestFormControlDirtyValuesAndReset(t *testing.T) {
 	}
 }
 
+func TestSelectOptionsRemainLiveAcrossMutations(t *testing.T) {
+	parallelBrowserTest(t)
+	historyTestPages(t, func(t *testing.T, page *Page) {
+		value, err := page.Evaluate(context.Background(), `(() => {
+  document.body.innerHTML = '<select id="outer"><option id="first" value="a">A</option><option id="second" value="b">B</option></select><select id="other"></select>';
+  const select = document.getElementById('outer');
+  const other = document.getElementById('other');
+  const options = select.options;
+  if (options.length !== 2 || select.value !== 'a') return false;
+  const nested = document.createElement('select');
+  nested.innerHTML = '<option id="nested">N</option>';
+  select.appendChild(nested);
+  if (options.length !== 2) return false;
+  const third = document.createElement('option');
+  third.value = 'c';
+  select.appendChild(third);
+  if (options.length !== 3 || options[2] !== third) return false;
+  other.appendChild(document.getElementById('second'));
+  if (options.length !== 2 || other.options.length !== 1) return false;
+  select.removeChild(document.getElementById('first'));
+  return options.length === 1 && options[0] === third && select.value === 'c';
+})()`)
+		if err != nil || value != true {
+			t.Fatalf("live select options after mutations: %v %v", value, err)
+		}
+	})
+}
+
 func TestFormControlInitialValueAndDirectChildText(t *testing.T) {
 	parallelBrowserTest(t)
 	b, err := New(v8engine.Factory{}, chrome152.New())

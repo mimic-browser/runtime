@@ -51,16 +51,17 @@ func TestReflectedAttributesIgnorePublicOverrides(t *testing.T) {
 	parallelBrowserTest(t)
 	p := bootstrapSnapshotPage(t)
 	historyEval(t, p, `(()=>{
- const script=document.createElement('script'),anchor=document.createElement('a'),link=document.createElement('link');
+ const script=document.createElement('script'),probe=document.createElement('script'),anchor=document.createElement('a'),link=document.createElement('link');
  let calls=0;
  for(const element of [script,anchor,link]){
    element.setAttribute=()=>{calls++;throw Error('author override')};
    element.getAttribute=()=>{calls++;throw Error('author override')};
  }
- script.async=true;script.defer=true;
+ script.integrity='sha384-proof';script.async=true;script.defer=true;
+ probe.type='text/javascript';probe.src='/proof.js';probe.integrity='sha384-proof';probe.async=true;probe.defer=true;
  anchor.type='application/pdf';link.type='text/css';
  document.body.lang='en';
- return calls===0&&script.async&&script.defer&&anchor.type==='application/pdf'&&link.type==='text/css'&&document.body.lang==='en';
+ return calls===0&&script.async&&script.defer&&script.integrity==='sha384-proof'&&probe.getAttributeNames().join()==='type,src,integrity,async,defer'&&probe.attributes.length===5&&probe.attributes.getNamedItem('integrity').value==='sha384-proof'&&anchor.type==='application/pdf'&&link.type==='text/css'&&document.body.lang==='en';
  })()`, true)
 }
 

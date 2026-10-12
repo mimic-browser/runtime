@@ -43,6 +43,7 @@ type Page struct {
 	turnObservers      map[*TurnSubscription]struct{}    // allocated only by inspector consumers
 	inspectorViewEpoch uint64                            // command-owned scroll epoch; does not invalidate style caches
 	debuggers          map[*Debugger]struct{}
+	nativeInspectors   map[*NativeInspector]struct{}
 	inputIgnored       bool   // Page command owned; survives document navigation.
 	inputHintRealm     *Realm // Last protocol-scrolled target; Page command owned.
 	inputHintNodeID    int64

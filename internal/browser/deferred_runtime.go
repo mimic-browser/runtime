@@ -61,6 +61,13 @@ func (d *deferredRuntime) ready() (engine.Runtime, error) {
 		}
 	}
 	d.realm.registerPermissions()
+	if err := d.realm.agent.Page().attachNativeInspectors(d.realm); err != nil {
+		_ = d.realm.runtime.Close()
+		d.realm.runtimeGroup.remove(d.realm)
+		d.err = err
+		d.realm.runtime = d
+		return nil, err
+	}
 	return d.realm.runtime, nil
 }
 

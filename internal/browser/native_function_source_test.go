@@ -37,6 +37,29 @@ func TestPlatformCallableReceiverDiagnostics(t *testing.T) {
 	}
 }
 
+func TestDOMOperationReceiverBrandsMatchFrozenChrome(t *testing.T) {
+	parallelBrowserTest(t)
+	p := bootstrapSnapshotPage(t)
+	value := bootstrapSnapshotEvaluate(t, p, `(()=>{
+ const failure=callback=>{try{callback();return null}catch(error){return [error.name,error.message]}};
+ const frame=document.createElement('iframe');document.body.append(frame);
+ const foreign=frame.contentWindow,container=document.createElement('div'),child=document.createElement('span');
+ const result=[
+   failure(()=>Element.prototype.append.call(undefined)),
+   failure(()=>Node.prototype.appendChild.call(undefined)),
+   failure(()=>Object.getOwnPropertyDescriptor(HTMLIFrameElement.prototype,'contentWindow').get.call(undefined)),
+   foreign.Element.prototype.append.call(container,child)===undefined&&container.firstChild===child,
+   Object.getOwnPropertyDescriptor(HTMLIFrameElement.prototype,'contentWindow').get.call(frame)===foreign,
+ ];
+ frame.remove();
+ return JSON.stringify(result);
+})()`)
+	want := `[["TypeError","Illegal invocation"],["TypeError","Illegal invocation"],["TypeError","Illegal invocation"],true,true]`
+	if value != want {
+		t.Fatalf("DOM receiver brands: want %s, got %v", want, value)
+	}
+}
+
 //go:embed testdata/constructor_object_brand.js
 var constructorObjectBrandProbe string
 

@@ -41,7 +41,7 @@ func TestDatePlatformStackMatchesFrozenChrome(t *testing.T) {
 		t.Fatalf("Date coercion stack: %s", value.String())
 	}
 	// The platform compilation boundary must retain the injected clock.
-	clock, err := r.Eval(context.Background(), `Date.now()===1000 && +new Date()===1000 && +new Date(0)===0`, "clock-check.js")
+	clock, err := r.Eval(context.Background(), `Date.now()===1000 && +new Date()===1000 && +new Date(0)===0 && Date.now.name==='now' && Function.prototype.toString.call(Date.now)==='function now() { [native code] }'`, "clock-check.js")
 	if err != nil || clock.Export() != true {
 		t.Fatalf("clock semantics: %v %v", clock, err)
 	}

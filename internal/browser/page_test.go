@@ -1767,6 +1767,62 @@ func TestMatchMediaDerivesFromCanonicalPreferences(t *testing.T) {
 	}
 }
 
+func TestMatchMediaDesktopFeatureDefaultsMatchChrome(t *testing.T) {
+	parallelBrowserTest(t)
+	p := testPage(t)
+	p.env.Preferences.ColorScheme = "dark"
+	p.env.Preferences.ReducedMotion = false
+	v, err := p.Evaluate(context.Background(), `(() => {
+		const queries = [
+			'monochrome', 'monochrome:0', 'color-gamut:rec2020', 'color-gamut:p3',
+			'color-gamut:srgb', 'any-hover:hover', 'any-hover:none', 'hover:hover',
+			'hover:none', 'any-pointer:fine', 'any-pointer:coarse', 'any-pointer:none',
+			'pointer:fine', 'pointer:coarse', 'pointer:none', 'inverted-colors:inverted',
+			'inverted-colors:none', 'display-mode:fullscreen', 'display-mode:standalone',
+			'display-mode:minimal-ui', 'display-mode:browser', 'forced-colors:none',
+			'forced-colors:active', 'prefers-color-scheme:light', 'prefers-color-scheme:dark',
+			'prefers-contrast:no-preference', 'prefers-contrast:less', 'prefers-contrast:more',
+			'prefers-contrast:custom', 'prefers-reduced-motion:no-preference',
+			'prefers-reduced-motion:reduce', 'prefers-reduced-transparency:no-preference',
+			'prefers-reduced-transparency:reduce',
+		];
+		return JSON.stringify(queries.flatMap((query, index) => matchMedia('(' + query + ')').matches ? [index] : []));
+	})()`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `[1,4,5,7,9,12,20,21,24,25,29,31]`
+	if v != want {
+		t.Fatalf("desktop media feature defaults: %#v, want %#v", v, want)
+	}
+}
+
+func TestMatchMediaDerivesDeviceMetricsFromCanonicalDisplay(t *testing.T) {
+	parallelBrowserTest(t)
+	p := testPage(t)
+	p.env.Display.PhysicalWidth = 2560
+	p.env.Display.PhysicalHeight = 1440
+	p.env.Display.DeviceScaleFactor = 1.25
+	v, err := p.Evaluate(context.Background(), `(() => ({
+	device: matchMedia('(device-width: ' + screen.width + 'px) and (device-height: ' + screen.height + 'px)').matches,
+	deviceWidth: matchMedia('(device-width: ' + screen.width + 'px)').matches,
+	deviceHeight: matchMedia('(device-height: ' + screen.height + 'px)').matches,
+	dpr: matchMedia('(-webkit-device-pixel-ratio: 1.25)').matches,
+	resolution: matchMedia('(resolution: 1.25dppx)').matches,
+	dpi: matchMedia('(resolution: 120dpi)').matches,
+	wrongDevice: matchMedia('(device-width: ' + (screen.width - 1) + 'px)').matches,
+	wrongDPR: matchMedia('(-webkit-device-pixel-ratio: 2)').matches,
+	moz: matchMedia('(-moz-device-pixel-ratio: 1.25)').matches,
+}))()`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := v.(map[string]any)
+	if result["device"] != true || result["deviceWidth"] != true || result["deviceHeight"] != true || result["dpr"] != true || result["resolution"] != true || result["dpi"] != true || result["wrongDevice"] != false || result["wrongDPR"] != false || result["moz"] != false {
+		t.Fatalf("device media queries diverged from canonical display state: %#v", result)
+	}
+}
+
 func TestCrossOriginResourceTimingRequiresTimingAllowOrigin(t *testing.T) {
 	parallelBrowserTest(t)
 	resource := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {

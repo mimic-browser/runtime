@@ -96,6 +96,7 @@ type Realm struct {
 	runtime                  engine.Runtime
 	scheduler                *scheduler.Scheduler
 	timers                   map[uint64]*windowTimer
+	nextTimerID              uint64
 	document                 *dom.Document
 	documentStream           *documentStream
 	documentStreamReset      engine.Value
@@ -2134,6 +2135,7 @@ func (r *Realm) installBindingsOnOwner() error {
 	host["clearTimer"] = r.transientFn(r.hostClearTimer)
 	r.installWindowExceptionReporting(host)
 	host["createWorker"] = r.fn(r.hostCreateWorker)
+	host["createSharedWorker"] = r.fn(r.hostCreateSharedWorker)
 	host["createObjectURL"] = r.fn(func(_ engine.Value, a []engine.Value) (engine.Value, error) {
 		// Chrome returns the empty string when a retained function is called
 		// after its document's execution context has been deactivated.
@@ -2625,6 +2627,7 @@ func (r *Realm) hostFetch(_ engine.Value, a []engine.Value) (engine.Value, error
 		return promise.Value, nil
 	}
 	request := fetchRequest(r.agent.ContextID(), u, r.documentURL(), a)
+	request.BlobResource = r.agent.Page().ctx.network.CaptureBlob(u.String())
 	request.ContentPolicyDirective = "connect-src"
 	request.ContentPolicy = r.contentPolicy()
 	request.ContentPolicyURL = r.documentURL()
@@ -2715,12 +2718,18 @@ func (r *Realm) hostXHR(_ engine.Value, a []engine.Value) (engine.Value, error) 
 	}
 	headers := headerMap(arg(a, 3))
 	authorHeaderOrder := stringSlice(arg(a, 6))
-	body := []byte(strarg(a, 4))
+	binaryBody, _ := arg(a, 11).(bool)
+	var body []byte
+	if binaryBody {
+		body = byteSlice(arg(a, 4))
+	} else {
+		body = []byte(strarg(a, 4))
+	}
 	hasBody, _ := arg(a, 8).(bool)
 	if method := strarg(a, 1); method == "GET" || method == "HEAD" {
 		body, hasBody = nil, false
 	}
-	if hasBody {
+	if hasBody && !binaryBody {
 		headers.Set("Content-Type", xhrStringContentType(headers.Get("Content-Type")))
 	}
 	timeout := time.Duration(numarg(a, 5)) * time.Millisecond

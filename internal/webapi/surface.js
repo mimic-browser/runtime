@@ -4972,11 +4972,15 @@
       this.sandbox.value = String(v);
     }
     get contentWindow() {
-      const id = host.iframeWindow(elementSlot(this).nodeId, isNodeConnected(this));
+      const slot = elementSlot(this);
+      if (slot?.tagName !== 'IFRAME') throw new TypeError('Illegal invocation');
+      const id = host.iframeWindow(slot.nodeId, isNodeConnected(this));
       return id == null ? null : remoteWindow(id);
     }
     get contentDocument() {
-      const id = host.iframeWindow(elementSlot(this).nodeId, isNodeConnected(this));
+      const slot = elementSlot(this);
+      if (slot?.tagName !== 'IFRAME') throw new TypeError('Illegal invocation');
+      const id = host.iframeWindow(slot.nodeId, isNodeConnected(this));
       return id == null ? null : remoteDocument(id, true);
     }
   }
@@ -6662,6 +6666,121 @@
         workerSlots.get(this)[key] = value;
       },
     });
+  const sharedWorkerSlots = new WeakMap(),
+    sharedWorkerPortSlots = new WeakMap();
+  class SharedWorkerPort extends MessagePort {
+    constructor(token, workerID) {
+      super(hostToken);
+      if (token !== hostToken) illegal('MessagePort');
+      sharedWorkerPortSlots.set(this, {
+        workerID,
+        closed: false,
+        started: false,
+        pending: [],
+        onmessage: null,
+        onmessageerror: null,
+      });
+    }
+    postMessage(message) {
+      const state = sharedWorkerPortSlots.get(this);
+      if (state.closed) return;
+      const wire = cloneCodec.encode(message);
+      host.workerPost(state.workerID, wire, cloneCodec.trace(wire));
+    }
+    start() {
+      const state = sharedWorkerPortSlots.get(this);
+      if (state.closed || state.started) return;
+      state.started = true;
+      while (state.pending.length)
+        host.queuePostedMessage(() => dispatchTrusted(this, state.pending.shift()));
+    }
+    close() {
+      const state = sharedWorkerPortSlots.get(this);
+      if (state.closed) return;
+      state.closed = true;
+      state.pending.length = 0;
+      host.terminateWorker(state.workerID);
+    }
+    get onmessage() {
+      return sharedWorkerPortSlots.get(this).onmessage;
+    }
+    set onmessage(value) {
+      sharedWorkerPortSlots.get(this).onmessage = typeof value === 'function' ? value : null;
+      if (value) this.start();
+    }
+    get onmessageerror() {
+      return sharedWorkerPortSlots.get(this).onmessageerror;
+    }
+    set onmessageerror(value) {
+      sharedWorkerPortSlots.get(this).onmessageerror = typeof value === 'function' ? value : null;
+    }
+  }
+  class SharedWorker extends EventTarget {
+    constructor(scriptURL, options = {}) {
+      super();
+      if (!arguments.length) throw new TypeError('Not enough arguments');
+      const url = trustedConvert(
+        scriptURL,
+        'TrustedScriptURL',
+        'SharedWorker constructor',
+        "Failed to construct 'SharedWorker': ",
+      );
+      if (typeof options === 'string') options = { name: options };
+      if (options == null) options = {};
+      if (typeof options !== 'object' && typeof options !== 'function')
+        throw new TypeError(
+          "Failed to construct 'SharedWorker': The provided value is not of type 'StringOrSharedWorkerOptions'.",
+        );
+      const optionString = (key, fallback) => {
+        const value = options[key];
+        if (value === undefined) return fallback;
+        if (typeof value === 'symbol')
+          throw new TypeError('Cannot convert a Symbol value to a string');
+        return bindingString(value);
+      };
+      const type = optionString('type', 'classic');
+      if (type !== 'classic' && type !== 'module')
+        throw new TypeError(
+          "The provided value '" + type + "' is not a valid enum value of type WorkerType.",
+        );
+      const credentials = optionString('credentials', 'same-origin');
+      if (!['omit', 'same-origin', 'include'].includes(credentials))
+        throw new TypeError(
+          "The provided value '" +
+            credentials +
+            "' is not a valid enum value of type RequestCredentials.",
+        );
+      const name = optionString('name', '');
+      const state = { id: 0, port: null, onerror: null };
+      sharedWorkerSlots.set(this, state);
+      const deliver = (data) => {
+          const portState = sharedWorkerPortSlots.get(state.port),
+            event = new MessageEvent('message', { data: cloneCodec.decode(data) });
+          if (portState.started) dispatchTrusted(state.port, event);
+          else portState.pending.push(event);
+        },
+        report = (message) => dispatchTrusted(this, new ErrorEvent('error', { message }));
+      state.id = host.createSharedWorker(
+        deliver,
+        report,
+        url,
+        '',
+        type,
+        domStringJSONEncode(name),
+        credentials,
+      );
+      state.port = new SharedWorkerPort(hostToken, state.id);
+    }
+    get port() {
+      return sharedWorkerSlots.get(this).port;
+    }
+    get onerror() {
+      return sharedWorkerSlots.get(this).onerror;
+    }
+    set onerror(value) {
+      sharedWorkerSlots.get(this).onerror = typeof value === 'function' ? value : null;
+    }
+  }
   /* shared_base64 */
   /* shared_webcrypto */
   const subtleCrypto = Object.create(SubtleCrypto.prototype);
@@ -8553,6 +8672,19 @@
       const generation = ++state.generation,
         requestID = (state.requestID = 'xhr-' + ++nextXHRID);
       let uploadListenerFlag = false;
+      // XHR extracts BufferSource bytes before invoking user-defined toString.
+      // A Uint8Array subclass (such as a Buffer) may decode invalid UTF-8
+      // in toString, permanently changing the bytes sent on the wire.
+      const binaryBody = body instanceof ArrayBuffer || ArrayBuffer.isView(body);
+      let requestBody = binaryBody ? null : body == null ? '' : String(body);
+      if (binaryBody) {
+        const view =
+          body instanceof ArrayBuffer
+            ? new Uint8Array(body)
+            : new Uint8Array(body.buffer, body.byteOffset, body.byteLength);
+        requestBody = new Array(view.byteLength);
+        for (let index = 0; index < view.byteLength; index++) requestBody[index] = view[index];
+      }
       // Read the canonical event registry without calling author-replaced
       // collection methods while a platform operation inspects its listeners.
       bridgeApply(
@@ -8615,13 +8747,14 @@
         state.method,
         state.url,
         state.requestHeaders,
-        body == null ? '' : String(body),
+        requestBody,
         Number(state.timeout) || 0,
         state.requestHeaderOrder,
         Boolean(state.withCredentials),
         body != null,
         requestID,
         uploadListenerFlag,
+        binaryBody,
       );
     }
     abort() {
@@ -8942,6 +9075,7 @@
     File,
     FileReader,
     Worker,
+    SharedWorker,
     Document,
     HTMLDocument,
     Navigator,
@@ -10016,6 +10150,7 @@
       });
     };
     reflectString('HTMLScriptElement', 'type');
+    reflectString('HTMLScriptElement', 'integrity');
     reflectString('HTMLInputElement', 'name');
     if (globalThis.HTMLInputElement && globalThis.HTMLInputElement.prototype)
       Object.defineProperty(globalThis.HTMLInputElement.prototype, 'type', {
@@ -10140,6 +10275,7 @@
       File,
       FileReader,
       Worker,
+      SharedWorker,
       Document,
       HTMLDocument,
       Navigator,

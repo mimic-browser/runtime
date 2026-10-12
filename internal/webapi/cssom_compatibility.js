@@ -348,7 +348,9 @@ const constructedStyleSheets = (() => {
       // preserves other valid rules while discarding invalid raw fragments.
       if (
         (node.type === 'Rule' && node.prelude.type === 'SelectorList') ||
-        (node.type === 'Atrule' && !['import', 'charset'].includes(node.name))
+        (node.type === 'Atrule' &&
+          !['import', 'charset'].includes(node.name) &&
+          (!node.name.startsWith('-') || node.name === '-webkit-keyframes'))
       )
         result.push(makeRule(node, sheet));
     });

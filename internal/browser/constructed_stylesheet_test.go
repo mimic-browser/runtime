@@ -55,6 +55,21 @@ return sheet instanceof CSSStyleSheet&&sheet instanceof StyleSheet&&root.querySe
 	}
 }
 
+func TestStyleSheetDropsUnsupportedVendorKeyframes(t *testing.T) {
+	parallelBrowserTest(t)
+	p := testPage(t)
+	value, err := p.Evaluate(context.Background(), `(()=>{
+		const style=document.createElement('style');
+		style.textContent='*{color:transparent}body,html{margin:0}fieldset{padding:0}button:focus,input:focus{outline:0}:focus{border:none}textarea{resize:none}.no-selection{user-select:none}@-webkit-keyframes pop{from{opacity:0}to{opacity:1}}@-moz-keyframes pop{from{opacity:0}to{opacity:1}}@-o-keyframes pop{from{opacity:0}to{opacity:1}}@keyframes pop{from{opacity:0}to{opacity:1}}';
+		document.head.append(style);
+		const text=Array.from(style.sheet.cssRules,rule=>rule.cssText).join('\n');
+		return JSON.stringify([style.sheet.cssRules.length,text.includes('@-webkit-keyframes'),text.includes('@keyframes'),text.includes('@-moz-keyframes'),text.includes('@-o-keyframes')]);
+	})()`)
+	if err != nil || value != `[9,true,true,false,false]` {
+		t.Fatalf("vendor keyframe CSSOM recovery: %v, %v", value, err)
+	}
+}
+
 func TestTreeWalkerCanonicalTemplatesAndFiltering(t *testing.T) {
 	parallelBrowserTest(t)
 	b, err := New(v8engine.Factory{}, chrome152.New())

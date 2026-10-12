@@ -161,14 +161,6 @@ func TestTrustedTypesChrome152(t *testing.T) {
 			}
 			for name, want := range oracle.Cases[key] {
 				got := actual[name]
-				if name == "SharedWorker" {
-					if expected, ok := want.(map[string]any); ok && expected["error"] == nil {
-						if result, ok := got.(map[string]any); !ok || result["error"] != "NotSupportedError" || !reflect.DeepEqual(result["calls"], expected["calls"]) {
-							t.Errorf("%s: expected explicit unsupported boundary, got %v", name, got)
-						}
-						continue
-					}
-				}
 				// Exact messages are relevant to TT/CSP; unrelated DOM syntax errors
 				// are compared by exception class and policy invocation ordering.
 				if x, ok := want.(map[string]any); ok {

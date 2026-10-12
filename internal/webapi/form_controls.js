@@ -607,13 +607,20 @@
       writable: true,
     });
   }
-  const optionList = (select) =>
-    Array.from(compatibilitySelectors.query(select, 'option')).filter((option) => {
+  const optionLists = new WeakMap();
+  const optionList = (select) => {
+    const version = domCollectionVersion();
+    const cached = optionLists.get(select);
+    if (cached?.version === version) return cached.list;
+    const list = Array.from(compatibilitySelectors.query(select, 'option')).filter((option) => {
       for (let p = option.parentElement; p; p = p.parentElement) {
         if (p.localName === 'select') return p === select;
       }
       return false;
     });
+    optionLists.set(select, { version, list });
+    return list;
+  };
   const selectOwner = (option) => {
     for (let p = option.parentElement; p; p = p.parentElement) {
       if (p.localName === 'select') return p;

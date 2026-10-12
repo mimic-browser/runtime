@@ -134,7 +134,7 @@ func TestGeneratedLazyOperationsKeepNavigatorSemantics(t *testing.T) {
 	page.ctx.browser.microphoneProvider = emptyMicrophoneProvider{}
 	probe := `(async()=>{
    const devices = await navigator.mediaDevices.enumerateDevices();
-   if (!Array.isArray(devices) || devices.length !== 1) return 'devices:'+JSON.stringify(devices);
+   if (!Array.isArray(devices) || devices.length !== 2 || devices[0].kind !== 'videoinput' || devices[1].kind !== 'audiooutput') return 'devices:'+JSON.stringify(devices);
    const permissions = await navigator.permissions.query({name:'camera'});
    if (!(permissions instanceof PermissionStatus)) return 'permission';
    try { await navigator.mediaDevices.getUserMedia(); return 'accepted'; }

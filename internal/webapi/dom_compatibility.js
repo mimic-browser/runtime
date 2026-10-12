@@ -884,6 +884,7 @@ const compatibilityElementState = {};
   for (const method of ['appendChild', 'insertBefore', 'removeChild', 'replaceChild']) {
     const original = mutationOriginals[method];
     member(Node.prototype, method, function (node, reference) {
+      if (!isDOMNode(this)) throw new TypeError('Illegal invocation');
       if (
         mutationDepth ||
         (!observers.size &&
@@ -1109,17 +1110,27 @@ const compatibilityElementState = {};
     for (const node of nodes) fragment.appendChild(node);
     return fragment;
   };
+  const requireParentNodeReceiver = (prototype, receiver) => {
+    const valid =
+      prototype === Element.prototype
+        ? elementSlot(receiver)?.type === 'element'
+        : isDOMFragment(receiver);
+    if (!valid) throw new TypeError('Illegal invocation');
+  };
   for (const prototype of [Element.prototype, DocumentFragment.prototype]) {
     member(prototype, 'append', function (...values) {
+      requireParentNodeReceiver(prototype, this);
       if (values.length) this.appendChild(convertMutationNodes(values));
     });
     member(prototype, 'prepend', function (...values) {
+      requireParentNodeReceiver(prototype, this);
       if (values.length) {
         const node = convertMutationNodes(values);
         this.insertBefore(node, this.firstChild);
       }
     });
     member(prototype, 'replaceChildren', function (...values) {
+      requireParentNodeReceiver(prototype, this);
       const node = values.length ? convertMutationNodes(values) : null;
       if (node) prepareInsertion(this, node, null, true);
       const removed = Array.from(this.childNodes),

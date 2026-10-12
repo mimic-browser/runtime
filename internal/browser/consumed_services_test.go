@@ -185,6 +185,61 @@ func TestConsumedCacheChromeOracle(t *testing.T) {
 	})
 }
 
+func TestCacheStorageUsageEstimateTracksCanonicalOriginState(t *testing.T) {
+	parallelBrowserTest(t)
+	historyTestPages(t, func(t *testing.T, p *Page) {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		first := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("<!doctype html><body>")) }))
+		defer first.Close()
+		second := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("<!doctype html><body>")) }))
+		defer second.Close()
+		if err := p.Navigate(ctx, first.URL); err != nil {
+			t.Fatal(err)
+		}
+		value, err := p.Evaluate(ctx, `(async()=>{
+			await caches.delete('quota-accounting');
+			const before=await navigator.storage.estimate(), cache=await caches.open('quota-accounting');
+			const rows=[];
+			for(const [url,response,init] of [
+				['https://t.l/0',new Response(null,{status:204})],
+				['https://t.l/null200',new Response(null)],
+				['https://t.l/empty',new Response('')],
+				['https://t.l/a',new Response('a')],
+				['https://t.l/status',new Response(null,{statusText:'Hello'})],
+				['https://t.l/h1',new Response(null,{headers:{x:'y'}})],
+				['https://t.l/request',new Response(null),{headers:{a:'b'}}],
+				['https://t.l/100',new Response('x'.repeat(100))],
+				['https://t.l/1000',new Response('x'.repeat(1000))],
+				['https://t.l/headers',new Response('abc',{headers:{'x-probe':'q'.repeat(37)}})],
+			]){
+				await cache.put(init?new Request(url,init):url,response);
+				const estimate=await navigator.storage.estimate();
+				rows.push([estimate.usage,estimate.quota-before.quota,estimate.usageDetails.caches||0]);
+			}
+			return JSON.stringify({before:[before.usage,before.usageDetails.caches||0],rows});
+		})()`)
+		const want = `{"before":[0,0],"rows":[[72,72,72],[150,150,150],[294,294,294],[435,435,435],[517,517,517],[598,598,598],[684,684,684],[926,926,926],[2069,2069,2069],[2269,2269,2269]]}`
+		if err != nil || value != want {
+			t.Fatalf("cache quota accounting: %v, %v", value, err)
+		}
+		if err := p.Navigate(ctx, second.URL); err != nil {
+			t.Fatal(err)
+		}
+		value, err = p.Evaluate(ctx, `navigator.storage.estimate().then(value=>[value.usage,value.usageDetails.caches||0].join(','))`)
+		if err != nil || value != "0,0" {
+			t.Fatalf("cross-origin cache quota isolation: %v, %v", value, err)
+		}
+		if err := p.Navigate(ctx, first.URL); err != nil {
+			t.Fatal(err)
+		}
+		value, err = p.Evaluate(ctx, `(async()=>{const retained=await navigator.storage.estimate();await caches.delete('quota-accounting');const removed=await navigator.storage.estimate();return [retained.usage,removed.usage,removed.usageDetails.caches||0].join(',')})()`)
+		if err != nil || value != "2269,0,0" {
+			t.Fatalf("cache quota deletion: %v, %v", value, err)
+		}
+	})
+}
+
 func TestConsumedCookieChromeOracle(t *testing.T) {
 	serialBrowserTest(t)
 	historyTestPages(t, func(t *testing.T, p *Page) {

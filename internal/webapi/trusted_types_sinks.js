@@ -592,28 +592,6 @@ const trustedDocumentWrite = (receiver, args, name) => {
       return parsed.content;
     });
   }
-  // SharedWorker execution remains explicitly unsupported. Its URL binding
-  // still performs the required synchronous check before that boundary.
-  if (globalThis.SharedWorker) {
-    const SharedWorker = class SharedWorker {
-      constructor(value) {
-        if (!arguments.length) throw new TypeError('Not enough arguments');
-        trustedConvert(
-          value,
-          'TrustedScriptURL',
-          'SharedWorker constructor',
-          "Failed to construct 'SharedWorker': ",
-        );
-        throw platformDOMException('SharedWorker execution is unsupported.', 'NotSupportedError');
-      }
-    };
-    markNative(SharedWorker, 'SharedWorker');
-    Object.defineProperty(globalThis, 'SharedWorker', {
-      value: SharedWorker,
-      writable: true,
-      configurable: true,
-    });
-  }
 }
 
 const trustedCloneAttribute = (element, name, value, ns) => {
