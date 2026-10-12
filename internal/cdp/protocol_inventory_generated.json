@@ -16,13 +16,14 @@
     "domains": 58,
     "types": 611,
     "methods": {
-      "implemented": 9,
-      "partial": 136,
-      "unsupported": 520
+      "implemented": 14,
+      "partial": 137,
+      "unsupported": 514
     },
     "events": {
-      "partial": 40,
-      "unsupported": 194
+      "implemented": 3,
+      "partial": 41,
+      "unsupported": 190
     }
   },
   "entries": [
@@ -2977,8 +2978,9 @@
       ],
       "support": {
         "status": "partial",
-        "notes": "Same modeled rectangle/CSS edges as JS and hit testing. No complete layout/transforms/SVG quads or multiple inline fragments. Foreign Console wrappers retain their canonical frame/node owner; resolving into an explicit foreign execution context imports the same canonical reference.",
+        "notes": "Same modeled rectangle/CSS edges as JS and hit testing. Child-frame offsets use canonical content boxes without invoking replaceable author geometry methods; percentage padding resolves to the same used distances as input. No complete layout/transforms/SVG quads or multiple inline fragments. Foreign Console wrappers retain their canonical frame/node owner; resolving into an explicit foreign execution context imports the same canonical reference.",
         "tests": [
+          "internal/cdp/input_hit_target_test.go#TestFrameBoxModelIgnoresAuthorGeometryOverrides",
           "internal/browser/input_test.go#TestDefaultControlGeometryMatchesChrome152",
           "compatibility/cdp_automation.py#input.pointer_click",
           "compatibility/cdp_automation.mjs#input.pointer_click",
@@ -3026,8 +3028,10 @@
       ],
       "support": {
         "status": "partial",
-        "notes": "Same modeled rectangle/CSS edges as JS and hit testing. No complete layout/transforms/SVG quads or multiple inline fragments. Foreign Console wrappers retain their canonical frame/node owner; resolving into an explicit foreign execution context imports the same canonical reference.",
+        "notes": "Same modeled rectangle/CSS edges as JS and hit testing. Child-frame offsets use canonical content boxes without invoking replaceable author geometry methods; percentage padding resolves to the same used distances as input. No complete layout/transforms/SVG quads or multiple inline fragments. Foreign Console wrappers retain their canonical frame/node owner; resolving into an explicit foreign execution context imports the same canonical reference.",
         "tests": [
+          "internal/cdp/input_hit_target_test.go#TestFrameBoxModelIgnoresAuthorGeometryOverrides",
+          "internal/cdp/input_hit_target_test.go#TestFrameContentQuadClickUsesResolvedPadding",
           "internal/browser/input_test.go#TestDefaultControlGeometryMatchesChrome152",
           "compatibility/cdp_automation.py#input.pointer_click",
           "compatibility/cdp_automation.mjs#input.pointer_click",
@@ -3700,10 +3704,11 @@
       "returns": [],
       "support": {
         "status": "partial",
-        "notes": "Canonical element scroll operation; optional rect and full nested layout/scrolling are not implemented. Foreign Console wrappers retain their canonical frame/node owner; resolving into an explicit foreign execution context imports the same canonical reference.",
+        "notes": "Canonical element scroll operation, including revealing a control through its iframe ancestors before viewport-coordinate input. Optional rect and complete nested layout/scrolling remain partial. Foreign Console wrappers retain their canonical frame/node owner; resolving into an explicit foreign execution context imports the same canonical reference.",
         "tests": [
           "compatibility/cdp_automation.mjs#input.pointer_click",
-          "internal/cdp/inspector_command_line_frames_test.go#TestInspectorCommandLineChildSelection"
+          "internal/cdp/inspector_command_line_frames_test.go#TestInspectorCommandLineChildSelection",
+          "internal/cdp/input_hit_target_test.go#TestFrameControlScrollMeasureAndClickWithoutRuntime"
         ]
       }
     },
@@ -4381,7 +4386,11 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "implemented",
+        "notes": "Native V8 breakpoint resolution events.",
+        "tests": [
+          "internal/cdp/debugger_native_test.go#TestDebuggerNativeBreakpointPreservesSourceAndAuthorStack"
+        ]
       }
     },
     {
@@ -4411,7 +4420,11 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "implemented",
+        "notes": "Disables and releases the native V8 Inspector session and its retained debugger state.",
+        "tests": [
+          "internal/cdp/debugger_native_test.go#TestDebuggerNativeBreakpointPreservesSourceAndAuthorStack"
+        ]
       }
     },
     {
@@ -4448,7 +4461,11 @@
         "debuggerId"
       ],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Native V8 Inspector attachment for materialized document-tree realms. Future realms in the active tree are attached before author scripts execute. Existing scripts compiled before the first native attachment are not replayed.",
+        "tests": [
+          "internal/cdp/debugger_native_test.go#TestDebuggerNativeBreakpointPreservesSourceAndAuthorStack"
+        ]
       }
     },
     {
@@ -4475,7 +4492,11 @@
         "exceptionDetails"
       ],
       "support": {
-        "status": "unsupported"
+        "status": "implemented",
+        "notes": "Native V8 call-frame evaluation while paused; explicit evaluation retains its requested author-visible effects.",
+        "tests": [
+          "internal/cdp/debugger_native_test.go#TestDebuggerNativeBreakpointPreservesSourceAndAuthorStack"
+        ]
       }
     },
     {
@@ -4513,7 +4534,11 @@
         "bytecode"
       ],
       "support": {
-        "status": "unsupported"
+        "status": "implemented",
+        "notes": "Returns the original native V8 script source without source rewriting or author-code evaluation.",
+        "tests": [
+          "internal/cdp/debugger_native_test.go#TestDebuggerNativeBreakpointPreservesSourceAndAuthorStack"
+        ]
       }
     },
     {
@@ -4614,7 +4639,11 @@
       ],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "implemented",
+        "notes": "Native V8 pause events with call frames and hit breakpoint identifiers.",
+        "tests": [
+          "internal/cdp/debugger_native_test.go#TestDebuggerNativeBreakpointPreservesSourceAndAuthorStack"
+        ]
       }
     },
     {
@@ -4665,7 +4694,11 @@
       ],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "implemented",
+        "notes": "Resumes a native V8 debugger pause while the Page task remains suspended.",
+        "tests": [
+          "internal/cdp/debugger_native_test.go#TestDebuggerNativeBreakpointPreservesSourceAndAuthorStack"
+        ]
       }
     },
     {
@@ -4678,7 +4711,11 @@
       "optionalParameters": [],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "implemented",
+        "notes": "Native V8 resume events.",
+        "tests": [
+          "internal/cdp/debugger_native_test.go#TestDebuggerNativeBreakpointPreservesSourceAndAuthorStack"
+        ]
       }
     },
     {
@@ -4747,7 +4784,11 @@
       ],
       "returns": [],
       "support": {
-        "status": "unsupported"
+        "status": "partial",
+        "notes": "Native V8 script notifications after Debugger attachment; scripts compiled before the first native attachment are not replayed.",
+        "tests": [
+          "internal/cdp/debugger_native_test.go#TestDebuggerNativeBreakpointPreservesSourceAndAuthorStack"
+        ]
       }
     },
     {
@@ -4851,7 +4892,11 @@
         "actualLocation"
       ],
       "support": {
-        "status": "unsupported"
+        "status": "implemented",
+        "notes": "Native V8 source-location breakpoints for JavaScript scripts.",
+        "tests": [
+          "internal/cdp/debugger_native_test.go#TestDebuggerNativeBreakpointPreservesSourceAndAuthorStack"
+        ]
       }
     },
     {
@@ -7246,8 +7291,10 @@
       "returns": [],
       "support": {
         "status": "partial",
-        "notes": "Canonical trusted mouse dispatch using Mimic geometry and frame coordinates. Opt-in CDP diagnostics correlate input commands with V8 calls. Native compositor, drag and touch fidelity are unsupported.",
+        "notes": "Canonical trusted mouse dispatch using Mimic geometry and resolved frame content coordinates. Parent hit testing selects the painted child frame, respecting sibling occlusion, overlays, visibility and pointer-events before crossing a frame boundary. Opt-in CDP diagnostics correlate input commands with V8 calls. Native compositor, drag and touch fidelity are unsupported.",
         "tests": [
+          "internal/cdp/input_hit_target_test.go#TestFrameContentQuadClickUsesResolvedPadding",
+          "internal/browser/input_test.go#TestProtocolMouseInputHonorsFramePaintOrder",
           "internal/browser/input_test.go#TestProtocolSelectAndContentClickAcrossWorlds",
           "internal/browser/input_test.go#TestProtocolMouseInputRoutesThroughIframeCoordinates",
           "internal/browser/frame_geometry_epoch_test.go#TestFrameGeometryEpochTracksAncestorChanges",
@@ -12577,10 +12624,14 @@
       ],
       "support": {
         "status": "partial",
-        "notes": "Promise waits yield the Page turn for commands/timers/input. Object previews and deep serialization are unsupported.",
+        "notes": "Promise waits yield the Page turn for commands/timers/input. Object previews and deep serialization are unsupported. Result transport serializes own data properties only; enumerable accessors and opaque Proxy/foreign values reject without executing author code. Exceptions/rejection values are retained without author coercion or lazy stack formatting.",
         "tests": [
           "internal/browser/debugger_test.go#TestDebuggerReturnByValueAndAwait",
-          "internal/cdp/runtime_test.go#TestCDPAwaitPromiseAllowsSameSessionResolverAndMultipleWaiters"
+          "internal/cdp/runtime_test.go#TestCDPAwaitPromiseAllowsSameSessionResolverAndMultipleWaiters",
+          "internal/cdp/runtime_observability_test.go#TestRuntimeInspectionDoesNotExecuteAuthorCode",
+          "internal/cdp/runtime_observability_test.go#TestRuntimeExceptionInspectionDoesNotCoerceThrownValues",
+          "internal/cdp/runtime_observability_test.go#TestRuntimeAwaitPromiseDoesNotReadAuthorProperties",
+          "internal/browser/debugger_observability_test.go#TestDebuggerExceptionObservationHasNoAuthorCoercion"
         ]
       }
     },
@@ -12635,13 +12686,16 @@
       ],
       "support": {
         "status": "partial",
-        "notes": "Realm/session-owned handles, by-value JSON, promises, unserializable arguments, exceptions and context/uniqueContextId selection. Deep serialization rejects. Previews, side-effect restrictions, REPL/CLI mode, userGesture and complete debugger options are not implemented. Unnamed evaluation origins and engine-direct function entry preserve author stacks and caller observations without debugger helper frames. Requests with throwOnSideEffect=true explicitly reject without executing author code; eager preview is unavailable.",
+        "notes": "Realm/session-owned handles, by-value JSON, promises, unserializable arguments, exceptions and context/uniqueContextId selection. Deep serialization rejects. Previews, side-effect restrictions, REPL/CLI mode, userGesture and complete debugger options are not implemented. Unnamed evaluation origins and engine-direct function entry preserve author stacks and caller observations without debugger helper frames. Requests with throwOnSideEffect=true explicitly reject without executing author code; eager preview is unavailable. Result transport serializes own data properties only; enumerable accessors and opaque Proxy/foreign values reject without executing author code. Exceptions/rejection values are retained without author coercion or lazy stack formatting.",
         "tests": [
           "internal/browser/debugger_test.go#TestDebuggerRemoteValuesMatchChrome152",
           "internal/browser/debugger_test.go#TestDebuggerPreservesHandlesAndDescriptorSemantics",
           "internal/cdp/runtime_test.go#TestCDPAwaitPromiseAllowsSameSessionResolverAndMultipleWaiters",
           "internal/browser/debugger_source_boundary_test.go#TestDebuggerSourceAndInvocationBoundary",
-          "internal/cdp/inspector_editing_test.go#TestInspectorEagerEvaluationDoesNotExecute"
+          "internal/cdp/inspector_editing_test.go#TestInspectorEagerEvaluationDoesNotExecute",
+          "internal/cdp/runtime_observability_test.go#TestRuntimeInspectionDoesNotExecuteAuthorCode",
+          "internal/cdp/runtime_observability_test.go#TestRuntimeExceptionInspectionDoesNotCoerceThrownValues",
+          "internal/browser/debugger_observability_test.go#TestDebuggerPrivateDescriptorTransportAcrossEngines"
         ]
       }
     },
@@ -12686,12 +12740,19 @@
       "returns": [],
       "support": {
         "status": "partial",
-        "notes": "Live remote-object arguments in emitting context; no historical replay or full async stacks.",
+        "notes": "Live remote-object arguments in emitting context; no historical replay or full async stacks. Passive attachment/event delivery preserves unattached author observations: no getters, Proxy traps, lazy Error stacks or added author microtasks.",
         "tests": [
           "internal/cdp/runtime_test.go#TestCDPConsoleArgumentsHaveObjectHandles",
           "compatibility/cdp_automation.py#runtime.console_arguments",
           "internal/cdp/inspector_editing_test.go#TestInspectorPageAutoAttachDoesNotAttachItself",
-          "internal/cdp/inspector_editing_test.go#TestInspectorExplicitConsoleEvaluationEmitsOnce"
+          "internal/cdp/inspector_editing_test.go#TestInspectorExplicitConsoleEvaluationEmitsOnce",
+          "internal/cdp/runtime_observability_test.go#TestRuntimePassiveConsoleObservations",
+          "internal/cdp/console_domain_test.go#TestConsoleInspectionPreservesPassiveErrorState",
+          "internal/cdp/runtime_observability_test.go#TestRuntimeInspectionKeepsErrorStackLazy",
+          "internal/browser/debugger_observability_test.go#TestDebuggerPassiveInspectionInColdAndRestoredRealms",
+          "internal/browser/debugger_observability_test.go#TestDebuggerPrivateDescriptorTransportAcrossEngines",
+          "internal/browser/debugger_observability_test.go#TestDebuggerPassiveConsoleAcrossEngines",
+          "internal/cdp/server_test.go#TestCDPConsoleEventUsesCurrentExecutionContext"
         ]
       }
     },
@@ -12706,10 +12767,11 @@
       "returns": [],
       "support": {
         "status": "partial",
-        "notes": "Live context/event subscription across default/isolated worlds; no historical console replay.",
+        "notes": "Live context/event subscription across default/isolated worlds; no historical console replay. Passive attachment/event delivery preserves unattached author observations: no getters, Proxy traps, lazy Error stacks or added author microtasks.",
         "tests": [
           "internal/cdp/server_test.go#TestCDPProjectsChildFrameTreeLifecycleAndExecutionContext",
-          "compatibility/cdp_automation.py#page.child_frame_events_evaluation"
+          "compatibility/cdp_automation.py#page.child_frame_events_evaluation",
+          "internal/cdp/runtime_observability_test.go#TestRuntimePassiveConsoleObservations"
         ]
       }
     },
@@ -12724,9 +12786,10 @@
       "returns": [],
       "support": {
         "status": "partial",
-        "notes": "Releases console object group; no retained message buffer or replay model.",
+        "notes": "Releases console object group; no retained message buffer or replay model. Private null-prototype handle storage and cleanup do not construct author-observable iterator records or invoke author prototype hooks.",
         "tests": [
-          "internal/cdp/runtime_test.go#TestCDPConsoleArgumentsHaveObjectHandles"
+          "internal/cdp/runtime_test.go#TestCDPConsoleArgumentsHaveObjectHandles",
+          "internal/browser/debugger_observability_test.go#TestDebuggerPrivateDescriptorTransportAcrossEngines"
         ]
       }
     },
@@ -12741,12 +12804,13 @@
       "returns": [],
       "support": {
         "status": "partial",
-        "notes": "Live context/event subscription across default/isolated worlds. Page-session initial command turns preserve arrival order; asynchronous commit/Promise waits yield rather than blocking later commands or independent sessions. No historical console replay.",
+        "notes": "Live context/event subscription across default/isolated worlds. Page-session initial command turns preserve arrival order; asynchronous commit/Promise waits yield rather than blocking later commands or independent sessions. No historical console replay. Passive attachment/event delivery preserves unattached author observations: no getters, Proxy traps, lazy Error stacks or added author microtasks.",
         "tests": [
           "internal/cdp/command_order_test.go#TestPipelinedPageCommandsPreserveFrameContextOrder",
           "internal/cdp/command_order_test.go#TestQueuedPageCommandsDoNotBlockIndependentSessions",
           "internal/cdp/server_test.go#TestCDPProjectsChildFrameTreeLifecycleAndExecutionContext",
-          "compatibility/cdp_automation.py#page.child_frame_events_evaluation"
+          "compatibility/cdp_automation.py#page.child_frame_events_evaluation",
+          "internal/cdp/runtime_observability_test.go#TestRuntimePassiveConsoleObservations"
         ]
       }
     },
@@ -12782,7 +12846,7 @@
       ],
       "support": {
         "status": "partial",
-        "notes": "Canonical realm evaluation, object groups, exceptions and Promise waits. includeCommandLineAPI uses a temporary native V8 Inspector scope on demand, preserving global lexical declarations, selected-node identity, author property precedence and console-group last result ($_). No source rewriting or persistent helper globals. Native CLI support requires V8; Blink-specific DOM command-line helpers and side-effect/eager-evaluation fidelity are incomplete. Requests with throwOnSideEffect=true explicitly reject without executing author code; eager preview is unavailable. Detached protocol responses are encoded outside Page/session ownership and sent by a bounded connection-owned FIFO writer; slow clients do not retain the Page turn or the arrival-order slot after reply admission to the FIFO. Outbound overflow or a ten-second write deadline closes the connection with a diagnostic error. Client-side receive timeouts alone do not cancel execution.",
+        "notes": "Canonical realm evaluation, object groups, exceptions and Promise waits. includeCommandLineAPI uses a temporary native V8 Inspector scope on demand, preserving global lexical declarations, selected-node identity, author property precedence and console-group last result ($_). No source rewriting or persistent helper globals. Native CLI support requires V8; Blink-specific DOM command-line helpers and side-effect/eager-evaluation fidelity are incomplete. Requests with throwOnSideEffect=true explicitly reject without executing author code; eager preview is unavailable. Detached protocol responses are encoded outside Page/session ownership and sent by a bounded connection-owned FIFO writer; slow clients do not retain the Page turn or the arrival-order slot after reply admission to the FIFO. Outbound overflow or a ten-second write deadline closes the connection with a diagnostic error. Client-side receive timeouts alone do not cancel execution. Result transport serializes own data properties only; enumerable accessors and opaque Proxy/foreign values reject without executing author code. Exceptions/rejection values are retained without author coercion or lazy stack formatting. Native command-line evaluation returns raw engine values without Inspector RemoteObject wrapping, preserving passive lazy Error state and canonical $_ identity. The native CLI scope closes before the Page-owned microtask checkpoint; exception reporting does not use verbose native Inspector conversion.",
         "tests": [
           "internal/browser/debugger_test.go#TestDebuggerRemoteValuesMatchChrome152",
           "internal/browser/debugger_test.go#TestDebuggerPreservesHandlesAndDescriptorSemantics",
@@ -12797,7 +12861,15 @@
           "internal/cdp/slow_writer_test.go#TestUnreadRuntimeResponseDoesNotBlockAnotherClient",
           "internal/cdp/slow_writer_test.go#TestOutboundOverflowClosesConnectionAndReleasesQueue",
           "internal/cdp/command_timing_test.go#TestCommandTimingSeparatesPageWait",
-          "internal/cdp/accepted_close_test.go#TestTransportEOFStillCancelsRunningEvaluation"
+          "internal/cdp/accepted_close_test.go#TestTransportEOFStillCancelsRunningEvaluation",
+          "internal/cdp/runtime_observability_test.go#TestRuntimeInspectionDoesNotExecuteAuthorCode",
+          "internal/cdp/runtime_observability_test.go#TestRuntimeExceptionInspectionDoesNotCoerceThrownValues",
+          "internal/cdp/runtime_observability_test.go#TestRuntimeCommandLineResultInspectionDoesNotExecuteAuthorCode",
+          "internal/cdp/runtime_observability_test.go#TestRuntimeInspectionUsesPrivateTransportRecords",
+          "internal/cdp/runtime_observability_test.go#TestRuntimeCommandLineUnicodeAndExplicitAccessor",
+          "internal/browser/debugger_observability_test.go#TestDebuggerPassiveInspectionInColdAndRestoredRealms",
+          "internal/browser/debugger_observability_test.go#TestDebuggerExceptionObservationHasNoAuthorCoercion",
+          "internal/browser/debugger_observability_test.go#TestDebuggerPrivateDescriptorTransportAcrossEngines"
         ]
       }
     },
@@ -12973,10 +13045,14 @@
       ],
       "support": {
         "status": "partial",
-        "notes": "Own/inherited descriptors, accessor filtering and live values without invoking getters. V8 private/internal slots and previews are incomplete.",
+        "notes": "Own/inherited descriptors, accessor filtering and live values without invoking getters. V8 private/internal slots and previews are incomplete. Proxy objects and traversal into Proxy prototypes reject explicitly without executing traps. Canonical DOM descriptions do not read overridable author node properties. Goja Error property enumeration rejects because native stack descriptor lookup is not passive; private pristine native intrinsics construct its other descriptor records without author prototype setters.",
         "tests": [
           "internal/browser/debugger_test.go#TestDebuggerPreservesHandlesAndDescriptorSemantics",
-          "compatibility/cdp_automation.py#runtime.handles_properties"
+          "compatibility/cdp_automation.py#runtime.handles_properties",
+          "internal/cdp/runtime_observability_test.go#TestRuntimeInspectionDoesNotExecuteAuthorCode",
+          "internal/cdp/runtime_observability_test.go#TestRuntimeInspectionUsesPrivateTransportRecords",
+          "internal/cdp/runtime_observability_test.go#TestRuntimeInspectionKeepsErrorStackLazy",
+          "internal/browser/debugger_observability_test.go#TestDebuggerPrivateDescriptorTransportAcrossEngines"
         ]
       }
     },
@@ -13047,10 +13123,11 @@
       "returns": [],
       "support": {
         "status": "implemented",
-        "notes": "Releases session-owned handles/groups while preserving page object identity and state.",
+        "notes": "Releases session-owned handles/groups while preserving page object identity and state. Private null-prototype handle storage and cleanup do not construct author-observable iterator records or invoke author prototype hooks.",
         "tests": [
           "internal/browser/debugger_test.go#TestDebuggerPreservesHandlesAndDescriptorSemantics",
-          "internal/browser/debugger_test.go#TestDebuggerCanonicalNodeAndSessionIsolation"
+          "internal/browser/debugger_test.go#TestDebuggerCanonicalNodeAndSessionIsolation",
+          "internal/browser/debugger_observability_test.go#TestDebuggerPrivateDescriptorTransportAcrossEngines"
         ]
       }
     },
@@ -13067,10 +13144,11 @@
       "returns": [],
       "support": {
         "status": "implemented",
-        "notes": "Releases session-owned handles/groups while preserving page object identity and state.",
+        "notes": "Releases session-owned handles/groups while preserving page object identity and state. Private null-prototype handle storage and cleanup do not construct author-observable iterator records or invoke author prototype hooks.",
         "tests": [
           "internal/browser/debugger_test.go#TestDebuggerPreservesHandlesAndDescriptorSemantics",
-          "internal/browser/debugger_test.go#TestDebuggerCanonicalNodeAndSessionIsolation"
+          "internal/browser/debugger_test.go#TestDebuggerCanonicalNodeAndSessionIsolation",
+          "internal/browser/debugger_observability_test.go#TestDebuggerPrivateDescriptorTransportAcrossEngines"
         ]
       }
     },

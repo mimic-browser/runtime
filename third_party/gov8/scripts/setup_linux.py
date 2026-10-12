@@ -113,7 +113,7 @@ def main():
             "-output", "internal/prebuilt/linux_amd64/libgov8_shim.so.gz", cwd=ROOT)
         metadata = ROOT / "internal/prebuilt/prebuilt_linux_amd64.go"
         metadata.write_text('//go:build linux && amd64\n\npackage prebuilt\n\nimport _ "embed"\n\n'
-            f'const (\n ABI = 44\n Size = int64({destination.stat().st_size})\n SHA256 = "{sha(destination)}"\n'
+            f'const (\n ABI = 45\n Size = int64({destination.stat().st_size})\n SHA256 = "{sha(destination)}"\n'
             ' fileName = "libgov8_shim.so"\n)\n\n//go:embed linux_amd64/libgov8_shim.so.gz\nvar compressed []byte\n')
         run("gofmt", "-w", metadata)
         print("Packaged Linux shim. Validate with: go test ./...", flush=True)

@@ -295,6 +295,11 @@ func (a *adapter) cloneLocal(scope *gov8.Scope, value engine.Value) (gov8.Value,
 // lets browser-owned serializers support platform values (Blob/File) while
 // retaining the same native exotic-object check as V8's structured clone.
 func (a *adapter) IsStructuredCloneProxy(value engine.Value) bool {
+	proxy, _ := a.IsDebuggerProxy(value)
+	return proxy
+}
+
+func (a *adapter) IsDebuggerProxy(value engine.Value) (bool, error) {
 	var proxy bool
 	check := func(scope *gov8.Scope) (engine.Value, error) {
 		v, err := a.cloneLocal(scope, value)
@@ -305,9 +310,9 @@ func (a *adapter) IsStructuredCloneProxy(value engine.Value) bool {
 		return nil, err
 	}
 	if callback := a.onCallback(); callback != nil {
-		_, _ = check(callback.scope.Scope())
-	} else {
-		_, _ = a.run(func(_ *state, _ *gov8.Context, scope *gov8.Scope) (engine.Value, error) { return check(scope) })
+		_, err := check(callback.scope.Scope())
+		return proxy, err
 	}
-	return proxy
+	_, err := a.run(func(_ *state, _ *gov8.Context, scope *gov8.Scope) (engine.Value, error) { return check(scope) })
+	return proxy, err
 }

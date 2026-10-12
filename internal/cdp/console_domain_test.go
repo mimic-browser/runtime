@@ -7,7 +7,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-func TestConsolePreviewFollowsRuntimeDomain(t *testing.T) {
+func TestConsoleInspectionPreservesPassiveErrorState(t *testing.T) {
 	s, addr := runningServer(t)
 	c, _, err := websocket.DefaultDialer.Dial("ws://"+addr+"/devtools/page/"+s.Page.ID, nil)
 	if err != nil {
@@ -17,6 +17,7 @@ func TestConsolePreviewFollowsRuntimeDomain(t *testing.T) {
 	_ = c.SetReadDeadline(time.Now().Add(10 * time.Second))
 	id := 0
 	var previews []map[string]any
+	consoleEvents := 0
 	call := func(method string, params map[string]any) map[string]any {
 		id++
 		if err := c.WriteJSON(map[string]any{"id": id, "method": method, "params": params}); err != nil {
@@ -28,6 +29,7 @@ func TestConsolePreviewFollowsRuntimeDomain(t *testing.T) {
 				t.Fatal(err)
 			}
 			if reply["method"] == "Runtime.consoleAPICalled" {
+				consoleEvents++
 				args := reply["params"].(map[string]any)["args"].([]any)
 				if len(args) > 0 {
 					if preview, ok := args[0].(map[string]any)["preview"].(map[string]any); ok {
@@ -41,7 +43,9 @@ func TestConsolePreviewFollowsRuntimeDomain(t *testing.T) {
 		}
 	}
 	probe := `(()=>{let reads=[];const e=new Error('x');e.toString=()=>{reads.push('text');return 'custom'};Object.defineProperty(e,'name',{get(){reads.push('name');return 'Error'}});console.log(e);return reads.join(',')})()`
-	for _, step := range []struct{ method, want string }{{"", "text"}, {"Runtime.enable", "text,name"}, {"Runtime.disable", "text"}, {"Runtime.enable", "text,name"}} {
+	// Ordinary console storage still performs message-text conversion. Passive
+	// Runtime observation must add no Error.name or lazy-stack observations.
+	for _, step := range []struct{ method, want string }{{"", "text"}, {"Runtime.enable", "text"}, {"Runtime.disable", "text"}, {"Runtime.enable", "text"}} {
 		if step.method != "" {
 			call(step.method, map[string]any{})
 		}
@@ -51,14 +55,8 @@ func TestConsolePreviewFollowsRuntimeDomain(t *testing.T) {
 			t.Fatalf("%s got %v want %s", step.method, value, step.want)
 		}
 	}
-	if len(previews) != 2 {
-		t.Fatalf("got %d Error previews", len(previews))
-	}
-	for _, preview := range previews {
-		property := preview["properties"].([]any)[0].(map[string]any)
-		if property["name"] != "stack" || property["type"] != "string" || property["value"] == "" {
-			t.Fatalf("missing materialized stack: %v", property)
-		}
+	if consoleEvents != 2 || len(previews) != 0 {
+		t.Fatalf("expected two passive console events without lazy previews: events=%d previews=%v", consoleEvents, previews)
 	}
 	// Frozen Chrome leaves author stack getters and object stack values untouched.
 	reply := call("Runtime.evaluate", map[string]any{"expression": `(()=>{let reads=[];for(const mode of ['getter','object']){const e=new Error('x');e.toString=()=> 'custom';if(mode==='getter')Object.defineProperty(e,'stack',{get(){reads.push('stack');return 'author'}});else e.stack={toString(){reads.push('coerce');return 'object'}};console.log(e)}return reads.join(',')})()`, "returnByValue": true})

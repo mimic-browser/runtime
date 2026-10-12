@@ -27,10 +27,13 @@ func TestProtocolCoverageUsesCompleteGeneratedInventory(t *testing.T) {
 		}
 		seen[row.Name] = row
 	}
-	for _, name := range []string{"Debugger.enable", "Schema.getDomains", "Audits.enable", "WebMCP.enable", "Page.bringToFront"} {
+	for _, name := range []string{"Schema.getDomains", "Audits.enable", "WebMCP.enable", "Page.bringToFront"} {
 		if row := seen[name]; row.Status != "unsupported" || row.SemanticsImplemented || row.SemanticsVerified {
 			t.Errorf("wire/acknowledgment promoted to implementation: %#v", row)
 		}
+	}
+	if row := seen["Debugger.enable"]; row.Status != "partial" || len(row.Tests) == 0 || row.Notes == "" {
+		t.Fatal("native Debugger scope/evidence disappeared", row)
 	}
 	if row := seen["Page.captureScreenshot"]; row.Status != "partial" || len(row.Tests) == 0 || row.Notes == "" {
 		t.Fatal("approximate screenshot scope disappeared", row)

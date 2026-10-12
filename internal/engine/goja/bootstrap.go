@@ -45,7 +45,7 @@ func (r *runtime) EvalBootstrap(ctx context.Context, source, name string) (engin
 	}
 	program, err := compileBootstrap(source, name)
 	if err != nil {
-		return nil, jsError(err)
+		return nil, r.jsError(err)
 	}
 	return r.run(ctx, func() (goja.Value, error) { return r.vm.RunProgram(program) })
 }

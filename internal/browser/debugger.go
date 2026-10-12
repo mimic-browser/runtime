@@ -174,7 +174,9 @@ func (d *Debugger) state(ctx context.Context, frameID, realmID string) (*debugge
 		trace.Record(ctx, trace.CDP, "evaluatePhase", map[string]any{"phase": "stateValue", "durationNs": time.Since(started).Nanoseconds()})
 	}
 	defer releaseDebuggerValue(r, prefix)
-	bridge, err := r.runtime.Call(ctx, r.debuggerFactory, nil, r.frameNodeDescribe, prefix)
+	inspection := r.val(r.transientFn(r.debuggerInspect))
+	defer releaseDebuggerValue(r, inspection)
+	bridge, err := r.runtime.Call(ctx, r.debuggerFactory, nil, r.frameNodeDescribe, prefix, inspection)
 	if err != nil {
 		return nil, err
 	}

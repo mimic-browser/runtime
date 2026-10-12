@@ -1204,7 +1204,9 @@ func (a *adapter) Await(value engine.Value) (engine.Value, bool, error) {
 			if persistErr != nil {
 				return nil, persistErr
 			}
-			return nil, &callException{error: fmt.Errorf("promise rejected: %s", localResultString(localResult, realm)), value: thrown}
+			// Preserve the rejection value, but never stringify author objects as
+			// part of observing settlement. That could queue additional jobs.
+			return nil, &callException{error: errors.New("promise rejected"), value: thrown}
 		}
 		result, err = a.persist(scope, localResult)
 		return nil, err
@@ -1239,7 +1241,9 @@ const MimicDate = new Proxy(NativeDate, {
   },
 });
 Object.defineProperty(MimicDate, 'now', {
-  value: () => mimicDateNow(),
+  value: function now() {
+    return mimicDateNow();
+  },
   writable: true,
   configurable: true,
 });
@@ -2054,6 +2058,11 @@ func (a *adapter) callbackValueWithJSON(scope *gov8.CallbackScope, realm *gov8.C
 	}
 	if buffer, ok := value.(engine.BinaryBuffer); ok {
 		return marshalBinaryBuffer(scope.Scope(), realm, buffer)
+	}
+	if function, ok := value.(hostFunction); ok {
+		// A console callback may lazily create its session's private inspector
+		// bridge. Use the owning callback scope for the native host function.
+		return a.marshal(scope.Scope(), realm, function)
 	}
 	// DOM result lists are plain by-value records. One native JSON parse replaces
 	// one FFI call per property/array slot; arbitrary host objects keep the

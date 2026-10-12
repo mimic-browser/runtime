@@ -4,9 +4,51 @@ import (
 	"context"
 	"errors"
 	"github.com/moreveal/mimic/internal/engine"
+	"strings"
 	"testing"
 	"time"
 )
+
+func TestCaughtExceptionDoesNotCoerceAuthorValue(t *testing.T) {
+	r := Factory{}.New()
+	defer r.Close()
+	ctx := context.Background()
+	if _, err := r.Eval(ctx, `globalThis.effects = [];
+globalThis.thrown = { toString() { effects.push('toString'); return 'author'; } };`, "setup.js"); err != nil {
+		t.Fatal(err)
+	}
+	_, err := r.Eval(ctx, "throw thrown", "throw.js")
+	if err == nil {
+		t.Fatal("exception lost")
+	}
+	value, readErr := r.Eval(ctx, "JSON.stringify(effects)", "read.js")
+	if readErr != nil || value.String() != "[]" {
+		t.Fatalf("exception coercion: %v %v", value, readErr)
+	}
+	if _, err := r.Eval(ctx, `globalThis.thrown = new Error('original');
+Object.defineProperties(thrown, {
+  name: { get() { effects.push('name'); return 'Error'; } },
+  message: { get() { effects.push('message'); return 'author'; } },
+});
+Object.getOwnPropertyDescriptor = () => { effects.push('descriptor'); throw 1; };
+Object.defineProperty(Object.prototype, 'value', {
+  get() { effects.push('inheritedValue'); throw 1; }, configurable: true,
+});`, "error-setup.js"); err != nil {
+		t.Fatal(err)
+	}
+	_, err = r.Eval(ctx, "throw thrown", "error-throw.js")
+	if err == nil {
+		t.Fatal("Error exception lost")
+	}
+	value, readErr = r.Eval(ctx, "JSON.stringify(effects)", "error-read.js")
+	if readErr != nil || value.String() != "[]" {
+		t.Fatalf("Error diagnostics executed author code: %v %v", value, readErr)
+	}
+	_, err = r.Eval(ctx, "throw new Error('useful diagnostic')", "native-message.js")
+	if err == nil || !strings.Contains(err.Error(), "useful diagnostic") {
+		t.Fatalf("own data message lost: %v", err)
+	}
+}
 
 func TestEvalHonorsContextCancellationAndRuntimeRemainsUsable(t *testing.T) {
 	runtime := Factory{}.New()

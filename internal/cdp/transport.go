@@ -26,7 +26,8 @@ type connection struct {
 	cancel          context.CancelFunc
 	writeMu         sync.Mutex
 	outMu           sync.Mutex
-	outbox          chan wirePacket
+	outbox          []wirePacket
+	outWake         chan struct{}
 	outBytes        int
 	outTail         <-chan struct{}
 	writerDone      chan struct{}
@@ -54,7 +55,7 @@ func (s *Server) ws(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	c := &connection{server: s, conn: conn, ctx: ctx, cancel: cancel, sessions: make(map[string]*session), contexts: make(map[string]bool), profileCommands: os.Getenv("MIMIC_PROFILE_CDP") == "1"}
-	c.outbox = make(chan wirePacket, 256)
+	c.outWake = make(chan struct{}, 1)
 	c.writerDone = make(chan struct{})
 	s.lifecycleMu.Lock()
 	if s.closed {
@@ -175,7 +176,10 @@ func independentControlCommand(method string) bool {
 	case "Fetch.disable", "Fetch.getResponseBody", "Network.setRequestInterception",
 		"Fetch.continueRequest", "Fetch.continueResponse", "Fetch.failRequest", "Fetch.fulfillRequest",
 		"Network.continueInterceptedRequest", "Mimic.startTrace", "Mimic.stopTrace", "Mimic.getTrace",
-		"Mimic.getStatus", "Mimic.getDiagnostics", "Mimic.cancelExecution", "Page.stopLoading", "Target.closeTarget":
+		"Mimic.getStatus", "Mimic.getDiagnostics", "Mimic.cancelExecution", "Page.stopLoading", "Target.closeTarget",
+		"Debugger.getScriptSource", "Debugger.setBreakpoint", "Debugger.setBreakpointByUrl",
+		"Debugger.removeBreakpoint", "Debugger.setInstrumentationBreakpoint",
+		"Debugger.evaluateOnCallFrame", "Debugger.resume":
 		return true
 	default:
 		return false
@@ -309,14 +313,13 @@ func (c *connection) enqueueWire(payload []byte, timing *commandTiming) {
 		c.failWriter(fmt.Errorf("CDP outbound byte limit exceeded"))
 		return
 	}
+	c.outbox = append(c.outbox, packet)
+	c.outBytes += len(payload)
+	c.outTail = packet.done
+	c.outMu.Unlock()
 	select {
-	case c.outbox <- packet:
-		c.outBytes += len(payload)
-		c.outTail = packet.done
-		c.outMu.Unlock()
+	case c.outWake <- struct{}{}:
 	default:
-		c.outMu.Unlock()
-		c.failWriter(fmt.Errorf("CDP outbound message limit exceeded"))
 	}
 }
 
@@ -349,21 +352,28 @@ func (c *connection) writeLoop() {
 	defer func() {
 		c.outMu.Lock()
 		defer c.outMu.Unlock()
-		for {
-			select {
-			case packet := <-c.outbox:
-				c.outBytes -= len(packet.payload)
-				close(packet.done)
-			default:
-				return
-			}
+		for _, packet := range c.outbox {
+			c.outBytes -= len(packet.payload)
+			close(packet.done)
 		}
+		c.outbox = nil
 	}()
 	for {
 		select {
 		case <-c.ctx.Done():
 			return
-		case packet := <-c.outbox:
+		case <-c.outWake:
+		}
+		for {
+			c.outMu.Lock()
+			if len(c.outbox) == 0 {
+				c.outMu.Unlock()
+				break
+			}
+			packet := c.outbox[0]
+			c.outbox[0] = wirePacket{}
+			c.outbox = c.outbox[1:]
+			c.outMu.Unlock()
 			c.writeMu.Lock()
 			started := time.Now()
 			if packet.timing != nil {

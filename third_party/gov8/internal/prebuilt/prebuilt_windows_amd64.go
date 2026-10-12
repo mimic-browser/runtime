@@ -5,9 +5,9 @@ package prebuilt
 import _ "embed"
 
 const (
-	ABI      = 44
-	Size     = int64(46464512)
-	SHA256   = "55d964aa01113bf7d2f3abf3f6998d6c9afecffe0a678d368277d784b55a7610"
+	ABI      = 45
+	Size     = int64(46466048)
+	SHA256   = "2225ffe7d0f40b4334c4597fb106dbace3668dd61714789c9ea538abd619cf7e"
 	fileName = "gov8_shim.dll"
 )
 

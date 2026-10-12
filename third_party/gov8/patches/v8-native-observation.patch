@@ -588,3 +588,24 @@
    }
  
    DCHECK(is_compiled_scope.is_compiled());
+diff --git a/v8/src/inspector/v8-inspector-session-impl.cc b/v8/src/inspector/v8-inspector-session-impl.cc
+--- a/v8/src/inspector/v8-inspector-session-impl.cc
++++ b/v8/src/inspector/v8-inspector-session-impl.cc
+@@ -536,14 +536,15 @@
+ 
+   // Temporarily allow eval.
+   scope.allowCodeGenerationFromStrings();
+-  scope.setTryCatchVerbose();
++  // The native caller owns exception reporting; keep caught values passive.
+   if (includeCommandLineAPI) {
+     scope.installCommandLineAPI();
+   }
+   v8::MaybeLocal<v8::Value> maybeResultValue;
+   {
++    // The Page performs the checkpoint after the temporary CLI scope closes.
+     v8::MicrotasksScope microtasksScope(scope.context(),
+-                                        v8::MicrotasksScope::kRunMicrotasks);
++                                        v8::MicrotasksScope::kDoNotRunMicrotasks);
+     const v8::Local<v8::String> source =
+         toV8String(m_inspector->isolate(), expression);
+     maybeResultValue = v8::debug::EvaluateGlobal(

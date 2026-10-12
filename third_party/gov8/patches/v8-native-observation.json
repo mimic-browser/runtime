@@ -3,8 +3,8 @@
   "crate_version": "152.2.0",
   "crate_sha256": "a10fe1a92da5c32c7c7f838ce36c0ccfcfd5edf0865b58bdde820aa64cea9888",
   "patch": "v8-native-observation.patch",
-  "patch_sha256": "608e438cc1a06801444168367b99045d914b10edef5cfe67f0b18f5cd5e1d3e2",
-  "purpose": "Observation-only property handlers, strict native callback receivers, context-owned API function snapshots and trusted platform compilation provenance",
+  "patch_sha256": "ee87f6d5f008d326fd4d5ec59f6da9fdc0ca93115061482c9c5dfeabbcf4dd90",
+  "purpose": "Observation-only property handlers, strict native callback receivers, context-owned API function snapshots, trusted platform compilation provenance and passive native Inspector evaluation with Page-owned microtask checkpoints",
   "files": [
     {
       "path": "v8/include/v8-function-callback.h",
@@ -80,6 +80,11 @@
       "path": "v8/src/codegen/compiler.cc",
       "before_sha256": "9592c530cdce781eaf5a42e16e1c092aa12d3bab5fecc4e2868399f8b37dbc33",
       "after_sha256": "235a07f56bb668c7ebedd9291642eb0e466816c13fb136167acd2fa2c94e55b1"
+    },
+    {
+      "path": "v8/src/inspector/v8-inspector-session-impl.cc",
+      "before_sha256": "156218588aa7bce2e392b39c4996c5a971bd4bb9f383491aaabbdee4d1216bda",
+      "after_sha256": "bfd00b1ce066590d3f285f4438163c69e86934a73075f88872ec43eb68e95c9f"
     }
   ]
 }

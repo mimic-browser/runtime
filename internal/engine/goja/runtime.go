@@ -1,12 +1,12 @@
 package gojaengine
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"math/big"
 	"reflect"
-	"strings"
 	"time"
 
 	"github.com/dop251/goja"
@@ -15,14 +15,27 @@ import (
 
 type Factory struct{}
 
-func (Factory) New() engine.Runtime { return &runtime{vm: goja.New()} }
+func (Factory) New() engine.Runtime {
+	vm := goja.New()
+	// Goja creates descriptor fields with ordinary assignments. Use private
+	// pristine intrinsics so author Object.prototype setters cannot observe
+	// descriptor construction. This VM executes no author code or jobs.
+	metadata := goja.New()
+	descriptor, _ := goja.AssertFunction(metadata.Get("Object").ToObject(metadata).Get("getOwnPropertyDescriptor"))
+	hasOwn, _ := goja.AssertFunction(metadata.Get("Object").ToObject(metadata).Get("prototype").ToObject(metadata).Get("hasOwnProperty"))
+	return &runtime{vm: vm, nativeDescriptor: descriptor, nativeHasOwn: hasOwn}
+}
 
 type value struct{ v goja.Value }
 
 func (v value) Export() any    { return v.v.Export() }
 func (v value) String() string { return v.v.String() }
 
-type runtime struct{ vm *goja.Runtime }
+type runtime struct {
+	vm               *goja.Runtime
+	nativeDescriptor goja.Callable
+	nativeHasOwn     goja.Callable
+}
 
 func (r *runtime) Eval(ctx context.Context, source, name string) (engine.Value, error) {
 	return r.run(ctx, func() (goja.Value, error) { return r.vm.RunScript(name, source) })
@@ -52,7 +65,7 @@ func (r *runtime) run(ctx context.Context, execute func() (goja.Value, error)) (
 	<-watcherDone
 	r.vm.ClearInterrupt()
 	if err != nil {
-		return nil, jsError(err)
+		return nil, r.jsError(err)
 	}
 	return value{v}, nil
 }
@@ -216,12 +229,37 @@ func (r *runtime) Call(ctx context.Context, fn, this engine.Value, args ...engin
 	<-watcherDone
 	r.vm.ClearInterrupt()
 	if err != nil {
-		return nil, jsError(err)
+		return nil, r.jsError(err)
 	}
 	return value{v}, nil
 }
 
-func jsError(err error) error {
+func (r *runtime) jsError(err error) error {
+	// Exception.Unwrap and String can both execute author code. Classify the
+	// engine's caught exception before generic Go error traversal, and retain
+	// its native stack without coercing the thrown object.
+	if exception, ok := err.(*goja.Exception); ok {
+		var text bytes.Buffer
+		thrown := exception.Value()
+		if object, ok := thrown.(*goja.Object); ok {
+			text.WriteString(object.ClassName() + " exception")
+			// Native Error's message descriptor is passive; its stack descriptor
+			// is not. Keep useful own string messages without invoking accessors
+			// or consulting author replacements for the reflection intrinsics.
+			if object.ClassName() == "Error" {
+				if message := r.ownErrorMessage(object); message != "" {
+					text.WriteString(": " + message)
+				}
+			}
+		} else if thrown != nil {
+			text.WriteString(thrown.String())
+		}
+		for _, frame := range exception.Stack() {
+			text.WriteString("\n\tat ")
+			frame.Write(&text)
+		}
+		return &callException{error: errors.New(text.String()), value: thrown}
+	}
 	var interrupted *goja.InterruptedError
 	if errors.As(err, &interrupted) {
 		if cause, ok := interrupted.Value().(error); ok {
@@ -229,10 +267,23 @@ func jsError(err error) error {
 		}
 		return fmt.Errorf("JavaScript execution interrupted: %v", interrupted.Value())
 	}
-	if exception, ok := err.(*goja.Exception); ok {
-		return &callException{error: errors.New(strings.TrimSpace(exception.String())), value: exception.Value()}
-	}
 	return err
+}
+
+func (r *runtime) ownErrorMessage(object *goja.Object) string {
+	desc, err := r.nativeDescriptor(goja.Undefined(), object, r.vm.ToValue("message"))
+	if err != nil || goja.IsUndefined(desc) {
+		return ""
+	}
+	own, err := r.nativeHasOwn(desc, r.vm.ToValue("value"))
+	if err != nil || !own.ToBoolean() {
+		return ""
+	}
+	message := desc.(*goja.Object).Get("value")
+	if message.ExportType() == reflect.TypeOf("") {
+		return message.String()
+	}
+	return ""
 }
 
 type callException struct {
@@ -328,7 +379,7 @@ func (r *runtime) Await(v engine.Value) (engine.Value, bool, error) {
 	case goja.PromiseStateFulfilled:
 		return value{p.Result()}, true, nil
 	case goja.PromiseStateRejected:
-		return nil, true, &callException{error: fmt.Errorf("promise rejected: %s", p.Result().String()), value: p.Result()}
+		return nil, true, &callException{error: errors.New("promise rejected"), value: p.Result()}
 	default:
 		return v, false, nil
 	}

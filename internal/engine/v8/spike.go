@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
+	"strings"
 	"sync"
 
 	gov8 "github.com/maclof/gov8"
@@ -32,6 +33,9 @@ type actorCommand struct {
 
 type state struct {
 	isolate             *gov8.Isolate
+	inspector           *gov8.Inspector
+	inspectorClient     *inspectorPauseClient
+	inspectorSessions   map[*inspectorSession]struct{}
 	realms              map[uint64]*gov8.Context
 	activeAdapter       *adapter
 	adapters            map[uint64]*adapter
@@ -45,13 +49,14 @@ type state struct {
 // goroutine. V8 isolates on either host cannot follow a Go
 // goroutine when it migrates between OS threads.
 type Runtime struct {
-	commands   chan actorCommand
-	done       chan struct{}
-	snapshot   *gov8.StartupData // consumer copy, released after isolate disposal
-	once       sync.Once
-	actorTID   uint32
-	actorState *state         // actor-thread only after initialization
-	deferred   []actorCommand // actor-thread only; drained at the outer boundary
+	commands         chan actorCommand
+	done             chan struct{}
+	snapshot         *gov8.StartupData // consumer copy, released after isolate disposal
+	once             sync.Once
+	actorTID         uint32
+	actorState       *state         // actor-thread only after initialization
+	deferred         []actorCommand // actor-thread only; drained at the outer boundary
+	inspectorOwnerID uint64
 }
 
 type Realm struct {
@@ -86,7 +91,7 @@ func newRuntime(snapshot *gov8.StartupData) (*Runtime, error) {
 	if _, err := initialize(); err != nil {
 		return nil, err
 	}
-	r := &Runtime{commands: make(chan actorCommand), done: make(chan struct{}), snapshot: snapshot}
+	r := &Runtime{commands: make(chan actorCommand), done: make(chan struct{}), snapshot: snapshot, inspectorOwnerID: inspectorOwnerSequence.Add(1)}
 	ready := make(chan error, 1)
 	go r.loop(ready)
 	if err := <-ready; err != nil {
@@ -237,6 +242,14 @@ func (r *Runtime) newRealm(bare bool) (*Realm, error) {
 		}
 		s.next++
 		s.realms[s.next] = ctx
+		if s.inspector != nil {
+			empty := gov8.EmptyInspectorStringView()
+			if err := s.inspector.ContextCreated(ctx, 1, empty, empty); err != nil {
+				delete(s.realms, s.next)
+				_ = ctx.Close()
+				return response{err: err}
+			}
+		}
 		return response{value: s.next}
 	})
 	if err != nil {
@@ -351,6 +364,11 @@ func (r *Realm) Dispose() error {
 			return response{}
 		}
 		delete(s.realms, r.id)
+		if s.inspector != nil {
+			if err := s.inspector.ContextDestroyed(ctx); err != nil {
+				return response{err: err}
+			}
+		}
 		return response{err: ctx.Close()}
 	}, true)
 	return err
@@ -362,6 +380,9 @@ func (r *Runtime) Dispose() error {
 	var disposeErr error
 	r.once.Do(func() {
 		_, dispatchErr := r.executeCommand(func(s *state) response {
+			if err := closeInspectorState(s); err != nil && disposeErr == nil {
+				disposeErr = err
+			}
 			for id, ctx := range s.realms {
 				if err := ctx.Close(); err != nil && disposeErr == nil {
 					disposeErr = err
@@ -439,7 +460,14 @@ func evalText(iso *gov8.Isolate, ctx *gov8.Context, source, name string) (string
 }
 
 func exceptionError(catcher *gov8.TryCatch, scope *gov8.Scope, ctx *gov8.Context, name string, cause error) error {
-	text, err := catcher.ExceptionText(scope, ctx)
+	// ExceptionText applies ToString to the thrown value. Diagnostics must not
+	// invoke author hooks merely because an embedder caught an exception.
+	message, present, err := catcher.Message(scope)
+	text := ""
+	if err == nil && present {
+		text, err = message.Text(ctx)
+		text = strings.TrimPrefix(text, "Uncaught ")
+	}
 	if err == nil && text != "" {
 		// Read engine-owned source coordinates, not exception.stack: the latter
 		// can execute application getters or Error.prepareStackTrace while we

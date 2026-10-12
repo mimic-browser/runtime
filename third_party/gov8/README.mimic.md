@@ -11,7 +11,7 @@ Upstream examples, conformance fixtures, and unrelated tests are omitted.
   and a new native export. This supplies real HTMLDDA operator semantics.
 - Preserve accessor getter/setter values in property-definer callbacks. Their
   handles occupy existing otherwise-unused kind-specific frame slots; the
-  callback frame remains 160 bytes and native ABI remains 44.
+  callback frame remains 160 bytes.
 - Use observation-only native property callbacks and strict native receiver
   dispatch. Callback references are shared by snapshot creation and restoration;
   callback data belongs to the realm rather than a Go registry handle.
@@ -31,6 +31,12 @@ Upstream examples, conformance fixtures, and unrelated tests are omitted.
   Queue observations use pinned flat bindings, avoiding the virtual-layout
   difference introduced by V8's cppgc microtask-queue build mode. Other contexts
   retain their shared queue; shutdown is applied only at idle execution boundaries.
+
+- Evaluate explicitly requested command-line source through an ephemeral native
+  Inspector scope and transfer its raw value without RemoteObject serialization.
+  Disable verbose exception reporting and leave microtask checkpoints to the
+  Page after temporary command-line helpers have been removed. Passive transport
+  must not format author exceptions or lazy stacks.
 
 The adapter and browser implementation live in Mimic rather than this binding.
 The new export fails explicitly if an old GOV8_SHIM_DLL override is selected.
@@ -81,10 +87,10 @@ Update `Size` and `SHA256` in `internal/prebuilt/prebuilt_windows_amd64.go`
 from the packaging output. Validate without a shim override using focused
 native identity, property observation, Date receiver and snapshot tests.
 
-Packaged Windows DLL: 46,464,512 bytes, SHA-256
-`55d964aa01113bf7d2f3abf3f6998d6c9afecffe0a678d368277d784b55a7610`.
+Packaged Windows DLL: 46,466,048 bytes, SHA-256
+`2225ffe7d0f40b4334c4597fb106dbace3668dd61714789c9ea538abd619cf7e`.
 Patched Windows V8 archive SHA-256:
-`07896581257a5880946602eba27dfb2677b114e093de2cc98c116c6416755b02`.
+`c4e2270f733cf1dd0090255126030566b84a049d08128b20e5def6730fdfd739`.
 Native engine: V8 15.2.124.1-rusty, crate 152.2.0, temporal_capi 0.2.6.
 
 Platform exception initialization removes ordinary Error's hidden original
@@ -110,9 +116,9 @@ GPU/display service is needed. Its size and digest live in
 verification are shared with Windows.
 
 The pointer-compressed Linux archive SHA-256 is
-`b05abd203317307e55de5b18c006b04c760302182a2ccd1de780430c2c752615`.
-The packaged library is 59,005,088 bytes, SHA-256
-`c4638e6f2bf608eb3118101b31c1b7e098986d16b8d742bf5213e7124134c901`.
+`1763c87ca75ef8717434b49dcccc745dd760e307e56817d502a1d7f94bd7dde8`.
+The packaged library is 59,009,184 bytes, SHA-256
+`1a1b716e400c4b2ef20b3d84bf8ddcc9d3b862117983d9891c8aec1146ef461d`.
 Under WSL, use `--build-dir` on the Linux filesystem to avoid extracting the
 pinned source tree through the Windows filesystem mount.
 
@@ -136,6 +142,6 @@ and enable the `v8_enable_pointer_compression` Cargo feature. Generating the cra
 Rust FFI bindings additionally requires libclang 21.1 or newer; that step is
 separate from compiling the V8 archive consumed by the Go shim.
 
-Both engines report V8 `15.2.124.1-rusty` and shim ABI 44.
+Both engines report V8 `15.2.124.1-rusty` and shim ABI 45.
 `GOV8_SHIM_LIBRARY` is the cross-platform developer override; `GOV8_SHIM_DLL`
 remains supported. Neither is needed for normal builds or deployments.

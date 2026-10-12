@@ -13,6 +13,7 @@ func (r *Realm) debuggerConsole(name string, values engine.Value) {
 		}
 		state, err := debugger.state(context.Background(), r.agent.ContextID(), r.ID)
 		if err != nil {
+			r.agent.Page().trace.Add(trace.Error, "consoleInspection", map[string]any{"error": err.Error(), "realm": r.ID})
 			continue
 		}
 		result, err := state.json(context.Background(), "console", map[string]any{}, values)

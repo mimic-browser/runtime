@@ -103,38 +103,60 @@ func TestUnreadRuntimeResponseDoesNotBlockAnotherClient(t *testing.T) {
 	}
 }
 func TestOutboundOverflowClosesConnectionAndReleasesQueue(t *testing.T) {
-	for _, limit := range []string{"bytes", "messages"} {
-		t.Run(limit, func(t *testing.T) {
-			s, addr := runningServer(t)
-			wire := browserConnection(t, addr)
-			wireCall(t, wire, 1, "Runtime.evaluate", map[string]any{"expression": "1"})
-			c := s.clientSnapshot()[0]
-			c.writeMu.Lock()
-			if limit == "bytes" {
-				c.enqueueWire(make([]byte, maxQueuedWireBytes), nil)
-				c.enqueueWire([]byte("x"), nil)
-			} else {
-				for i := 0; i < 258; i++ {
-					c.enqueueWire([]byte("x"), nil)
-				}
-			}
-			c.writeMu.Unlock()
-			select {
-			case <-c.ctx.Done():
-			case <-time.After(time.Second):
-				t.Fatal("overflow did not cancel transport")
-			}
-			select {
-			case <-c.writerDone:
-			case <-time.After(time.Second):
-				t.Fatal("overflow retained writer")
-			}
-			c.outMu.Lock()
-			defer c.outMu.Unlock()
-			if c.outBytes != 0 || len(c.outbox) != 0 {
-				t.Fatal("overflow retained payloads")
-			}
-		})
+	s, addr := runningServer(t)
+	wire := browserConnection(t, addr)
+	wireCall(t, wire, 1, "Runtime.evaluate", map[string]any{"expression": "1"})
+	c := s.clientSnapshot()[0]
+	c.writeMu.Lock()
+	c.enqueueWire(make([]byte, maxQueuedWireBytes), nil)
+	c.enqueueWire([]byte("x"), nil)
+	c.writeMu.Unlock()
+	select {
+	case <-c.ctx.Done():
+	case <-time.After(time.Second):
+		t.Fatal("overflow did not cancel transport")
+	}
+	select {
+	case <-c.writerDone:
+	case <-time.After(time.Second):
+		t.Fatal("overflow retained writer")
+	}
+	c.outMu.Lock()
+	defer c.outMu.Unlock()
+	if c.outBytes != 0 || len(c.outbox) != 0 {
+		t.Fatal("overflow retained payloads")
+	}
+}
+
+func TestOutboundEventBurstDoesNotCloseConnection(t *testing.T) {
+	s, addr := runningServer(t)
+	wire := browserConnection(t, addr)
+	wireCall(t, wire, 1, "Runtime.evaluate", map[string]any{"expression": "1"})
+	c := s.clientSnapshot()[0]
+	c.writeMu.Lock()
+	for i := 0; i < 1024; i++ {
+		c.enqueueWire([]byte(fmt.Sprintf(`{"event":%d}`, i)), nil)
+	}
+	c.outMu.Lock()
+	queued := len(c.outbox)
+	c.outMu.Unlock()
+	if queued < 1023 || c.ctx.Err() != nil {
+		c.writeMu.Unlock()
+		t.Fatalf("event burst lost transport: queued=%d err=%v", queued, c.ctx.Err())
+	}
+	c.writeMu.Unlock()
+	_ = wire.SetReadDeadline(time.Now().Add(5 * time.Second))
+	for i := 0; i < 1024; i++ {
+		var packet map[string]int
+		if err := wire.ReadJSON(&packet); err != nil {
+			t.Fatal(err)
+		}
+		if packet["event"] != i {
+			t.Fatalf("packet %d: %v", i, packet)
+		}
+	}
+	if c.ctx.Err() != nil {
+		t.Fatal("connection closed after event burst")
 	}
 }
 

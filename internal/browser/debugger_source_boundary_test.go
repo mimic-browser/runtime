@@ -54,9 +54,9 @@ func TestDebuggerSourceAndInvocationBoundary(t *testing.T) {
 
 }
 
-// Native serialization executes enumerable getters, but its implementation
-// frames must not join the author stack (headful Chrome 152 observation).
-func TestDebuggerSerializationPreservesAuthorStack(t *testing.T) {
+// Serialization is passive transport, not permission to call author getters.
+// Instrumented Chrome's getter invocation is deliberately outside our oracle.
+func TestDebuggerSerializationRejectsAccessorsWithoutAuthorFrames(t *testing.T) {
 	serialBrowserTest(t)
 	for _, mode := range []string{"cold", "snapshot"} {
 		t.Run(mode, func(t *testing.T) {
@@ -78,7 +78,7 @@ func TestDebuggerSerializationPreservesAuthorStack(t *testing.T) {
 			}
 			d := NewDebugger(p)
 			defer d.Close()
-			debuggerEval(t, d, `globalThis.authorObservations = [];
+			_, err := d.Evaluate(context.Background(), "", "", `globalThis.authorObservations = [];
 Error.prepareStackTrace = (_, frames) =>
   frames.map((f) => ({ name: f.getFunctionName(), file: f.getFileName(), eval: f.isEval() }));
 ({
@@ -89,8 +89,11 @@ Error.prepareStackTrace = (_, frames) =>
   plain: 2,
 });
 `, DebuggerOptions{ReturnByValue: true})
+			if err == nil {
+				t.Fatal("accessor serialization did not reject")
+			}
 			got := debuggerEval(t, d, `JSON.stringify(authorObservations)`, DebuggerOptions{ReturnByValue: true})
-			const expected = `[[{"name":"get authorAccessor","file":"","eval":false}]]`
+			const expected = `[]`
 			if got["value"] != expected {
 				t.Fatalf("serialization author stack: %v", got)
 			}

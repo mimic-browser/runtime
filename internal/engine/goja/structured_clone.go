@@ -9,3 +9,7 @@ import (
 func (r *runtime) IsStructuredCloneProxy(v engine.Value) bool {
 	return unwrap(v).ExportType() == reflect.TypeOf(goja.Proxy{})
 }
+
+func (r *runtime) IsDebuggerProxy(v engine.Value) (bool, error) {
+	return r.IsStructuredCloneProxy(v), nil
+}

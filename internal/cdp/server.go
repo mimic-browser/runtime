@@ -202,6 +202,7 @@ type session struct {
 	conn                    *websocket.Conn
 	page                    *browser.Page
 	debugger                *browser.Debugger
+	nativeInspector         *browser.NativeInspector
 	bindMu                  sync.RWMutex
 	interceptor             *ControlInterceptor
 	unsub                   func()
@@ -251,6 +252,10 @@ func (s *session) unbindPage() {
 		s.debugger.Close()
 		s.debugger = nil
 		s.page.UnlockCommands()
+	}
+	if s.nativeInspector != nil {
+		_ = s.nativeInspector.Close()
+		s.nativeInspector = nil
 	}
 	s.page.LockCommands()
 	if s.removeInspectorTurn != nil {
@@ -734,6 +739,10 @@ func (s *session) handleCommand(m message) (afterUnlock func()) {
 	if value, handled, runtimeErr := s.handleRuntime(runtimeCtx, m.Method, p); handled {
 		finishRuntimeCall()
 		reply(m.ID, value, runtimeErr)
+		return
+	}
+	if value, handled, debuggerErr := s.handleDebugger(m); handled {
+		reply(m.ID, value, debuggerErr)
 		return
 	}
 	if value, handled, domErr := s.handleDOM(s.ctx, m.Method, p); handled {

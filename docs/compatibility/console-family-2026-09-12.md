@@ -49,11 +49,16 @@ classification failures propagate through the host callback. Other engines keep
 the bounded script fallback and are not claimed equivalent to native V8 brands.
 
 Runtime console preview is a second observation: with Runtime enabled, Chrome
-materializes the native lazy Error.stack in the returned preview, which reads Error.name once. Author stack accessors remain accessors, and object-valued stacks are not coerced; frozen A/B controls verify both. A disabled / enabled / disabled-again matrix
-separates this effect. Mimic now gates console inspection on Runtime's actual
-domain state, including sessions whose debugger was created by Runtime.evaluate.
-Merely retaining a debugger object after Runtime.disable does not authorize
-another preview. Console format arguments remain live remote values.
+materializes the native lazy Error.stack in the returned preview, which reads
+Error.name once. Author stack accessors remain accessors, and object-valued
+stacks are not coerced; frozen A/B controls verify both. A disabled / enabled /
+disabled-again matrix separates this effect. This remains evidence of an
+instrumented Chrome artifact, not the current Mimic contract. Under
+[the passive-tooling rule](../oracle-policy.md), Mimic deliberately does not
+materialize lazy Error stacks for Runtime inspection. Runtime's domain state
+controls console event delivery; enabling it adds no author accessor, Proxy
+trap or stack-formatting calls. Console format arguments remain live remote
+values.
 
 ## Evidence and validation
 
@@ -68,8 +73,10 @@ shape/return/coercion/label observations agree with Mimic.
 Tests compare the retained oracle in ordinary and restored bootstrap modes for
 Window, iframe and worker. Additional tests cover native brands, throwing
 descriptions, untouched proxies/plain objects, failed timer-label state
-transitions and Runtime enable/disable/re-enable. Existing console count,
-formatting, group and live-object debugger tests pass; the broader bootstrap
+transitions. Current regressions compare unattached execution with Runtime
+disabled, enabled, disabled again and re-enabled, including multiple sessions,
+author accessors, Proxy traps, lazy stacks and microtask ordering. Existing
+console count, formatting, group and live-object debugger tests pass; the broader bootstrap
 observational-equivalence and worker-fetch checks pass. The old trace-only
 `[function]` expectation was replaced with the measured function text, while its
 plain-object non-coercion and explicit format-conversion assertions remain.
@@ -89,6 +96,6 @@ shutdown diagnostics, not fixture failures.
 package. Console table rendering, DevTools UI formatting, full remote previews
 and stackTrace protocol enrichment remain outside this bounded repair. Numeric
 timer durations are not frozen expectations. The Error.name preview regression
-targets native Error observations; this does not claim a complete redesign of
-all debugger remote-object brand/proxy handling. No target-specific branch or
-payload answer is embedded in the implementation.
+is superseded by passive inspection regressions. Unsafe serialization and Proxy
+property traversal reject rather than execute author hooks. No target-specific
+branch or payload answer is embedded in the implementation.
