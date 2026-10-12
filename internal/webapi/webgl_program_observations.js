@@ -133,12 +133,20 @@ method('linkProgram', (s, program) => {
   }
   p.vertex = vertex[0].evaluation;
   p.fragment = fragment[0].evaluation;
-  if (
-    p.fragment.globals.some(
+  p.varyings = p.fragment.globals
+    .filter(
       (g) => (g.qualifier === 'varying' || g.qualifier === 'in') && p.fragment.used.has(g.name),
     )
-  )
-    fail('varying interpolation');
+    .map((g) => ({ ...g }));
+  for (const varying of p.varyings) {
+    const output = p.vertex.globals.find(
+      (g) => (g.qualifier === 'varying' || g.qualifier === 'out') && g.name === varying.name,
+    );
+    if (!output || output.type !== varying.type) {
+      p.log = 'Varying types differ or a fragment input has no vertex output.';
+      return;
+    }
+  }
   p.attributes = p.vertex.globals
     .filter(
       (g) => (g.qualifier === 'attribute' || g.qualifier === 'in') && p.vertex.used.has(g.name),
@@ -490,12 +498,17 @@ const drawVertices = (s, mode, first, count, indices = null, instance = 0) => {
       const n = Number(attribute.type.slice(-1));
       input[attribute.name] = Number.isFinite(n) ? values.slice(0, n) : values[0];
     }
-    let position;
+    let vertexResult;
     try {
-      position = glslObservations.execute(p.vertex, input);
+      vertexResult = glslObservations.execute(
+        p.vertex,
+        input,
+        p.varyings.map((varying) => varying.name),
+      );
     } catch (e) {
       fail('vertex evaluation: ' + e.message);
     }
+    const position = vertexResult.output;
     if (!Array.isArray(position) || position.length !== 4) fail('vertex output');
     if (
       !position.every(Number.isFinite) ||
@@ -503,7 +516,7 @@ const drawVertices = (s, mode, first, count, indices = null, instance = 0) => {
       position.slice(0, 3).some((v) => Math.abs(v) > position[3])
     )
       fail('clip-space observation boundary');
-    vertices.push(position);
+    vertices.push({ position, varyings: vertexResult.captured });
   }
   if (s.enabled.get(2929) || s.enabled.get(2960) || s.enabled.get(3042) || s.enabled.get(2884))
     fail('shader depth/stencil/blend observations');
@@ -512,6 +525,7 @@ const drawVertices = (s, mode, first, count, indices = null, instance = 0) => {
     vertices,
     mode,
     fragment: p.fragment,
+    varyings: p.varyings,
     uniforms,
     viewport: s.viewport.slice(),
     mask: s.mask.slice(),
@@ -545,12 +559,16 @@ const materializePrograms = (s) => {
     s.samplePixels = samples.map(() => s.pixels.slice());
   for (const command of commands) {
     const [vx, vy, vw, vh] = command.viewport;
-    const vertices = command.vertices.map((p) => [
-        ((p[0] / p[3] + 1) * vw) / 2 + vx,
-        ((p[1] / p[3] + 1) * vh) / 2 + vy,
-        p[2] / p[3],
-        1 / p[3],
-      ]),
+    const vertices = command.vertices.map(({ position: p, varyings }) => {
+        const transformed = [
+          ((p[0] / p[3] + 1) * vw) / 2 + vx,
+          ((p[1] / p[3] + 1) * vh) / 2 + vy,
+          p[2] / p[3],
+          1 / p[3],
+        ];
+        transformed.varyings = varyings;
+        return transformed;
+      }),
       triangles = [];
     if (command.mode === 4)
       for (let i = 0; i + 2 < vertices.length; i += 3) triangles.push(vertices.slice(i, i + 3));
@@ -568,43 +586,159 @@ const materializePrograms = (s) => {
     for (const [a, b, c] of triangles) {
       const area = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
       if (Math.abs(area) < 1e-12) continue;
-      for (let y = 0; y < s.height; y++)
-        for (let x = 0; x < s.width; x++) {
+      const edges = [
+        [b, c],
+        [c, a],
+        [a, b],
+      ];
+      const topLeft = edges.map(([u, v]) => {
+        if (area < 0) [u, v] = [v, u];
+        return v[1] < u[1] || (v[1] === u[1] && v[0] > u[0]);
+      });
+      const edgeMargins = edges.map(
+        ([u, v]) => (Math.abs(v[0] - u[0]) + Math.abs(v[1] - u[1])) / (2 * Math.abs(area)),
+      );
+      const edgeDX = edges.map(([u, v]) => (v[0] - u[0]) / area);
+      const edgeDY = edges.map(([u, v]) => (v[1] - u[1]) / area);
+      const weights = [0, 0, 0];
+      const fragmentInputs = {
+        ...command.uniforms,
+        gl_FragCoord: [0, 0, 0, 0],
+        gl_FrontFacing: area > 0,
+      };
+      const colorScratch = [0, 0, 0, 0];
+      const resolvedVaryings = command.varyings.map((varying) => {
+        const av = a.varyings[varying.name];
+        const output = Array.isArray(av) ? new Array(av.length) : 0;
+        fragmentInputs[varying.name] = output;
+        return {
+          name: varying.name,
+          av,
+          bv: b.varyings[varying.name],
+          cv: c.varyings[varying.name],
+          output,
+        };
+      });
+      // A direct vec4 output can be evaluated from already-interpolated
+      // vertex values. Keep the general GLSL evaluator for every other shader.
+      let directColor = null;
+      if (command.fragment.directColor) {
+        const components = [];
+        for (const arg of command.fragment.directColor) {
+          if (arg.op === 'literal') {
+            components.push({ constant: Math.fround(arg.value) });
+            continue;
+          }
+          const varying = resolvedVaryings.find((entry) => entry.name === arg.name);
+          if (varying) {
+            if (Array.isArray(varying.av)) {
+              for (let index = 0; index < varying.av.length; index++)
+                components.push({ varying, index });
+            } else components.push({ varying, index: -1 });
+          } else if (Object.hasOwn(command.uniforms, arg.name)) {
+            const value = command.uniforms[arg.name];
+            for (const part of Array.isArray(value) ? value : [value])
+              components.push({ constant: Math.fround(part) });
+          } else {
+            components.length = 0;
+            break;
+          }
+        }
+        if (components.length >= 4) directColor = components.slice(0, 4);
+      }
+      const minX = Math.max(0, Math.floor(Math.min(a[0], b[0], c[0]) - 1));
+      const maxX = Math.min(s.width, Math.ceil(Math.max(a[0], b[0], c[0]) + 1));
+      const minY = Math.max(0, Math.floor(Math.min(a[1], b[1], c[1]) - 1));
+      const maxY = Math.min(s.height, Math.ceil(Math.max(a[1], b[1], c[1]) + 1));
+      for (let y = minY; y < maxY; y++)
+        for (let x = minX; x < maxX; x++) {
           if (command.scissor) {
             const [sx, sy, sw, sh] = command.scissor;
             if (x < sx || y < sy || x >= sx + sw || y >= sy + sh) continue;
           }
           const px = x + 0.5,
-            py = y + 0.5,
-            cross = (u, v) => (v[0] - u[0]) * (py - u[1]) - (v[1] - u[1]) * (px - u[0]);
-          const weights = [cross(b, c) / area, cross(c, a) / area, cross(a, b) / area];
-          const covered = samples.map(([dx, dy]) => {
-            const edge = (u, v) =>
-              (v[0] - u[0]) * (y + dy - u[1]) - (v[1] - u[1]) * (x + dx - u[0]);
-            return [
-              [b, c],
-              [c, a],
-              [a, b],
-            ].every(([u, v]) => {
-              const w = edge(u, v) / area;
-              if (w < 0) return false;
-              if (w !== 0) return true;
-              if (area < 0) [u, v] = [v, u];
-              return v[1] < u[1] || (v[1] === u[1] && v[0] > u[0]);
-            });
-          });
-          if (!covered.some(Boolean)) continue;
+            py = y + 0.5;
+          for (let edgeIndex = 0; edgeIndex < 3; edgeIndex++) {
+            const u = edges[edgeIndex][0];
+            weights[edgeIndex] = edgeDX[edgeIndex] * (py - u[1]) - edgeDY[edgeIndex] * (px - u[0]);
+          }
+          let fullyCovered = true,
+            fullyOutside = false;
+          for (let edgeIndex = 0; edgeIndex < 3; edgeIndex++) {
+            if (weights[edgeIndex] <= edgeMargins[edgeIndex]) fullyCovered = false;
+            if (weights[edgeIndex] < -edgeMargins[edgeIndex]) fullyOutside = true;
+          }
+          if (fullyOutside) continue;
+          let covered = null;
+          if (!fullyCovered) {
+            covered = new Array(samples.length);
+            let anyCovered = false;
+            for (let sample = 0; sample < samples.length; sample++) {
+              const [dx, dy] = samples[sample];
+              let inside = true;
+              for (let edgeIndex = 0; edgeIndex < 3; edgeIndex++) {
+                const w =
+                  weights[edgeIndex] +
+                  edgeDX[edgeIndex] * (dy - 0.5) -
+                  edgeDY[edgeIndex] * (dx - 0.5);
+                if (w < 0 || (w === 0 && !topLeft[edgeIndex])) {
+                  inside = false;
+                  break;
+                }
+              }
+              covered[sample] = inside;
+              anyCovered ||= inside;
+            }
+            if (!anyCovered) continue;
+          }
           const depth = (weights[0] * a[2] + weights[1] * b[2] + weights[2] * c[2] + 1) / 2,
             reciprocalW = weights[0] * a[3] + weights[1] * b[3] + weights[2] * c[3];
+          const fragCoord = fragmentInputs.gl_FragCoord;
+          fragCoord[0] = px;
+          fragCoord[1] = py;
+          fragCoord[2] = depth;
+          fragCoord[3] = reciprocalW;
           let color;
-          try {
-            color = glslObservations.execute(command.fragment, {
-              ...command.uniforms,
-              gl_FragCoord: [px, py, depth, reciprocalW],
-              gl_FrontFacing: area > 0,
-            });
-          } catch (e) {
-            fail('fragment evaluation: ' + e.message);
+          if (directColor) {
+            for (let channel = 0; channel < 4; channel++) {
+              const component = directColor[channel];
+              if (Object.hasOwn(component, 'constant')) {
+                colorScratch[channel] = component.constant;
+              } else {
+                const { av, bv, cv } = component.varying;
+                const index = component.index;
+                colorScratch[channel] = Math.fround(
+                  (weights[0] * (index < 0 ? av : av[index]) * a[3] +
+                    weights[1] * (index < 0 ? bv : bv[index]) * b[3] +
+                    weights[2] * (index < 0 ? cv : cv[index]) * c[3]) /
+                    reciprocalW,
+                );
+              }
+            }
+            color = colorScratch;
+          } else {
+            for (const varying of resolvedVaryings) {
+              const { av, bv, cv } = varying;
+              if (Array.isArray(av)) {
+                const interpolated = varying.output;
+                for (let index = 0; index < av.length; index++)
+                  interpolated[index] = Math.fround(
+                    (weights[0] * av[index] * a[3] +
+                      weights[1] * bv[index] * b[3] +
+                      weights[2] * cv[index] * c[3]) /
+                      reciprocalW,
+                  );
+              } else
+                fragmentInputs[varying.name] = Math.fround(
+                  (weights[0] * av * a[3] + weights[1] * bv * b[3] + weights[2] * cv * c[3]) /
+                    reciprocalW,
+                );
+            }
+            try {
+              color = glslObservations.executeColor(command.fragment, fragmentInputs, colorScratch);
+            } catch (e) {
+              fail('fragment evaluation: ' + e.message);
+            }
           }
           if (color === null) continue;
           if (!Array.isArray(color) || color.length !== 4) fail('fragment output');
@@ -618,13 +752,18 @@ const materializePrograms = (s) => {
               );
               if (s.samplePixels) {
                 for (let sample = 0; sample < samples.length; sample++)
-                  if (covered[sample]) s.samplePixels[sample][i + k] = value;
+                  if (fullyCovered || covered[sample]) s.samplePixels[sample][i + k] = value;
               } else s.pixels[i + k] = value;
             }
         }
     }
   }
-  if (s.samplePixels)
-    for (let i = 0; i < s.pixels.length; i++)
-      s.pixels[i] = Math.ceil(s.samplePixels.reduce((n, p) => n + p[i], 0) / samples.length - 0.5);
+  if (s.samplePixels) {
+    const sampleCount = s.samplePixels.length;
+    for (let i = 0; i < s.pixels.length; i++) {
+      let sum = 0;
+      for (let sample = 0; sample < sampleCount; sample++) sum += s.samplePixels[sample][i];
+      s.pixels[i] = Math.ceil(sum / sampleCount - 0.5);
+    }
+  }
 };

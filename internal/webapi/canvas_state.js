@@ -1359,8 +1359,7 @@ const canvasCompatibilityState = (() => {
     return new ImageBitmap(token, b);
   };
   // Canvas serialization consumes the same readback state as getImageData and
-  // bitmap copies. A fixed, store-only zlib stream keeps PNG bytes reproducible
-  // across Pages without introducing a second raster or fingerprint model.
+  // bitmap copies. Compress the scanlines without a second raster model.
   const pngCRC = (() => {
     const table = new Uint32Array(256);
     for (let n = 0; n < 256; n++) {
@@ -1392,40 +1391,45 @@ const canvasCompatibilityState = (() => {
     if (!s.width || !s.height) return null;
     const source = buffer(s),
       scan = new Uint8Array((s.width * 4 + 1) * s.height);
+    const srgb = !s.colorSpace || s.colorSpace === 'srgb';
     for (let y = 0; y < s.height; y++) {
       const row = y * (s.width * 4 + 1);
       for (let x = 0; x < s.width; x++) {
         const i = (y * s.width + x) * 4,
           j = row + 1 + x * 4,
-          a = source[i + 3],
-          rgba = canvasConvertColor(
+          a = source[i + 3];
+        if (srgb) {
+          // Integer sRGB storage needs only alpha unpremultiplication. Avoid
+          // allocating and converting an RGBA vector for every PNG pixel.
+          if (a === 255) {
+            scan[j] = source[i];
+            scan[j + 1] = source[i + 1];
+            scan[j + 2] = source[i + 2];
+          } else if (a) {
+            const scale = 255 / a;
+            scan[j] = Math.round(source[i] * scale);
+            scan[j + 1] = Math.round(source[i + 1] * scale);
+            scan[j + 2] = Math.round(source[i + 2] * scale);
+          }
+          scan[j + 3] = a;
+        } else {
+          const rgba = canvasConvertColor(
             [
               a ? (source[i] * 255) / a : 0,
               a ? (source[i + 1] * 255) / a : 0,
               a ? (source[i + 2] * 255) / a : 0,
               a,
-              s.colorSpace || 'srgb',
+              s.colorSpace,
             ],
             'srgb',
           );
-        for (let k = 0; k < 4; k++) scan[j + k] = Math.round(rgba[k]);
+          for (let k = 0; k < 4; k++) scan[j + k] = Math.round(rgba[k]);
+        }
       }
     }
-    const z = [0x78, 0x01];
-    for (let offset = 0; offset < scan.length; ) {
-      const length = Math.min(65535, scan.length - offset),
-        final = offset + length === scan.length;
-      z.push(final ? 1 : 0, length & 255, length >>> 8, ~length & 255, (~length >>> 8) & 255);
-      for (let i = 0; i < length; i++) z.push(scan[offset + i]);
-      offset += length;
-    }
-    let a = 1,
-      b = 0;
-    for (const value of scan) {
-      a = (a + value) % 65521;
-      b = (b + a) % 65521;
-    }
-    z.push(...pngU32(((b << 16) | a) >>> 0));
+    const compressed = atob(host.compressCanvasScanline(pngBase64(scan)));
+    const z = new Uint8Array(compressed.length);
+    for (let i = 0; i < compressed.length; i++) z[i] = compressed.charCodeAt(i);
     const ihdr = pngU32(s.width).concat(pngU32(s.height), [8, 6, 0, 0, 0]);
     return new Uint8Array([
       137,

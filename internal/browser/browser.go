@@ -86,6 +86,22 @@ func NewWithOptions(factory engine.Factory, bundle compatibility.Bundle, options
 	// Installed font metadata is browser-wide immutable input. Resolve it once
 	// during browser construction, never in a synchronous DOM/layout read.
 	textmetrics.WarmSystemCatalog()
+	fontFamilies := []string{"system-ui", "sans-serif", "serif", "monospace"}
+	for _, family := range []string{env.Fonts.SystemUI, env.Fonts.SansSerif, env.Fonts.Serif, env.Fonts.Monospace} {
+		if family != "" {
+			fontFamilies = append(fontFamilies, family)
+		}
+	}
+	// Fallback order is part of the profile. Warm the first few resources;
+	// eagerly decoding every installed fallback would retain large font files
+	// that most Pages never use.
+	for i, family := range env.Fonts.Fallback {
+		if i == 3 {
+			break
+		}
+		fontFamilies = append(fontFamilies, family)
+	}
+	textmetrics.WarmProfileFontFaces(fontFamilies, env.Fonts.Fallback)
 	lifetime, cancel := context.WithCancel(context.Background())
 	b := &Browser{devPreview: options.DevPreview, speechProvider: provider, factory: factory, env: env.Clone(), compat: bundle, contexts: map[string]*Context{}, lifetime: lifetime, cancel: cancel}
 	b.cameraProvider = options.CameraProvider

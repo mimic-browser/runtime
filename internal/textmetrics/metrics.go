@@ -29,6 +29,7 @@ type resource struct {
 	index  int
 	family string
 	aspect font.Aspect
+	shared bool
 }
 
 type resourceSelectionKey struct {
@@ -46,6 +47,7 @@ type fallbackSelectionKey struct {
 
 type loaded struct {
 	resource                 resource
+	sharedKey                string
 	face                     *font.Face
 	shaper                   *harfbuzz.Font
 	ascent, descent, lineGap float64
@@ -211,18 +213,28 @@ func hintGlyphBounds(face *loaded, size float64, glyph uint32) (ok bool) {
 			ok = false
 		}
 	}()
+	loadHintFont(face)
+	return face.hintFont != nil && face.hintGlyph.Load(face.hintFont, fixed.Int26_6(math.Round(size*64)), truetype.Index(glyph), xfont.HintingFull) == nil
+}
+
+func loadHintFont(face *loaded) {
 	if !face.hintLoaded {
 		face.hintLoaded = true
+		if face.sharedKey != "" {
+			face.hintFont = getSystemHint(face.sharedKey)
+		}
 		// TrueType hinting is only observable through Canvas ink bounds. The
 		// regular shaping face has already loaded its own tables, so retaining
 		// the entire source file for every DOM-only font is unnecessary.
-		if face.resource.index == 0 {
+		if face.hintFont == nil && face.resource.index == 0 {
 			if data, err := os.ReadFile(face.resource.path); err == nil {
 				face.hintFont, _ = truetype.Parse(data)
+				if face.sharedKey != "" {
+					putSystemHint(face.sharedKey, face.hintFont)
+				}
 			}
 		}
 	}
-	return face.hintFont != nil && face.hintGlyph.Load(face.hintFont, fixed.Int26_6(math.Round(size*64)), truetype.Index(glyph), xfont.HintingFull) == nil
 }
 
 func (e *Engine) scan() {
@@ -271,7 +283,7 @@ func scanFontDirectories(dirs []string) ([]resource, map[string]resource, map[st
 					d.Aspect.SetDefaults()
 					if d.Family != "" {
 						coverage[fmt.Sprintf("%s#%d", path, index)] = deferredFontCoverage(path, index)
-						catalog = append(catalog, resource{path, index, strings.ToLower(d.Family), d.Aspect})
+						catalog = append(catalog, resource{path: path, index: index, family: strings.ToLower(d.Family), aspect: d.Aspect, shared: true})
 						if raw, err := loader.RawTable(ot.MustNewTag("name")); err == nil {
 							if names, _, err := tables.ParseName(raw); err == nil {
 								for _, id := range []tables.NameID{4, 6} {
@@ -407,6 +419,23 @@ func (e *Engine) load(r resource) (*loaded, error) {
 	if err := e.makeFontRoom(int(stat.Size())); err != nil {
 		return nil, err
 	}
+	sharedKey := ""
+	if r.shared {
+		sharedKey = systemFontKey(r.path, r.index, stat)
+		if cached := getSystemFont(sharedKey); cached != nil {
+			face := font.NewFace(cached.font)
+			value := &loaded{
+				resource: r, sharedKey: sharedKey, face: face,
+				shaper: harfbuzz.NewFont(face), ascent: cached.ascent,
+				descent: cached.descent, lineGap: cached.lineGap,
+				emAscent: cached.emAscent, emDescent: cached.emDescent,
+				resourceBytes: int(stat.Size()), lastUse: e.fontUse,
+			}
+			e.faces[key] = value
+			e.bytes += value.resourceBytes
+			return value, nil
+		}
+	}
 	loaders, err := ot.NewLoaders(f)
 	if err != nil || r.index >= len(loaders) {
 		return nil, fmt.Errorf("invalid font container")
@@ -424,7 +453,7 @@ func (e *Engine) load(r resource) (*loaded, error) {
 	if !ok {
 		return nil, fmt.Errorf("missing horizontal font metrics")
 	}
-	value := &loaded{resource: r, face: face, shaper: harfbuzz.NewFont(face), ascent: float64(metrics.Ascender), descent: -float64(metrics.Descender), lineGap: float64(metrics.LineGap), emAscent: float64(metrics.Ascender), emDescent: -float64(metrics.Descender), resourceBytes: int(stat.Size())}
+	value := &loaded{resource: r, sharedKey: sharedKey, face: face, shaper: harfbuzz.NewFont(face), ascent: float64(metrics.Ascender), descent: -float64(metrics.Descender), lineGap: float64(metrics.LineGap), emAscent: float64(metrics.Ascender), emDescent: -float64(metrics.Descender), resourceBytes: int(stat.Size())}
 	// The Windows Chrome profile uses Windows ascender/descender rather than
 	// the optional typographic line metrics (notably different in Consolas).
 	if os2, err := loader.RawTable(ot.MustNewTag("OS/2")); err == nil && len(os2) >= 78 {
@@ -436,6 +465,13 @@ func (e *Engine) load(r resource) (*loaded, error) {
 	e.faces[key] = value
 	value.lastUse = e.fontUse
 	e.bytes += value.resourceBytes
+	if sharedKey != "" {
+		putSystemFont(sharedKey, &sharedSystemFont{
+			font: ft, ascent: value.ascent, descent: value.descent,
+			lineGap: value.lineGap, emAscent: value.emAscent,
+			emDescent: value.emDescent, bytes: 2 * value.resourceBytes,
+		})
+	}
 	return value, nil
 }
 

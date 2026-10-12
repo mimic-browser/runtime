@@ -18,6 +18,14 @@ the runtime core never imports `chrome/152` (or any future version) directly.
 `internal/engine` is the only contract visible to browser code. The V8, QuickJS and goja
 adapters live below it. Production browser code does not import a concrete engine.
 
+Tooling is an observational projection of the same state. Passive CDP attachment
+and Runtime inspection must not execute author hooks or change lazy state,
+exceptions or task/microtask ordering. Native metadata, captured intrinsics and
+canonical DOM state supply descriptions; unsafe reflection rejects explicitly.
+The compatibility reference is the unattached browser, including its observable
+bugs, rather than effects introduced by DevTools or automation. See
+[the oracle policy](oracle-policy.md) and [Runtime ownership](cdp-runtime.md).
+
 ## State
 
 `Environment` stores canonical facts only: product, platform, hardware,

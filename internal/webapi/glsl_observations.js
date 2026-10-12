@@ -418,11 +418,64 @@ const glslObservations = (() => {
     }
     for (const g of globals) if (g.value) infer(g.value, root);
     validate(main, root);
-    return { globals, main, shaderType, output, used };
+    // A single vector output assembled from inputs and constants needs no
+    // per-fragment interpreter scope. Keep the parsed shader as the fallback.
+    let directColor = null;
+    if (shaderType === 35632 && main.op === 'block' && main.body.length === 1) {
+      const assignment = main.body[0];
+      if (
+        assignment.op === 'assign' &&
+        assignment.kind === '=' &&
+        assignment.name === output &&
+        assignment.value.op === 'call' &&
+        assignment.value.name === 'vec4' &&
+        assignment.value.args.every((arg) => arg.op === 'literal' || arg.op === 'variable')
+      )
+        directColor = assignment.value.args;
+    }
+    return { globals, main, shaderType, output, used, directColor };
   }
   const initial = (type) =>
     type.includes('vec') ? Array(Number(type.slice(-1))).fill(0) : type === 'bool' ? false : 0;
-  function execute(shader, inputs) {
+  function executeColor(shader, inputs, output) {
+    if (shader.directColor) {
+      let count = 0;
+      let available = true;
+      for (const arg of shader.directColor) {
+        if (arg.op === 'variable' && !Object.hasOwn(inputs, arg.name)) {
+          available = false;
+          break;
+        }
+        const value = arg.op === 'literal' ? arg.value : inputs[arg.name];
+        if (Array.isArray(value)) {
+          for (const component of value) {
+            if (count < 4) output[count] = f(component);
+            count++;
+          }
+        } else {
+          if (count < 4) output[count] = f(value);
+          count++;
+        }
+      }
+      if (available && count >= 4) return output;
+    }
+    return execute(shader, inputs);
+  }
+  function execute(shader, inputs, captureNames = null) {
+    if (captureNames === null && shader.directColor) {
+      const values = [];
+      let available = true;
+      for (const arg of shader.directColor) {
+        if (arg.op === 'variable' && !Object.hasOwn(inputs, arg.name)) {
+          available = false;
+          break;
+        }
+        const value = arg.op === 'literal' ? arg.value : inputs[arg.name];
+        if (Array.isArray(value)) values.push(...value);
+        else values.push(value);
+      }
+      if (available && values.length >= 4) return values.slice(0, 4).map(f);
+    }
     let budget = 4096;
     const root = Object.assign(Object.create(null), inputs);
     root[shader.output] = undefined;
@@ -635,7 +688,14 @@ const glslObservations = (() => {
       if (!Object.hasOwn(root, g.name))
         root[g.name] = g.value ? evaluate(g.value, root) : initial(g.type);
     const result = run(shader.main, root);
-    return result === 'discard' ? null : root[shader.output];
+    const output = result === 'discard' ? null : root[shader.output];
+    if (captureNames === null) return output;
+    const captured = Object.create(null);
+    for (const name of captureNames) {
+      const value = root[name];
+      captured[name] = Array.isArray(value) ? value.slice() : value;
+    }
+    return { output, captured };
   }
-  return { compile, execute, initial };
+  return { compile, execute, executeColor, initial };
 })();
