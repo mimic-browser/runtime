@@ -37,6 +37,7 @@ type resourceSelectionKey struct {
 	choices  string
 	weight   uint64
 	italic   bool
+	exact    bool
 }
 
 type fallbackSelectionKey struct {
@@ -305,8 +306,19 @@ func scanFontDirectories(dirs []string) ([]resource, map[string]resource, map[st
 }
 
 func (e *Engine) selectResource(families string, weight float64, italic bool, choices []FontReference) (resource, error) {
+	return e.selectResourceWithFallback(families, weight, italic, choices, true)
+}
+
+// Fallback traversal must test each CSS family independently. The final serif
+// default is appropriate for a complete font list, but injecting it after each
+// candidate would select Times New Roman before later author families.
+func (e *Engine) selectNamedResource(family string, weight float64, italic bool, choices []FontReference) (resource, error) {
+	return e.selectResourceWithFallback(family, weight, italic, choices, false)
+}
+
+func (e *Engine) selectResourceWithFallback(families string, weight float64, italic bool, choices []FontReference, defaultFallback bool) (resource, error) {
 	e.scan()
-	key := resourceSelectionKey{families: families, choices: resourceSelectionChoices(choices), weight: math.Float64bits(weight), italic: italic}
+	key := resourceSelectionKey{families: families, choices: resourceSelectionChoices(choices), weight: math.Float64bits(weight), italic: italic, exact: !defaultFallback}
 	if selected, ok := e.resourceSelections[key]; ok {
 		return selected, nil
 	}
@@ -325,7 +337,9 @@ func (e *Engine) selectResource(families string, weight float64, italic bool, ch
 		return selected, nil
 	}
 	names := strings.Split(families, ",")
-	names = append(names, "serif")
+	if defaultFallback {
+		names = append(names, "serif")
+	}
 	for _, name := range names {
 		name = strings.TrimSpace(name)
 		quoted := strings.HasPrefix(name, "\"") || strings.HasPrefix(name, "'")

@@ -180,7 +180,7 @@ func (e *Engine) fallbackFace(primary *loaded, cluster []rune, families string, 
 		return nil, nil
 	}
 	for _, name := range names {
-		r, err := e.selectResource(name, weight, italic, choices)
+		r, err := e.selectNamedResource(name, weight, italic, choices)
 		if err != nil {
 			continue
 		}
