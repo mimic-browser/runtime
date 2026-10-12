@@ -357,11 +357,18 @@
     });
   const emit = (target, kind, type, init = {}, trusted = true, native = true) => {
     const event = eventFor(kind, type, init),
-      stamp = eventSlots.get(event),
-      timing =
-        trusted && native && !isolated
-          ? host.performanceEventStart(type, nodeID(target), stamp.timeStamp, stamp.cancelable)
-          : 0;
+      stamp = eventSlots.get(event);
+    if (trusted && native && kind === 'PointerEvent' && type === 'pointermove') {
+      const sample = eventFor(kind, type, init),
+        sampleState = eventSlots.get(sample);
+      sampleState.trusted = true;
+      sampleState.timeStamp = stamp.timeStamp;
+      stamp.coalesced = [sample];
+    }
+    const timing =
+      trusted && native && !isolated
+        ? host.performanceEventStart(type, nodeID(target), stamp.timeStamp, stamp.cancelable)
+        : 0;
     const allowed = dispatchEventCore(target, event, trusted, native),
       others = host.broadcastInputEvent(
         nodeID(target),
@@ -1078,11 +1085,9 @@
       });
     if (operation === 'rect') {
       const rect = clientRectFor(element),
-        entries = computedCSSDeclarations(element),
-        value = (name) =>
-          geometryPixels(
-            geometryValue(element, entries.find((entry) => entry.name === name)?.value),
-          ) || 0,
+        // Input and protocol quads share used CSS edges. Raw declarations such
+        // as percentage padding are not viewport distances.
+        value = (name) => Number.parseFloat(cssComputedValue(element, name)) || 0,
         left = value('border-left-width') + value('padding-left'),
         top = value('border-top-width') + value('padding-top'),
         right = value('border-right-width') + value('padding-right'),

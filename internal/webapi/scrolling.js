@@ -454,7 +454,10 @@ compatibilityScrolling = (() => {
     // If no intermediate ancestor establishes a scrolling/clipping context, the
     // viewport containment test is sufficient and avoids materializing document
     // scroll extents or ancestor layout.
+    // A child viewport alone cannot establish visibility: its embedding frame
+    // may need scrolling in an ancestor document.
     if (
+      windowRelations.self === windowRelations.top &&
       opts.ifNeeded &&
       withStyleReadCache(() => {
         for (let p = geometryParent(element); p && p !== root(); p = geometryParent(p)) {

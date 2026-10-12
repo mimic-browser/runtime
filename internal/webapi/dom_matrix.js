@@ -496,6 +496,14 @@ const DOMMatrix = (() => {
   compatibilityMatrix.geometryCoordinate = (value) =>
     Number.isNaN(value) ? 0 : Math.fround(Math.max(-geometryLimit, Math.min(geometryLimit, value)));
   compatibilityMatrix.point = (m, x, y, z = 0, w = 1) =>
-    Array.from({ length: 4 }, (_, i) => m[i] * x + m[4 + i] * y + m[8 + i] * z + m[12 + i] * w);
+    Array.from({ length: 4 }, (_, i) => {
+      // Blink's client-rect projection uses gfx float matrices. Preserve the
+      // multiply/add rounding sequence; rounding only the final coordinate is
+      // observably different for authored scale factors.
+      let value = Math.fround(m[i] * x);
+      value = Math.fround(value + Math.fround(m[4 + i] * y));
+      value = Math.fround(value + Math.fround(m[8 + i] * z));
+      return Math.fround(value + Math.fround(m[12 + i] * w));
+    });
   return DOMMatrix;
 })();

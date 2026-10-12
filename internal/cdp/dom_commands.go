@@ -97,23 +97,18 @@ func (s *session) frameElementOffset(ctx context.Context, frame *browser.Frame) 
 	if parent == nil {
 		return 0, 0, nil
 	}
-	d := s.runtimeDebugger()
-	object, err := d.ResolveNode(ctx, parent.ID, "", frame.ElementNodeID(), "")
+	// Frame projection is a browser observation. Calling public JS methods here
+	// lets author overrides move protocol quads away from the input surface (and
+	// can execute author code merely by reading a box model).
+	model, err := s.page.ProtocolBoxModel(ctx, parent, frame.ElementNodeID())
 	if err != nil {
 		return 0, 0, err
 	}
-	objectID := stringValue(object["objectId"])
-	defer d.ReleaseObject(ctx, objectID)
-	result, err := d.CallFunction(ctx, parent.ID, "", `function(){const r=this.getBoundingClientRect(),s=getComputedStyle(this),n=k=>parseFloat(s[k])||0;return {x:r.x+n('borderLeftWidth')+n('paddingLeft'),y:r.y+n('borderTopWidth')+n('paddingTop')}}`, map[string]any{"objectId": objectID}, browser.DebuggerOptions{ReturnByValue: true})
-	if err != nil {
-		return 0, 0, err
+	content, _ := model["content"].([]any)
+	if len(content) != 8 {
+		return 0, 0, fmt.Errorf("Could not compute iframe content box")
 	}
-	if ex := result["exceptionDetails"]; ex != nil {
-		return 0, 0, fmt.Errorf("iframe geometry failed: %v", ex)
-	}
-	remote, _ := result["result"].(map[string]any)
-	offset, _ := remote["value"].(map[string]any)
-	return coordinateValue(offset["x"]), coordinateValue(offset["y"]), nil
+	return coordinateValue(content[0]), coordinateValue(content[1]), nil
 }
 
 func (s *session) describeNode(id int64, depth int) (map[string]any, error) {

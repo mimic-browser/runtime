@@ -548,17 +548,11 @@
     constructor(type, init = {}) {
       super(type, init);
       const data = {};
-      for (const name of [
-        'screenX',
-        'screenY',
-        'clientX',
-        'clientY',
-        'button',
-        'buttons',
-        'movementX',
-        'movementY',
-      ])
-        data[name] = Number(init[name]) || 0;
+      for (const name of ['screenX', 'screenY', 'clientX', 'clientY'])
+        data[name] = Math.floor(Number(init[name]) || 0);
+      data.button = (Number(init.button) << 16) >> 16;
+      data.buttons = Number(init.buttons) & 0xffff;
+      for (const name of ['movementX', 'movementY']) data[name] = Number(init[name]) >> 0;
       for (const name of ['ctrlKey', 'shiftKey', 'altKey', 'metaKey']) data[name] = !!init[name];
       data.relatedTarget = init.relatedTarget ?? null;
       mouseSlots.set(this, data);
@@ -647,6 +641,9 @@
   class PointerEvent extends MouseEvent {
     constructor(type, init = {}) {
       super(type, init);
+      const mouse = mouseSlots.get(this);
+      for (const name of ['screenX', 'screenY', 'clientX', 'clientY'])
+        mouse[name] = Number(init[name]) || 0;
       const data = {};
       for (const [name, fallback] of [
         ['pointerId', 0],
@@ -685,10 +682,22 @@
     accessor(PointerEvent.prototype, name, function () {
       return pointerSlots.get(this)?.[name];
     });
-  for (const name of ['getCoalescedEvents', 'getPredictedEvents'])
-    member(PointerEvent.prototype, name, function () {
-      return [];
-    });
+  const getCoalescedEvents = function () {
+    if (!pointerSlots.has(this)) throw new TypeError('Illegal invocation');
+    const state = eventSlots.get(this);
+    return state.trusted && state.coalesced ? state.coalesced.slice() : [];
+  };
+  const updateCoalescedEvents = () => {
+    if (host.documentSecurity().secureContext)
+      member(PointerEvent.prototype, 'getCoalescedEvents', getCoalescedEvents);
+    else delete PointerEvent.prototype.getCoalescedEvents;
+  };
+  updateCoalescedEvents();
+  bootstrapRestoreHooks.push(updateCoalescedEvents);
+  member(PointerEvent.prototype, 'getPredictedEvents', function () {
+    if (!pointerSlots.has(this)) throw new TypeError('Illegal invocation');
+    return [];
+  });
   for (const [name, value] of Object.entries({ UIEvent, MouseEvent, PointerEvent })) {
     markNative(value, name);
     Object.defineProperty(globalThis, name, { value, writable: true, configurable: true });

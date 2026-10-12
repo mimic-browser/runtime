@@ -14,6 +14,46 @@ func TestCSSBoxGraphMatchesFrozenChrome(t *testing.T) {
 	testCSSObservation(t, "css_box_geometry")
 }
 
+func TestCSSRootPercentageHeightUsesInitialContainingBlock(t *testing.T) {
+	parallelBrowserTest(t)
+	historyTestPages(t, func(t *testing.T, page *Page) {
+		navigateCapabilityFixture(t, page)
+		result, err := page.Evaluate(context.Background(), `(() => {
+  document.documentElement.style.cssText = 'margin:0;padding:0;width:100%;height:100%';
+  document.body.style.cssText = 'margin:0;padding:0;width:100%;height:100%';
+  const html = document.documentElement.getBoundingClientRect();
+  const body = document.body.getClientRects()[0];
+  return JSON.stringify([html.width, html.height, body.width, body.height, innerWidth, innerHeight]);
+})()`)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got []float64
+		if err := json.Unmarshal([]byte(result.(string)), &got); err != nil {
+			t.Fatal(err)
+		}
+		if len(got) != 6 || got[0] != got[4] || got[1] != got[5] || got[2] != got[4] || got[3] != got[5] {
+			t.Fatalf("root percentage geometry diverged from initial containing block: %v", got)
+		}
+	})
+}
+
+func TestCSSClientRectTransformUsesFloatMatrixRounding(t *testing.T) {
+	parallelBrowserTest(t)
+	historyTestPages(t, func(t *testing.T, page *Page) {
+		navigateCapabilityFixture(t, page)
+		result, err := page.Evaluate(context.Background(), `(() => {
+			document.body.innerHTML='<div id="box" style="position:absolute;left:0;top:0;width:100px;height:100px;transform-origin:unset;transform:scale(1.123456789)"></div>';
+			const r=document.getElementById('box').getClientRects()[0];
+			return JSON.stringify([r.top,r.right,r.bottom,r.left,r.width,r.height]);
+		})()`)
+		const want = `[-6.172840118408203,106.17283248901367,106.17283248901367,-6.172840118408203,112.34567260742188,112.34567260742188]`
+		if err != nil || result != want {
+			t.Fatalf("float client-rect transform: %v want %s, err=%v", result, want, err)
+		}
+	})
+}
+
 func TestCSSOpposingInsetsStretchAutoPositionedBoxes(t *testing.T) {
 	parallelBrowserTest(t)
 	historyTestPages(t, func(t *testing.T, page *Page) {

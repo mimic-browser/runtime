@@ -146,6 +146,50 @@ func TestInputInternalsDoNotReenterAuthorSelectors(t *testing.T) {
 	})
 }
 
+func TestProtocolMouseMoveCoalescedSampleMatchesChrome(t *testing.T) {
+	parallelBrowserTest(t)
+	historyTestPages(t, func(t *testing.T, page *Page) {
+		navigateCapabilityFixture(t, page)
+		ctx := context.Background()
+		if _, err := page.Evaluate(ctx, `globalThis.inputMoves=[]; document.addEventListener('pointermove', event => { const samples=event.getCoalescedEvents(); inputMoves.push({trusted:event.isTrusted, same:samples[0]===event, samples:samples.map(sample=>[sample.x,sample.y,sample.isTrusted,sample.timeStamp===event.timeStamp])}); });`); err != nil {
+			t.Fatal(err)
+		}
+		if err := page.DispatchProtocolInput(ctx, "Input.dispatchMouseEvent", map[string]any{"type": "mouseMoved", "x": 37.5, "y": 48.25}); err != nil {
+			t.Fatal(err)
+		}
+		value, err := page.Evaluate(ctx, `JSON.stringify(inputMoves)`)
+		if err != nil || value != `[{"trusted":true,"same":false,"samples":[[37.5,48.25,true,true]]}]` {
+			t.Fatalf("coalesced pointer sample: %v %v", value, err)
+		}
+		value, err = page.Evaluate(ctx, `JSON.stringify([new PointerEvent('pointermove').getCoalescedEvents().length, typeof PointerEvent.prototype.getPredictedEvents, isSecureContext])`)
+		if err != nil || value != `[0,"function",true]` {
+			t.Fatalf("PointerEvent methods in secure context: %v %v", value, err)
+		}
+	})
+}
+
+func TestMouseEventCoordinatesMatchChromeIntegerBoundary(t *testing.T) {
+	parallelBrowserTest(t)
+	historyTestPages(t, func(t *testing.T, page *Page) {
+		navigateCapabilityFixture(t, page)
+		ctx := context.Background()
+		value, err := page.Evaluate(ctx, `JSON.stringify([new MouseEvent('x',{screenX:37.9,screenY:-1.9,clientX:37.9,clientY:-1.9,button:1.9,buttons:3.9,movementX:2.9,movementY:-2.9}),new PointerEvent('x',{screenX:37.9,screenY:-1.9,clientX:37.9,clientY:-1.9,button:1.9,buttons:3.9,movementX:2.9,movementY:-2.9})].map(e=>[e.screenX,e.screenY,e.clientX,e.clientY,e.button,e.buttons,e.movementX,e.movementY]))`)
+		if err != nil || value != `[[37,-2,37,-2,1,3,2,-2],[37.9,-1.9,37.9,-1.9,1,3,2,-2]]` {
+			t.Fatalf("constructed mouse and pointer coordinates: %v %v", value, err)
+		}
+		if _, err := page.Evaluate(ctx, `globalThis.nativeCoordinates=[]; for(const type of ['pointermove','mousemove']) document.addEventListener(type,event=>nativeCoordinates.push([type,event.clientX,event.clientY,event.isTrusted]));`); err != nil {
+			t.Fatal(err)
+		}
+		if err := page.DispatchProtocolInput(ctx, "Input.dispatchMouseEvent", map[string]any{"type": "mouseMoved", "x": 37.9, "y": 48.1}); err != nil {
+			t.Fatal(err)
+		}
+		value, err = page.Evaluate(ctx, `JSON.stringify(nativeCoordinates)`)
+		if err != nil || value != `[["pointermove",37.9,48.1,true],["mousemove",37,48,true]]` {
+			t.Fatalf("trusted mouse and pointer coordinates: %v %v", value, err)
+		}
+	})
+}
+
 func TestProtocolInputSharesFocusAndFormStateAcrossWorlds(t *testing.T) {
 	parallelBrowserTest(t)
 	historyTestPages(t, func(t *testing.T, page *Page) {
@@ -372,6 +416,53 @@ func TestProtocolMouseInputRoutesThroughIframeCoordinates(t *testing.T) {
 		clicked, err := page.Evaluate(ctx, `document.querySelector('iframe').contentWindow.clicks`)
 		if err != nil || numberValue(clicked) != 1 {
 			t.Fatalf("iframe button was not clicked: %v %v", clicked, err)
+		}
+	})
+}
+
+func TestProtocolMouseInputHonorsFramePaintOrder(t *testing.T) {
+	parallelBrowserTest(t)
+	historyTestPages(t, func(t *testing.T, page *Page) {
+		navigateCapabilityFixture(t, page)
+		ctx := context.Background()
+		if _, err := page.Evaluate(ctx, `
+document.body.style.margin = '0';
+globalThis.framesForInput = [];
+for (let i = 0; i < 2; i++) {
+  const frame = document.createElement('iframe');
+  frame.style.cssText = 'position:absolute;left:40px;top:30px;width:100px;height:100px;border:0';
+  document.body.append(frame);
+  frame.contentDocument.body.style.margin = '0';
+  frame.contentDocument.body.innerHTML = '<button style="width:100px;height:100px" onclick="window.clicks=(window.clicks||0)+1">go</button>';
+  framesForInput.push(frame);
+}
+globalThis.cover = document.createElement('label');
+cover.style.cssText = 'position:absolute;left:40px;top:30px;width:100px;height:100px;z-index:2;display:none';
+cover.onclick = () => globalThis.coverClicks = (globalThis.coverClicks || 0) + 1;
+document.body.append(cover);
+true;
+`); err != nil {
+			t.Fatal(err)
+		}
+		for step, mutation := range []string{
+			`true`,
+			`framesForInput[1].style.pointerEvents = 'none'`,
+			`cover.style.display = 'block'`,
+			`cover.style.pointerEvents = 'none'; framesForInput[1].style.pointerEvents = 'auto'; framesForInput[1].style.visibility = 'hidden'`,
+		} {
+			if _, err := page.Evaluate(ctx, mutation); err != nil {
+				t.Fatal(err)
+			}
+			for _, kind := range []string{"mousePressed", "mouseReleased"} {
+				if err := page.DispatchProtocolInput(ctx, "Input.dispatchMouseEvent", map[string]any{"type": kind, "x": 70, "y": 60, "button": "left", "clickCount": 1}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			got, err := page.Evaluate(ctx, `JSON.stringify([framesForInput[0].contentWindow.clicks||0,framesForInput[1].contentWindow.clicks||0,globalThis.coverClicks||0])`)
+			want := []string{`[0,1,0]`, `[1,1,0]`, `[1,1,1]`, `[2,1,1]`}[step]
+			if err != nil || got != want {
+				t.Fatalf("step %d: frame paint order: %v %v, want %s", step, got, err, want)
+			}
 		}
 	})
 }

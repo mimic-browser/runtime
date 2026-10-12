@@ -786,6 +786,10 @@ const cssBoxModel = (() => {
   };
   const percentageHeightBasis = (element, own) => {
     const parent = geometryParent(element);
+    // The root element's percentage height resolves against the initial
+    // containing block. Resolving it through normal-flow children creates a
+    // root/body cycle and incorrectly collapses html/body { height: 100% }.
+    if (element === document.documentElement) return host.viewport().height;
     if (
       !(styleReadCache.quirksMode ??= documentIsQuirks(document)) ||
       !['static', 'relative', 'sticky'].includes(own.position) ||

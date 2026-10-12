@@ -210,8 +210,28 @@ func (p *Page) mouseInputTarget(ctx context.Context, owner *Realm, params map[st
 	if frame == nil {
 		return owner, params, nil
 	}
-	for _, child := range frame.Children() {
-		if child.Realm == nil || child.ElementNodeID() == 0 {
+	children := frame.Children()
+	if len(children) == 0 {
+		return owner, params, nil
+	}
+	// A frame's rectangle alone does not establish a hit. Sibling frames,
+	// overlays, visibility and pointer-events participate in the parent's paint
+	// order before coordinates can enter a child document.
+	rawHits, err := owner.invokeInputWorld(ctx, owner, 0, "points", fmt.Sprintf(`{"x":%g,"y":%g}`, x, y))
+	if err != nil {
+		return nil, nil, err
+	}
+	var hits struct {
+		Nodes []int64 `json:"nodes"`
+	}
+	if err := json.Unmarshal([]byte(rawHits), &hits); err != nil {
+		return nil, nil, err
+	}
+	if len(hits.Nodes) == 0 {
+		return owner, params, nil
+	}
+	for _, child := range children {
+		if child.Realm == nil || child.ElementNodeID() == 0 || child.ElementNodeID() != hits.Nodes[0] {
 			continue
 		}
 		raw, err := owner.invokeInputWorld(ctx, owner, child.ElementNodeID(), "rect", "{}")
