@@ -42,7 +42,7 @@ func TestMediaProfileIdentityConstraintsAndPixels(t *testing.T) {
 		defer cancel()
 		value, err := p.Evaluate(ctx, `navigator.mediaDevices
   .enumerateDevices()
-  .then((ds) => ds.length === 2 && ds.every((d) => !d.label && !d.deviceId && !d.groupId));`)
+  .then((ds) => ds.length === 3 && ds.every((d) => !d.label && !d.deviceId && !d.groupId));`)
 		if err != nil || value != true {
 			t.Fatalf("redaction: %v %v", value, err)
 		}
@@ -174,7 +174,7 @@ func TestMediaProfileIdentityConstraintsAndPixels(t *testing.T) {
 		if _, err := p.ctx.SetMediaProfileJSON([]byte(`{"devices":[]}`)); err != nil {
 			t.Fatal(err)
 		}
-		value, err = p.Evaluate(ctx, `navigator.mediaDevices.enumerateDevices().then((ds) => ds.length === 0);`)
+		value, err = p.Evaluate(ctx, `navigator.mediaDevices.enumerateDevices().then((ds) => ds.length === 1 && ds[0].kind === 'audiooutput' && !ds[0].deviceId && !ds[0].label);`)
 		if err != nil || value != true {
 			t.Fatalf("empty configured catalog: %v %v", value, err)
 		}
@@ -505,7 +505,8 @@ func TestSystemMediaProfileCamera(t *testing.T) {
 	value, err := p.Evaluate(ctx, `(async () => {
   globalThis.mediaProfileHardwarePhase = 'enumeration';
   const devices = await navigator.mediaDevices.enumerateDevices();
-  if (devices.length !== 1 || devices[0].label !== 'USB Camera')
+  const camera = devices.find((device) => device.kind === 'videoinput');
+  if (devices.length !== 2 || camera?.label !== 'USB Camera')
     throw new Error('private native source');
   globalThis.mediaProfileHardwarePhase = 'capture';
   const stream = await navigator.mediaDevices.getUserMedia({

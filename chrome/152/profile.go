@@ -91,6 +91,10 @@ func environment(mode state.BrowserMode) state.Environment {
 	// than treated as a Chrome-version semantic.
 	environment.Graphics.WebGPU.InitializationDelayMillis = 205
 	environment.Network.WireProfile = "chrome-152-windows-x64"
+	// The controlled Chrome 152 oracle exposes a rounded 100 ms value through
+	// Navigator.connection.rtt. Keep it in the environment profile: it describes
+	// the captured machine/network and is not a Chrome-version-wide constant.
+	environment.Network.RTTMillis = 100
 	// These are properties of the pinned differential-test machine/network,
 	// not of a target site. They remain canonical and externally configurable
 	// state, while the Chrome 152 bundle supplies the reproducible default.

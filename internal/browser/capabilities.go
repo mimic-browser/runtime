@@ -182,7 +182,7 @@ func addCapabilityHosts(r *Realm, h map[string]any) {
 	})
 	h["mediaTypeSupport"] = r.fn(func(_ engine.Value, a []engine.Value) (engine.Value, error) {
 		m := p.environmentView().Capabilities.Media.Formats.Support(strarg(a, 0))
-		return r.val(map[string]any{"play": m.Play, "mediaSource": m.MediaSource, "precise": m.Precise, "efficient": m.Efficient, "kind": m.Kind}), nil
+		return r.val(map[string]any{"play": m.Play, "mediaSource": m.MediaSource, "mediaRecorder": m.MediaRecorder, "precise": m.Precise, "efficient": m.Efficient, "kind": m.Kind}), nil
 	})
 	h["capabilityState"] = r.fn(func(_ engine.Value, a []engine.Value) (engine.Value, error) {
 		e := p.environmentView()
@@ -249,9 +249,19 @@ func addCapabilityHosts(r *Realm, h map[string]any) {
 			if r.origin == "null" {
 				return r.val(nil), nil
 			}
-			// Web Storage is excluded from StorageManager usage in Blink. Future
-			// quota clients must account bytes here, alongside the same budget.
-			return r.val(map[string]any{"quota": e.Capabilities.StorageQuotaBytes, "usage": 0, "usageDetails": map[string]any{}}), nil
+			// Web Storage is excluded from StorageManager usage in Blink. Quota
+			// clients derive from the same Context-owned state as their APIs.
+			p.ctx.mu.Lock()
+			cacheUsage := p.ctx.cacheUsageLocked(r.origin)
+			p.ctx.mu.Unlock()
+			details := map[string]any{}
+			if cacheUsage != 0 {
+				details["caches"] = cacheUsage
+			}
+			// Chromium exposes the current usage on top of the origin's remaining
+			// temporary-storage allowance. A successful Cache.put therefore raises
+			// both usage and the reported total quota by the same amount.
+			return r.val(map[string]any{"quota": e.Capabilities.StorageQuotaBytes + cacheUsage, "usage": cacheUsage, "usageDetails": details}), nil
 		}
 		p.ctx.mu.Lock()
 		defer p.ctx.mu.Unlock()

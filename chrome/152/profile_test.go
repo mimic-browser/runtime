@@ -19,6 +19,9 @@ func TestDefaultOracleEnvironmentIsHeadful(t *testing.T) {
 	if brands := profile.State.Product.UserAgentBrands; len(brands) != 2 || brands[1].Brand != "Chromium" {
 		t.Fatalf("unexpected Chrome-for-Testing UA-CH brands: %+v", brands)
 	}
+	if profile.State.Network.RTTMillis != 100 {
+		t.Fatalf("unexpected controlled-oracle network RTT: %v", profile.State.Network.RTTMillis)
+	}
 	if !bundle.Expectations().PrimaryOracle.Authoritative || bundle.Expectations().PrimaryOracle.Mode != state.BrowserModeHeadful {
 		t.Fatal("headful Chrome must be the authoritative compatibility oracle")
 	}

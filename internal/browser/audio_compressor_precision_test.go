@@ -16,3 +16,8 @@ func TestAudioFFTPrecisionMatchesFrozenChrome(t *testing.T) {
 	parallelBrowserTest(t)
 	documentAllOracle(t, "audio_fft_precision")
 }
+
+func TestAudioAnalyserPrecisionMatchesFrozenChrome(t *testing.T) {
+	parallelBrowserTest(t)
+	documentAllOracle(t, "audio_analyser_precision")
+}

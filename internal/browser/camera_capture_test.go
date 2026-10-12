@@ -84,10 +84,12 @@ func TestCameraStreamPixelsCloneAndTeardown(t *testing.T) {
 		defer cancel()
 		result, err := p.Evaluate(ctx, `(async () => {
   const devices = await navigator.mediaDevices.enumerateDevices();
-  if (devices.length !== 1 || devices[0].label !== 'Fixture camera' || !devices[0].deviceId)
+  const camera = devices.find((device) => device.kind === 'videoinput');
+  const output = devices.find((device) => device.kind === 'audiooutput');
+  if (devices.length !== 2 || camera?.label !== 'Fixture camera' || !camera.deviceId || output?.deviceId || output?.label)
     throw new Error('devices');
   globalThis.stream = await navigator.mediaDevices.getUserMedia({
-    video: { deviceId: { exact: devices[0].deviceId } },
+    video: { deviceId: { exact: camera.deviceId } },
   });
   globalThis.track = stream.getVideoTracks()[0];
   globalThis.clone = track.clone();
@@ -96,7 +98,7 @@ func TestCameraStreamPixelsCloneAndTeardown(t *testing.T) {
     !(track instanceof MediaStreamTrack) ||
     track === clone ||
     track.id === clone.id ||
-    clone.getSettings().deviceId !== devices[0].deviceId
+    clone.getSettings().deviceId !== camera.deviceId
   )
     throw new Error('identity');
   const v = document.createElement('video');
@@ -165,7 +167,7 @@ func TestCameraPermissionConstraintsAndOriginIsolation(t *testing.T) {
 		defer cancel()
 		result, err := p.Evaluate(ctx, `(async () => {
   const d = await navigator.mediaDevices.enumerateDevices();
-  if (d.length !== 1 || d[0].label || d[0].deviceId) throw new Error('privacy');
+  if (d.length !== 2 || d[0].kind !== 'videoinput' || d[0].label || d[0].deviceId || d[1].kind !== 'audiooutput' || d[1].label || d[1].deviceId) throw new Error('privacy');
   try {
     await navigator.mediaDevices.getUserMedia({ video: true });
     return false;

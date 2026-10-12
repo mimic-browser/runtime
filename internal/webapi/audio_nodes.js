@@ -618,41 +618,233 @@ const analyserTime = (n) => {
     out[i] = n.history[(n.historyFrame - out.length + i + 32768) & 32767];
   return out;
 };
-const analyserFrequency = (n) => {
-  if (n.frequencyVersion === n.analysisVersion && n.spectrum) return n.spectrum;
-  const input = analyserTime(n),
-    N = input.length,
-    re = new Float32Array(N),
-    im = new Float32Array(N);
-  for (let i = 0; i < N; i++)
-    re[i] =
-      input[i] *
-      (0.42 - 0.5 * Math.cos((2 * Math.PI * i) / N) + 0.08 * Math.cos((4 * Math.PI * i) / N));
-  for (let i = 1, j = 0; i < N; i++) {
-    let bit = N >> 1;
+// Chromium's Windows audio analyzer converts linear magnitudes with UCRT's
+// float log10 implementation. Keep the calculation in Float32, including the
+// table reduction and FMA order, because a double Math.log10 has observably
+// different rounding for some bins.
+const audioFloatBitsBuffer = new ArrayBuffer(4),
+  audioFloatBitsView = new Float32Array(audioFloatBitsBuffer),
+  audioUintBitsView = new Uint32Array(audioFloatBitsBuffer),
+  audioFloatFromBits = (bits) => {
+    audioUintBitsView[0] = bits >>> 0;
+    return audioFloatBitsView[0];
+  },
+  audioFloatBits = (value) => {
+    audioFloatBitsView[0] = value;
+    return audioUintBitsView[0];
+  },
+  audioFMA = (a, b, c) => f(a * b + c),
+  audioLog10Lead = [],
+  audioLog10Tail = [],
+  audioLog10Inverse = [];
+for (let i = 0; i <= 128; i++) {
+  const exact = Math.log10(1 + i / 128),
+    lead = audioFloatFromBits(audioFloatBits(f(exact)) & 0xffffc000);
+  audioLog10Lead.push(lead);
+  audioLog10Tail.push(f(exact - lead));
+  audioLog10Inverse.push(f(256 / (128 + i)));
+}
+const audioLog10f = (value) => {
+  const x = f(value),
+    bits = audioFloatBits(x),
+    absoluteBits = bits & 0x7fffffff;
+  if (absoluteBits === 0) return -Infinity;
+  if (bits >>> 31) return NaN;
+  if (absoluteBits >= 0x7f800000) return x;
+  if (absoluteBits < 0x00800000) return f(Math.log10(x));
+
+  const difference = f(x - 1);
+  if (Math.abs(difference) < 0.0625) {
+    const ratio = f(difference / f(2 + difference)),
+      doubled = f(ratio + ratio),
+      squared = f(doubled * doubled),
+      correction = audioFMA(
+        audioFMA(audioFloatFromBits(0x3daaaaab), squared, audioFloatFromBits(0x3c4ccccd)),
+        f(doubled * squared),
+        -f(difference * ratio),
+      ),
+      high = audioFloatFromBits(audioFloatBits(difference) & 0xffff0000),
+      remainder = f(correction + f(difference - high)),
+      highPart = f(high * audioFloatFromBits(0x3ede0000)),
+      lowPart = audioFMA(
+        remainder,
+        audioFloatFromBits(0x3a37b152),
+        f(high * audioFloatFromBits(0x3a37b152)),
+      );
+    return f(f(highPart + f(remainder * audioFloatFromBits(0x3ede0000))) + lowPart);
+  }
+
+  const mantissa = bits & 0x7fffff,
+    exponent = f((bits >>> 23) - 127),
+    normalized = audioFloatFromBits(mantissa | 0x3f000000),
+    index = (mantissa + 0x8000) >>> 16,
+    nearest = audioFloatFromBits((index << 16) | 0x3f000000),
+    reduced = f(f(nearest - normalized) * audioLog10Inverse[index]),
+    polynomial = audioFMA(
+      audioFMA(audioFloatFromBits(0x3eaaaaab), reduced, 0.5),
+      f(reduced * reduced),
+      reduced,
+    ),
+    converted = f(polynomial * audioFloatFromBits(0x3ede5bd9)),
+    tail = f(
+      audioFMA(audioFloatFromBits(0x39826a13), exponent, -converted) + audioLog10Tail[index],
+    ),
+    lead = audioFMA(audioFloatFromBits(0x3e9a0000), exponent, audioLog10Lead[index]);
+  return f(lead + tail);
+};
+// AnalyserNode shares Chromium's RustFFT Float32 power-of-two plan with
+// PeriodicWave. The forward plan is the conjugate of the already measured
+// inverse butterfly order; reconstruction follows rustfft_ffi.rs.
+const analyserForwardFFT = (input) => {
+  const add = (a, b) => [f(a[0] + b[0]), f(a[1] + b[1])],
+    sub = (a, b) => [f(a[0] - b[0]), f(a[1] - b[1])],
+    rot = (a) => [-a[1], a[0]],
+    scale = (a, s) => [f(a[0] * s), f(a[1] * s)],
+    mul = (a, b) => [f(a[0] * b[0] - f(a[1] * b[1])), f(a[0] * b[1] + f(a[1] * b[0]))],
+    plainMul = (a, b) => [f(f(a[0] * b[0]) - f(a[1] * b[1])), f(f(a[0] * b[1]) + f(a[1] * b[0]))],
+    tw = (i, length) => {
+      const angle = ((-2 * Math.PI) / length) * i;
+      return [f(Math.cos(angle)), -f(Math.sin(angle))];
+    },
+    root = f(Math.SQRT1_2),
+    eighth = (a, third = false) => scale(third ? sub(rot(a), a) : add(rot(a), a), root);
+  const b4 = (a) => {
+    const x = add(a[0], a[2]),
+      y = sub(a[0], a[2]),
+      z = add(a[1], a[3]),
+      t = rot(sub(a[1], a[3]));
+    return [add(x, z), add(y, t), sub(x, z), sub(y, t)];
+  };
+  const b8 = (a) => {
+    const x = b4([a[0], a[2], a[4], a[6]]),
+      y = b4([a[1], a[3], a[5], a[7]]);
+    y[1] = eighth(y[1]);
+    y[2] = rot(y[2]);
+    y[3] = eighth(y[3], true);
+    return [...x.map((value, i) => add(value, y[i])), ...x.map((value, i) => sub(value, y[i]))];
+  };
+  const b32 = (a) => {
+    const rows = Array.from({ length: 8 }, (_, j) => b4([a[j], a[j + 8], a[j + 16], a[j + 24]]));
+    for (let j = 1; j < 8; j++)
+      for (let k = 1; k < 4; k++) {
+        const index = j * k,
+          value = rows[j][k];
+        if (index === 4) rows[j][k] = eighth(value);
+        else if (index === 8) rows[j][k] = rot(value);
+        else if (index === 12) rows[j][k] = eighth(value, true);
+        else {
+          const factor =
+            index > 16
+              ? scale(tw(index - 16, 32), -1)
+              : index > 8
+                ? rot(tw(index - 8, 32))
+                : tw(index, 32);
+          rows[j][k] = mul(value, factor);
+        }
+      }
+    const out = new Array(32);
+    for (let k = 0; k < 4; k++) {
+      const values = b8(rows.map((row) => row[k]));
+      for (let j = 0; j < 8; j++) out[k + 4 * j] = values[j];
+    }
+    return out;
+  };
+  const mixed = (a, radix, inner, twiddleFirst) => {
+    const length = a.length,
+      width = length / radix,
+      rows = Array.from({ length: radix }, () => new Array(width));
+    for (let j = 0; j < width; j++) {
+      const values =
+        radix === 4
+          ? b4(Array.from({ length: radix }, (_, r) => a[j + r * width]))
+          : b8(Array.from({ length: radix }, (_, r) => a[j + r * width]));
+      rows[0][j] = values[0];
+      for (let r = 1; r < radix; r++)
+        rows[r][j] = twiddleFirst
+          ? mul(tw(j * r, length), values[r])
+          : mul(values[r], tw(j * r, length));
+    }
+    const out = new Array(length);
+    for (let r = 0; r < radix; r++) {
+      const values = inner(rows[r]);
+      for (let j = 0; j < width; j++) out[j * radix + r] = values[j];
+    }
+    return out;
+  };
+  const transform = (a) => {
+    if (a.length === 256) return mixed(a, 8, b32, false);
+    const radix = a.length === 1024 || a.length === 8192 ? 4 : 8;
+    return mixed(a, radix, transform, true);
+  };
+  const n = input.length,
+    half = n / 2,
+    packed = Array.from({ length: half }, (_, i) => [input[2 * i], -input[2 * i + 1]]),
+    spectrum = transform(packed).map((value) => [value[0], -value[1]]),
+    real = new Float32Array(half),
+    imag = new Float32Array(half);
+  real[0] = f(spectrum[0][0] + spectrum[0][1]);
+  imag[0] = f(spectrum[0][0] - spectrum[0][1]);
+  for (let k = 1; k < half / 2; k++) {
+    const z = spectrum[k],
+      mirror = spectrum[half - k],
+      even = [f(0.5 * f(z[0] + mirror[0])), f(0.5 * f(z[1] - mirror[1]))],
+      odd = [f(z[1] + mirror[1]), f(-(z[0] - mirror[0]))],
+      angle = (-2 * Math.PI * k) / n,
+      weighted = plainMul([f(0.5 * Math.cos(angle)), f(0.5 * Math.sin(angle))], odd),
+      value = add(even, weighted),
+      reflected = sub(even, weighted);
+    real[k] = value[0];
+    imag[k] = value[1];
+    real[half - k] = reflected[0];
+    imag[half - k] = -reflected[1];
+  }
+  real[half / 2] = spectrum[half / 2][0];
+  imag[half / 2] = -spectrum[half / 2][1];
+  imag[0] = 0;
+  return [real, imag];
+};
+const analyserRadix2FFT = (input) => {
+  const real = input.slice(),
+    imag = new Float32Array(input.length);
+  for (let i = 1, j = 0; i < real.length; i++) {
+    let bit = real.length >> 1;
     for (; j & bit; bit >>= 1) j ^= bit;
     j ^= bit;
     if (i < j) {
-      const v = re[i];
-      re[i] = re[j];
-      re[j] = v;
+      const value = real[i];
+      real[i] = real[j];
+      real[j] = value;
     }
   }
-  for (let size = 2; size <= N; size *= 2)
-    for (let base = 0; base < N; base += size)
+  for (let size = 2; size <= real.length; size *= 2)
+    for (let base = 0; base < real.length; base += size)
       for (let j = 0; j < size / 2; j++) {
         const a = base + j,
           b = a + size / 2,
           angle = (-2 * Math.PI * j) / size,
           wr = Math.cos(angle),
           wi = Math.sin(angle),
-          tr = re[b] * wr - im[b] * wi,
-          ti = re[b] * wi + im[b] * wr;
-        re[b] = re[a] - tr;
-        im[b] = im[a] - ti;
-        re[a] += tr;
-        im[a] += ti;
+          tr = real[b] * wr - imag[b] * wi,
+          ti = real[b] * wi + imag[b] * wr;
+        real[b] = real[a] - tr;
+        imag[b] = imag[a] - ti;
+        real[a] += tr;
+        imag[a] += ti;
       }
+  return [real, imag];
+};
+const analyserFrequency = (n) => {
+  if (n.frequencyVersion === n.analysisVersion && n.spectrum) return n.spectrum;
+  const input = analyserTime(n),
+    N = input.length;
+  for (let i = 0; i < N; i++)
+    input[i] = f(
+      input[i] *
+        f(0.42 - 0.5 * Math.cos((2 * Math.PI * i) / N) + 0.08 * Math.cos((4 * Math.PI * i) / N)),
+    );
+  const [re, im] = [512, 2048, 4096, 16384, 32768].includes(N)
+    ? analyserForwardFFT(input)
+    : analyserRadix2FFT(input);
   const previous = n.spectrum || new Float32Array(N / 2),
     out = new Float32Array(N / 2);
   for (let i = 0; i < out.length; i++)
@@ -677,7 +869,7 @@ for (const name of [
       throw new TypeError('Invalid typed array');
     const values = frequency ? analyserFrequency(n) : analyserTime(n);
     for (let i = 0; i < Math.min(array.length, values.length); i++) {
-      const value = frequency ? 20 * Math.log10(values[i]) : values[i];
+      const value = frequency ? f(20 * audioLog10f(values[i])) : values[i];
       array[i] = floating
         ? value
         : Math.max(

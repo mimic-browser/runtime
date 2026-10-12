@@ -10,18 +10,19 @@ import (
 // MediaContainerPolicy is profile codec policy. Observations do not require a
 // decoder device, but all MIME-consuming APIs must agree on the same grammar.
 type MediaContainerPolicy struct {
-	Codecs       []string
-	DefaultCodec string
-	MediaSource  bool
+	Codecs        []string
+	DefaultCodec  string
+	MediaSource   bool
+	MediaRecorder bool
 }
 type MediaFormatCatalog struct {
 	Containers     map[string]MediaContainerPolicy
 	EfficientVideo []string
 }
 type MediaTypeSupport struct {
-	Play                            string
-	MediaSource, Precise, Efficient bool
-	Kind                            string
+	Play                                           string
+	MediaSource, MediaRecorder, Precise, Efficient bool
+	Kind                                           string
 }
 
 var avcCodec = regexp.MustCompile(`^avc[13]\.([0-9a-fA-F]{6})$`)
@@ -116,11 +117,13 @@ func (c MediaFormatCatalog) Support(content string) MediaTypeSupport {
 	if len(codecs) == 0 {
 		if container.DefaultCodec == "" {
 			out.Play = "maybe"
+			out.MediaRecorder = container.MediaRecorder
 			return out
 		}
 		out.Play = "probably"
 		out.Precise = true
 		out.MediaSource = container.MediaSource
+		out.MediaRecorder = container.MediaRecorder
 		out.Efficient = true
 		return out
 	}
@@ -151,6 +154,7 @@ func (c MediaFormatCatalog) Support(content string) MediaTypeSupport {
 		mse = false
 	}
 	out.MediaSource = mse
+	out.MediaRecorder = container.MediaRecorder
 	out.Precise = precise && len(codecs) == 1
 	out.Efficient = efficient
 	return out

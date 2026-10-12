@@ -439,8 +439,17 @@ func addCameraHosts(r *Realm, h map[string]any) {
 					}
 					rows = append(rows, map[string]any{"deviceId": r.mediaDeviceID("videoinput", d.ID, d.media), "groupId": r.mediaGroupID("videoinput", d.ID, d.media), "label": d.Label, "kind": "videoinput"})
 				}
-				// An unavailable native backend contributes no devices of its kind;
-				// a capture request still reports the concrete backend failure.
+				// Chrome exposes its anonymous default output before speaker-selection
+				// permission regardless of whether the embedder has a playback backend.
+				// Output enumeration is browser identity; capture providers only govern
+				// audioinput and videoinput membership.
+				for _, kind := range r.agent.Page().environmentView().Capabilities.Media.Kinds {
+					if kind == "audiooutput" {
+						rows = append(rows, map[string]any{"deviceId": "", "groupId": "", "label": "", "kind": kind})
+						break
+					}
+				}
+				// A capture request still reports concrete input-backend failures.
 				if err != nil && audioErr != nil {
 					return promise.Resolve(cameraFailure("NotReadableError", fmt.Sprintf("camera: %s; microphone: %s", r.mediaBackendFailure("videoinput", err), r.mediaBackendFailure("audioinput", audioErr)), ""))
 				}

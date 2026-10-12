@@ -176,7 +176,7 @@ func TestNavigatorCapturedOperationsV8(t *testing.T) {
 
 // Keep the frozen observations unchanged and verify them before asserting the
 // explicitly requested automation policy. A prompt must reject rather than
-// wait for UI; enumerated devices must belong to implemented native backends.
+// wait for UI.
 func navigatorAutomationObservation(t *testing.T, name string, frozen any) any {
 	t.Helper()
 	switch name {
@@ -198,7 +198,7 @@ func navigatorAutomationObservation(t *testing.T, name string, frozen any) any {
 		if !reflect.DeepEqual(frozen, chrome) {
 			t.Fatalf("retained Chrome device observation changed: %v", frozen)
 		}
-		return map[string]any{"value": []any{anonymous("audioinput"), anonymous("videoinput")}}
+		return frozen
 	default:
 		return frozen
 	}

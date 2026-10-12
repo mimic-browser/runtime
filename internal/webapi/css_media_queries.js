@@ -18,6 +18,8 @@ const cssMediaMatches = (query) => {
   }
   let viewport;
   const dimensions = () => viewport || (viewport = host.viewport());
+  let display;
+  const screen = () => display || (display = host.screen());
   const number = (node) => {
     if (node?.type === 'Identifier' && ['width', 'height'].includes(node.name))
       return dimensions()[node.name];
@@ -80,10 +82,53 @@ const cssMediaMatches = (query) => {
               number(value),
             )
           : dimensions()[name] > 0;
+      if (['device-width', 'device-height'].includes(name)) {
+        const axis = name === 'device-width' ? 'width' : 'height';
+        return value
+          ? compare(
+              screen()[axis],
+              node.name.startsWith('min-') ? '>=' : node.name.startsWith('max-') ? '<=' : '=',
+              number(value),
+            )
+          : screen()[axis] > 0;
+      }
+      if (name === '-webkit-device-pixel-ratio') {
+        const ratio = value?.type === 'Number' ? Number(value.value) : null;
+        return compare(
+          screen().devicePixelRatio,
+          node.name.startsWith('min-') ? '>=' : node.name.startsWith('max-') ? '<=' : '=',
+          ratio,
+        );
+      }
+      if (name === 'resolution') {
+        const unit = value?.unit?.toLowerCase(),
+          raw = value?.type === 'Number' ? Number(value.value) : Number(value?.value),
+          ratio =
+            unit === 'dppx' || unit === 'x'
+              ? raw
+              : unit === 'dpi'
+                ? raw / 96
+                : unit === 'dpcm'
+                  ? (raw * 2.54) / 96
+                  : null;
+        return compare(
+          screen().devicePixelRatio,
+          node.name.startsWith('min-') ? '>=' : node.name.startsWith('max-') ? '<=' : '=',
+          ratio,
+        );
+      }
       if (name === 'orientation')
         return (
           value?.name === (dimensions().width > dimensions().height ? 'landscape' : 'portrait')
         );
+      if (name === 'monochrome') return value?.type === 'Number' && Number(value.value) === 0;
+      if (name === 'color-gamut') return value?.name === 'srgb';
+      if (name === 'any-hover' || name === 'hover') return value?.name === 'hover';
+      if (name === 'any-pointer' || name === 'pointer') return value?.name === 'fine';
+      if (name === 'display-mode') return value?.name === 'browser';
+      if (name === 'forced-colors') return value?.name === 'none';
+      if (name === 'prefers-contrast') return value?.name === 'no-preference';
+      if (name === 'prefers-reduced-transparency') return value?.name === 'no-preference';
       if (['prefers-color-scheme', 'prefers-reduced-motion'].includes(name))
         return host.media('(' + name + ': ' + (value?.name || '') + ')');
     }

@@ -1267,6 +1267,23 @@ const installNavigatorCapabilities = () => {
       configurable: true,
       enumerable: true,
     });
+  const recorderTypeSupported = {
+    isTypeSupported(type) {
+      if (!arguments.length)
+        throw new TypeError(
+          "Failed to execute 'isTypeSupported' on 'MediaRecorder': 1 argument required, but only 0 present.",
+        );
+      return !!host.mediaTypeSupport(mediaString(type)).mediaRecorder;
+    },
+  }.isTypeSupported;
+  native(recorderTypeSupported, 'isTypeSupported');
+  if (typeof globalThis.MediaRecorder === 'function')
+    Object.defineProperty(MediaRecorder, 'isTypeSupported', {
+      value: recorderTypeSupported,
+      writable: true,
+      configurable: true,
+      enumerable: true,
+    });
   for (const name of ['decodingInfo', 'encodingInfo'])
     method(
       'MediaCapabilities',
