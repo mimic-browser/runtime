@@ -152,6 +152,25 @@ func (s *SessionState) Blob(raw string) ([]byte, string, bool) {
 	return append([]byte(nil), entry.body...), entry.contentType, ok && entry.mediaSource == nil
 }
 
+// BlobResource retains an object URL entry for a load already initiated before
+// revocation. It never makes the URL available to subsequent loads.
+type BlobResource struct {
+	url         string
+	body        []byte
+	contentType string
+}
+
+func (s *SessionState) CaptureBlob(raw string) *BlobResource {
+	if !strings.HasPrefix(raw, "blob:") {
+		return nil
+	}
+	body, contentType, ok := s.Blob(raw)
+	if !ok {
+		return nil
+	}
+	return &BlobResource{url: raw, body: body, contentType: contentType}
+}
+
 func (s *SessionState) PutMediaSourceURL(raw, owner string, source MediaSourceResource) {
 	s.mu.Lock()
 	s.blobs[raw] = blobEntry{owner: owner, mediaSource: source}

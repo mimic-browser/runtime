@@ -2,6 +2,7 @@ package browser
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -9,6 +10,70 @@ import (
 	"testing"
 	"time"
 )
+
+func TestXHRBinaryBodyPreservesBytes(t *testing.T) {
+	serialBrowserTest(t)
+	historyTestPages(t, func(t *testing.T, p *Page) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path != "/echo" {
+				io.WriteString(w, "<!doctype html><body>")
+				return
+			}
+			body, _ := io.ReadAll(r.Body)
+			json.NewEncoder(w).Encode([]string{r.Header.Get("Content-Type"), hex.EncodeToString(body)})
+		}))
+		defer server.Close()
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := p.Navigate(ctx, server.URL); err != nil {
+			t.Fatal(err)
+		}
+		got, err := p.Evaluate(ctx, `new Promise(resolve => {
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', '/echo');
+  xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+  xhr.onload = () => resolve(xhr.responseText.trim());
+  xhr.send(new Uint8Array([0x92, 0xda, 0x02, 0xf6, 0xff, 0x80]));
+})`)
+		want := `["application/octet-stream","92da02f6ff80"]`
+		if err != nil || got != want {
+			t.Fatalf("binary XHR: got %v, %v; want %s", got, err, want)
+		}
+		got, err = p.Evaluate(ctx, `new Promise(resolve => {
+  class EncodedProof extends Uint8Array {
+    toString() { return new TextDecoder().decode(this); }
+  }
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', '/echo');
+  xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+  xhr.onload = () => resolve(xhr.responseText.trim());
+  xhr.send(new EncodedProof([0x92, 0xda, 0x02, 0xf6, 0xff, 0x80]));
+})`)
+		if err != nil || got != want {
+			t.Fatalf("XHR called binary body's text decoder: got %v, %v; want %s", got, err, want)
+		}
+		got, err = p.Evaluate(ctx, `new Promise(resolve => {
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', '/echo');
+  xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+  xhr.onload = () => resolve(xhr.responseText.trim());
+  xhr.send(new DataView(new Uint8Array([0, 0x92, 0xda, 0x02, 0xf6, 0xff, 0x80, 0]).buffer, 1, 6));
+})`)
+		if err != nil || got != want {
+			t.Fatalf("XHR DataView byte range: got %v, %v; want %s", got, err, want)
+		}
+		got, err = p.Evaluate(ctx, `new Promise(resolve => {
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', '/echo');
+  xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+  xhr.onload = () => resolve(xhr.responseText.trim());
+  xhr.send(new Uint8Array([0x92, 0xda, 0x02, 0xf6, 0xff, 0x80]).buffer);
+})`)
+		if err != nil || got != want {
+			t.Fatalf("XHR ArrayBuffer bytes: got %v, %v; want %s", got, err, want)
+		}
+	})
+}
 
 // Expected headers were received from frozen headful Chrome 152.0.7977.82
 // by a local server (request-edges2-20260913-chrome diagnostic capture).

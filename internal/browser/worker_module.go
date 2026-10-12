@@ -16,9 +16,10 @@ import (
 // responses; compilation, graph traversal and completions run on its event loop.
 // Unlike a document, a worker has no import map or document lifecycle hooks.
 type workerModules struct {
-	worker   *DedicatedWorker
-	lifetime context.Context
-	entries  map[string]*workerModule
+	initialBlob *network.BlobResource
+	worker      *DedicatedWorker
+	lifetime    context.Context
+	entries     map[string]*workerModule
 }
 
 type workerModule struct {
@@ -114,6 +115,8 @@ func (m *workerModules) fetch(target, referrer *url.URL, callback func(*workerMo
 		OmitClientHints: true, ClientIsWorker: true, Mode: "cors", Credentials: w.credentials, EnforceCORS: true,
 		Destination: "script", Owner: "worker", ContentPolicy: w.policy, ContentPolicyURL: w.url, ContentPolicyDirective: "script-src"}
 	if key == w.url.String() && w.scriptType == "module" {
+		request.BlobResource = m.initialBlob
+		m.initialBlob = nil
 		request.Mode, request.Destination, request.Initiator = "same-origin", "worker", network.Worker
 		request.ClientIsWorker = false
 		request.Referrer = w.securityURL
@@ -243,6 +246,7 @@ func (w *DedicatedWorker) startModule(ctx context.Context, source string) {
 			if err != nil {
 				return w.reportError(err)
 			}
+			w.queueSharedConnect()
 			// Chrome dispatches messages while evaluation is suspended on TLA.
 			w.enableMessages()
 			return nil

@@ -26,7 +26,8 @@ func (r *Realm) syncPerformanceEntries() {
 			}
 			continue
 		}
-		if event.Name != "response" || event.Data["initiator"] == network.Navigation {
+		failed := event.Name == "failed" && event.Data["performanceFailure"] == true
+		if (event.Name != "response" && !failed) || event.Data["initiator"] == network.Navigation {
 			continue
 		}
 		if owner, stamped := event.Data["performanceOwner"]; stamped {

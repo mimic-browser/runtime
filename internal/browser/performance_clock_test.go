@@ -32,6 +32,19 @@ func TestPerformanceClamperStableMonotonicBuckets(t *testing.T) {
 	}
 }
 
+func TestPerformanceClamperPreservesTimeTicksDoubleRounding(t *testing.T) {
+	// Both frozen Chrome 152 and current Chrome on the Windows oracle host use
+	// this boot-time magnitude. Consecutive 100us buckets retain the same
+	// observable double representation used by the hCaptcha timing collector.
+	c := performanceClamper{seed: 123456789, precisionBaseMillis: 81910026.7959}
+	origin := time.Unix(1789070000, 0)
+	first := c.now(origin.Add(32600*time.Microsecond), origin, false)
+	second := c.now(origin.Add(32700*time.Microsecond), origin, false)
+	if first != 32.599999994039536 || second-first != 0.10000000894069672 {
+		t.Fatalf("unexpected TimeTicks double projection: %.17g %.17g", first, second-first)
+	}
+}
+
 // Frozen Chrome 152 local oracle: ordinary timestamps lie on a 100us grid,
 // isolated timestamps on a 5us grid; both are nondecreasing. Sampling the
 // minimum positive delta alone also measures host-call overhead, not resolution.

@@ -49,3 +49,11 @@ func Now() time.Time {
 }
 
 func Since(start time.Time) time.Duration { return Now().Sub(start) }
+
+// FloatMilliseconds returns the platform monotonic coordinate as a double.
+// Blink converts TimeTicks through this coordinate before subtracting a
+// document origin. Its magnitude therefore contributes observable IEEE-754
+// rounding to DOMHighResTimeStamp values.
+func FloatMilliseconds() float64 {
+	return float64(readCounter()) * 1000 / float64(clockFrequency)
+}

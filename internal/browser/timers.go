@@ -74,8 +74,11 @@ func (r *Realm) hostTimer(_ engine.Value, args []engine.Value) (engine.Value, er
 		}
 		return err
 	}
-	id = r.scheduler.Post(scheduler.Timer, delay, callback)
-	registration.taskID = id
+	// Timer handles are allocated by the Window timer API. Other Page tasks
+	// must not consume public handles observable through setTimeout's return.
+	r.nextTimerID++
+	id = r.nextTimerID
+	registration.taskID = r.scheduler.Post(scheduler.Timer, delay, callback)
 	r.timers[id] = registration
 	// Window timer handles are Web IDL numbers, including in runtimes whose
 	// uint64 marshaling otherwise produces a JavaScript BigInt.

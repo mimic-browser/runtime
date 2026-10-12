@@ -578,7 +578,10 @@
     });
     try {
       const operation = (async () => {
-        const body = await consume(request);
+        // An empty body does not defer request initiation to a microtask. In
+        // particular, a blob URL must be acquired before the caller revokes it.
+        const body =
+          slot(bodies, request).stream === null ? new Uint8Array() : await consume(request);
         if (signal.aborted) throw signal.reason;
         let raw;
         try {

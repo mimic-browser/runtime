@@ -69,8 +69,9 @@ func (w *DedicatedWorker) hostTimer(_ engine.Value, args []engine.Value) (engine
 		}
 		return err
 	}
-	id = w.scheduler.Post(scheduler.Timer, delay, callback)
-	registration.taskID = id
+	w.nextTimerID++
+	id = w.nextTimerID
+	registration.taskID = w.scheduler.Post(scheduler.Timer, delay, callback)
 	w.timers[id] = registration
 	w.signal()
 	return w.runtime.Value(float64(id)), nil

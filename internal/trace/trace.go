@@ -223,7 +223,7 @@ func (r *Recorder) Add(kind Kind, name string, data map[string]any) {
 	}
 	r.next++
 	e := Event{r.next, time.Now().UTC(), kind, name, data}
-	if kind == Network && name == "response" {
+	if kind == Network && (name == "response" || name == "failed" && data["performanceFailure"] == true) {
 		r.networkEvents = append(r.networkEvents, e)
 	}
 	if r.enabled {

@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/moreveal/mimic/internal/monotime"
 	"github.com/moreveal/mimic/internal/network"
 )
 
@@ -87,14 +88,20 @@ func (r *Realm) performanceNavigationID() int {
 // Each bucket has a stable randomized transition, not fresh jitter per read.
 // Reference: chromium/152.0.7977.82 third_party/blink/renderer/core/timing/time_clamper.cc.
 // The immutable seed belongs to a Page and is shared with its frames/workers.
-type performanceClamper struct{ seed uint64 }
+type performanceClamper struct {
+	seed                uint64
+	precisionBaseMillis float64
+}
 
 func newPerformanceClamper() performanceClamper {
 	var seed [8]byte
 	if _, err := rand.Read(seed[:]); err != nil {
 		panic(err)
 	}
-	return performanceClamper{binary.LittleEndian.Uint64(seed[:])}
+	return performanceClamper{
+		seed:                binary.LittleEndian.Uint64(seed[:]),
+		precisionBaseMillis: monotime.FloatMilliseconds(),
+	}
 }
 
 func (c performanceClamper) micros(us int64, isolated bool) int64 {
@@ -131,5 +138,9 @@ func (c performanceClamper) now(now, origin time.Time, isolated bool) float64 {
 	if delta < 0 {
 		return 0
 	}
-	return float64(delta) / 1000
+	millis := float64(delta) / 1000
+	// Blink represents the clamped boot-relative TimeTicks coordinate as a
+	// double before making it document-relative. Preserve the resulting binary
+	// cancellation rather than returning an unrealistically exact decimal grid.
+	return (c.precisionBaseMillis + millis) - c.precisionBaseMillis
 }

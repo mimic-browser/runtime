@@ -6,6 +6,13 @@ import (
 )
 
 func (r *Realm) installImageResources(host map[string]any) {
+	host["compressCanvasScanline"] = r.fn(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
+		encoded, err := compressCanvasScanline(strarg(args, 0))
+		if err != nil {
+			return nil, err
+		}
+		return r.val(encoded), nil
+	})
 	host["imageInfo"] = r.fn(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
 		id := int64(numarg(args, 0))
 		node, ok := r.document.Get(id)

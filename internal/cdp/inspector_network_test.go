@@ -99,6 +99,34 @@ func TestInspectorNetworkRedirectPostAndBodies(t *testing.T) {
 	}
 }
 
+func TestInspectorBinaryPostEntriesMatchTransportBytes(t *testing.T) {
+	body := []byte{0x92, 0xda, 0x02, 0xf6, '{', 0, 0xff, 0x80}
+	transport := make(chan []byte, 1)
+	fixture := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		received, _ := io.ReadAll(r.Body)
+		transport <- received
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	t.Cleanup(fixture.Close)
+	s, addr := runningServer(t)
+	w, sessionID := inspectorSession(t, s, addr)
+	w.call(t, sessionID, "Network.enable", map[string]any{})
+	u, _ := url.Parse(fixture.URL)
+	_, err := s.Page.Loader().Load(context.Background(), network.Request{ID: "binary-post", ContextID: s.Page.Top.ID, URL: u, Method: http.MethodPost, Body: body, Initiator: network.Fetch})
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := w.event(t, "Network.requestWillBeSent")["request"].(map[string]any)
+	entries := request["postDataEntries"].([]any)
+	if len(entries) != 1 {
+		t.Fatalf("binary body entries: %v", entries)
+	}
+	captured, err := base64.StdEncoding.DecodeString(entries[0].(map[string]any)["bytes"].(string))
+	if err != nil || !bytes.Equal(captured, body) || !bytes.Equal(<-transport, body) {
+		t.Fatalf("capture or transport changed bytes: captured=%x expected=%x err=%v", captured, body, err)
+	}
+}
+
 func TestInspectorPostHistoryIsLazyAndBounded(t *testing.T) {
 	s := &session{}
 	s.rememberPostData("empty", "")

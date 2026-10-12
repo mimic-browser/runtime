@@ -9,7 +9,36 @@ import (
 
 	chrome152 "github.com/moreveal/mimic/chrome/152"
 	v8engine "github.com/moreveal/mimic/internal/engine/v8"
+	"github.com/moreveal/mimic/internal/scheduler"
 )
+
+func TestTimerHandlesIgnoreUnrelatedSchedulerTasks(t *testing.T) {
+	serialBrowserTest(t)
+	b, err := New(v8engine.Factory{}, chrome152.New())
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := b.NewContext()
+	defer c.Close()
+	p, err := c.NewPage()
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, err := p.Evaluate(context.Background(), `setTimeout(()=>{},60000)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 100; i++ {
+		p.Top.Realm.scheduler.Post(scheduler.Control, 0, func(context.Context) error { return nil })
+	}
+	second, err := p.Evaluate(context.Background(), `setInterval(()=>{},60000)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first != float64(1) || second != float64(2) {
+		t.Fatalf("timer handles after unrelated tasks: first=%v second=%v", first, second)
+	}
+}
 
 //go:embed testdata/timer_numeric_conversion.js
 var timerNumericConversionProbe string

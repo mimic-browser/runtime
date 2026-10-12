@@ -35,6 +35,8 @@ type DedicatedWorker struct {
 	deliverCallback     engine.Value
 	errorCallback       engine.Value
 	messageReceiver     engine.Value
+	connectReceiver     engine.Value
+	shared              bool
 	url                 *url.URL
 	nameJSON            string // JSON string spelling preserves every UTF-16 code unit across agents.
 	scriptType          string
@@ -59,9 +61,18 @@ type DedicatedWorker struct {
 	fetchCancels        map[string]context.CancelFunc // worker task/host callbacks only
 	fetchWG             sync.WaitGroup
 	timers              map[uint64]*workerTimer // worker task/host callbacks only
+	nextTimerID         uint64
 }
 
 func (r *Realm) hostCreateWorker(_ engine.Value, args []engine.Value) (engine.Value, error) {
+	return r.hostCreateWorkerKind(args, false)
+}
+
+func (r *Realm) hostCreateSharedWorker(_ engine.Value, args []engine.Value) (engine.Value, error) {
+	return r.hostCreateWorkerKind(args, true)
+}
+
+func (r *Realm) hostCreateWorkerKind(args []engine.Value, shared bool) (engine.Value, error) {
 	if len(args) < 3 {
 		return nil, fmt.Errorf("worker callbacks and URL are required")
 	}
@@ -71,7 +82,7 @@ func (r *Realm) hostCreateWorker(_ engine.Value, args []engine.Value) (engine.Va
 	if err != nil {
 		return nil, err
 	}
-	w := &DedicatedWorker{id: id, parent: r, deliverCallback: args[0], errorCallback: args[1], url: workerURL, securityURL: r.documentURL(), topLevelURL: r.requestTopLevelURL(), done: make(chan struct{}), wake: make(chan struct{}, 1), performanceOrigin: r.scheduler.Now()}
+	w := &DedicatedWorker{id: id, parent: r, deliverCallback: args[0], errorCallback: args[1], shared: shared, url: workerURL, securityURL: r.documentURL(), topLevelURL: r.requestTopLevelURL(), done: make(chan struct{}), wake: make(chan struct{}, 1), performanceOrigin: r.scheduler.Now()}
 	w.nameJSON = strarg(args, 5)
 	w.scriptType, w.credentials = strarg(args, 4), strarg(args, 6)
 	if w.nameJSON == "" {
@@ -84,7 +95,7 @@ func (r *Realm) hostCreateWorker(_ engine.Value, args []engine.Value) (engine.Va
 	w.cookieContext = r.cookieContext()
 	r.workers[id] = w
 	source := strarg(args, 3)
-	r.agent.Page().trace.Add(trace.Lifecycle, "workerCreated", map[string]any{"url": workerURL.String(), "worker": id, "realm": r.ID})
+	r.agent.Page().trace.Add(trace.Lifecycle, "workerCreated", map[string]any{"url": workerURL.String(), "worker": id, "realm": r.ID, "shared": shared})
 	w.Start(source)
 	return r.val(id), nil
 }
@@ -92,6 +103,7 @@ func (r *Realm) hostCreateWorker(_ engine.Value, args []engine.Value) (engine.Va
 // Start launches the worker agent. JavaScript is executed only by the worker's
 // own scheduler runner; the creating Window agent never calls into this runtime.
 func (w *DedicatedWorker) Start(source string) {
+	initialBlob := w.parent.agent.Page().ctx.network.CaptureBlob(w.url.String())
 	ctx, cancel := context.WithCancel(w.parent.resourceContext)
 	w.mu.Lock()
 	if w.closed {
@@ -112,12 +124,12 @@ func (w *DedicatedWorker) Start(source string) {
 		}
 		w.started = true
 		w.mu.Unlock()
-		go w.run(ctx, source)
+		go w.run(ctx, source, initialBlob)
 		return nil
 	})
 }
 
-func (w *DedicatedWorker) run(ctx context.Context, source string) {
+func (w *DedicatedWorker) run(ctx context.Context, source string, initialBlob *network.BlobResource) {
 	defer close(w.done)
 	if ctx.Err() != nil || w.isClosed() {
 		return
@@ -167,7 +179,7 @@ func (w *DedicatedWorker) run(ctx context.Context, source string) {
 		// document. Do not retain its abandoned task queue or response bodies.
 		w.mu.Lock()
 		w.closed = true
-		w.runtime, w.scheduler, w.messageReceiver = nil, nil, nil
+		w.runtime, w.scheduler, w.messageReceiver, w.connectReceiver = nil, nil, nil, nil
 		w.pending = nil
 		w.performance = nil
 		w.modules, w.moduleEvaluation = nil, nil
@@ -238,6 +250,9 @@ func (w *DedicatedWorker) run(ctx context.Context, source string) {
 	})
 	host["nameJSON"] = runtime.Function(func(engine.Value, []engine.Value) (engine.Value, error) {
 		return runtime.Value(w.nameJSON), nil
+	})
+	host["isSharedWorker"] = runtime.Function(func(engine.Value, []engine.Value) (engine.Value, error) {
+		return runtime.Value(w.shared), nil
 	})
 	host["postMessage"] = transientRuntimeFunction(runtime, func(_ engine.Value, args []engine.Value) (engine.Value, error) {
 		w.deliverToParent(arg(args, 0), strarg(args, 1))
@@ -372,6 +387,13 @@ func (w *DedicatedWorker) run(ctx context.Context, source string) {
 		p.trace.Add(trace.API, "Crypto.getRandomValues", map[string]any{"bytes": n, "worker": w.id})
 		return runtime.Value(out), nil
 	})
+	host["compressCanvasScanline"] = runtime.Function(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
+		encoded, err := compressCanvasScanline(strarg(args, 0))
+		if err != nil {
+			return nil, err
+		}
+		return runtime.Value(encoded), nil
+	})
 	host["randomUUID"] = runtime.Function(func(engine.Value, []engine.Value) (engine.Value, error) {
 		p.trace.Add(trace.API, "Crypto.randomUUID", map[string]any{"worker": w.id})
 		return runtime.Value(uuid.NewString()), nil
@@ -389,7 +411,8 @@ func (w *DedicatedWorker) run(ctx context.Context, source string) {
 		owner := fmt.Sprintf("%s/worker/%d", w.parent.ID, w.id)
 		for _, event := range p.trace.EventsSince(w.performanceCursor) {
 			w.performanceCursor = event.Sequence
-			if event.Kind != trace.Network || event.Name != "response" || event.Data["performanceOwner"] != owner {
+			failed := event.Name == "failed" && event.Data["performanceFailure"] == true
+			if event.Kind != trace.Network || (event.Name != "response" && !failed) || event.Data["performanceOwner"] != owner {
 				continue
 			}
 			status := numberValue(event.Data["status"])
@@ -465,8 +488,11 @@ func (w *DedicatedWorker) run(ctx context.Context, source string) {
 	}
 	w.mu.Lock()
 	w.messageReceiver = runtime.Get("__deliver")
+	if w.shared {
+		w.connectReceiver = runtime.Get("__connect")
+	}
 	w.mu.Unlock()
-	if _, err := runtime.Eval(ctx, `delete globalThis.__deliver;delete globalThis.__workerHost;delete globalThis.__mimicEvalSourceResolver;delete globalThis.__mimicImportMetaResolveFactory`, "mimic:hide-worker-internals"); err != nil {
+	if _, err := runtime.Eval(ctx, `delete globalThis.__deliver;delete globalThis.__connect;delete globalThis.__workerHost;delete globalThis.__mimicEvalSourceResolver;delete globalThis.__mimicImportMetaResolveFactory`, "mimic:hide-worker-internals"); err != nil {
 		_ = w.reportError(err)
 		return
 	}
@@ -476,11 +502,15 @@ func (w *DedicatedWorker) run(ctx context.Context, source string) {
 		// structured JS trace so protocol subscribers do not misroute it.
 		p.trace.Add(trace.JS, "workerStart", map[string]any{"url": w.url.String(), "worker": w.id})
 		if w.scriptType == "module" {
+			w.modules.initialBlob = initialBlob
+			initialBlob = nil
 			w.startModule(ctx, source)
 			return nil
 		}
 		if source == "" {
-			res, loadErr := p.loader.Load(taskContext, w.parent.withResourceTiming(network.Request{ContextID: w.parent.agent.ContextID(), URL: w.url, Referrer: w.securityURL, SourceURL: w.securityURL, TopLevelURL: w.topLevelURL, HasCrossSiteAncestor: w.cookieContext.HasCrossSiteAncestor, Initiator: network.Worker, OmitClientHints: true}))
+			request := w.parent.withResourceTiming(network.Request{ContextID: w.parent.agent.ContextID(), URL: w.url, Referrer: w.securityURL, SourceURL: w.securityURL, TopLevelURL: w.topLevelURL, HasCrossSiteAncestor: w.cookieContext.HasCrossSiteAncestor, Initiator: network.Worker, OmitClientHints: true, BlobResource: initialBlob})
+			initialBlob = nil
+			res, loadErr := p.loader.Load(taskContext, request)
 			if loadErr != nil {
 				return loadErr
 			}
@@ -498,6 +528,7 @@ func (w *DedicatedWorker) run(ctx context.Context, source string) {
 		if err != nil {
 			return err
 		}
+		w.queueSharedConnect()
 		w.enableMessages()
 		return nil
 	})
@@ -522,6 +553,38 @@ func (w *DedicatedWorker) run(ctx context.Context, source string) {
 		case <-ticker.C:
 		}
 	}
+}
+
+func (w *DedicatedWorker) connectShared(ctx context.Context) error {
+	if !w.shared {
+		return nil
+	}
+	w.mu.Lock()
+	runtime, receiver := w.runtime, w.connectReceiver
+	w.mu.Unlock()
+	if runtime == nil || receiver == nil {
+		return nil
+	}
+	result, err := runtime.Call(ctx, receiver, runtime.Get("self"))
+	releaseRuntimeValues(runtime, result)
+	return err
+}
+
+// SharedWorker's connect event is a task queued after evaluation. Promise
+// reactions from the initial script run first, so handlers installed from a
+// microtask observe the connection just as they do in Chrome.
+func (w *DedicatedWorker) queueSharedConnect() {
+	if !w.shared {
+		return
+	}
+	w.mu.Lock()
+	workerScheduler := w.scheduler
+	w.mu.Unlock()
+	if workerScheduler == nil {
+		return
+	}
+	workerScheduler.Post(scheduler.DOM, 0, w.connectShared)
+	w.signal()
 }
 
 func (w *DedicatedWorker) PostMessage(data any, traceJSON string) {

@@ -39,7 +39,11 @@ func (r *Realm) installPerformanceMemory(host map[string]any) {
 			// The machine profile supplies an application budget. A document's
 			// modeled initial graph plus post-bootstrap allocations supply usage.
 			physical := uint64(r.agent.Page().environmentView().Hardware.DeviceMemoryGB * float64(uint64(1)<<30))
-			m.limit = max(16*quantum, min(physical/2, uint64(4)<<30))
+			// 64-bit desktop V8's default old-generation budget is accompanied by
+			// its young-generation reservation. Chrome reports their combined
+			// 4192 MiB limit through the non-standard performance.memory surface.
+			const desktopV8Limit = uint64(4192) * 1024 * 1024
+			m.limit = max(16*quantum, min(physical/2, desktopV8Limit))
 			logical := uint64(len(r.document.TextContent(r.document.Root().ID)))*2 + quantum
 			if provider, ok := r.runtime.(engine.AllocationRuntime); ok {
 				sample, err := provider.SampleAllocations()

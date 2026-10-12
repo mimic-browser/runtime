@@ -42,6 +42,9 @@ const (
 )
 
 type Request struct {
+	// BlobResource is captured by the initiating consumer before asynchronous
+	// dispatch. Interception can change URL, but cannot transfer this capability.
+	BlobResource *BlobResource
 	// ContentPolicy is captured from the initiating realm and remains fixed
 	// across redirects. Its source URL must not follow the request destination.
 	ContentPolicy          csp.PolicySet
@@ -397,11 +400,39 @@ func (l *Loader) Load(ctx context.Context, r Request) (response Response, loadEr
 	if r.ID == "" {
 		r.ID = uuid.NewString()
 	}
+	requestIssued := false
+	responseAttempted := false
 	if !r.reportingFailure {
 		r.reportingFailure = true
 		defer func() {
 			if loadErr != nil {
-				l.trace.Add(trace.Network, "failed", map[string]any{"id": r.ID, "url": r.URL.String(), "error": loadErr.Error(), "initiator": r.Initiator, "context": r.ContextID, "canceled": errors.Is(loadErr, context.Canceled) || ctx.Err() == context.Canceled})
+				failure := map[string]any{"id": r.ID, "url": r.URL.String(), "error": loadErr.Error(), "initiator": r.Initiator, "context": r.ContextID, "canceled": errors.Is(loadErr, context.Canceled) || ctx.Err() == context.Canceled}
+				if requestIssued && !responseAttempted && r.PerformanceOwner != "" {
+					elapsed := float64(monotime.Since(r.operationStarted)) / float64(time.Millisecond)
+					if r.ObservePerformanceCompletion != nil {
+						r.ObservePerformanceCompletion(elapsed)
+					}
+					initiatorType := r.PerformanceInitiatorType
+					if initiatorType == "" {
+						initiatorType = string(r.Initiator)
+						if r.Initiator == Image {
+							initiatorType = "img"
+						} else if r.Initiator == XHR {
+							initiatorType = "xmlhttprequest"
+						} else if r.Initiator == Stylesheet {
+							initiatorType = "link"
+						}
+					}
+					failure["performanceFailure"] = true
+					failure["performanceOwner"] = r.PerformanceOwner
+					failure["performanceStart"] = r.PerformanceStart
+					failure["performanceURL"] = r.performanceURL()
+					failure["performanceInitiatorType"] = initiatorType
+					failure["durationMs"] = elapsed
+					failure["status"] = 0
+					failure["performanceTimingAllowFailed"] = true
+				}
+				l.trace.Add(trace.Network, "failed", failure)
 				l.trace.Add(trace.Resource, "loadEnd", map[string]any{"id": r.ID, "url": r.URL.String(), "error": loadErr.Error()})
 			}
 		}()
@@ -490,6 +521,7 @@ func (l *Loader) Load(ctx context.Context, r Request) (response Response, loadEr
 	visibleHeaders := headerStrings(r.Headers)
 	requestStarted := monotime.Now()
 	l.trace.Add(trace.Network, "request", map[string]any{"id": r.ID, "url": r.URL.String(), "method": r.Method, "headers": visibleHeaders, "postData": string(r.Body), "initiator": r.Initiator, "context": r.ContextID, "performanceOwner": r.PerformanceOwner, "performanceStart": r.PerformanceStart})
+	requestIssued = true
 	l.trace.Add(trace.Resource, "loadStart", map[string]any{"id": r.ID, "url": r.URL.String(), "type": r.Initiator, "context": r.ContextID})
 	decision := ResourceDecision{}
 	reportedWholeBlock := false
@@ -543,6 +575,7 @@ func (l *Loader) Load(ctx context.Context, r Request) (response Response, loadEr
 				res.Duration = monotime.Since(requestStarted)
 			}
 			l.acceptResponseState(r, res)
+			responseAttempted = true
 			return l.after(ctx, r, res)
 		}
 	}
@@ -555,6 +588,9 @@ func (l *Loader) Load(ctx context.Context, r Request) (response Response, loadEr
 	}
 	if r.URL.Scheme == "blob" {
 		body, contentType, ok := l.session.Blob(r.URL.String())
+		if resource := r.BlobResource; resource != nil && resource.url == r.URL.String() {
+			body, contentType, ok = append([]byte(nil), resource.body...), resource.contentType, true
+		}
 		if !ok {
 			return Response{}, fmt.Errorf("blob URL has been revoked or is unknown")
 		}
@@ -562,6 +598,7 @@ func (l *Loader) Load(ctx context.Context, r Request) (response Response, loadEr
 		if contentType != "" {
 			headers.Set("Content-Type", contentType)
 		}
+		responseAttempted = true
 		return l.after(ctx, r, Response{Status: http.StatusOK, Headers: headers, Body: body, URL: r.URL, Synthetic: true})
 	}
 	cacheAllowed := decision.ReportOnly || decision.Work.CacheRead == nil || *decision.Work.CacheRead
@@ -620,6 +657,7 @@ func (l *Loader) Load(ctx context.Context, r Request) (response Response, loadEr
 			"firstResponseByte": float64(cached.Duration) / float64(time.Millisecond),
 			"responseComplete":  float64(cached.Duration) / float64(time.Millisecond),
 		}}
+		responseAttempted = true
 		return l.after(ctx, r, cached)
 	}
 	if r.policySnapshot != nil {
@@ -782,6 +820,7 @@ func (l *Loader) Load(ctx context.Context, r Request) (response Response, loadEr
 	}
 	releaseAcquisition()
 	releaseAcquisition = func() {}
+	responseAttempted = true
 	return l.after(ctx, r, res)
 }
 

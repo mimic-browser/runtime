@@ -24,6 +24,7 @@ func (w *DedicatedWorker) installFetch(host map[string]any, lifetime context.Con
 			return promise.Value, nil
 		}
 		request := fetchRequest(w.parent.agent.ContextID(), target, w.url, args)
+		request.BlobResource = w.parent.agent.Page().ctx.network.CaptureBlob(target.String())
 		request.ContentPolicyDirective = "connect-src"
 		request.ContentPolicy = w.policy
 		request.ContentPolicyURL = w.url

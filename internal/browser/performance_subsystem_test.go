@@ -59,6 +59,19 @@ func TestPerformanceMemoryMatchesFrozenChrome(t *testing.T) {
 	parallelBrowserTest(t)
 	documentAllOracle(t, "performance_memory")
 }
+func TestPerformanceMemoryDesktopHeapLimit(t *testing.T) {
+	parallelBrowserTest(t)
+	historyTestPages(t, func(t *testing.T, page *Page) {
+		navigateCapabilityFixture(t, page)
+		value, err := page.Evaluate(context.Background(), `performance.memory.jsHeapSizeLimit`)
+		raw, _ := json.Marshal(value)
+		var got float64
+		_ = json.Unmarshal(raw, &got)
+		if err != nil || got != 4395630592 {
+			t.Fatalf("desktop V8 heap limit: %v, %v", value, err)
+		}
+	})
+}
 func TestPerformanceCloneBrandsMatchFrozenChrome(t *testing.T) {
 	parallelBrowserTest(t)
 

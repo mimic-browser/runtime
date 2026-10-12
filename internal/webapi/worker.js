@@ -247,7 +247,7 @@
         data: init.data,
         origin: init.origin || '',
         source: null,
-        ports: [],
+        ports: Array.from(init.ports || []),
       });
     }
     get data() {
@@ -564,12 +564,79 @@
     clearInterval: (id) => host.clearTimer(webIDLNumber(id)),
   };
   Object.assign(globalThis, operations);
-  globalThis.__deliver = (data) =>
-    dispatchWorkerEvent(
-      globalThis,
-      new MessageEvent('message', { data: cloneCodec.decode(data) }),
-      true,
-    );
+  const sharedWorker = host.isSharedWorker();
+  let sharedPort = null,
+    sharedMessagePortConstructor = null;
+  if (sharedWorker) {
+    const sharedPortSlots = new WeakMap();
+    class MessagePort extends EventTarget {
+      constructor() {
+        super();
+        sharedPortSlots.set(this, {
+          closed: false,
+          started: false,
+          pending: [],
+          onmessage: null,
+          onmessageerror: null,
+        });
+      }
+      postMessage(data) {
+        const state = sharedPortSlots.get(this);
+        if (state.closed) return;
+        const wire = cloneCodec.encode(data);
+        host.postMessage(wire, cloneCodec.trace(wire));
+      }
+      start() {
+        const state = sharedPortSlots.get(this);
+        state.started = true;
+        while (state.pending.length) dispatchWorkerEvent(this, state.pending.shift(), true);
+      }
+      close() {
+        const state = sharedPortSlots.get(this);
+        state.closed = true;
+        state.pending.length = 0;
+      }
+      get onmessage() {
+        return sharedPortSlots.get(this).onmessage;
+      }
+      set onmessage(value) {
+        sharedPortSlots.get(this).onmessage = typeof value === 'function' ? value : null;
+        if (value) this.start();
+      }
+      get onmessageerror() {
+        return sharedPortSlots.get(this).onmessageerror;
+      }
+      set onmessageerror(value) {
+        sharedPortSlots.get(this).onmessageerror = typeof value === 'function' ? value : null;
+      }
+    }
+    sharedMessagePortConstructor = MessagePort;
+    Object.defineProperty(MessagePort.prototype, Symbol.toStringTag, {
+      value: 'MessagePort',
+      configurable: true,
+    });
+    Object.defineProperty(globalThis, 'MessagePort', {
+      value: MessagePort,
+      writable: true,
+      configurable: true,
+    });
+    sharedPort = new MessagePort();
+    globalThis.__deliver = (data) => {
+      const state = sharedPortSlots.get(sharedPort),
+        event = new MessageEvent('message', { data: cloneCodec.decode(data) });
+      if (state.started) dispatchWorkerEvent(sharedPort, event, true);
+      else state.pending.push(event);
+    };
+    globalThis.__connect = () =>
+      dispatchWorkerEvent(globalThis, new MessageEvent('connect', { ports: [sharedPort] }), true);
+  } else {
+    globalThis.__deliver = (data) =>
+      dispatchWorkerEvent(
+        globalThis,
+        new MessageEvent('message', { data: cloneCodec.decode(data) }),
+        true,
+      );
+  }
   globalThis.__applyWorkerExposure = (exposure) => {
     const expected = new Map(
       (exposure.properties || []).map((property) => [property.name, property]),
@@ -661,6 +728,7 @@
     const workerPrototype = globalThis.WorkerGlobalScope && globalThis.WorkerGlobalScope.prototype;
     const dedicatedPrototype =
       globalThis.DedicatedWorkerGlobalScope && globalThis.DedicatedWorkerGlobalScope.prototype;
+    let sharedPrototype = globalThis.SharedWorkerGlobalScope?.prototype;
     if (workerPrototype) {
       Object.defineProperty(workerPrototype, 'structuredClone', {
         value: cloneCodec.clone,
@@ -760,7 +828,56 @@
         configurable: true,
       });
     }
-    if (dedicatedPrototype) {
+    if (sharedWorker && !sharedPrototype) {
+      const SharedWorkerGlobalScope = class SharedWorkerGlobalScope {
+        constructor() {
+          throw new TypeError('Illegal constructor');
+        }
+      };
+      Object.setPrototypeOf(SharedWorkerGlobalScope.prototype, workerPrototype);
+      Object.defineProperty(globalThis, 'SharedWorkerGlobalScope', {
+        value: SharedWorkerGlobalScope,
+        writable: true,
+        configurable: true,
+      });
+      sharedPrototype = SharedWorkerGlobalScope.prototype;
+    }
+    if (sharedWorker && sharedPrototype) {
+      Object.defineProperty(globalThis, 'MessagePort', {
+        value: sharedMessagePortConstructor,
+        writable: true,
+        configurable: true,
+      });
+      Object.defineProperty(sharedPrototype, Symbol.toStringTag, {
+        value: 'SharedWorkerGlobalScope',
+        configurable: true,
+      });
+      Object.defineProperty(sharedPrototype, 'onconnect', {
+        get() {
+          return handlers.connect || null;
+        },
+        set(value) {
+          setHandler('connect', value);
+        },
+        enumerable: true,
+        configurable: true,
+      });
+      Object.setPrototypeOf(globalThis, sharedPrototype);
+      Object.defineProperty(globalThis, Symbol.toStringTag, {
+        value: 'SharedWorkerGlobalScope',
+        configurable: true,
+      });
+      Object.defineProperty(globalThis, 'onconnect', {
+        get() {
+          return handlers.connect || null;
+        },
+        set(value) {
+          setHandler('connect', value);
+        },
+        enumerable: true,
+        configurable: true,
+      });
+    } else if (dedicatedPrototype) {
       Object.defineProperty(dedicatedPrototype, Symbol.toStringTag, {
         value: 'DedicatedWorkerGlobalScope',
         configurable: true,
@@ -814,38 +931,42 @@
     // host-installed prototype accessor in every embeddable engine. Keep the
     // DedicatedWorkerGlobalScope handler as an own global accessor, matching
     // Chrome's observable worker global and preserving ordinary script syntax.
-    Object.defineProperty(globalThis, 'onmessage', {
-      get() {
-        return handlers.message;
-      },
-      set(value) {
-        setHandler('message', value);
-      },
-      enumerable: true,
-      configurable: true,
-    });
-    Object.defineProperty(globalThis, 'onmessageerror', {
-      get() {
-        return handlers.messageerror;
-      },
-      set(value) {
-        setHandler('messageerror', value);
-      },
-      enumerable: true,
-      configurable: true,
-    });
-    Object.defineProperty(globalThis, 'postMessage', {
-      value: operations.postMessage,
-      writable: true,
-      enumerable: true,
-      configurable: true,
-    });
-    Object.defineProperty(globalThis, 'close', {
-      value: operations.close,
-      writable: true,
-      enumerable: true,
-      configurable: true,
-    });
+    if (!sharedWorker)
+      Object.defineProperty(globalThis, 'onmessage', {
+        get() {
+          return handlers.message;
+        },
+        set(value) {
+          setHandler('message', value);
+        },
+        enumerable: true,
+        configurable: true,
+      });
+    if (!sharedWorker)
+      Object.defineProperty(globalThis, 'onmessageerror', {
+        get() {
+          return handlers.messageerror;
+        },
+        set(value) {
+          setHandler('messageerror', value);
+        },
+        enumerable: true,
+        configurable: true,
+      });
+    if (!sharedWorker)
+      Object.defineProperty(globalThis, 'postMessage', {
+        value: operations.postMessage,
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      });
+    if (!sharedWorker)
+      Object.defineProperty(globalThis, 'close', {
+        value: operations.close,
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      });
     if (!host.isSecureContext()) {
       delete Crypto.prototype.randomUUID;
       delete WorkerNavigator.prototype.deviceMemory;
