@@ -126,6 +126,20 @@ support models script-observable state and queries rather than reconstructing
 an image for its own sake. Capability values remain
 projections of the selected Environment, not properties of the host's GPU.
 
+The graphics target includes true CPU rasterization of author-observable
+Canvas, OffscreenCanvas and WebGL surfaces. It does not require rendering the
+displayed page. A context owns one ordered surface state: drawing, readback,
+copies, ImageBitmap transfer and serialization must all use that state. Raster
+work may be deferred until the state is observed, provided operation order and
+timing-visible behavior remain compatible. Fonts and color glyphs, antialiasing,
+compositing, color conversion and GPU-dependent WebGL results are calibrated
+against headful Chrome captures under an explicit Environment profile. A
+profile selects a coherent graphics/font implementation and capabilities;
+it cannot select arbitrary output noise or a site-specific image. Unsupported
+operations remain explicit until their CPU execution is validated. The current
+implementation still has approximate rasterization boundaries documented in
+`docs/compatibility/graphics-observations.md`.
+
 Readback is not an independent random or precomputed fingerprint. It must derive
 from the same state as dimensions, context settings, metrics and operations.
 Identical operations in identical state must produce identical observations;

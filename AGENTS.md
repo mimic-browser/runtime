@@ -54,12 +54,24 @@ the current behavioral reference.
   navigation, networking, and other projections should observe the same
   underlying state rather than maintain independently synchronized copies.
 
-- Mimic does not render images and must not require a GPU or a native graphics
-  backend. Model the observations scripts can make, including consistent
+- Mimic does not render displayed pages and must not require a GPU or a native
+  graphics backend. Model the observations scripts can make, including consistent
   metrics, readbacks, local changes, resets and copies. Do not substitute
   independent random buffers or a fingerprint derived from the entire command
   sequence; repeated and overlapping observations must agree. See
   `docs/architecture.md` for the graphics observation boundary.
+
+- Canvas, OffscreenCanvas, WebGL and related readbacks are browser-observable
+  rendering outputs, even though Mimic does not render a displayed page. The
+  target is a CPU implementation of the selected Chrome profile's observable
+  pixels, not merely plausible or internally consistent approximations. Use
+  one authoritative surface per context for reads, copies and serialization.
+  Calibrate fonts, rasterization and graphics capabilities against captured
+  Chrome behavior for each supported environment profile. Differences between
+  Chrome GPU/font configurations must follow those configurations coherently;
+  do not add site-specific pixels, random noise or independent output hashes.
+  Keep the implementation lazy, bounded and measured so a fidelity change does
+  not impose unobserved page-rendering work or regress Page latency.
 
 - Do not implement behavior specifically for individual websites, tests, or
   benchmarks. Fix the underlying browser semantic or architectural cause.
