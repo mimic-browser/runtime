@@ -19,6 +19,8 @@ const renderFormats = {
   33328: [32, 32, 0, 0, 0, 0],
   34836: [32, 32, 32, 32, 0, 0],
   35898: [11, 11, 10, 0, 0, 0],
+  36759: [8, 8, 8, 8, 0, 0],
+  32859: [16, 16, 16, 16, 0, 0],
 };
 const framebufferTarget = (s, t) => {
   t = Number(t) >>> 0;
@@ -71,6 +73,7 @@ for (const [name, klass] of [
       if (s.drawFramebuffer === value) s.drawFramebuffer = null;
       if (s.readFramebuffer === value) s.readFramebuffer = null;
       own.attachments.clear();
+      own.multiview?.clear();
     } else {
       if (s.renderbuffer === value) s.renderbuffer = null;
       for (const f of new Set([s.drawFramebuffer, s.readFramebuffer])) {
@@ -142,6 +145,8 @@ method('renderbufferStorage', (s, t, format, width, height) => {
     }
   } else if (
     !renderFormats[format] ||
+    (format === 36759 && !s.extensions.has('EXT_render_snorm')) ||
+    (format === 32859 && !s.extensions.has('EXT_texture_norm16')) ||
     format === 34843 ||
     (half &&
       !s.extensions.has('EXT_color_buffer_half_float') &&
@@ -151,7 +156,13 @@ method('renderbufferStorage', (s, t, format, width, height) => {
     error(s, 1280);
     return;
   }
-  Object.assign(r, { format, storageFormat: format, width, height });
+  Object.assign(r, {
+    format,
+    storageFormat: format,
+    width,
+    height,
+    pixels: format === 34836 ? new Float32Array(width * height * 4) : null,
+  });
 });
 method('getRenderbufferParameter', (s, t, p) => {
   if (Number(t) !== 36161) {
@@ -191,6 +202,7 @@ method('framebufferRenderbuffer', (s, t, a, rt, value) => {
   for (const key of a === 33306 ? [36096, 36128] : [a])
     if (value === null) f.attachments.delete(key);
     else f.attachments.set(key, value);
+  for (const key of a === 33306 ? [36096, 36128] : [a]) f.multiview?.delete(key);
 });
 method('checkFramebufferStatus', (s, t) => {
   t = framebufferTarget(s, t);
@@ -200,6 +212,16 @@ method('checkFramebufferStatus', (s, t) => {
   if (!f.attachments.size) return 36055;
   let width, height;
   for (const [a, value] of f.attachments) {
+    const multiview = f.multiview?.get(a);
+    if (multiview) {
+      const texture = resources.get(value);
+      const image = texture?.levels.get('35866:' + multiview.level);
+      if (!image || image.depth < multiview.baseViewIndex + multiview.numViews) return 36054;
+      if (width !== undefined && (width !== image.width || height !== image.height)) return 36057;
+      width = image.width;
+      height = image.height;
+      continue;
+    }
     const r = resources.get(value),
       bits = renderFormats[r.storageFormat] || [0, 0, 0, 0, 0, 0];
     if (
@@ -227,6 +249,14 @@ method('getFramebufferAttachmentParameter', (s, t, a, p) => {
   const value = f.attachments.get(a === 33306 ? 36096 : a),
     r = resources.get(value);
   p = Number(p) >>> 0;
+  const multiview = f.multiview?.get(a);
+  if (multiview) {
+    if (p === 0x9630) return multiview.numViews;
+    if (p === 0x9632) return multiview.baseViewIndex;
+    if (p === 36048) return 5890;
+    if (p === 36049) return value;
+    if (p === 36050) return multiview.level;
+  }
   const componentEnabled =
     kind === 'webgl2' ||
     s.extensions.has('EXT_color_buffer_half_float') ||
@@ -252,6 +282,7 @@ method('getFramebufferAttachmentParameter', (s, t, a, p) => {
       return null;
     }
     if (!r.storageFormat) return 0;
+    if (r.storageFormat === 36759) return 36764;
     return [33325, 33327, 34842, 34843, 33326, 33328, 34836, 35898].includes(r.storageFormat)
       ? 5126
       : 35863;

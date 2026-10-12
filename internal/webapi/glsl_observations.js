@@ -46,8 +46,15 @@ const glslObservations = (() => {
     log2: Math.log2,
     sign: Math.sign,
   };
-  function compile(source, shaderType) {
+  function compile(source, shaderType, extensions = new Map()) {
     if (source.length > 65536) unsupported('shader source limit');
+    source = source.replace(
+      /^\s*#extension\s+GL_([A-Za-z0-9_]+)\s*:\s*require\s*$/gm,
+      (line, name) => {
+        if (!extensions.has(name)) unsupported('unsupported shader extension ' + name);
+        return '';
+      },
+    );
     source = source
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .replace(/\/\/[^\n]*/g, '')

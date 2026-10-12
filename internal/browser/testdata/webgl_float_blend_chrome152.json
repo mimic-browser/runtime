@@ -1,0 +1,38 @@
+{
+  "captureMetadata": {
+    "chromeVersion": "Chrome/152.0.7977.82",
+    "chromiumRevision": 1669021,
+    "v8Version": "15.2.124.21",
+    "platform": "windows-x64",
+    "browserMode": "headful",
+    "profileFreshness": "fresh-controlled",
+    "environmentProfileId": "chrome-152-windows-x64-headful-controlled-v1",
+    "launchArgumentsClass": [
+      "--remote-debugging-port=<fixed-nonzero>",
+      "--user-data-dir=<fresh-dedicated-profile>",
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--window-size=1280,800",
+      "about:blank"
+    ],
+    "chromeSHA256": "ea36dd818a90176f1a70616f0363d9be527229389a6c073a0b1688b9e73f67e9",
+    "navigatorWebdriver": false,
+    "observedViewport": [1272, 653],
+    "observedWindow": [1280, 800],
+    "devicePixelRatio": 1,
+    "recording": "explicit Runtime.evaluate after direct browser launch; exact launch arguments retained privately"
+  },
+  "value": {
+    "extension": true,
+    "status": 36053,
+    "linked": true,
+    "drawError": 0,
+    "readError": 0,
+    "pixel": [
+      0.1600000113248825,
+      0.320000022649765,
+      0.48000001907348633,
+      0.4000000059604645
+    ]
+  }
+}

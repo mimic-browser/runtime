@@ -49,6 +49,7 @@ method('createTexture', (s) => {
             [34892, 0],
             [34893, 515],
             [37167, false],
+            [0x90ea, 0x1902],
           ]
         : []),
     ]),
@@ -100,6 +101,10 @@ method('getTexParameter', (s, target, pname) => {
   pname = Number(pname) >>> 0;
   if (pname === 34046 && s.extensions.has('EXT_texture_filter_anisotropic'))
     return t.parameters.get(pname) || 1;
+  if (pname === 0x90ea && !s.extensions.has('WEBGL_stencil_texturing')) {
+    error(s, 1280);
+    return null;
+  }
   if (!t.parameters.has(pname)) {
     error(s, 1280);
     return null;
@@ -119,7 +124,11 @@ const textureParameter = (s, target, pname, value, integer) => {
     t.parameters.set(pname, Math.min(value, profile.anisotropy));
     return;
   }
-  if (!t.parameters.has(pname) || pname === 37167) {
+  if (
+    !t.parameters.has(pname) ||
+    pname === 37167 ||
+    (pname === 0x90ea && !s.extensions.has('WEBGL_stencil_texturing'))
+  ) {
     error(s, 1280);
     return;
   }
@@ -129,12 +138,19 @@ const textureParameter = (s, target, pname, value, integer) => {
       : pname === 10241
         ? [9728, 9729, 9984, 9985, 9986, 9987]
         : [10242, 10243, 32882].includes(pname)
-          ? [10497, 33071, 33648]
-          : pname === 34892
-            ? [0, 34894]
-            : pname === 34893
-              ? [512, 513, 514, 515, 516, 517, 518, 519]
-              : null;
+          ? [
+              10497,
+              33071,
+              33648,
+              ...(s.extensions.has('EXT_texture_mirror_clamp_to_edge') ? [0x8743] : []),
+            ]
+          : pname === 0x90ea
+            ? [0x1902, 0x1901]
+            : pname === 34892
+              ? [0, 34894]
+              : pname === 34893
+                ? [512, 513, 514, 515, 516, 517, 518, 519]
+                : null;
   if (allowed && !allowed.includes(value)) {
     error(s, 1280);
     return;
@@ -297,6 +313,58 @@ method(
       });
   },
 );
+if (kind === 'webgl2')
+  method(
+    'texImage3D',
+    (
+      s,
+      target,
+      level,
+      internalformat,
+      width,
+      height,
+      depth,
+      border,
+      format,
+      type,
+      value,
+      ...extra
+    ) => {
+      target = Number(target) >>> 0;
+      if (target !== 35866) {
+        error(s, 1280);
+        return;
+      }
+      const texture = textureBound(s, target);
+      if (!texture) return;
+      [level, width, height, depth, border] = [level, width, height, depth, border].map(
+        (v) => Number(v) | 0,
+      );
+      if (!textureDimensions(s, 3553, level, width, height, border)) return;
+      if (depth < 0 || depth > (profile.parameters[35071]?.value || 2048)) {
+        error(s, 1281);
+        return;
+      }
+      if (Number(internalformat) !== 32856 || Number(format) !== 6408 || Number(type) !== 5121) {
+        error(s, 1282);
+        return;
+      }
+      if (extra.length) fail('texture 3D source offset');
+      if (width * height * depth > 16777216) fail('texture 3D allocation limit');
+      const pixels = textureUnpack(s, width, height * depth, Number(format), Number(type), value);
+      if (pixels)
+        texture.levels.set(target + ':' + level, {
+          width,
+          height,
+          depth,
+          format: 6408,
+          internalformat: 32856,
+          type: 5121,
+          pixels,
+          floatPixels: false,
+        });
+    },
+  );
 method('texSubImage2D', (s, target, level, x, y, width, height, format, type, value, ...extra) => {
   if (value === undefined) return fail('TexImageSource subupload');
   target = textureImageTarget(s, target);
@@ -420,12 +488,14 @@ const textureInputs = (s, program) => {
     const wrap = (i, n, mode) =>
       mode === 33071
         ? Math.max(0, Math.min(n - 1, i))
-        : mode === 33648
-          ? (() => {
-              i = ((i % (2 * n)) + 2 * n) % (2 * n);
-              return i < n ? i : 2 * n - 1 - i;
-            })()
-          : ((i % n) + n) % n;
+        : mode === 0x8743
+          ? Math.max(0, Math.min(n - 1, i < 0 ? -i - 1 : i))
+          : mode === 33648
+            ? (() => {
+                i = ((i % (2 * n)) + 2 * n) % (2 * n);
+                return i < n ? i : 2 * n - 1 - i;
+              })()
+            : ((i % n) + n) % n;
     const read = (x, y) => {
       const at = (wrap(y, image.height, wrapT) * image.width + wrap(x, image.width, wrapS)) * 4;
       return Array.from(image.pixels.subarray(at, at + 4), (v) =>

@@ -281,6 +281,14 @@
           : 'WebGL GLSL ES 1.0 (OpenGL ES GLSL ES 1.0 Chromium)';
       if (p === 3106) return new Float32Array(s.color);
       if (p === 3107) return s.mask.slice();
+      if (p === 0x80c9) return s.blendSrcRGB ?? 1;
+      if (p === 0x80c8) return s.blendDstRGB ?? 0;
+      if (p === 0x80cb) return s.blendSrcAlpha ?? 1;
+      if (p === 0x80ca) return s.blendDstAlpha ?? 0;
+      if (p === 0x88fc && s.extensions.has('WEBGL_blend_func_extended'))
+        return profile.parameters[p]?.value ?? 1;
+      if (p === 0x9631 && s.extensions.has('OVR_multiview2'))
+        return profile.parameters[p]?.value ?? 4;
       if (p === 2978) return new Int32Array(s.viewport);
       if (p === 3088) return new Int32Array(s.scissor);
       if (p === 3333) return s.pack;
@@ -300,6 +308,16 @@
       }
       if (p === 0x8038) return s.polygonOffsetFactor ?? 0;
       if (p === 0x2a00) return s.polygonOffsetUnits ?? 0;
+      if (p === 0x0b40 && s.extensions.has('WEBGL_polygon_mode')) return s.polygonMode;
+      if (p === 0x8e4f && s.extensions.has('WEBGL_provoking_vertex')) return s.provokingVertex;
+      if (s.extensions.has('OES_shader_multisample_interpolation')) {
+        if (p === 0x8e5b) return profile.parameters[p]?.value ?? -0.5;
+        if (p === 0x8e5c) return profile.parameters[p]?.value ?? 0.4375;
+        if (p === 0x8e5d) return profile.parameters[p]?.value ?? 4;
+      }
+      if (s.extensions.has('WEBGL_clip_cull_distance')) {
+        if (p === 0x0d32 || p === 0x82f9 || p === 0x82fa) return profile.parameters[p]?.value ?? 8;
+      }
       if (p === 3379) return graphics.maxTextureSize;
       if (profile.parameters[p]) return parameterValue(profile.parameters[p]);
       if (p === 34467)
@@ -535,6 +553,37 @@
     });
     method('colorMask', (s, r, g, b, a) => {
       s.mask = [r, g, b, a].map(Boolean);
+      const indexed = s.indexedBuffers?.get(0);
+      if (indexed) indexed.mask = s.mask;
+    });
+    const blendFactor = (s, value) => {
+      value = Number(value) >>> 0;
+      if (
+        [
+          0, 1, 0x0300, 0x0301, 0x0302, 0x0303, 0x0304, 0x0305, 0x0306, 0x0307, 0x0308, 0x8001,
+          0x8002, 0x8003, 0x8004,
+        ].includes(value)
+      )
+        return value;
+      if (
+        s.extensions.has('WEBGL_blend_func_extended') &&
+        [0x88f9, 0x8589, 0x88fa, 0x88fb].includes(value)
+      )
+        return value;
+      error(s, 1280);
+      return null;
+    };
+    method('blendFunc', (s, src, dst) => {
+      src = blendFactor(s, src);
+      dst = blendFactor(s, dst);
+      if (src === null || dst === null) return;
+      s.blendSrcRGB = s.blendSrcAlpha = src;
+      s.blendDstRGB = s.blendDstAlpha = dst;
+    });
+    method('blendFuncSeparate', (s, srcRGB, dstRGB, srcAlpha, dstAlpha) => {
+      const values = [srcRGB, dstRGB, srcAlpha, dstAlpha].map((v) => blendFactor(s, v));
+      if (values.includes(null)) return;
+      [s.blendSrcRGB, s.blendDstRGB, s.blendSrcAlpha, s.blendDstAlpha] = values;
     });
     method('clearDepth', (s, value) => {
       s.depthClear = Math.min(1, Math.max(0, Number(value)));
@@ -598,6 +647,8 @@
           return;
         }
         s.enabled.set(p, name === 'enable');
+        if (p === 3042 && s.indexedBuffers)
+          for (const state of s.indexedBuffers.values()) state.blend = name === 'enable';
       });
     method('isEnabled', (s, p) => {
       p = Number(p);
@@ -631,7 +682,6 @@
       return s.pixels;
     };
     method('clear', (s, mask) => {
-      if (s.drawFramebuffer) fail('attachment clear');
       mask = Number(mask) >>> 0;
       if (mask & ~(16384 | 256 | 1024)) {
         error(s, 1281);
@@ -640,6 +690,18 @@
       if (mask & 256) s.depthValue = s.depthMask ? s.depthClear : s.depthValue;
       if (mask & 1024) s.stencilValue = s.stencilClear;
       if (!(mask & 16384)) return;
+      if (s.drawFramebuffer) {
+        const framebuffer = resources.get(s.drawFramebuffer);
+        const color = resources.get(framebuffer?.attachments.get(36064));
+        if (!color?.pixels || color.storageFormat !== 34836) fail('attachment clear');
+        materializePrograms(s);
+        const rect = s.enabled.get(3089) ? s.scissor : [0, 0, color.width, color.height];
+        for (let y = Math.max(0, rect[1]); y < Math.min(color.height, rect[1] + rect[3]); y++)
+          for (let x = Math.max(0, rect[0]); x < Math.min(color.width, rect[0] + rect[2]); x++)
+            for (let c = 0; c < 4; c++)
+              if (s.mask[c]) color.pixels[(y * color.width + x) * 4 + c] = s.color[c];
+        return;
+      }
       const pixels = storage(s),
         rect = s.enabled.get(3089) ? s.scissor : [0, 0, s.width, s.height];
       for (let y = Math.max(0, rect[1]); y < Math.min(s.height, rect[1] + rect[3]); y++)
@@ -653,7 +715,6 @@
             }
     });
     method('readPixels', (s, x, y, w, h, format, pixelType, dest, ...extra) => {
-      if (s.readFramebuffer) fail('attachment readPixels');
       if (extra.length) fail('readPixels destination offset');
       x = Number(x) | 0;
       y = Number(y) | 0;
@@ -661,6 +722,33 @@
       h = Number(h) | 0;
       if (w < 0 || h < 0) {
         error(s, 1281);
+        return;
+      }
+      if (s.readFramebuffer) {
+        const framebuffer = resources.get(s.readFramebuffer);
+        const color = resources.get(framebuffer?.attachments.get(36064));
+        if (!color?.pixels || color.storageFormat !== 34836) fail('attachment readPixels');
+        if (
+          Number(format) !== 6408 ||
+          Number(pixelType) !== 5126 ||
+          !(dest instanceof Float32Array)
+        )
+          fail('attachment readPixels format');
+        if (dest.length < w * h * 4) {
+          error(s, 1282);
+          return;
+        }
+        materializePrograms(s);
+        for (let row = 0; row < h; row++)
+          for (let col = 0; col < w; col++)
+            for (let c = 0; c < 4; c++) {
+              const px = x + col;
+              const py = y + row;
+              dest[(row * w + col) * 4 + c] =
+                px >= 0 && px < color.width && py >= 0 && py < color.height
+                  ? color.pixels[(py * color.width + px) * 4 + c]
+                  : 0;
+            }
         return;
       }
       if (Number(format) !== 6408 || Number(pixelType) !== 5121) fail('readPixels format');

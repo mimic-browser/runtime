@@ -21,7 +21,7 @@ method('compileShader', (s, value) => {
   shader.compiled = false;
   shader.log = '';
   try {
-    shader.evaluation = glslObservations.compile(shader.source, shader.shaderType);
+    shader.evaluation = glslObservations.compile(shader.source, shader.shaderType, s.extensions);
     shader.compiled = true;
   } catch (e) {
     shader.evaluation = null;
@@ -469,8 +469,25 @@ const drawVertices = (s, mode, first, count, indices = null, instance = 0) => {
   }
   if (!count) return;
   if (![4, 5, 6].includes(mode)) fail('primitive mode');
+  if (s.polygonMode === 0x1b01) fail('polygon line rasterization');
   if (count > 65536) fail('vertex observation limit');
-  if (s.drawFramebuffer) fail('shader framebuffer readback');
+  const blendEnabled = s.indexedBuffers?.get(0)?.blend ?? s.enabled.get(3042);
+  let colorAttachment = null;
+  if (s.drawFramebuffer) {
+    const framebuffer = resources.get(s.drawFramebuffer);
+    colorAttachment = resources.get(framebuffer?.attachments.get(36064));
+    if (!colorAttachment?.storageFormat || !colorAttachment.width || !colorAttachment.height) {
+      error(s, 1282);
+      return;
+    }
+    if (colorAttachment.storageFormat !== 34836) fail('shader framebuffer format');
+    if (blendEnabled && !s.extensions.has('EXT_float_blend')) {
+      error(s, 1282);
+      return;
+    }
+    if (!colorAttachment.pixels)
+      colorAttachment.pixels = new Float32Array(colorAttachment.width * colorAttachment.height * 4);
+  }
   const uniforms = { __sampleTexture: textureInputs(s, p) };
   for (const [name, value] of p.values)
     uniforms[name] = Array.isArray(value) ? value.slice() : value;
@@ -510,11 +527,7 @@ const drawVertices = (s, mode, first, count, indices = null, instance = 0) => {
     }
     const position = vertexResult.output;
     if (!Array.isArray(position) || position.length !== 4) fail('vertex output');
-    if (
-      !position.every(Number.isFinite) ||
-      position[3] <= 0 ||
-      position.slice(0, 2).some((v) => Math.abs(v) > position[3])
-    )
+    if (!position.every(Number.isFinite) || position[3] <= 0)
       fail('clip-space observation boundary');
     const depthMin = s.clipDepthMode === 0x935f ? 0 : -position[3];
     const clippedPosition = position.slice();
@@ -522,7 +535,12 @@ const drawVertices = (s, mode, first, count, indices = null, instance = 0) => {
       clippedPosition[2] = Math.max(depthMin, Math.min(position[3], clippedPosition[2]));
     vertices.push({ position: clippedPosition, varyings: vertexResult.captured });
   }
-  if (s.enabled.get(2929) || s.enabled.get(2960) || s.enabled.get(3042) || s.enabled.get(2884))
+  if (
+    s.enabled.get(2929) ||
+    s.enabled.get(2960) ||
+    (blendEnabled && !colorAttachment) ||
+    s.enabled.get(2884)
+  )
     fail('shader depth/stencil/blend observations');
   (s.drawCommands || (s.drawCommands = [])).push({
     queries: [...(s.activeQueries?.values() || [])].map((value) => resources.get(value)),
@@ -536,6 +554,14 @@ const drawVertices = (s, mode, first, count, indices = null, instance = 0) => {
     clipDepthMode: s.clipDepthMode || 0x935e,
     depthClamp: !!s.enabled.get(0x864f),
     mask: s.mask.slice(),
+    colorAttachment,
+    blend: !!blendEnabled,
+    blendFactors: [
+      s.blendSrcRGB ?? 1,
+      s.blendDstRGB ?? 0,
+      s.blendSrcAlpha ?? 1,
+      s.blendDstAlpha ?? 0,
+    ],
     scissor: s.enabled.get(3089) ? s.scissor.slice() : null,
   });
   if (!s.shaderObserved) {
@@ -547,24 +573,43 @@ const drawVertices = (s, mode, first, count, indices = null, instance = 0) => {
   }
 };
 method('drawArrays', (s, mode, first, count) => drawVertices(s, mode, first, count));
+const blendFactorValue = (mode, source, destination, channel) => {
+  if (mode === 0) return 0;
+  if (mode === 1) return 1;
+  if (mode === 0x0302) return source[3];
+  if (mode === 0x0303) return 1 - source[3];
+  if (mode === 0x0304) return destination[3];
+  if (mode === 0x0305) return 1 - destination[3];
+  if (mode === 0x0300) return source[channel];
+  if (mode === 0x0301) return 1 - source[channel];
+  if (mode === 0x0306) return destination[channel];
+  if (mode === 0x0307) return 1 - destination[channel];
+  fail('blend factor');
+};
 // Raster boundaries are approximated; ordered triangle samples share the same
 // authoritative bytes used by clear, readPixels and canvas snapshots.
 const materializePrograms = (s) => {
   const commands = s.drawCommands;
   if (!commands?.length) return;
   s.drawCommands = [];
-  if (s.width * s.height > 65536) fail('shader sample observation limit');
-  const samples = s.attributes.antialias
-    ? [
-        [3 / 8, 1 / 8],
-        [7 / 8, 3 / 8],
-        [1 / 8, 5 / 8],
-        [5 / 8, 7 / 8],
-      ]
-    : [[0.5, 0.5]];
-  if (s.attributes.antialias && !s.samplePixels)
-    s.samplePixels = samples.map(() => s.pixels.slice());
   for (const command of commands) {
+    const surface = command.colorAttachment || s;
+    const width = command.colorAttachment ? surface.width : s.width;
+    const height = command.colorAttachment ? surface.height : s.height;
+    const pixels = surface.pixels;
+    if (width * height > 65536) fail('shader sample observation limit');
+    const samples =
+      !command.colorAttachment && s.attributes.antialias
+        ? [
+            [3 / 8, 1 / 8],
+            [7 / 8, 3 / 8],
+            [1 / 8, 5 / 8],
+            [5 / 8, 7 / 8],
+          ]
+        : [[0.5, 0.5]];
+    if (!command.colorAttachment && s.attributes.antialias && !s.samplePixels)
+      s.samplePixels = samples.map(() => s.pixels.slice());
+    const samplePixels = command.colorAttachment ? null : s.samplePixels;
     const [vx, vy, vw, vh] = command.viewport;
     const vertices = command.vertices.map(({ position: p, varyings }) => {
         const transformed = [
@@ -589,7 +634,7 @@ const materializePrograms = (s) => {
     if (command.mode === 6)
       for (let i = 2; i < vertices.length; i++)
         triangles.push([vertices[0], vertices[i - 1], vertices[i]]);
-    if (triangles.length * s.width * s.height > 16777216) fail('triangle sample complexity limit');
+    if (triangles.length * width * height > 16777216) fail('triangle sample complexity limit');
     for (const [a, b, c] of triangles) {
       if (!command.depthClamp) {
         const minimum = command.clipDepthMode === 0x935f ? 0 : -1;
@@ -664,9 +709,9 @@ const materializePrograms = (s) => {
         if (components.length >= 4) directColor = components.slice(0, 4);
       }
       const minX = Math.max(0, Math.floor(Math.min(a[0], b[0], c[0]) - 1));
-      const maxX = Math.min(s.width, Math.ceil(Math.max(a[0], b[0], c[0]) + 1));
+      const maxX = Math.min(width, Math.ceil(Math.max(a[0], b[0], c[0]) + 1));
       const minY = Math.max(0, Math.floor(Math.min(a[1], b[1], c[1]) - 1));
-      const maxY = Math.min(s.height, Math.ceil(Math.max(a[1], b[1], c[1]) + 1));
+      const maxY = Math.min(height, Math.ceil(Math.max(a[1], b[1], c[1]) + 1));
       for (let y = minY; y < maxY; y++)
         for (let x = minX; x < maxX; x++) {
           if (command.scissor) {
@@ -761,27 +806,34 @@ const materializePrograms = (s) => {
           if (color === null) continue;
           if (!Array.isArray(color) || color.length !== 4) fail('fragment output');
           for (const query of command.queries) query.samplesPassed = true;
-          const i = (y * s.width + x) * 4;
+          const i = (y * width + x) * 4;
           for (let k = 0; k < 4; k++)
-            if (command.mask[k] && (k !== 3 || s.attributes.alpha)) {
-              const value = Math.max(
-                0,
-                Math.ceil(Math.fround(Math.max(0, Math.min(1, color[k])) * 255) - 0.5),
-              );
-              if (s.samplePixels) {
+            if (command.mask[k] && (command.colorAttachment || k !== 3 || s.attributes.alpha)) {
+              let output = color[k];
+              if (command.blend) {
+                const [srcRGB, dstRGB, srcAlpha, dstAlpha] = command.blendFactors;
+                const prior = Array.from(pixels.subarray(i, i + 4));
+                output =
+                  color[k] * blendFactorValue(k === 3 ? srcAlpha : srcRGB, color, prior, k) +
+                  prior[k] * blendFactorValue(k === 3 ? dstAlpha : dstRGB, color, prior, k);
+              }
+              const value = command.colorAttachment
+                ? Math.fround(output)
+                : Math.max(0, Math.ceil(Math.fround(Math.max(0, Math.min(1, output)) * 255) - 0.5));
+              if (samplePixels) {
                 for (let sample = 0; sample < samples.length; sample++)
-                  if (fullyCovered || covered[sample]) s.samplePixels[sample][i + k] = value;
-              } else s.pixels[i + k] = value;
+                  if (fullyCovered || covered[sample]) samplePixels[sample][i + k] = value;
+              } else pixels[i + k] = value;
             }
         }
     }
-  }
-  if (s.samplePixels) {
-    const sampleCount = s.samplePixels.length;
-    for (let i = 0; i < s.pixels.length; i++) {
-      let sum = 0;
-      for (let sample = 0; sample < sampleCount; sample++) sum += s.samplePixels[sample][i];
-      s.pixels[i] = Math.ceil(sum / sampleCount - 0.5);
+    if (samplePixels) {
+      const sampleCount = samplePixels.length;
+      for (let i = 0; i < pixels.length; i++) {
+        let sum = 0;
+        for (let sample = 0; sample < sampleCount; sample++) sum += samplePixels[sample][i];
+        pixels[i] = Math.ceil(sum / sampleCount - 0.5);
+      }
     }
   }
 };
