@@ -1,0 +1,139 @@
+{
+  "captureMetadata": {
+    "schemaVersion": 1,
+    "chromeVersion": "Chrome/152.0.7977.82",
+    "v8Version": "15.2.124.21",
+    "platform": "windows-x64",
+    "browserMode": "headful",
+    "profileFreshness": "fresh-dedicated-profile",
+    "recording": "explicit Runtime.evaluate after direct headful browser launch",
+    "commandLineFeatureOverrides": [],
+    "navigatorWebdriver": false,
+    "chromeSHA256": "ea36dd818a90176f1a70616f0363d9be527229389a6c073a0b1688b9e73f67e9",
+    "probeSHA256": "61b82e4d9370a2dec79696f2509bf360f4432effcf0b82e1deac622f720ce2aa",
+    "launchArgumentsClass": [
+      "--remote-debugging-port=<fixed nonzero port>",
+      "--user-data-dir=<fresh dedicated profile>",
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--window-size=1280,800",
+      "about:blank"
+    ]
+  },
+  "value": {
+    "stateBefore": [
+      36001,
+      37726,
+      false,
+      0
+    ],
+    "stateAfter": [
+      36002,
+      37727,
+      true,
+      true,
+      1,
+      2,
+      3,
+      0
+    ],
+    "invalid": [
+      36002,
+      37727,
+      1280
+    ],
+    "isolation": [
+      36001,
+      37726,
+      false,
+      0
+    ],
+    "lower": [
+      [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          255,
+          255,
+          255,
+          0
+        ],
+        [
+          0,
+          255,
+          0,
+          0
+        ]
+      ],
+      0
+    ],
+    "clipped": [
+      [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      0
+    ],
+    "clamped": [
+      [
+        [
+          0,
+          255,
+          0,
+          0
+        ],
+        [
+          255,
+          255,
+          255,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      0
+    ]
+  }
+}

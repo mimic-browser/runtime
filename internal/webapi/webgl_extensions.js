@@ -48,6 +48,55 @@ extension(
     s.debug = true;
   },
 );
+extension(
+  'EXT_clip_control',
+  'EXTClipControl',
+  {
+    LOWER_LEFT_EXT: 0x8ca1,
+    UPPER_LEFT_EXT: 0x8ca2,
+    NEGATIVE_ONE_TO_ONE_EXT: 0x935e,
+    ZERO_TO_ONE_EXT: 0x935f,
+    CLIP_ORIGIN_EXT: 0x935c,
+    CLIP_DEPTH_MODE_EXT: 0x935d,
+  },
+  {
+    clipControlEXT: {
+      length: 2,
+      call: (s, origin, depth) => {
+        origin = Number(origin) >>> 0;
+        depth = Number(depth) >>> 0;
+        if (![0x8ca1, 0x8ca2].includes(origin) || ![0x935e, 0x935f].includes(depth)) {
+          error(s, 1280);
+          return;
+        }
+        s.clipOrigin = origin;
+        s.clipDepthMode = depth;
+      },
+    },
+  },
+  (s) => {
+    s.clipOrigin = 0x8ca1;
+    s.clipDepthMode = 0x935e;
+  },
+);
+extension('EXT_depth_clamp', 'EXTDepthClamp', { DEPTH_CLAMP_EXT: 0x864f }, {}, (s) => {
+  s.enabled.set(0x864f, false);
+});
+extension(
+  'EXT_polygon_offset_clamp',
+  'EXTPolygonOffsetClamp',
+  { POLYGON_OFFSET_CLAMP_EXT: 0x8e1b },
+  {
+    polygonOffsetClampEXT: {
+      length: 3,
+      call: (s, factor, units, clamp) => {
+        s.polygonOffsetFactor = Math.fround(factor);
+        s.polygonOffsetUnits = Math.fround(units);
+        s.polygonOffsetClamp = Math.fround(clamp);
+      },
+    },
+  },
+);
 extension('EXT_texture_filter_anisotropic', 'EXTTextureFilterAnisotropic', {
   TEXTURE_MAX_ANISOTROPY_EXT: 34046,
   MAX_TEXTURE_MAX_ANISOTROPY_EXT: 34047,
@@ -290,8 +339,14 @@ const restoreState = (s) => {
   s.depthValue = 1;
   s.stencilValue = 0;
   s.stencilMaskFront = s.stencilMaskBack = 4294967295;
+  s.clipOrigin = 0x8ca1;
+  s.clipDepthMode = 0x935e;
+  s.polygonOffsetFactor = 0;
+  s.polygonOffsetUnits = 0;
+  s.polygonOffsetClamp = 0;
   s.derivativeHint = s.mipmapHint = 4352;
   for (const key of s.enabled.keys()) s.enabled.set(key, key === 3024);
+  s.enabled.delete(0x864f);
   s.textureUnits?.clear();
   s.activeTexture = 0;
   s.unpackAlignment = 4;

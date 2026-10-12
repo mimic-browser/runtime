@@ -287,6 +287,19 @@
       if (p === 2931) return s.depthClear;
       if (p === 2961) return s.stencilClear;
       if (p === 2930) return s.depthMask;
+      if (p === 0x935c || p === 0x935d) {
+        if (s.extensions.has('EXT_clip_control'))
+          return p === 0x935c ? s.clipOrigin : s.clipDepthMode;
+        error(s, 1280);
+        return null;
+      }
+      if (p === 0x8e1b) {
+        if (s.extensions.has('EXT_polygon_offset_clamp')) return s.polygonOffsetClamp ?? 0;
+        error(s, 1280);
+        return null;
+      }
+      if (p === 0x8038) return s.polygonOffsetFactor ?? 0;
+      if (p === 0x2a00) return s.polygonOffsetUnits ?? 0;
       if (p === 3379) return graphics.maxTextureSize;
       if (profile.parameters[p]) return parameterValue(profile.parameters[p]);
       if (p === 34467)
@@ -562,6 +575,11 @@
     method('depthMask', (s, value) => {
       s.depthMask = Boolean(value);
     });
+    method('polygonOffset', (s, factor, units) => {
+      s.polygonOffsetFactor = Math.fround(factor);
+      s.polygonOffsetUnits = Math.fround(units);
+      s.polygonOffsetClamp = 0;
+    });
     const rectangle = (s, key, x, y, w, h) => {
       const rect = [x, y, w, h].map((v) => Number(v) | 0);
       if (rect[2] < 0 || rect[3] < 0) {
@@ -701,6 +719,9 @@
           extensions: new Map(),
           stencilMaskFront: 4294967295,
           stencilMaskBack: 4294967295,
+          polygonOffsetFactor: 0,
+          polygonOffsetUnits: 0,
+          polygonOffsetClamp: 0,
           derivativeHint: 4352,
           mipmapHint: 4352,
           bindings: new Map(),

@@ -513,10 +513,14 @@ const drawVertices = (s, mode, first, count, indices = null, instance = 0) => {
     if (
       !position.every(Number.isFinite) ||
       position[3] <= 0 ||
-      position.slice(0, 3).some((v) => Math.abs(v) > position[3])
+      position.slice(0, 2).some((v) => Math.abs(v) > position[3])
     )
       fail('clip-space observation boundary');
-    vertices.push({ position, varyings: vertexResult.captured });
+    const depthMin = s.clipDepthMode === 0x935f ? 0 : -position[3];
+    const clippedPosition = position.slice();
+    if (s.enabled.get(0x864f))
+      clippedPosition[2] = Math.max(depthMin, Math.min(position[3], clippedPosition[2]));
+    vertices.push({ position: clippedPosition, varyings: vertexResult.captured });
   }
   if (s.enabled.get(2929) || s.enabled.get(2960) || s.enabled.get(3042) || s.enabled.get(2884))
     fail('shader depth/stencil/blend observations');
@@ -528,6 +532,9 @@ const drawVertices = (s, mode, first, count, indices = null, instance = 0) => {
     varyings: p.varyings,
     uniforms,
     viewport: s.viewport.slice(),
+    clipOrigin: s.clipOrigin || 0x8ca1,
+    clipDepthMode: s.clipDepthMode || 0x935e,
+    depthClamp: !!s.enabled.get(0x864f),
     mask: s.mask.slice(),
     scissor: s.enabled.get(3089) ? s.scissor.slice() : null,
   });
@@ -562,7 +569,7 @@ const materializePrograms = (s) => {
     const vertices = command.vertices.map(({ position: p, varyings }) => {
         const transformed = [
           ((p[0] / p[3] + 1) * vw) / 2 + vx,
-          ((p[1] / p[3] + 1) * vh) / 2 + vy,
+          (((command.clipOrigin === 0x8ca2 ? -p[1] : p[1]) / p[3] + 1) * vh) / 2 + vy,
           p[2] / p[3],
           1 / p[3],
         ];
@@ -584,6 +591,16 @@ const materializePrograms = (s) => {
         triangles.push([vertices[0], vertices[i - 1], vertices[i]]);
     if (triangles.length * s.width * s.height > 16777216) fail('triangle sample complexity limit');
     for (const [a, b, c] of triangles) {
+      if (!command.depthClamp) {
+        const minimum = command.clipDepthMode === 0x935f ? 0 : -1;
+        if (
+          (a[2] < minimum && b[2] < minimum && c[2] < minimum) ||
+          (a[2] > 1 && b[2] > 1 && c[2] > 1)
+        )
+          continue;
+        if (a[2] < minimum || a[2] > 1 || b[2] < minimum || b[2] > 1 || c[2] < minimum || c[2] > 1)
+          fail('partial clip-space observation boundary');
+      }
       const area = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
       if (Math.abs(area) < 1e-12) continue;
       const edges = [
@@ -691,7 +708,8 @@ const materializePrograms = (s) => {
             }
             if (!anyCovered) continue;
           }
-          const depth = (weights[0] * a[2] + weights[1] * b[2] + weights[2] * c[2] + 1) / 2,
+          const depthCoordinate = weights[0] * a[2] + weights[1] * b[2] + weights[2] * c[2],
+            depth = command.clipDepthMode === 0x935f ? depthCoordinate : (depthCoordinate + 1) / 2,
             reciprocalW = weights[0] * a[3] + weights[1] * b[3] + weights[2] * c[3];
           const fragCoord = fragmentInputs.gl_FragCoord;
           fragCoord[0] = px;
