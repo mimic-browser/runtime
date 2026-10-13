@@ -82,3 +82,21 @@ func TestOfflineAudioUnsupportedGraphRejects(t *testing.T) {
 		}
 	})
 }
+
+func TestOfflineAudioShortRenderDoesNotYieldBetweenEveryQuantum(t *testing.T) {
+	serialBrowserTest(t)
+	historyTestPages(t, func(t *testing.T, p *Page) {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		value, err := p.Evaluate(ctx, `(async()=>{
+ const c=new OfflineAudioContext(1,5000,44100);
+ const rendered=c.startRendering().then(()=>"audio");
+ const timeout=new Promise(resolve=>setTimeout(()=>resolve("timeout"),80));
+ const start=performance.now();while(performance.now()-start<350){}
+ return Promise.race([rendered,timeout]);
+})()`)
+		if err != nil || value != "audio" {
+			t.Fatalf("value=%v error=%v", value, err)
+		}
+	})
+}

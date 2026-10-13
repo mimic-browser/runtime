@@ -1609,33 +1609,44 @@
         };
         const step = () => {
           try {
-            if (c.renderFrame >= c.length) return finish();
-            const suspension = c.suspensions.get(c.renderFrame);
-            if (suspension) {
-              c.suspensions.delete(c.renderFrame);
-              if (!c.runningEventEmitted) {
-                emit(this, 'statechange');
-                c.runningEventEmitted = true;
+            // Chrome renders an offline graph away from the main-thread task
+            // queue. Advancing one 128-frame quantum per timer makes short
+            // renders lose races against unrelated author timers and exposes
+            // main-thread load as audio-render latency. Process a bounded run
+            // in one task while retaining exact suspension boundaries.
+            const batchEnd = Math.min(c.length, c.renderFrame + 8192);
+            while (c.renderFrame < batchEnd) {
+              const suspension = c.suspensions.get(c.renderFrame);
+              if (suspension) {
+                c.suspensions.delete(c.renderFrame);
+                if (!c.runningEventEmitted) {
+                  emit(this, 'statechange');
+                  c.runningEventEmitted = true;
+                }
+                c.state = 'suspended';
+                c.renderContinuation = step;
+                suspension.resolve();
+                setTimeout(() => emit(this, 'statechange'), 0);
+                return;
               }
-              c.state = 'suspended';
-              c.renderContinuation = step;
-              suspension.resolve();
-              setTimeout(() => emit(this, 'statechange'), 0);
-              return;
+              const count = Math.min(128, c.length - c.renderFrame),
+                quantum = render(this, c.renderFrame, count);
+              for (let channel = 0; channel < c.numberOfChannels; channel++)
+                buffer.copyToChannel(quantum.getChannelData(channel), channel, c.renderFrame);
+              c.renderFrame += 128;
+              c.currentTime = Math.min(c.length, c.renderFrame) / c.sampleRate;
             }
-            const count = Math.min(128, c.length - c.renderFrame),
-              quantum = render(this, c.renderFrame, count);
-            for (let channel = 0; channel < c.numberOfChannels; channel++)
-              buffer.copyToChannel(quantum.getChannelData(channel), channel, c.renderFrame);
-            c.renderFrame += 128;
-            c.currentTime = Math.min(c.length, c.renderFrame) / c.sampleRate;
+            if (c.renderFrame >= c.length) return finish();
             setTimeout(step, 0);
           } catch (error) {
             c.state = 'closed';
             reject(error);
           }
         };
-        setTimeout(step, 0);
+        // A short native offline render can finish before the next timer task.
+        // Start its first bounded batch at the microtask checkpoint instead of
+        // making every render wait behind author timers already in the queue.
+        platformPromiseResolve().then(step);
       });
     } catch (e) {
       return platformPromiseReject(e);
