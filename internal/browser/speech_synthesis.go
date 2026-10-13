@@ -199,7 +199,15 @@ func (r *Realm) receiveSpeechEvent(ctx context.Context, event speech.Event) erro
 }
 
 func addSpeechHosts(r *Realm, h map[string]any) {
-	h["installSpeechNotifier"] = r.fn(func(_ engine.Value, a []engine.Value) (engine.Value, error) { r.speechNotifier = a[0]; return nil, nil })
+	h["installSpeechNotifier"] = r.fn(func(_ engine.Value, a []engine.Value) (engine.Value, error) {
+		r.speechNotifier = a[0]
+		// Chrome starts platform voice discovery independently of the first
+		// author getVoices() call. Starting it when the realm installs its event
+		// sink lets a cold document observe the native voice list without making
+		// that first read pay the provider initialization latency.
+		r.openSpeechProvider()
+		return nil, nil
+	})
 	h["speechState"] = r.fn(func(_ engine.Value, a []engine.Value) (engine.Value, error) {
 		s := r.speechState()
 		switch strarg(a, 0) {

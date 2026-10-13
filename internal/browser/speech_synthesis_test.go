@@ -104,6 +104,10 @@ func TestSpeechPortableProviderQueueAndCancellation(t *testing.T) {
 				}
 				return v
 			}
+			eval(`0`)
+			if backend == nil {
+				t.Fatal("realm did not begin platform voice discovery during bootstrap")
+			}
 			drain := func() {
 				t.Helper()
 				if err := p.AdvanceTime(ctx, time.Millisecond); err != nil {
