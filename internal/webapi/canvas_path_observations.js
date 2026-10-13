@@ -224,7 +224,7 @@ const strokeSegmentContains = (x, y, width, lineCap, edge) => {
   }
   return (x - a[0] - t * dx) ** 2 + (y - a[1] - t * dy) ** 2 <= radius * radius;
 };
-const strokeContains = (path, x, y, width, lineCap) => {
+const strokeSegmentsContain = (path, x, y, width, lineCap) => {
   for (const sub of path) {
     const ps = sub.points,
       n = ps.length;
@@ -361,6 +361,13 @@ const strokeJoinsContain = (op, x, y) => {
   }
   return false;
 };
+// Keep hit testing, the unaccelerated predicate, and the per-pixel edge
+// accelerator on one complete stroke geometry. Canvas defaults are part of
+// the predicate because callers such as isPointInStroke do not pass a draw
+// snapshot.
+const strokeContains = (path, x, y, width, lineCap = 'butt', lineJoin = 'miter', miterLimit = 10) =>
+  strokeSegmentsContain(path, x, y, width, lineCap) ||
+  strokeJoinsContain({ path, width, lineJoin, miterLimit }, x, y);
 const paintSnapshot = (style, space = 'srgb', scheme = 'light', transform = [1, 0, 0, 1, 0, 0]) => {
   const pattern = patterns.get(style);
   if (pattern) {
@@ -944,7 +951,7 @@ const pathPixelCoverage = (op, x, y) => {
         (op.stroke
           ? (edges
               ? strokeEdgesContain(edges, px, py, op.width, op.lineCap)
-              : strokeContains(op.path, px, py, op.width, op.lineCap)) ||
+              : strokeSegmentsContain(op.path, px, py, op.width, op.lineCap)) ||
             strokeJoinsContain(op, px, py)
           : containsWindingSnapshot(op, px, py))
       )
