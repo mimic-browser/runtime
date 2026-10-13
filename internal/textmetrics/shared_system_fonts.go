@@ -20,6 +20,8 @@ type sharedSystemFont struct {
 	hint                     *truetype.Font
 	ascent, descent, lineGap float64
 	emAscent, emDescent      float64
+	useTypoMetrics           bool
+	legacyKern               map[uint32]int16
 	bytes                    int
 }
 

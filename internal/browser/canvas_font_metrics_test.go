@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"math"
 	"os"
+	"runtime"
 	"strconv"
 	"testing"
 )
@@ -74,5 +75,29 @@ func TestCanvasFontMetricsFrozenChrome(t *testing.T) {
 				t.Fatal(diff)
 			}
 		})
+	}
+}
+
+func TestCanvasTypographicMetricsFontUsesChromeFontBoxAndGridFit(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("frozen control uses the installed Windows Cambria Math face")
+	}
+	serialBrowserTest(t)
+	p := bootstrapSnapshotPage(t)
+	defer p.Close()
+	navigateCapabilityFixture(t, p)
+	value, err := p.Evaluate(context.Background(), `(()=>{
+		const context = new OffscreenCanvas(200, 100).getContext('2d');
+		context.font = '16px "Cambria Math"';
+		const metrics = context.measureText('mwmwmwmwlli');
+		return [metrics.width, metrics.fontBoundingBoxAscent,
+			metrics.fontBoundingBoxDescent, metrics.actualBoundingBoxRight];
+	})()`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []any{float64(111), float64(12), float64(4), float64(111)}
+	if diff := bootstrapSnapshotDifference("Cambria Math Canvas metrics", want, value); diff != "" {
+		t.Fatal(diff)
 	}
 }

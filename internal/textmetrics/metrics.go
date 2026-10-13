@@ -56,6 +56,8 @@ type loaded struct {
 	hintFont                 *truetype.Font
 	hintGlyph                truetype.GlyphBuf
 	hintLoaded               bool
+	useTypoMetrics           bool
+	legacyKern               map[uint32]int16
 	resourceBytes            int
 	lastUse                  uint64
 }
@@ -444,7 +446,9 @@ func (e *Engine) load(r resource) (*loaded, error) {
 				shaper: harfbuzz.NewFont(face), ascent: cached.ascent,
 				descent: cached.descent, lineGap: cached.lineGap,
 				emAscent: cached.emAscent, emDescent: cached.emDescent,
-				resourceBytes: int(stat.Size()), lastUse: e.fontUse,
+				useTypoMetrics: cached.useTypoMetrics,
+				legacyKern:     cached.legacyKern,
+				resourceBytes:  int(stat.Size()), lastUse: e.fontUse,
 			}
 			e.faces[key] = value
 			e.bytes += value.resourceBytes
@@ -472,11 +476,21 @@ func (e *Engine) load(r resource) (*loaded, error) {
 	// The Windows Chrome profile uses Windows ascender/descender rather than
 	// the optional typographic line metrics (notably different in Consolas).
 	if os2, err := loader.RawTable(ot.MustNewTag("OS/2")); err == nil && len(os2) >= 78 {
-		value.ascent = float64(binary.BigEndian.Uint16(os2[74:76]))
-		value.descent = float64(binary.BigEndian.Uint16(os2[76:78]))
-		value.emAscent = float64(int16(binary.BigEndian.Uint16(os2[68:70])))
-		value.emDescent = -float64(int16(binary.BigEndian.Uint16(os2[70:72])))
+		typoAscent := float64(int16(binary.BigEndian.Uint16(os2[68:70])))
+		typoDescent := -float64(int16(binary.BigEndian.Uint16(os2[70:72])))
+		value.emAscent, value.emDescent = typoAscent, typoDescent
+		// DirectWrite honors USE_TYPO_METRICS for the Canvas font box. Some
+		// mathematical fonts deliberately keep very large Win clipping bounds;
+		// exposing those as fontBoundingBox* diverges from Chrome by several em.
+		if binary.BigEndian.Uint16(os2[62:64])&(1<<7) != 0 {
+			value.useTypoMetrics = true
+			value.ascent, value.descent = typoAscent, typoDescent
+		} else {
+			value.ascent = float64(binary.BigEndian.Uint16(os2[74:76]))
+			value.descent = float64(binary.BigEndian.Uint16(os2[76:78]))
+		}
 	}
+	value.legacyKern = decodeLegacyKern(loader)
 	e.faces[key] = value
 	value.lastUse = e.fontUse
 	e.bytes += value.resourceBytes
@@ -484,7 +498,9 @@ func (e *Engine) load(r resource) (*loaded, error) {
 		putSystemFont(sharedKey, &sharedSystemFont{
 			font: ft, ascent: value.ascent, descent: value.descent,
 			lineGap: value.lineGap, emAscent: value.emAscent,
-			emDescent: value.emDescent, bytes: 2 * value.resourceBytes,
+			emDescent: value.emDescent, useTypoMetrics: value.useTypoMetrics,
+			legacyKern: value.legacyKern,
+			bytes:      2 * value.resourceBytes,
 		})
 	}
 	return value, nil
@@ -631,6 +647,24 @@ func (e *Engine) shapeWithFonts(text, families string, size, weight float64, ita
 				continue
 			}
 			g := Glyph{Cluster: info.Cluster, Advance: float64(p.XAdvance) * scale, XOffset: float64(p.XOffset) * scale, YOffset: -float64(p.YOffset) * scale}
+			// DirectWrite grid-fits advances for fonts that opt into typographic
+			// metrics. This is observable through Canvas measureText; Cambria Math
+			// is a common example whose unhinted HarfBuzz advances are fractional.
+			if hintInk && run.face.useTypoMetrics {
+				g.Advance = math.Round(g.Advance)
+			}
+			if !noKern && i > 0 && len(run.face.legacyKern) != 0 {
+				previous := buffer.Info[i-1].Glyph
+				// go-text applies OpenType GPOS but does not project the legacy
+				// TrueType kern table used by fonts such as Cambria Math.
+				// DirectWrite applies that pair adjustment after grid fitting.
+				pair := uint32(previous)<<16 | uint32(info.Glyph)
+				// Do not add a legacy pair when GPOS already changed the advance.
+				unpositioned := run.face.shaper.GlyphHAdvance(previous)
+				if adjustment := run.face.legacyKern[pair]; adjustment != 0 && buffer.Pos[i-1].XAdvance == unpositioned {
+					result.Glyphs[len(result.Glyphs)-1].Advance += float64(adjustment) * scale
+				}
+			}
 			if hintInk {
 				g.GlyphID = uint32(info.Glyph)
 				g.RasterFace = run.face.resource.index
@@ -659,6 +693,45 @@ func (e *Engine) shapeWithFonts(text, families string, size, weight float64, ita
 		buffer.Clear()
 	}
 	return result, nil
+}
+
+func decodeLegacyKern(loader *ot.Loader) map[uint32]int16 {
+	data, err := loader.RawTable(ot.MustNewTag("kern"))
+	if err != nil || len(data) < 4 || binary.BigEndian.Uint16(data[:2]) != 0 {
+		return nil
+	}
+	count, offset := int(binary.BigEndian.Uint16(data[2:4])), 4
+	var pairs map[uint32]int16
+	for table := 0; table < count && offset+6 <= len(data); table++ {
+		length := int(binary.BigEndian.Uint16(data[offset+2 : offset+4]))
+		coverage := binary.BigEndian.Uint16(data[offset+4 : offset+6])
+		if length < 14 || offset+14 > len(data) {
+			break
+		}
+		subtableEnd := offset + length
+		if coverage>>8 == 0 && coverage&1 != 0 && coverage&6 == 0 {
+			n := int(binary.BigEndian.Uint16(data[offset+6 : offset+8]))
+			requiredEnd := offset + 14 + n*6
+			// Several Windows fonts contain a version-0 kern subtable whose
+			// 16-bit length wrapped while nPairs and the enclosing SFNT table
+			// retain the complete data. DirectWrite accepts these tables.
+			if requiredEnd <= len(data) {
+				if requiredEnd > subtableEnd {
+					subtableEnd = requiredEnd
+				}
+				if pairs == nil {
+					pairs = make(map[uint32]int16, n)
+				}
+				for i := 0; i < n; i++ {
+					at := offset + 14 + i*6
+					key := uint32(binary.BigEndian.Uint16(data[at:at+2]))<<16 | uint32(binary.BigEndian.Uint16(data[at+2:at+4]))
+					pairs[key] += int16(binary.BigEndian.Uint16(data[at+4 : at+6]))
+				}
+			}
+		}
+		offset = subtableEnd
+	}
+	return pairs
 }
 
 func finite(v float64) bool { return !math.IsNaN(v) && !math.IsInf(v, 0) }
