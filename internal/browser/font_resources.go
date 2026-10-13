@@ -10,6 +10,16 @@ import (
 )
 
 func installFontResourceHosts(host map[string]any, runtime engine.Runtime, resources func() *textmetrics.Engine) {
+	host["canvasRasterModule"] = runtime.Function(func(_ engine.Value, _ []engine.Value) (engine.Value, error) {
+		return runtime.Value(engine.BinaryBuffer(canvasRasterModule)), nil
+	})
+	host["canvasRasterFont"] = runtime.Function(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
+		data, err := resources().RasterFontData(strarg(args, 0))
+		if err != nil {
+			return nil, err
+		}
+		return runtime.Value(engine.BinaryBuffer(data)), nil
+	})
 	host["shapeText"] = runtime.Function(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
 		shape := resources().ShapeWithFonts
 		if numarg(args, 7) != 0 {

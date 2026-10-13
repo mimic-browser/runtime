@@ -13,6 +13,8 @@ The binaries do not ship a separate GCC runtime DLL.
 
 The packager additionally collects licenses for the actual Go dependency graph,
 Go's standard library, embedded QuickJS, Temporal, and vendored script resources.
+`canvas-raster-notices.txt` records the pinned Cargo dependency inventory and
+deduplicated license texts for the embedded CPU WebAssembly raster module.
 fhttp v0.6.9 omits the LICENSE file referenced by its retained Go Authors BSD
 headers; the packager includes the Go BSD text with explicit attribution and
 checks that the identifying header still exists rather than silently omitting it.

@@ -1,4 +1,5 @@
-// Canvas storage and API state only. No native rasterizer, fonts or GPU.
+// Canvas storage and API state. Color glyphs use a bundled CPU raster module;
+// no GPU or OS graphics backend is required.
 const canvasCompatibilityState = (() => {
   // Preserve the selected generated WebIDL surface while replacing its storage
   // implementation. JS implementation parameters include internal slots and
@@ -360,6 +361,96 @@ const canvasCompatibilityState = (() => {
         ? -width
         : 0;
   let hintBoundaryReported = false;
+  // Rendering a color glyph must not consult author-overridable WebAssembly
+  // globals or prototype methods during a later Canvas readback.
+  let rasterModuleCtor, rasterInstanceCtor;
+  const captureRasterIntrinsics = () => {
+    rasterModuleCtor = globalThis.WebAssembly?.Module;
+    rasterInstanceCtor = globalThis.WebAssembly?.Instance;
+  };
+  captureRasterIntrinsics();
+  bootstrapRestoreHooks.push(captureRasterIntrinsics);
+  const RasterUint8Array = Uint8Array,
+    rasterSet = Function.prototype.call.bind(Uint8Array.prototype.set),
+    rasterSlice = Function.prototype.call.bind(Uint8Array.prototype.slice),
+    rasterMapGet = Function.prototype.call.bind(Map.prototype.get),
+    rasterMapSet = Function.prototype.call.bind(Map.prototype.set),
+    rasterMapClear = Function.prototype.call.bind(Map.prototype.clear);
+  let colorRaster = null;
+  const rasterFontIDs = new Map();
+  const rasterTiles = new Map();
+  let rasterTileBytes = 0;
+  const rasterInstance = () => {
+    if (colorRaster) return colorRaster;
+    const bytes = host.canvasRasterModule();
+    colorRaster = new rasterInstanceCtor(new rasterModuleCtor(bytes)).exports;
+    return colorRaster;
+  };
+  const rasterColorGlyph = (run, glyph) => {
+    const raster = rasterInstance();
+    let fontID = rasterMapGet(rasterFontIDs, glyph.rasterID);
+    if (fontID === undefined) {
+      const bytes = new RasterUint8Array(host.canvasRasterFont(glyph.rasterID)),
+        pointer = raster.raster_alloc(bytes.length);
+      if (!pointer) fail('NotSupportedError', 'Canvas color font exceeds the raster limit');
+      rasterSet(new RasterUint8Array(raster.memory.buffer, pointer, bytes.length), bytes);
+      fontID = raster.raster_register_font(pointer, bytes.length, glyph.rasterFace);
+      if (fontID < 0) {
+        raster.raster_free(pointer, bytes.length);
+        fail('NotSupportedError', 'Canvas color font could not be loaded');
+      }
+      rasterMapSet(rasterFontIDs, glyph.rasterID, fontID);
+    }
+    const left = Math.floor(run.x + glyph.left) - 2,
+      top = Math.floor(run.y + glyph.top) - 2,
+      right = Math.ceil(run.x + glyph.right) + 2,
+      bottom = Math.ceil(run.y + glyph.bottom) + 2,
+      width = right - left,
+      height = bottom - top;
+    if (width <= 0 || height <= 0 || width > 4096 || height > 4096)
+      fail('NotSupportedError', 'Canvas color glyph exceeds the raster limit');
+    const glyphX = run.x + glyph.originX - left,
+      glyphY = run.y + glyph.originY - top,
+      key = `${fontID}:${glyph.glyphID}:${run.fontSize}:${glyphX}:${glyphY}:${width}:${height}`;
+    const cached = rasterMapGet(rasterTiles, key);
+    if (cached) return { left, top, width, height, pixels: cached };
+    const length = width * height * 4,
+      pointer = raster.raster_alloc(length);
+    if (!pointer) fail('NotSupportedError', 'Canvas color glyph exceeds the raster limit');
+    try {
+      const status = raster.raster_glyph(
+        fontID,
+        glyph.glyphID,
+        run.fontSize,
+        glyphX,
+        glyphY,
+        width,
+        height,
+        pointer,
+      );
+      if (status !== 0) fail('NotSupportedError', 'Canvas color glyph could not be rasterized');
+      const pixels = rasterSlice(new RasterUint8Array(raster.memory.buffer, pointer, length));
+      // Bound retained tiles independently of glyph dimensions. Large tiles
+      // still render, but do not remain resident after the readback.
+      if (length <= 1 << 20) {
+        if (rasterTileBytes + length > 4 << 20) {
+          rasterMapClear(rasterTiles);
+          rasterTileBytes = 0;
+        }
+        rasterMapSet(rasterTiles, key, pixels);
+        rasterTileBytes += length;
+      }
+      return {
+        left,
+        top,
+        width,
+        height,
+        pixels,
+      };
+    } finally {
+      raster.raster_free(pointer, length);
+    }
+  };
   const shapeCanvasText = (draw, text, drawing = false) => {
     text = text.replace(/[\t\n\r\f]/g, ' ');
     const match = /^(.*?)((?:\d+(?:\.\d+)?|\.\d+))px(?:\/[^\s]+)?\s+(.+)$/.exec(draw.font),
@@ -413,11 +504,17 @@ const canvasCompatibilityState = (() => {
         top = Math.min(top, y + g.top);
         bottom = Math.max(bottom, y + g.bottom);
         glyphs.push({
+          originX: x,
+          originY: y,
           left: x + g.left,
           right: x + g.right,
           top: y + g.top,
           bottom: y + g.bottom,
           coverage: 96 + (chars[g.cluster].codePointAt(0) % 16) * 6,
+          rasterID: g.rasterID,
+          rasterFace: g.rasterFace,
+          glyphID: g.glyphID,
+          color: g.color,
         });
       }
       width +=
@@ -512,6 +609,7 @@ const canvasCompatibilityState = (() => {
     const pending = c.surface.pendingText || (c.surface.pendingText = []);
     pending.push({
       glyphs: shaped.glyphs,
+      fontSize: fontSize(d),
       x,
       y,
       scale,
@@ -521,6 +619,7 @@ const canvasCompatibilityState = (() => {
       composite: d.globalCompositeOperation,
       clips: d.clipPaths || [],
       shadow: shadowSnapshot(d, c.surface),
+      stroke,
     });
     if (pending.length >= 256) {
       ensurePixels(c.surface);
@@ -528,8 +627,8 @@ const canvasCompatibilityState = (() => {
     }
     c.surface.unmodeled = true;
   };
-  // Lazy, coarse coverage observations, not glyph rasterization. Each shaped glyph
-  // has one local coverage band; there are no glyph outlines or random pixels.
+  // Keep text in the same ordered surface queue as paths. Color glyphs use
+  // their font paint graph; unsupported text modes retain the diagnosed model.
   const materializeText = (s) => {
     const runs = s.pendingText;
     if (!runs?.length) return;
@@ -545,11 +644,23 @@ const canvasCompatibilityState = (() => {
         m = run.matrix,
         det = m[0] * m[3] - m[1] * m[2];
       if (!det) continue;
+      const colorTiles = [];
       let left = s.width,
         right = 0,
         top = s.height,
         bottom = 0;
       for (const glyph of run.glyphs) {
+        if (
+          glyph.color &&
+          !run.stroke &&
+          run.scale === 1 &&
+          run.composite === 'source-over' &&
+          m.every((value, i) => value === [1, 0, 0, 1, 0, 0][i]) &&
+          rasterModuleCtor !== undefined
+        ) {
+          colorTiles.push(rasterColorGlyph(run, glyph));
+          continue;
+        }
         const x = run.x + glyph.left * run.scale,
           y = run.y + glyph.top,
           w = (glyph.right - glyph.left) * run.scale,
@@ -585,8 +696,42 @@ const canvasCompatibilityState = (() => {
               source[i] =
                 (coverage[i] * paintColor(run.paint, xx + 0.5, yy + 0.5)[3]) / (255 * 255);
           }
+        for (const tile of colorTiles)
+          for (let yy = 0; yy < tile.height; yy++)
+            for (let xx = 0; xx < tile.width; xx++) {
+              const x = tile.left + xx,
+                y = tile.top + yy;
+              if (x < 0 || x >= s.width || y < 0 || y >= s.height) continue;
+              const i = y * s.width + x,
+                a = tile.pixels[(yy * tile.width + xx) * 4 + 3] / 255;
+              source[i] = 1 - (1 - source[i]) * (1 - a);
+            }
         materializeShadow(s, source, run.shadow, run.alpha, run.composite, run.clips);
       }
+      for (const tile of colorTiles)
+        for (let yy = 0; yy < tile.height; yy++)
+          for (let xx = 0; xx < tile.width; xx++) {
+            const source = (yy * tile.width + xx) * 4,
+              a = tile.pixels[source + 3];
+            if (!a) continue;
+            const x = tile.left + xx,
+              y = tile.top + yy;
+            if (x < 0 || x >= s.width || y < 0 || y >= s.height) continue;
+            if (!clipContains(run.clips, x + 0.5, y + 0.5)) continue;
+            compositePixel(
+              p,
+              (y * s.width + x) * 4,
+              [
+                Math.min(255, Math.round((tile.pixels[source] * 255) / a)),
+                Math.min(255, Math.round((tile.pixels[source + 1] * 255) / a)),
+                Math.min(255, Math.round((tile.pixels[source + 2] * 255) / a)),
+                a,
+              ],
+              run.alpha,
+              run.composite,
+              s.opaque,
+            );
+          }
       if (
         ['copy', 'source-in', 'source-out', 'destination-in', 'destination-atop'].includes(
           run.composite,

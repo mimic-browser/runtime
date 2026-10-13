@@ -65,6 +65,7 @@ type Engine struct {
 	genericFamilies        map[string]string
 	genericFallbacks       map[string][]string
 	resources              map[string]resource
+	rasterResources        map[string]resource
 	localNames             map[string]resource
 	dirs                   []string
 	catalog                []resource
@@ -499,6 +500,12 @@ type Glyph struct {
 	Top     float64 `json:"top"`
 	Bottom  float64 `json:"bottom"`
 	Ink     bool    `json:"ink"`
+	// Raster metadata is private to the Canvas bridge. It is absent from
+	// geometry-only measurements and never exposed as a Web API property.
+	RasterID   string `json:"rasterID,omitempty"`
+	RasterFace int    `json:"rasterFace,omitempty"`
+	GlyphID    uint32 `json:"glyphID,omitempty"`
+	Color      bool   `json:"color,omitempty"`
 }
 
 type Result struct {
@@ -624,6 +631,14 @@ func (e *Engine) shapeWithFonts(text, families string, size, weight float64, ita
 				continue
 			}
 			g := Glyph{Cluster: info.Cluster, Advance: float64(p.XAdvance) * scale, XOffset: float64(p.XOffset) * scale, YOffset: -float64(p.YOffset) * scale}
+			if hintInk {
+				if _, color := run.face.face.GlyphDataColor(tables.GlyphID(info.Glyph)); color {
+					g.GlyphID = uint32(info.Glyph)
+					g.RasterFace = run.face.resource.index
+					g.RasterID = e.rasterResourceID(run.face.resource)
+					g.Color = true
+				}
+			}
 			if bounds, ok := run.face.face.GlyphExtents(info.Glyph); ok && bounds.Width != 0 && bounds.Height != 0 {
 				g.Ink = true
 				g.Left = math.Floor(float64(bounds.XBearing) * scale)

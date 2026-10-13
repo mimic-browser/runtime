@@ -154,6 +154,7 @@ def notices(target):
         'Web Streams polyfill': ROOT / 'internal/webapi/vendor/web-streams-polyfill/LICENSE',
         'CSS selector dependencies': ROOT / 'internal/webapi/vendor/css-select/THIRD_PARTY_LICENSES.txt',
         'RustFFT': ROOT / 'internal/webapi/vendor/rustfft/NOTICE',
+        'Canvas CPU raster module': ROOT / 'tools/release/licenses/canvas-raster-notices.txt',
     }
     for name, path in extras.items():
         include(name, path)

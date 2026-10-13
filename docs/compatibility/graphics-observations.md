@@ -1,8 +1,9 @@
 # Graphics observation checkpoint
 
 The runtime uses per-context JavaScript state, immutable operation snapshots and
-query-time evaluation. It does not load a GPU, Chromium, ANGLE, a native renderer
-or a font rasterizer. No website-specific branches or source-string fingerprints
+query-time evaluation. It does not load a GPU, Chromium, ANGLE or an OS graphics
+backend. A bundled CPU WebAssembly module rasterizes supported color glyphs.
+No website-specific branches or source-string fingerprints
 select results. Repeating inputs reproduces the same observations; changing a
 local primitive preserves unaffected samples.
 
@@ -19,12 +20,17 @@ same profile therefore receive identical bytes for identical state. JPEG and
 WebP encoding remain explicit unsupported boundaries rather than independent
 approximate image models.
 
-Paths approximate curves with bounded line segments and sample pixel centers.
-There is no edge antialiasing. Stroke cap/join/dash fidelity, exact radial-gradient
-edge cases, Path2D, arcTo, roundRect, shadows, filters, exact text metrics/shaping,
-image decoding and general image resampling remain incomplete. Text retains its
-coarse local codepoint coverage model. Diagnostics explicitly identify approximate
-text/path observations; these results are not claimed to equal Chrome images.
+Paths approximate curves with bounded line segments and 8-by-8 coverage samples.
+COLRv1 color glyphs in unscaled, identity-transform, source-over `fillText` calls
+are rendered from the selected font's paint graph into that same Canvas surface.
+The module is Page/realm-owned and loads a font only when a color glyph is read.
+Stroke cap/join/dash fidelity, exact radial-gradient edge cases, Path2D, arcTo,
+roundRect, shadows, filters, transformed or scaled color text, monochrome glyph
+rasterization, exact text metrics, image decoding and general image resampling
+remain incomplete. Unsupported text modes retain the diagnosed coarse coverage
+model. CPU raster output is close to the retained Chrome 152 emoji control but
+is not pixel-identical; it differs in 172 of 400 pixels, mostly at antialiased
+edges and gradients. Diagnostics identify approximate text/path observations.
 
 ## WebGL
 

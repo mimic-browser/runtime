@@ -52,6 +52,7 @@ __pycache__/
 venv/
 .pytest_cache/
 node_modules/
+target/
 # Credentials: never use real sessions as fixtures
 .env
 .env.*

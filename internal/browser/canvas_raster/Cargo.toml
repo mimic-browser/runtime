@@ -1,0 +1,11 @@
+[package]
+name = "mimic-canvas-raster"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+vello_cpu = "=0.3.0"
