@@ -137,3 +137,25 @@ func TestCanvasSystemUIMetricsUseEnvironmentProfile(t *testing.T) {
 		}
 	}
 }
+
+func TestCanvasAdvanceUsesChromeFixedProjection(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("frozen control uses the installed Windows Ink Free face")
+	}
+	serialBrowserTest(t)
+	p := bootstrapSnapshotPage(t)
+	defer p.Close()
+	navigateCapabilityFixture(t, p)
+	value, err := p.Evaluate(context.Background(), `(()=>{
+		const context = new OffscreenCanvas(200, 100).getContext('2d');
+		context.font = '16px "Ink Free"';
+		return ['©', '®', '™'].map(text => context.measureText(text).width);
+	})()`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []any{15.00799560546875, 15.00799560546875, 12.35198974609375}
+	if diff := bootstrapSnapshotDifference("Canvas fixed advance projection", want, value); diff != "" {
+		t.Fatal(diff)
+	}
+}

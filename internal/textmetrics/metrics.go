@@ -647,6 +647,11 @@ func (e *Engine) shapeWithFonts(text, families string, size, weight float64, ita
 				continue
 			}
 			g := Glyph{Cluster: info.Cluster, Advance: float64(p.XAdvance) * scale, XOffset: float64(p.XOffset) * scale, YOffset: -float64(p.YOffset) * scale}
+			if hintInk {
+				// Blink's Windows shaping path projects Canvas advances through
+				// SkFixed 16.16 before TextMetrics widens them back to doubles.
+				g.Advance = math.Floor(g.Advance*65536) / 65536
+			}
 			// DirectWrite grid-fits advances for fonts that opt into typographic
 			// metrics. This is observable through Canvas measureText; Cambria Math
 			// is a common example whose unhinted HarfBuzz advances are fractional.
