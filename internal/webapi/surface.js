@@ -2736,11 +2736,31 @@
     (name) => !blitzProperties.includes(name),
   );
   const cssDeclaration = (element, computed = false, pseudo = '') => {
+    let prefetchedComputedValues = null,
+      prefetchedComputedVersion = '';
+    const computedVersion = () =>
+      host.observationVersion() +
+      ':' +
+      compatibilityElementState.observationVersion() +
+      ':' +
+      host.documentActive();
     const prefetchComputedNames = () => {
       if (!computed || pseudo) return;
+      const version = computedVersion();
       withStyleReadCache(() => {
         const record = blitzPackedRecord(element);
-        if (!record || record.packed.batchedStyles.has(record.at)) return;
+        if (!record) return;
+        const { packed, at } = record;
+        if (packed.batchedStyles.has(at)) {
+          prefetchedComputedValues = new Map();
+          for (const name of cssScalarBatchNames) {
+            const key = at + ':' + name;
+            if (packed.scalarValues.has(key))
+              prefetchedComputedValues.set(name, packed.scalarValues.get(key));
+          }
+          prefetchedComputedVersion = version;
+          return;
+        }
         // Empty native serializers retain the ordinary JS fallback per name.
         const values = host.blitzObserve(
           elementSlot(element).nodeId,
@@ -2748,15 +2768,18 @@
           JSON.stringify(cssScalarBatchNames),
         );
         if (!Array.isArray(values) || values.length !== cssScalarBatchNames.length) return;
-        const { packed, at } = record;
+        prefetchedComputedValues = new Map();
         for (let i = 0; i < cssScalarBatchNames.length; i++) {
-          const value = values[i];
+          const name = cssScalarBatchNames[i],
+            value = values[i];
           const bytes = typeof value === 'string' ? value.length * 2 : 0;
           if (packed.retainedBytes + bytes >= 64 * 1024 * 1024) break;
-          packed.scalarValues.set(at + ':' + cssScalarBatchNames[i], value);
+          packed.scalarValues.set(at + ':' + name, value);
+          prefetchedComputedValues.set(name, value);
           packed.retainedBytes += bytes;
         }
         packed.batchedStyles.add(at);
+        prefetchedComputedVersion = version;
       });
     };
     const target = new CSSStyleDeclaration(hostToken, element, computed, pseudo),
@@ -2808,7 +2831,11 @@
             };
           if (Object.hasOwn(cssNamedProperties, p) || webkitJSNames.has(p))
             return {
-              value: t.getPropertyValue(cssJSName(p)),
+              value:
+                prefetchedComputedVersion === computedVersion() &&
+                prefetchedComputedValues?.has(cssJSName(p))
+                  ? prefetchedComputedValues.get(cssJSName(p))
+                  : t.getPropertyValue(cssJSName(p)),
               writable: true,
               enumerable: Object.hasOwn(cssNamedProperties, p),
               configurable: true,

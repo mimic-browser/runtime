@@ -53,8 +53,11 @@ func TestComputedStyleEnumerationTracksMutations(t *testing.T) {
  const keys=Reflect.ownKeys(style);
  if(!keys.includes('epubCaptionSide')||Object.getOwnPropertyDescriptor(style,'epubCaptionSide')!==undefined)return 'legacy keys';
  element.style.color='rgb(1, 2, 3)';
+ Object.keys(style);
+ if(Object.getOwnPropertyDescriptor(style,'color').value!==style.color)return 'prefetched descriptor';
  const first=JSON.parse(JSON.stringify(style));
  element.style.color='rgb(4, 5, 6)';
+ if(Object.getOwnPropertyDescriptor(style,'color').value!==style.color)return 'stale descriptor';
  const second=JSON.parse(JSON.stringify(style));
  return first.color==='rgb(1, 2, 3)'&&second.color==='rgb(4, 5, 6)'?'ok':JSON.stringify([first.color,second.color]);
  })()`)
