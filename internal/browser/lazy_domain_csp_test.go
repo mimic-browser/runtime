@@ -68,6 +68,27 @@ func TestLazyWebAPIDomainsIgnoreAuthorEvalCSP(t *testing.T) {
   catch(error){result.nativeTypeError=error instanceof NativeTypeError}
   finally{globalThis.TypeError=NativeTypeError;globalThis.RangeError=NativeRangeError;globalThis.Error=NativeError;globalThis.Proxy=NativeProxy}
   result.intrinsicEffects=effects;
+  const intrinsicNames=['Object','Function','Array','Map','Set','WeakMap','WeakSet','Reflect','Promise','Date','Math','Number','String','RegExp','JSON','ArrayBuffer','DataView','Uint8Array','Float32Array'];
+  const originals={};
+  const pixels=new Uint8Array(4);
+  for(const name of intrinsicNames){
+    originals[name]=globalThis[name];
+    globalThis[name]=new NativeProxy(globalThis[name],{
+      apply(){effects.push(name+':apply');throw new NativeError('author '+name+' called')},
+      construct(){effects.push(name+':construct');throw new NativeError('author '+name+' called')},
+      get(){effects.push(name+':get');throw new NativeError('author '+name+' read')}
+    });
+  }
+  let broadIntrinsicResult;
+  try{
+    const attributes=document.createElement('div').attributes;
+    const headers=new Headers([['x-test','ok']]);
+    new OffscreenCanvas(1,1).getContext('webgl').readPixels(0,0,1,1,6408,5121,pixels);
+    broadIntrinsicResult=attributes.length===0&&headers.get('x-test')==='ok'&&pixels.length===4;
+  }catch(error){broadIntrinsicResult=error.name+':'+error.message}
+  finally{for(const name of intrinsicNames)globalThis[name]=originals[name]}
+  result.broadIntrinsicResult=broadIntrinsicResult;
+  result.broadIntrinsicEffects=effects.slice();
   try{eval('2+2');result.authorEvalAfter='allowed'}
   catch(error){result.authorEvalAfter=error.name}
   return result;
@@ -76,7 +97,7 @@ func TestLazyWebAPIDomainsIgnoreAuthorEvalCSP(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := value.(map[string]any)
-	if got["authorEval"] != "EvalError" || got["authorEvalAfter"] != "EvalError" || got["trustedAuthorEval"] != "EvalError" || got["overrideError"] != "allowed" || got["overrideLeak"] != false || got["webglWhileReplaced"] != "loaded" || got["webgpu"] != "loaded" || got["webgl"] != "loaded" || got["audio"] != "loaded" || got["nativeTypeError"] != true || len(got["intrinsicEffects"].([]any)) != 0 {
+	if got["authorEval"] != "EvalError" || got["authorEvalAfter"] != "EvalError" || got["trustedAuthorEval"] != "EvalError" || got["overrideError"] != "allowed" || got["overrideLeak"] != false || got["webglWhileReplaced"] != "loaded" || got["webgpu"] != "loaded" || got["webgl"] != "loaded" || got["audio"] != "loaded" || got["nativeTypeError"] != true || len(got["intrinsicEffects"].([]any)) != 0 || got["broadIntrinsicResult"] != true || len(got["broadIntrinsicEffects"].([]any)) != 0 {
 		t.Fatalf("lazy domains under author CSP = %#v", got)
 	}
 }
