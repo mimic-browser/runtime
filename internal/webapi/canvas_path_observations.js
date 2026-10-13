@@ -1314,7 +1314,8 @@ const frequentReadHairlineMask = (s, op, left, right, top, bottom) => {
   return mask;
 };
 const materializePath = (s, op) => {
-  if (hasSpatialCanvasFilter(op.filters) || (op.shadow && op.filters.length)) {
+  const filters = op.filters || [];
+  if (hasSpatialCanvasFilter(filters) || (op.shadow && filters.length)) {
     const temporary = {
       ...s,
       pixels: new Uint8ClampedArray(s.width * s.height * 4),
@@ -1328,7 +1329,7 @@ const materializePath = (s, op) => {
     });
     compositeCanvasFilterSurface(
       s,
-      applyCanvasFilters(temporary.pixels, s.width, s.height, op.filters),
+      applyCanvasFilters(temporary.pixels, s.width, s.height, filters),
       op.composite,
     );
     return;
@@ -1412,7 +1413,7 @@ const materializePath = (s, op) => {
     !op.stroke &&
     !op.clear &&
     !op.shadow &&
-    !op.filters.length &&
+    !filters.length &&
     !op.clips.length &&
     op.composite === 'source-over' &&
     Array.isArray(op.paint) &&
