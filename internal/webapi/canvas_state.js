@@ -809,7 +809,10 @@ const canvasCompatibilityState = (() => {
           for (let xx = 0; xx < tile.width; xx++) {
             const source = (yy * tile.width + xx) * 4,
               a = tile.pixels[source + 3];
-            if (!a) continue;
+            // Skia's Windows color-glyph pipeline drops the final sub-8 alpha
+            // coverage quantum. Vello retains those edge samples, which makes
+            // the selected Chrome profile one pixel wider/taller on readback.
+            if (a < 8) continue;
             const x = tile.left + xx,
               y = tile.top + yy;
             if (x < 0 || x >= s.width || y < 0 || y >= s.height) continue;

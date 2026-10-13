@@ -72,7 +72,11 @@ func TestCanvasColorGlyphUsesCanonicalSurface(t *testing.T) {
 				if err := json.Unmarshal([]byte(value.(string)), &got); err != nil {
 					t.Fatal(err)
 				}
-				if got.Colors < 100 || got.Nonzero < 150 || !got.Stable || !got.PNG {
+				// The retained frozen Chrome 152 control paints 195 pixels for
+				// this glyph. Pin a tight edge-coverage envelope as well as the
+				// shared surface relationships so the CPU rasterizer cannot
+				// quietly grow faint fringe pixels.
+				if got.Colors < 100 || got.Nonzero < 190 || got.Nonzero > 195 || !got.Stable || !got.PNG {
 					t.Fatalf("page %d color glyph did not use one stable Canvas surface: %+v", pageIndex, got)
 				}
 				if pageIndex == 0 {
