@@ -23,6 +23,8 @@ pub struct Owner {
     dirty: bool,
     pub generation: u64,
     color_scheme: ColorScheme,
+    viewport_width: u32,
+    viewport_height: u32,
 }
 
 #[derive(Debug, PartialEq)]
@@ -69,6 +71,8 @@ impl Owner {
             dirty: true,
             generation: 0,
             color_scheme: ColorScheme::Light,
+            viewport_width: width,
+            viewport_height: height,
         }
     }
 
@@ -182,6 +186,8 @@ impl Owner {
     }
 
     pub fn viewport(&mut self, width: u32, height: u32) {
+        self.viewport_width = width;
+        self.viewport_height = height;
         self.document
             .set_viewport(Viewport::new(width, height, 1.0, self.color_scheme));
         self.dirty = true;
@@ -254,6 +260,51 @@ impl Owner {
             return false;
         }
         self.document.resolve(time);
+        // A classic viewport scrollbar consumes root formatting space. For
+        // automatic overflow, viewport units still use the window viewport.
+        // Re-resolve only when the gutter changes; clean reads remain cheap.
+        for _ in 0..2 {
+            let Some(root) = self.document.try_root_element().map(|node| node.id) else {
+                break;
+            };
+            let width = self.viewport_width as f32;
+            let height = self.viewport_height as f32;
+            let overflow = self.document.resolved_style_value(root, "overflow-y");
+            let scrollbar_width = self.document.resolved_style_value(root, "scrollbar-width");
+            let gutter = if scrollbar_width == "none" || overflow == "hidden" || overflow == "clip" {
+                0.0
+            } else if overflow == "scroll"
+                || ((overflow == "auto" || overflow == "visible")
+                    && self.document.get_node(root).unwrap().scroll_height() > height)
+            {
+                if scrollbar_width == "thin" { 10.0 } else { 15.0 }
+            } else {
+                0.0
+            };
+            let available = if gutter > 0.0 { Some((width - gutter).max(0.0)) } else { None };
+            // Chrome excludes an explicitly reserved scrollbar from viewport
+            // units, while automatic overflow keeps 100vw at window width.
+            let css_width = if overflow == "scroll" {
+                width - gutter
+            } else {
+                width
+            };
+            let css_width = css_width.max(0.0) as u32;
+            let css_viewport_changed = self.document.viewport().window_size.0 != css_width;
+            if self.document.layout_viewport_width() == available && !css_viewport_changed {
+                break;
+            }
+            self.document.set_layout_viewport_width(available);
+            if css_viewport_changed {
+                self.document.set_viewport(Viewport::new(
+                    css_width,
+                    self.viewport_height,
+                    1.0,
+                    self.color_scheme,
+                ));
+            }
+            self.document.resolve(time);
+        }
         self.dirty = false;
         self.generation += 1;
         true
@@ -367,6 +418,29 @@ mod tests {
         assert_eq!(owner.rect(4).unwrap().width, 640.0);
         assert_eq!(owner.rect(4).unwrap().height, 40.0);
         assert_eq!(owner.generation, 2);
+    }
+
+    #[test]
+    fn viewport_scrollbar_reflows_root_without_shrinking_vw() {
+        let mut owner = Owner::new(1, 400, 300);
+        for (id, name) in [(2, "html"), (3, "body"), (4, "div"), (5, "div")] {
+            owner.element(id, "http://www.w3.org/1999/xhtml", name).unwrap();
+            owner.append(if id == 5 { 3 } else { id - 1 }, id).unwrap();
+        }
+        owner.attribute(3, "", "style", "margin:0").unwrap();
+        owner.attribute(4, "", "style", "height:400px").unwrap();
+        owner.attribute(5, "", "style", "position:fixed;width:100vw;height:1px").unwrap();
+        assert!(owner.resolve(0.0));
+        assert_eq!(owner.rect(2).unwrap().width, 385.0);
+        assert_eq!(owner.rect(3).unwrap().width, 385.0);
+        assert_eq!(owner.rect(5).unwrap().width, 400.0);
+        owner.attribute(4, "", "style", "height:10px").unwrap();
+        assert!(owner.resolve(0.0));
+        assert_eq!(owner.rect(2).unwrap().width, 400.0);
+        owner.attribute(2, "", "style", "overflow-y:scroll").unwrap();
+        assert!(owner.resolve(0.0));
+        assert_eq!(owner.rect(2).unwrap().width, 385.0);
+        assert_eq!(owner.rect(5).unwrap().width, 385.0);
     }
 
     #[test]

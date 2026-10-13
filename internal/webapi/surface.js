@@ -4375,7 +4375,7 @@
     }
     get clientWidth() {
       return viewportClientElement(this)
-        ? host.viewport().width
+        ? Math.round(layoutWidthBoxFor(this).clientWidth ?? host.viewport().width)
         : Math.round(layoutWidthBoxFor(this).clientWidth ?? 0);
     }
     get clientHeight() {

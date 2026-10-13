@@ -9,11 +9,11 @@ crate-type = ["rlib", "staticlib", "cdylib"]
 [dependencies]
 mimic-taffy-layout = { path = "../../layouttaffy/native" }
 # Floated inline boxes need Blitz's yielding line breaker and float placement.
-blitz-dom = { git = "https://github.com/moreveal/blitz.git", rev = "19a72d4a4163038d748603fbcf709d38bfa6a998", default-features = false, features = ["system-fonts", "floats"] }
+blitz-dom = { git = "https://github.com/moreveal/blitz.git", rev = "156bd85c5f5c4472db31ebd606d20e1dc641c93a", default-features = false, features = ["system-fonts", "floats"] }
 style = { package = "stylo", version = "0.21" }
 style_dom = { package = "stylo_dom", version = "0.21" }
 stylo_static_prefs = "0.21"
-blitz-traits = { git = "https://github.com/moreveal/blitz.git", rev = "19a72d4a4163038d748603fbcf709d38bfa6a998" }
+blitz-traits = { git = "https://github.com/moreveal/blitz.git", rev = "156bd85c5f5c4472db31ebd606d20e1dc641c93a" }
 markup5ever = "0.39"
 
 [patch.crates-io]
