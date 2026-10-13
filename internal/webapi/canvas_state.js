@@ -78,6 +78,80 @@ const canvasCompatibilityState = (() => {
       fail('NotSupportedError', 'Canvas storage above 16 million pixels is not implemented');
     return new Uint8ClampedArray(width * height * 4);
   };
+  const genericFontFamilies = new Set([
+    'serif',
+    'sans-serif',
+    'monospace',
+    'cursive',
+    'fantasy',
+    'system-ui',
+    'ui-serif',
+    'ui-sans-serif',
+    'ui-monospace',
+    'ui-rounded',
+    'emoji',
+    'math',
+    'fangsong',
+  ]);
+  const serializeCanvasFont = (input) => {
+    // Canvas exposes the parsed CSS shorthand, not the author's original text.
+    // Keep this bounded to the pixel-size grammar that the text shaper supports.
+    const match = /^\s*(.*?)\s*((?:\d+(?:\.\d+)?|\.\d+)px)(?:\s*\/\s*([^\s]+))?\s+(.+?)\s*$/.exec(
+      input,
+    );
+    if (!match || Number.parseFloat(match[2]) <= 0) return null;
+    const prefix = match[1].trim().split(/\s+/).filter(Boolean);
+    if (
+      prefix.some(
+        (word) => !/^(?:normal|italic|oblique|small-caps|bold|bolder|lighter|[1-9]00)$/.test(word),
+      )
+    )
+      return null;
+    const families = [];
+    let family = '',
+      quote = '',
+      escaped = false;
+    for (const char of match[4]) {
+      if (escaped) {
+        family += '\\' + char;
+        escaped = false;
+      } else if (char === '\\') escaped = true;
+      else if (quote) {
+        family += char;
+        if (char === quote) quote = '';
+      } else if (char === '"' || char === "'") {
+        quote = char;
+        family += char;
+      } else if (char === ',') {
+        families.push(family.trim());
+        family = '';
+      } else family += char;
+    }
+    if (escaped || quote) return null;
+    families.push(family.trim());
+    if (families.some((name) => !name)) return null;
+    const decode = (value) =>
+      value.replace(/\\(?:([0-9a-fA-F]{1,6})\s?|([^\n\r\f]))/g, (_, hex, char) =>
+        hex ? String.fromCodePoint(Math.min(Number.parseInt(hex, 16), 0x10ffff)) : char,
+      );
+    const normalized = families.map((name) => {
+      const quoted = (name[0] === '"' || name[0] === "'") && name[name.length - 1] === name[0];
+      const value = decode(quoted ? name.slice(1, -1) : name)
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (!value) return null;
+      if (/^-?[_a-zA-Z][-_a-zA-Z0-9]*$/.test(value) && !(quoted && genericFontFamilies.has(value)))
+        return value;
+      return '"' + value.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+    });
+    if (normalized.includes(null)) return null;
+    const style = prefix.filter((word) => word === 'italic' || word === 'oblique');
+    const rest = prefix.filter(
+      (word) => word !== 'italic' && word !== 'oblique' && word !== 'normal',
+    );
+    const shorthand = [...style, ...rest, match[2] + (match[3] ? '/' + match[3] : '')];
+    return shorthand.join(' ') + ' ' + normalized.join(', ');
+  };
   const defaults = () => ({
     fillStyle: '#000000',
     strokeStyle: '#000000',
@@ -1295,9 +1369,9 @@ const canvasCompatibilityState = (() => {
       set(value) {
         const c = contextState(this);
         if (key === 'font') {
-          value = String(value);
-          if (!/\b(?:[1-9]\d*(?:\.\d+)?|0?\.\d+)px(?:\s|\/)/.test(value)) return;
-          c.draw[key] = value;
+          const parsed = serializeCanvasFont(String(value));
+          if (parsed === null) return;
+          c.draw[key] = parsed;
           return;
         }
         if (key === 'letterSpacing' || key === 'wordSpacing') {
