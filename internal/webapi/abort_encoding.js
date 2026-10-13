@@ -174,4 +174,10 @@ class TextDecoder {
     return decodeUTF8(s, bytes, stream);
   }
 }
+// WebIDL operations are enumerable even though class methods are not. Chrome
+// exposes this descriptor before and after the operation is first called.
+Object.defineProperty(TextDecoder.prototype, 'decode', {
+  ...Object.getOwnPropertyDescriptor(TextDecoder.prototype, 'decode'),
+  enumerable: true,
+});
 expose('TextDecoder', TextDecoder);

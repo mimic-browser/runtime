@@ -5,6 +5,12 @@ import (
 	"testing"
 )
 
+func TestTextDecoderDecodeDescriptorMatchesChrome152(t *testing.T) {
+	parallelBrowserTest(t)
+	p := testPage(t)
+	historyEval(t, p, `(()=>{const d=Object.getOwnPropertyDescriptor(TextDecoder.prototype,'decode');return [d.enumerable,d.configurable,d.writable,d.value.name,d.value.length,Function.prototype.toString.call(d.value)].join('|')})()`, `true|true|true|decode|0|function decode() { [native code] }`)
+}
+
 func TestTextDecoderStreamChunkBoundariesAndErrors(t *testing.T) {
 	parallelBrowserTest(t)
 	p := testPage(t)
