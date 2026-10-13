@@ -129,6 +129,7 @@ func (l *Loader) prepareFetchCORS(ctx context.Context, r *Request) error {
 	pre := *r
 	pre.ID, pre.Method, pre.Body, pre.Credentials, pre.Redirect = "", "OPTIONS", nil, "omit", "error"
 	pre.corsPreflight = true
+	pre.OmitClientHints = true
 	pre.Headers = make(http.Header)
 	pre.Headers.Set("Origin", fetchOrigin(*r))
 	pre.Headers.Set("Access-Control-Request-Method", r.Method)

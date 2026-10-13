@@ -307,6 +307,12 @@ func (e Environment) WorkerRequestHeaders() map[string]string {
 	return e.requestHeaders(false)
 }
 
+// Browser-created CORS preflights use the complete language preference even
+// when document requests expose Chrome's reduced Accept-Language value.
+func (e Environment) PreflightRequestHeaders() map[string]string {
+	return e.requestHeaders(false)
+}
+
 func (e Environment) requestHeaders(reduce bool) map[string]string {
 	selectedLanguages := e.Locale.Languages
 	if reduce && len(selectedLanguages) > 1 {

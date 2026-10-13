@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/moreveal/mimic/internal/state"
 	"github.com/moreveal/mimic/internal/trace"
 )
 
@@ -111,6 +112,52 @@ func TestFetchCORSPreflight(t *testing.T) {
 	}
 	if preflights.Load() != 2 || actual.Load() != 1 {
 		t.Fatalf("preflight=%d actual=%d", preflights.Load(), actual.Load())
+	}
+}
+
+func TestFetchCORSPreflightUsesBrowserLanguageAndOmitsClientHints(t *testing.T) {
+	env := testEnvironment()
+	env.Locale.Languages = []string{"ru-RU", "ru", "en-US", "en"}
+	env.Locale.ReduceAcceptLanguage = true
+	preflightHeaders := make(chan http.Header, 1)
+	actualHeaders := make(chan http.Header, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", r.Header.Get("Origin"))
+		if r.Method == http.MethodOptions {
+			preflightHeaders <- r.Header.Clone()
+			w.Header().Set("Access-Control-Allow-Methods", "POST")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+			return
+		}
+		actualHeaders <- r.Header.Clone()
+	}))
+	defer server.Close()
+	source, _ := url.Parse("http://source.test/")
+	target, _ := url.Parse(server.URL)
+	_, err := NewLoader(func() state.Environment { return env }, NewCookieStore(), trace.New()).Load(
+		context.Background(), Request{
+			URL: target, SourceURL: source, Initiator: Fetch, Mode: "cors",
+			Method: http.MethodPost, Headers: http.Header{"Content-Type": {"application/octet-stream"}},
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	preflight := <-preflightHeaders
+	actual := <-actualHeaders
+	if got, want := preflight.Get("Accept-Language"), "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7"; got != want {
+		t.Fatalf("preflight Accept-Language = %q, want %q", got, want)
+	}
+	for _, header := range []string{"Sec-Ch-Ua", "Sec-Ch-Ua-Mobile", "Sec-Ch-Ua-Platform"} {
+		if got := preflight.Get(header); got != "" {
+			t.Fatalf("preflight %s = %q", header, got)
+		}
+	}
+	if got, want := actual.Get("Accept-Language"), "ru-RU,ru;q=0.9"; got != want {
+		t.Fatalf("actual Accept-Language = %q, want %q", got, want)
+	}
+	if actual.Get("Sec-Ch-Ua") == "" {
+		t.Fatal("actual request lost document client hints")
 	}
 }
 

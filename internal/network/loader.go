@@ -70,7 +70,7 @@ type Request struct {
 	Credentials          string
 	OpaqueOrigin         bool
 	HasCrossSiteAncestor bool
-	// Worker script and worker Fetch requests do not acquire document hints.
+	// Worker and browser-created preflight requests do not acquire document hints.
 	OmitClientHints bool
 	ClientHints     *ClientHintsContext
 	ID, ContextID   string
@@ -473,7 +473,9 @@ func (l *Loader) Load(ctx context.Context, r Request) (response Response, loadEr
 		}
 	} else {
 		headers := l.env().RequestHeaders()
-		if r.ClientIsWorker {
+		if r.corsPreflight {
+			headers = l.env().PreflightRequestHeaders()
+		} else if r.ClientIsWorker {
 			headers = l.env().WorkerRequestHeaders()
 		}
 		for k, v := range headers {
