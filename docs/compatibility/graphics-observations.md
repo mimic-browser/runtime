@@ -51,8 +51,8 @@ uniform and program changes. Arithmetic uses float32 rounding; UNORM conversion
 matches measured Windows Chrome midpoint behavior in the retained probes. This
 is not a promise of GPU transcendental or compiler-optimization equivalence.
 
-Varying interpolation, textures, matrices, user functions, arbitrary clip-space
-geometry, depth/stencil/blend/cull execution and multisampling remain explicit
+Arbitrary clip-space geometry, depth/stencil/cull execution, additional blend
+equations and factors, and multisampling remain explicit
 boundaries. Sample evaluation is bounded to 65,536 drawing-buffer pixels, 65,536
 vertices per draw, 4,096 evaluator steps per invocation and 1,024 loop iterations.
 Triangle edge ownership remains approximate; front-facing and fragment depth/W
@@ -61,13 +61,14 @@ are derived from the captured geometry. Approximate shader observations are diag
 Framebuffer/renderbuffer objects retain binding, ownership, deletion, attachment,
 format, dimensions and completeness state. Float formats require the enabled
 extension. Attached RGBA8 textures and renderbuffers share their underlying
-pixels with texture uploads, scissored clears, shader writes and readback;
+pixels with texture uploads, scissored clears, shader writes, SRC_ALPHA
+blending and readback;
 RGBA32F renderbuffer clear/readback uses the same attachment path. A pending
 shader draw materializes before a later subimage upload to that texture.
 Deleting a texture detaches it
 from the bound framebuffer while an unbound framebuffer retains the attached
 image until it is detached or deleted, matching the retained Chrome controls.
-Other attachment formats, texture-backed blending, multisample storage and
+Other attachment formats, multisample storage and
 blits remain explicit boundaries. No duplicate attachment pixel model is
 introduced.
 
@@ -92,6 +93,9 @@ The source SHA-256 and reference results are retained under
   attachment upload, clear, readback and bound/unbound texture deletion in
   direct headful Chrome 152 controls. Exact launch provenance is retained with
   the private raw captures.
+- `internal/browser/testdata/webgl_rgba_blend_chrome152.json`: two ordered
+  SRC_ALPHA draws on the default, renderbuffer and texture-backed RGBA8
+  surfaces in direct headful Chrome 152.
 - `webgl-validation-chrome152.json`: invalid shader cases, inactive inputs,
   uniform type errors and stale locations after relinking.
 

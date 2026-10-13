@@ -481,7 +481,6 @@ const drawVertices = (s, mode, first, count, indices = null, instance = 0) => {
       return;
     }
     if (![6408, 32856, 34836].includes(format)) fail('shader framebuffer format');
-    if (blendEnabled && !colorAttachment.floatPixels) fail('shader framebuffer blending');
     if (blendEnabled && colorAttachment.floatPixels && !s.extensions.has('EXT_float_blend')) {
       error(s, 1282);
       return;
@@ -534,12 +533,7 @@ const drawVertices = (s, mode, first, count, indices = null, instance = 0) => {
       clippedPosition[2] = Math.max(depthMin, Math.min(position[3], clippedPosition[2]));
     vertices.push({ position: clippedPosition, varyings: vertexResult.captured });
   }
-  if (
-    s.enabled.get(2929) ||
-    s.enabled.get(2960) ||
-    (blendEnabled && !colorAttachment) ||
-    s.enabled.get(2884)
-  )
+  if (s.enabled.get(2929) || s.enabled.get(2960) || s.enabled.get(2884))
     fail('shader depth/stencil/blend observations');
   (s.drawCommands || (s.drawCommands = [])).push({
     queries: [...(s.activeQueries?.values() || [])].map((value) => resources.get(value)),
@@ -806,17 +800,37 @@ const materializePrograms = (s) => {
           if (!Array.isArray(color) || color.length !== 4) fail('fragment output');
           for (const query of command.queries) query.samplesPassed = true;
           const i = (y * width + x) * 4;
+          const floatAttachment = !!command.colorAttachment?.floatPixels;
+          const destination = command.blend
+            ? Array.from(pixels.subarray(i, i + 4), (value) =>
+                floatAttachment ? value : value / 255,
+              )
+            : null;
+          // D3D11's RGBA8 blend unit uses quantized shader output and its
+          // complement (e.g. alpha 0.5 becomes factors 127/255 and 128/255).
+          // Keep floating attachments in their own unquantized domain.
+          const source =
+            command.blend && !floatAttachment
+              ? color.map(
+                  (value) =>
+                    Math.max(
+                      0,
+                      Math.ceil(Math.fround(Math.max(0, Math.min(1, value)) * 255) - 0.5),
+                    ) / 255,
+                )
+              : color;
           for (let k = 0; k < 4; k++)
             if (command.mask[k] && (command.colorAttachment || k !== 3 || s.attributes.alpha)) {
-              let output = color[k];
+              let output = source[k];
               if (command.blend) {
                 const [srcRGB, dstRGB, srcAlpha, dstAlpha] = command.blendFactors;
-                const prior = Array.from(pixels.subarray(i, i + 4));
                 output =
-                  color[k] * blendFactorValue(k === 3 ? srcAlpha : srcRGB, color, prior, k) +
-                  prior[k] * blendFactorValue(k === 3 ? dstAlpha : dstRGB, color, prior, k);
+                  source[k] *
+                    blendFactorValue(k === 3 ? srcAlpha : srcRGB, source, destination, k) +
+                  destination[k] *
+                    blendFactorValue(k === 3 ? dstAlpha : dstRGB, source, destination, k);
               }
-              const value = command.colorAttachment?.floatPixels
+              const value = floatAttachment
                 ? Math.fround(output)
                 : Math.max(0, Math.ceil(Math.fround(Math.max(0, Math.min(1, output)) * 255) - 0.5));
               if (samplePixels) {
