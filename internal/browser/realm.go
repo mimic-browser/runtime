@@ -2398,6 +2398,13 @@ func (r *Realm) installBindingsOnOwner() error {
 	if err := setEvalSourcePolicy(r.runtime, r.trustedTypesState()); err != nil {
 		return err
 	}
+	prepareBrowserDomains := r.runtime.Get("__mimicPrepareBrowserDomains")
+	if r.runtime.TypeOf(prepareBrowserDomains) != "function" {
+		return fmt.Errorf("bootstrap has no browser domain preparation hook")
+	}
+	if _, err = r.runtime.Call(context.Background(), prepareBrowserDomains, nil); err != nil {
+		return err
+	}
 	r.messageReceiver = r.runtime.Get("__receiveFrameMessage")
 	r.documentStreamReset = r.runtime.Get("__mimicResetDocumentStream")
 	r.documentStreamEvent = r.runtime.Get("__mimicDocumentStreamEvent")
@@ -2416,7 +2423,7 @@ func (r *Realm) installBindingsOnOwner() error {
 	}
 	r.resourceEventDispatcher = r.runtime.Get("__mimicDispatchResourceEvent")
 	r.performanceNotifier = r.runtime.Get("__mimicNotifyPerformanceObservers")
-	_, err = r.runtime.Eval(context.Background(), `delete globalThis.__mimic;delete globalThis.__mimicLazySurface;delete globalThis.__mimicRestoreBootstrap;delete globalThis.__mimicUnsupportedProbe;delete globalThis.__receiveFrameMessage;delete globalThis.__receiveMessagePort;delete globalThis.__mimicDispatchFrameLoad;delete globalThis.__mimicSyncWindowFrames;delete globalThis.__mimicDispatchResourceEvent;delete globalThis.__mimicNotifyPerformanceObservers`, "mimic:hide-internals")
+	_, err = r.runtime.Eval(context.Background(), `delete globalThis.__mimic;delete globalThis.__mimicLazySurface;delete globalThis.__mimicRestoreBootstrap;delete globalThis.__mimicPrepareBrowserDomains;delete globalThis.__mimicUnsupportedProbe;delete globalThis.__receiveFrameMessage;delete globalThis.__receiveMessagePort;delete globalThis.__mimicDispatchFrameLoad;delete globalThis.__mimicSyncWindowFrames;delete globalThis.__mimicDispatchResourceEvent;delete globalThis.__mimicNotifyPerformanceObservers`, "mimic:hide-internals")
 	if err == nil {
 		r.debuggerFactory, err = evalPlatformExpression(r.runtime, debuggerFactorySource, "mimic:debugger-intrinsics")
 	}

@@ -20,7 +20,7 @@
           ['GPUValidationError', 'GPUOutOfMemoryError', 'GPUInternalError'].includes(s.type)
         ))
     )
-      throw new TypeError('Illegal invocation');
+      throw new IntrinsicTypeError('Illegal invocation');
     return s;
   };
   const make = (type, data = {}) => {
@@ -36,7 +36,7 @@
         [name](...args) {
           const s = check(this, type);
           if (args.length < (prior?.value?.length || 0))
-            throw new TypeError('Not enough arguments');
+            throw new IntrinsicTypeError('Not enough arguments');
           return fn(s, ...args);
         },
       }[name];
@@ -84,7 +84,8 @@
   };
   const number = (value) => {
     const n = Number(value);
-    if (!Number.isSafeInteger(n) || n < 0) throw new TypeError('Expected unsigned integer');
+    if (!Number.isSafeInteger(n) || n < 0)
+      throw new IntrinsicTypeError('Expected unsigned integer');
     return n;
   };
   const operation = (message) => platformDOMException(message, 'OperationError');
@@ -135,7 +136,7 @@
   for (const name of ['has', 'keys', 'values', 'entries'])
     method('GPUSupportedFeatures', name, (s, ...args) => s.values[name](...args));
   method('GPUSupportedFeatures', 'forEach', (s, callback, thisArg) => {
-    if (typeof callback !== 'function') throw new TypeError('Expected callback');
+    if (typeof callback !== 'function') throw new IntrinsicTypeError('Expected callback');
     s.values.forEach((v, k) => callback.call(thisArg, v, k, s.object));
   });
   const featureIterator = function values() {
@@ -187,7 +188,7 @@
     for (const name of ['has', 'keys', 'values', 'entries'])
       method('WGSLLanguageFeatures', name, (s, ...args) => s.values[name](...args));
     method('WGSLLanguageFeatures', 'forEach', (s, callback, thisArg) => {
-      if (typeof callback !== 'function') throw new TypeError('Expected callback');
+      if (typeof callback !== 'function') throw new IntrinsicTypeError('Expected callback');
       s.values.forEach((v, k) => Reflect.apply(callback, thisArg, [v, k, languageFeatures]));
     });
     const iterator = function values() {
@@ -209,7 +210,7 @@
     options = options ?? {};
     const preference = options.powerPreference === undefined ? '' : String(options.powerPreference);
     if (preference && !['low-power', 'high-performance'].includes(preference))
-      return platformPromiseReject(new TypeError('Invalid powerPreference'));
+      return platformPromiseReject(new IntrinsicTypeError('Invalid powerPreference'));
     return host
       .gpuRequestAdapter(preference, options.forceFallbackAdapter ? 'fallback' : '')
       .then((g) =>
@@ -235,7 +236,7 @@
     const get = Object.getOwnPropertyDescriptor(
       {
         get gpu() {
-          if (this !== owner) throw new TypeError('Illegal invocation');
+          if (this !== owner) throw new IntrinsicTypeError('Illegal invocation');
           return gpu;
         },
       },
@@ -249,7 +250,7 @@
     const requested = Array.from(descriptor.requiredFeatures || [], String),
       available = slots.get(adapter.features).values;
     if (requested.some((f) => !available.has(f)))
-      return platformPromiseReject(new TypeError('Unsupported feature'));
+      return platformPromiseReject(new IntrinsicTypeError('Unsupported feature'));
     const values = { ...gpuLimitDefaults },
       supported = slots.get(adapter.limits).values;
     for (const [name, value] of Object.entries(descriptor.requiredLimits || {})) {
@@ -295,7 +296,7 @@
   method('GPUDevice', 'pushErrorScope', (s, filter) => {
     filter = String(filter);
     if (!['validation', 'out-of-memory', 'internal'].includes(filter))
-      throw new TypeError('Invalid error filter');
+      throw new IntrinsicTypeError('Invalid error filter');
     s.scopes.push({ filter, error: null });
   });
   method('GPUDevice', 'popErrorScope', (s) =>
@@ -325,11 +326,11 @@
   });
   method('GPUDevice', 'createBuffer', (s, descriptor) => {
     if (!descriptor || descriptor.size === undefined || descriptor.usage === undefined)
-      throw new TypeError('Missing buffer descriptor');
+      throw new IntrinsicTypeError('Missing buffer descriptor');
     const size = number(descriptor.size),
       usage = Number(descriptor.usage) >>> 0,
       mapped = !!descriptor.mappedAtCreation;
-    if (mapped && size % 4) throw new RangeError('Mapped size must be a multiple of four');
+    if (mapped && size % 4) throw new IntrinsicRangeError('Mapped size must be a multiple of four');
     if (size > 64 * 1024 * 1024) unsupported('buffer storage limit');
     if (mapped && !nativeTransfer && !host.detachArrayBuffer)
       unsupported('mapped buffer detachment');
@@ -535,7 +536,8 @@
     offset = number(offset);
     dataOffset = number(dataOffset);
     const view = ArrayBuffer.isView(data);
-    if (!view && !(data instanceof ArrayBuffer)) throw new TypeError('Expected buffer source');
+    if (!view && !(data instanceof ArrayBuffer))
+      throw new IntrinsicTypeError('Expected buffer source');
     const scale = view && !(data instanceof DataView) ? data.BYTES_PER_ELEMENT : 1,
       bytes = view
         ? new Uint8Array(data.buffer, data.byteOffset, data.byteLength)

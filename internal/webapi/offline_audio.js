@@ -42,22 +42,22 @@
   };
   const requireSlot = (map, value) => {
     const s = map.get(value);
-    if (!s) throw new TypeError('Illegal invocation');
+    if (!s) throw new IntrinsicTypeError('Illegal invocation');
     return s;
   };
   const finite = (value) => {
     value = Number(value);
-    if (!Number.isFinite(value)) throw new TypeError('Expected finite number');
+    if (!Number.isFinite(value)) throw new IntrinsicTypeError('Expected finite number');
     return value;
   };
   const float = (value) => {
     value = Math.fround(finite(value));
-    if (!Number.isFinite(value)) throw new TypeError('Expected finite float');
+    if (!Number.isFinite(value)) throw new IntrinsicTypeError('Expected finite float');
     return value;
   };
   const time = (value) => {
     value = finite(value);
-    if (value < 0) throw new RangeError('Negative time');
+    if (value < 0) throw new IntrinsicRangeError('Negative time');
     return value;
   };
   let synchronizeOwner = () => {};
@@ -132,7 +132,7 @@
   };
   const dimensions = (options) => {
     if (!options || options.length === undefined || options.sampleRate === undefined)
-      throw new TypeError('Missing audio dimensions');
+      throw new IntrinsicTypeError('Missing audio dimensions');
     const length = Number(options.length) >>> 0,
       numberOfChannels =
         options.numberOfChannels === undefined ? 1 : Number(options.numberOfChannels) >>> 0,
@@ -149,7 +149,7 @@
     return { length, numberOfChannels, sampleRate };
   };
   function AudioBuffer(options) {
-    if (!new.target) throw new TypeError('Expected new');
+    if (!new.target) throw new IntrinsicTypeError('Expected new');
     const s = dimensions(options),
       object = Object.create(new.target.prototype);
     s.channels = Array.from({ length: s.numberOfChannels }, () => new Float32Array(s.length));
@@ -167,14 +167,14 @@
   };
   method('AudioBuffer', 'getChannelData', function getChannelData(index) {
     const s = requireSlot(buffers, this);
-    if (!arguments.length) throw new TypeError('Expected channel');
+    if (!arguments.length) throw new IntrinsicTypeError('Expected channel');
     return channel(s, index);
   });
   for (const name of ['copyFromChannel', 'copyToChannel'])
     method('AudioBuffer', name, function (data, index, offset = 0) {
       const s = requireSlot(buffers, this);
       if (arguments.length < 2 || !(data instanceof Float32Array))
-        throw new TypeError('Expected Float32Array and channel');
+        throw new IntrinsicTypeError('Expected Float32Array and channel');
       if (!data.length) return;
       const target = channel(s, index);
       offset = Number(offset) >>> 0;
@@ -185,7 +185,7 @@
     });
   function OfflineAudioCompletionEvent(type, init) {
     if (!new.target || arguments.length < 2 || !init || init.renderedBuffer === undefined)
-      throw new TypeError('Expected completion buffer');
+      throw new IntrinsicTypeError('Expected completion buffer');
     requireSlot(buffers, init.renderedBuffer);
     const event = new Event(type, init);
     Object.setPrototypeOf(event, new.target.prototype);
@@ -263,7 +263,8 @@
   getter('AudioParam', 'automationRate', params, 'automationRate', function (value) {
     const s = requireSlot(params, this);
     value = String(value);
-    if (!['a-rate', 'k-rate'].includes(value)) throw new TypeError('Invalid automation rate');
+    if (!['a-rate', 'k-rate'].includes(value))
+      throw new IntrinsicTypeError('Invalid automation rate');
     if (s.fixedRate && value !== s.automationRate) throw exception('InvalidStateError');
     s.automationRate = value;
   });
@@ -354,20 +355,21 @@
   ])
     method('AudioParam', name, function (value, when) {
       const s = requireSlot(params, this);
-      if (arguments.length < 2) throw new TypeError('Expected value and time');
+      if (arguments.length < 2) throw new IntrinsicTypeError('Expected value and time');
       value = float(value);
       when = time(when);
-      if (kind === 'exponential' && value === 0) throw new RangeError('Zero exponential target');
+      if (kind === 'exponential' && value === 0)
+        throw new IntrinsicRangeError('Zero exponential target');
       addAutomation(s, { kind, time: when, value });
       return this;
     });
   method('AudioParam', 'setValueCurveAtTime', function setValueCurveAtTime(values, when, duration) {
     const s = requireSlot(params, this);
-    if (arguments.length < 3) throw new TypeError('Expected curve, time and duration');
+    if (arguments.length < 3) throw new IntrinsicTypeError('Expected curve, time and duration');
     values = Float32Array.from(values, float);
     when = time(when);
     duration = time(duration);
-    if (duration === 0) throw new RangeError('Zero curve duration');
+    if (duration === 0) throw new IntrinsicRangeError('Zero curve duration');
     if (values.length < 2) throw exception('InvalidStateError', 'Curve requires two values');
     addAutomation(s, { kind: 'curve', time: when, duration, values });
     return this;
@@ -397,11 +399,12 @@
   });
   method('AudioParam', 'setTargetAtTime', function setTargetAtTime() {
     const s = requireSlot(params, this);
-    if (arguments.length < 3) throw new TypeError('Expected target, time and time constant');
+    if (arguments.length < 3)
+      throw new IntrinsicTypeError('Expected target, time and time constant');
     const value = float(arguments[0]),
       when = time(arguments[1]),
       timeConstant = finite(arguments[2]);
-    if (timeConstant < 0) throw new RangeError('Negative time constant');
+    if (timeConstant < 0) throw new IntrinsicRangeError('Negative time constant');
     addAutomation(s, { kind: 'target', time: when, value, timeConstant });
     return this;
   });
@@ -450,7 +453,7 @@
           parameter.incoming.push({ source: this, output });
         return;
       }
-      throw new TypeError('Expected AudioNode');
+      throw new IntrinsicTypeError('Expected AudioNode');
     }
     output = Number(output) >>> 0;
     input = Number(input) >>> 0;
@@ -490,7 +493,7 @@
     }
     const b = nodes.get(destination);
     const parameter = params.get(destination);
-    if (!b && !parameter) throw new TypeError('Expected AudioNode or AudioParam');
+    if (!b && !parameter) throw new IntrinsicTypeError('Expected AudioNode or AudioParam');
     const incoming = b ? b.incoming : parameter.incoming;
     if (!incoming.some((edge) => edge.source === this)) throw exception('InvalidAccessError');
     const output = arguments.length > 1 ? Number(arguments[1]) >>> 0 : null;
@@ -520,7 +523,7 @@
       onended: null,
     });
   function AudioBufferSourceNode(context, options = {}) {
-    if (!new.target) throw new TypeError('Expected new');
+    if (!new.target) throw new IntrinsicTypeError('Expected new');
     const object = makeSource(context);
     Object.setPrototypeOf(object, new.target.prototype);
     options = options ?? {};
@@ -574,7 +577,7 @@
   const makeGain = (context) =>
     makeNode(context, 'GainNode', 1, 1, { gain: makeParam(context, 1) });
   function GainNode(context, options = {}) {
-    if (!new.target) throw new TypeError('Expected new');
+    if (!new.target) throw new IntrinsicTypeError('Expected new');
     const object = makeGain(context);
     Object.setPrototypeOf(object, new.target.prototype);
     options = options ?? {};
@@ -612,7 +615,7 @@
     return object;
   }
   function PeriodicWave(context, options = {}) {
-    if (!new.target) throw new TypeError('Expected new');
+    if (!new.target) throw new IntrinsicTypeError('Expected new');
     options = options ?? {};
     let real = options.real,
       imag = options.imag;
@@ -839,7 +842,7 @@
     });
   };
   function OscillatorNode(context, options = {}) {
-    if (!new.target) throw new TypeError('Expected new');
+    if (!new.target) throw new IntrinsicTypeError('Expected new');
     const object = makeOscillator(context);
     Object.setPrototypeOf(object, new.target.prototype);
     options = options ?? {};
@@ -847,7 +850,7 @@
       options.type !== undefined &&
       !['sine', 'square', 'sawtooth', 'triangle', 'custom'].includes(String(options.type))
     )
-      throw new TypeError('Invalid oscillator type');
+      throw new IntrinsicTypeError('Invalid oscillator type');
     for (const key of ['type', 'channelCount', 'channelCountMode', 'channelInterpretation'])
       if (options[key] !== undefined && !(key === 'type' && options.periodicWave !== undefined))
         object[key] = options[key];
@@ -896,7 +899,7 @@
     return makeNode(context, 'DynamicsCompressorNode', 1, 1, extra);
   };
   function DynamicsCompressorNode(context, options = {}) {
-    if (!new.target) throw new TypeError('Expected new');
+    if (!new.target) throw new IntrinsicTypeError('Expected new');
     const object = makeCompressor(context);
     Object.setPrototypeOf(object, new.target.prototype);
     options = options ?? {};
@@ -910,9 +913,10 @@
   for (const key of [...Object.keys(compressorParams), 'reduction'])
     getter('DynamicsCompressorNode', key, nodes);
   function OfflineAudioContext(channels, length, sampleRate) {
-    if (!new.target || arguments.length === 0) throw new TypeError('Expected offline dimensions');
+    if (!new.target || arguments.length === 0)
+      throw new IntrinsicTypeError('Expected offline dimensions');
     if (typeof channels !== 'object' && arguments.length < 3)
-      throw new TypeError('Expected three arguments');
+      throw new IntrinsicTypeError('Expected three arguments');
     const s = {
       ...dimensions(
         typeof channels === 'object'
@@ -962,7 +966,7 @@
   }
   method('BaseAudioContext', 'createBuffer', function createBuffer(channels, length, sampleRate) {
     requireSlot(contexts, this);
-    if (arguments.length < 3) throw new TypeError('Expected three arguments');
+    if (arguments.length < 3) throw new IntrinsicTypeError('Expected three arguments');
     return new AudioBuffer({ numberOfChannels: channels, length, sampleRate });
   });
   method('BaseAudioContext', 'createBufferSource', function createBufferSource() {
@@ -982,7 +986,7 @@
     'createPeriodicWave',
     function createPeriodicWave(real, imag, options = {}) {
       requireSlot(contexts, this);
-      if (arguments.length < 2) throw new TypeError('Expected coefficients');
+      if (arguments.length < 2) throw new IntrinsicTypeError('Expected coefficients');
       return makeWave(this, real, imag, !!options?.disableNormalization);
     },
   );
@@ -1071,7 +1075,7 @@
   method('BaseAudioContext', 'decodeAudioData', function decodeAudioData(data, success, failure) {
     try {
       requireSlot(contexts, this);
-      if (!(data instanceof ArrayBuffer)) throw new TypeError('Expected ArrayBuffer');
+      if (!(data instanceof ArrayBuffer)) throw new IntrinsicTypeError('Expected ArrayBuffer');
       const bytes = new Uint8Array(data).slice(),
         context = this;
       if (typeof host.detachArrayBuffer === 'function') host.detachArrayBuffer(data);

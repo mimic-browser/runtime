@@ -10482,6 +10482,15 @@
   };
   /* dev_preview_install */
   globalThis.__mimicEvalSourceResolver = evalSourceResolver;
+  // Browser implementations cannot depend on author-mutable globals at first
+  // use. Materialize them after bootstrap (and again after snapshot restore)
+  // while the realm is still exclusively browser-owned.
+  globalThis.__mimicPrepareBrowserDomains = () => {
+    for (const name of ['audio', 'webgl', 'webgpu']) {
+      const state = lazyDomainState.get(name);
+      if (state.status !== 'ready') ensureLazyDomain(name);
+    }
+  };
   /* compose_surface_tail */
   known = new Set(Reflect.ownKeys(globalThis));
   setTraceActive(host.ready(setTraceActive));

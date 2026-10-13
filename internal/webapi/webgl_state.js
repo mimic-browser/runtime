@@ -16,7 +16,7 @@
     for (const name of ['name', 'size', 'type']) {
       const get = function () {
         const data = activeInfos.get(this);
-        if (!data) throw new TypeError('Illegal invocation');
+        if (!data) throw new IntrinsicTypeError('Illegal invocation');
         return data[name];
       };
       if (typeof markNative === 'function') markNative(get, name, 'get ');
@@ -38,7 +38,7 @@
     for (const name of ['rangeMin', 'rangeMax', 'precision']) {
       const get = function () {
         const data = precisionFormats.get(this);
-        if (!data) throw new TypeError('Illegal invocation');
+        if (!data) throw new IntrinsicTypeError('Illegal invocation');
         return data[name];
       };
       if (typeof markNative === 'function') markNative(get, name, 'get ');
@@ -78,7 +78,7 @@
   };
   const check = (value) => {
     const s = slots.get(value);
-    if (!s) throw new TypeError('Illegal invocation');
+    if (!s) throw new IntrinsicTypeError('Illegal invocation');
     return s;
   };
   const error = (s, code) => {
@@ -86,7 +86,7 @@
   };
   const resource = (s, value, type) => {
     const r = resources.get(value);
-    if (!r || r.type !== type) throw new TypeError('Expected ' + type);
+    if (!r || r.type !== type) throw new IntrinsicTypeError('Expected ' + type);
     if (r.owner !== s || r.deleted || r.generation !== (s.generation || 0)) {
       error(s, 1282);
       return null;
@@ -104,7 +104,8 @@
     const f = {
       [name](...args) {
         const s = check(this);
-        if (args.length < (d?.value?.length || 0)) throw new TypeError('Not enough arguments');
+        if (args.length < (d?.value?.length || 0))
+          throw new IntrinsicTypeError('Not enough arguments');
         if (s.lost && !['getError', 'isContextLost'].includes(name) && !name.startsWith('create'))
           return name.startsWith('is') ? false : name.startsWith('get') ? null : undefined;
         if (name.startsWith('is') && args[0]) {
@@ -159,7 +160,7 @@
         set = function (value) {
           const s = check(this);
           if (typeof value === 'symbol')
-            throw new TypeError('Cannot convert a Symbol value to a string');
+            throw new IntrinsicTypeError('Cannot convert a Symbol value to a string');
           value = String(value);
           if (value === 'srgb' || value === 'display-p3') s[name] = value;
         };
@@ -460,7 +461,7 @@
             error(s, 1281);
             return;
           }
-          throw new TypeError('Expected buffer source');
+          throw new IntrinsicTypeError('Expected buffer source');
         }
       }
       b.data = new Uint8Array(source);
@@ -471,7 +472,7 @@
       if (!b) return;
       if (extra.length) fail('bufferSubData source offset');
       const source = bytes(value);
-      if (!source) throw new TypeError('Expected buffer source');
+      if (!source) throw new IntrinsicTypeError('Expected buffer source');
       offset = Math.trunc(Number(offset));
       if (offset < 0 || offset + source.length > b.data.length) {
         error(s, 1281);
@@ -493,7 +494,7 @@
         if (!b) return;
         if (extra.length) fail('getBufferSubData destination offset');
         const dest = bytes(value);
-        if (!dest) throw new TypeError('Expected buffer view');
+        if (!dest) throw new IntrinsicTypeError('Expected buffer view');
         offset = Math.trunc(Number(offset));
         if (offset < 0 || offset + dest.length > b.data.length) {
           error(s, 1281);
@@ -799,7 +800,7 @@
         return;
       }
       if (Number(format) !== 6408 || Number(pixelType) !== 5121) fail('readPixels format');
-      if (!(dest instanceof Uint8Array)) throw new TypeError('Expected Uint8Array');
+      if (!(dest instanceof Uint8Array)) throw new IntrinsicTypeError('Expected Uint8Array');
       const stride = Math.ceil((w * 4) / s.pack) * s.pack;
       if (dest.length < (h ? stride * (h - 1) + w * 4 : 0)) {
         error(s, 1282);
@@ -837,7 +838,7 @@
       normalized.xrCompatible = false;
       const powerPreference = normalized.powerPreference;
       if (!['default', 'low-power', 'high-performance'].includes(powerPreference))
-        throw new TypeError(
+        throw new IntrinsicTypeError(
           "Failed to execute 'getContext' on '" +
             (typeof HTMLCanvasElement !== 'undefined' && canvas instanceof HTMLCanvasElement
               ? 'HTMLCanvasElement'
