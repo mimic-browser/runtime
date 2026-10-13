@@ -235,19 +235,19 @@ Read [architecture and invariants](architecture.md),
 [Recorded Windows/Linux checks and limitations](platform-validation.md).
 
 ```sh
-go test ./...
-go test -race ./...
+python tools/testing/run_focused.py ./internal/browser --run '^TestPluginGraph'
 python3 tools/generate_compat.py --check
 python3 tools/check_repository.py
 ```
 
-The full suite includes **exact Windows font measurements**. To run those
-unchanged expectations on Linux, provide the same reference font files through
-`MIMIC_FONT_DIR`. For example (use a local Linux directory for the test fonts):
+Local iterations run focused tests; CI runs the full suite. On Windows, use the
+[focused runner](../tools/testing/README.md) instead of executing `go test`
+temporary binaries. It keeps one executable path per package across worktrees
+so Windows Firewall can reuse its existing application permission.
 
-```sh
-MIMIC_FONT_DIR=/path/to/reference-fonts go test ./...
-```
+The full CI suite includes **exact Windows font measurements**. To run focused
+tests with those unchanged expectations on Linux, provide the same reference
+font files through `MIMIC_FONT_DIR`, pointing at a local Linux directory.
 
 In WSL, the source font files are available under `/mnt/c/Windows/Fonts` on
 the reference host. Copy them locally for a full run: repeatedly scanning a

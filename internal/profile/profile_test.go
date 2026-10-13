@@ -54,6 +54,16 @@ func TestProfileRejections(t *testing.T) {
 		})
 	}
 }
+
+func TestProfileCannotFabricateICE(t *testing.T) {
+	base := testBase()
+	for _, fields := range []string{`"publicAddress":"203.0.113.10"`, `"hostCandidateCount":3`, `"hostDelayMillis":10`} {
+		_, err := Normalize(input(base, `,"network":{"ice":{`+fields+`}}`), base, nil)
+		if value, ok := err.(*Error); !ok || !strings.HasPrefix(value.Path, "network.ice") || value.Reason != "unsupported" {
+			t.Fatalf("fabricated ICE accepted: %v", err)
+		}
+	}
+}
 func TestProfilePatchAtomicAndSecretFree(t *testing.T) {
 	b := testBase()
 	d, err := Normalize(input(b, `,"network":{"proxy":{"server":"socks5://localhost:9000","username":"private-user","password":"private-password"}}`), b, nil)

@@ -96,6 +96,16 @@ the current behavioral reference.
   focused tests needed to establish the baseline; after the change, rerun only
   the focused tests needed to verify it. Let GitHub CI detect broad regressions.
 
+- On local Windows hosts, run focused Go tests with
+  `python tools/testing/run_focused.py <package> --run '<expression>'`.
+  This rebuilds and executes each package at a fixed path under
+  `%LOCALAPPDATA%/Mimic/test-binaries`, shared across worktrees. Do not execute
+  temporary `go test` binaries or create executable paths per run, worktree or
+  investigation: changing paths causes repeated Windows Firewall prompts.
+  The runner locks each package binary through build and execution and runs
+  from the package directory. Use `--race` or `--json` when needed. Keep logs
+  and captures in ignored local storage; do not change firewall settings.
+
 - Fix the shared semantic cause across related APIs and value types. If a
   failure appears through one entry point, check the underlying boundary and
   its other callers before adding a local conversion or workaround.

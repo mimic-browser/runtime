@@ -30,7 +30,7 @@ func (e *Error) Error() string     { return e.Path + ": " + e.Reason + ": " + e.
 func (e *Error) ProtocolCode() int { return -32602 }
 func (e *Error) ProtocolData() any { return e }
 func Limitations() []string {
-	return []string{"Custom timezone/Intl locale requires the native Intl backend. Generated GPU/font recipes are supported; arbitrary manual graphics/font/media backends remain unavailable.", "Audio output supports modeled 44.1/48 kHz stereo recipes. Graphics readbacks remain stateful approximations, not physical-GPU or Chrome pixel equivalence.", "Proxy routes resource-loader HTTP(S) traffic only; ICE metadata does not route WebRTC or change the public IP.", "Changing identity does not change the installed Chrome implementation; proxy transport disables HTTP/3."}
+	return []string{"Custom timezone/Intl locale requires the native Intl backend. Generated GPU/font recipes are supported; arbitrary manual graphics/font/media backends remain unavailable.", "Audio output supports modeled 44.1/48 kHz stereo recipes. Graphics readbacks remain stateful approximations, not physical-GPU or Chrome pixel equivalence.", "Context proxies isolate WebRTC to TURN over TCP/TLS through HTTP CONNECT or SOCKS5 CONNECT. STUN, TURN UDP/DTLS, SOCKS UDP ASSOCIATE and direct ICE are unavailable with a proxy. ICE profile metadata cannot configure candidates or an exit IP.", "Changing identity does not change the installed Chrome implementation; proxy transport disables HTTP/3."}
 }
 func failure(path, reason, message string) error { return &Error{path, reason, message} }
 
@@ -270,6 +270,9 @@ func dynamic(path string) bool {
 // Fields requiring new resource backends are explicit
 // boundaries. Reading their measured baseline remains supported.
 func boundary(path string) string {
+	if path == "network.ice" || strings.HasPrefix(path, "network.ice.") {
+		return "ICE observations come from the live transport; profile metadata cannot configure candidates, timing or an exit IP"
+	}
 	for _, p := range []string{"fonts", "graphics.webGLCapabilitiesJSON", "graphics.webGPU", "capabilities.devices", "capabilities.media"} {
 		if path == p || strings.HasPrefix(path, p+".") {
 			return "custom values are not yet validated by the available engine/backend"
@@ -423,6 +426,9 @@ func Normalize(raw []byte, base state.Environment, current *Document) (Document,
 	return d, nil
 }
 func (d Document) Validate(base state.Environment) error {
+	if !reflect.DeepEqual(d.Network.ICE, base.Network.ICE) {
+		return failure("network.ice", "unsupported", "ICE observations come from the live transport; profile metadata cannot configure candidates, timing or an exit IP")
+	}
 	if d.SchemaVersion != 1 || d.BaseProfile != base.ProfileID {
 		return failure("baseProfile", "unsupported", "profile must use the installed Mimic contract and base profile")
 	}

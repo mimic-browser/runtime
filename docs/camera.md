@@ -148,17 +148,17 @@ transport. ICE server configuration supports STUN and TURN. RTP counters come
 from actual packet reads and writes. Text and binary RTC data channels use SCTP
 and bounded send queues. Packet loss feedback requests new H264 keyframes.
 
-The transport and its certificate state are allocated when media is attached or
-a remote session is negotiated. An unattached peer's offline capability offer
-does not allocate a camera or encoder. Native H264 encoding starts only after
+The transport and its certificate state are allocated when a peer first needs
+native negotiation, including offer-only DataChannel sessions. Offers do not
+allocate a camera or encoder. Native H264 encoding starts only after
 the connection is established, and decoding starts when remote media arrives.
 Each encoder and decoder owns independent native state; Pages share only the
 immutable loaded codec library. Closing a peer releases transport and codecs
 without stopping the caller's independently owned camera stream.
 
-Attach media before applying an offline offer. Migrating an already applied
-offline session into a live transport rejects with `NotSupportedError` because
-its session certificate and transport state cannot be reused.
+Descriptions, candidates and stats come from the same native peer. A Context
+proxy restricts all WebRTC traffic to TURN TCP/TLS tunnels; unsupported routes
+cannot fall back directly. See [WebRTC transport and privacy](webrtc.md).
 
 Connected video negotiates H264 with packetization mode 1 and constrained
 baseline compatibility. Transmission adapts dimensions to at most 1280×720;
