@@ -56,7 +56,7 @@ equations and factors, and multisampling remain explicit
 boundaries. Sample evaluation is bounded to 65,536 drawing-buffer pixels, 65,536
 vertices per draw, 4,096 evaluator steps per invocation and 1,024 loop iterations.
 Triangle edge ownership remains approximate; front-facing and fragment depth/W
-are derived from the captured geometry. Approximate shader observations are diagnosed. Default context antialiasing remains disabled.
+are derived from the captured geometry. Approximate shader observations are diagnosed.
 
 Framebuffer/renderbuffer objects retain binding, ownership, deletion, attachment,
 format, dimensions and completeness state. Float formats require the enabled
@@ -68,6 +68,10 @@ shader draw materializes before a later subimage upload to that texture.
 Default and DEPTH_COMPONENT16 renderbuffer depth surfaces retain per-pixel
 clear/draw order, depth comparison, write masks and scissored clears. Draws
 deferred before a depth-only clear still update the unaffected pixels.
+The antialiased default framebuffer retains depth and color for each sample
+through later draws, blending, clears and readback resolution; a farther draw
+can fill uncovered samples without overwriting nearer ones. Its four-sample
+layout and depth ordering are pinned to a direct headful Chrome 152 control.
 Changing canvas dimensions discards queued draws and depth, while assigning
 the existing dimensions preserves WebGL contents in the retained Chrome
 controls for both HTMLCanvasElement and OffscreenCanvas.
@@ -105,6 +109,9 @@ The source SHA-256 and reference results are retained under
 - `internal/browser/testdata/webgl_depth*_chrome152.json`: ordered depth
   comparisons, write masks and local depth clears on the default and
   renderbuffer-backed surfaces in direct headful Chrome 152.
+- `internal/browser/testdata/webgl_multisample_depth_chrome152.json`: partial
+  coverage followed by a farther full-screen draw on the four-sample default
+  framebuffer in direct headful Chrome 152.
 - `webgl-validation-chrome152.json`: invalid shader cases, inactive inputs,
   uniform type errors and stale locations after relinking.
 

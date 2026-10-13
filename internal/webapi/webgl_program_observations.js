@@ -617,7 +617,22 @@ const materializePrograms = (s) => {
         : [[0.5, 0.5]];
     if (!command.colorAttachment && s.attributes.antialias && !s.samplePixels)
       s.samplePixels = samples.map(() => s.pixels.slice());
+    // The retained Chrome MSAA blend control resolves fractional sample color
+    // only after coverage is combined. Preserve it without paying for float
+    // sample storage on the common unblended path.
+    if (command.blend && s.samplePixels && !(s.samplePixels[0] instanceof Float32Array))
+      s.samplePixels = s.samplePixels.map((sample) => Float32Array.from(sample));
     const samplePixels = command.colorAttachment ? null : s.samplePixels;
+    const drawTargets = samplePixels || [pixels];
+    if (
+      samplePixels &&
+      command.depthEnabled &&
+      command.depthSurface &&
+      !command.depthSurface.sampleDepthPixels
+    )
+      command.depthSurface.sampleDepthPixels = samples.map(() =>
+        command.depthSurface.depthPixels.slice(),
+      );
     const [vx, vy, vw, vh] = command.viewport;
     const vertices = command.vertices.map(({ position: p, varyings }) => {
         const transformed = [
@@ -716,6 +731,24 @@ const materializePrograms = (s) => {
         }
         if (components.length >= 4) directColor = components.slice(0, 4);
       }
+      const depthPasses = (depth, prior) => {
+        const mode = command.depthFunc;
+        return mode === 512
+          ? false
+          : mode === 513
+            ? depth < prior
+            : mode === 514
+              ? depth === prior
+              : mode === 515
+                ? depth <= prior
+                : mode === 516
+                  ? depth > prior
+                  : mode === 517
+                    ? depth !== prior
+                    : mode === 518
+                      ? depth >= prior
+                      : true;
+      };
       const minX = Math.max(0, Math.floor(Math.min(a[0], b[0], c[0]) - 1));
       const maxX = Math.min(width, Math.ceil(Math.max(a[0], b[0], c[0]) + 1));
       const minY = Math.max(0, Math.floor(Math.min(a[1], b[1], c[1]) - 1));
@@ -813,47 +846,46 @@ const materializePrograms = (s) => {
           }
           if (color === null) continue;
           if (!Array.isArray(color) || color.length !== 4) fail('fragment output');
-          if (command.depthEnabled && command.depthSurface) {
-            const index = y * width + x;
-            const prior = command.depthSurface.depthPixels[index];
-            const mode = command.depthFunc;
-            const passed =
-              mode === 512
-                ? false
-                : mode === 513
-                  ? depth < prior
-                  : mode === 514
-                    ? depth === prior
-                    : mode === 515
-                      ? depth <= prior
-                      : mode === 516
-                        ? depth > prior
-                        : mode === 517
-                          ? depth !== prior
-                          : mode === 518
-                            ? depth >= prior
-                            : true;
-            if (!passed) continue;
+          const depthSurface = command.depthEnabled ? command.depthSurface : null;
+          const depthIndex = y * width + x;
+          let passedSamples = samplePixels && !fullyCovered ? covered : null;
+          if (samplePixels && depthSurface) {
+            passedSamples = new Array(samples.length);
+            let anyPassed = false;
+            for (let sample = 0; sample < samples.length; sample++) {
+              if (!fullyCovered && !covered[sample]) {
+                passedSamples[sample] = false;
+                continue;
+              }
+              const prior = depthSurface.sampleDepthPixels[sample][depthIndex];
+              const passed = depthPasses(depth, prior);
+              passedSamples[sample] = passed;
+              if (!passed) continue;
+              anyPassed = true;
+              if (command.depthMask) {
+                const maximum = 2 ** 24 - 1;
+                depthSurface.sampleDepthPixels[sample][depthIndex] =
+                  Math.round(Math.max(0, Math.min(1, depth)) * maximum) / maximum;
+              }
+            }
+            if (!anyPassed) continue;
+          } else if (depthSurface) {
+            if (!depthPasses(depth, depthSurface.depthPixels[depthIndex])) continue;
             if (command.depthMask) {
-              const bits = command.depthSurface.storageFormat === 33189 ? 16 : 24;
+              const bits = depthSurface.storageFormat === 33189 ? 16 : 24;
               const maximum = 2 ** bits - 1;
-              command.depthSurface.depthPixels[index] =
+              depthSurface.depthPixels[depthIndex] =
                 Math.round(Math.max(0, Math.min(1, depth)) * maximum) / maximum;
             }
           }
           for (const query of command.queries) query.samplesPassed = true;
           const i = (y * width + x) * 4;
           const floatAttachment = !!command.colorAttachment?.floatPixels;
-          const destination = command.blend
-            ? Array.from(pixels.subarray(i, i + 4), (value) =>
-                floatAttachment ? value : value / 255,
-              )
-            : null;
           // D3D11's RGBA8 blend unit uses quantized shader output and its
           // complement (e.g. alpha 0.5 becomes factors 127/255 and 128/255).
           // Keep floating attachments in their own unquantized domain.
           const source =
-            command.blend && !floatAttachment
+            command.blend && !floatAttachment && !samplePixels
               ? color.map(
                   (value) =>
                     Math.max(
@@ -862,25 +894,47 @@ const materializePrograms = (s) => {
                     ) / 255,
                 )
               : color;
-          for (let k = 0; k < 4; k++)
-            if (command.mask[k] && (command.colorAttachment || k !== 3 || s.attributes.alpha)) {
-              let output = source[k];
-              if (command.blend) {
-                const [srcRGB, dstRGB, srcAlpha, dstAlpha] = command.blendFactors;
-                output =
-                  source[k] *
-                    blendFactorValue(k === 3 ? srcAlpha : srcRGB, source, destination, k) +
-                  destination[k] *
-                    blendFactorValue(k === 3 ? dstAlpha : dstRGB, source, destination, k);
+          if (samplePixels && !command.blend) {
+            for (let k = 0; k < 4; k++)
+              if (command.mask[k] && (k !== 3 || s.attributes.alpha)) {
+                const value = Math.max(
+                  0,
+                  Math.ceil(Math.fround(Math.max(0, Math.min(1, source[k])) * 255) - 0.5),
+                );
+                for (let sample = 0; sample < samplePixels.length; sample++)
+                  if (!passedSamples || passedSamples[sample]) samplePixels[sample][i + k] = value;
               }
-              const value = floatAttachment
-                ? Math.fround(output)
-                : Math.max(0, Math.ceil(Math.fround(Math.max(0, Math.min(1, output)) * 255) - 0.5));
-              if (samplePixels) {
-                for (let sample = 0; sample < samples.length; sample++)
-                  if (fullyCovered || covered[sample]) samplePixels[sample][i + k] = value;
-              } else pixels[i + k] = value;
-            }
+            continue;
+          }
+          for (let sample = 0; sample < drawTargets.length; sample++) {
+            if (passedSamples && !passedSamples[sample]) continue;
+            const target = drawTargets[sample];
+            const destination = command.blend
+              ? Array.from(target.subarray(i, i + 4), (value) =>
+                  floatAttachment ? value : value / 255,
+                )
+              : null;
+            for (let k = 0; k < 4; k++)
+              if (command.mask[k] && (command.colorAttachment || k !== 3 || s.attributes.alpha)) {
+                let output = source[k];
+                if (command.blend) {
+                  const [srcRGB, dstRGB, srcAlpha, dstAlpha] = command.blendFactors;
+                  output =
+                    source[k] *
+                      blendFactorValue(k === 3 ? srcAlpha : srcRGB, source, destination, k) +
+                    destination[k] *
+                      blendFactorValue(k === 3 ? dstAlpha : dstRGB, source, destination, k);
+                }
+                target[i + k] = floatAttachment
+                  ? Math.fround(output)
+                  : samplePixels
+                    ? Math.fround(Math.max(0, Math.min(1, output)) * 255)
+                    : Math.max(
+                        0,
+                        Math.ceil(Math.fround(Math.max(0, Math.min(1, output)) * 255) - 0.5),
+                      );
+              }
+          }
         }
     }
     if (samplePixels) {

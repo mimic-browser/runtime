@@ -684,7 +684,10 @@
         s.width = width;
         s.height = height;
         s.pixels = new Uint8Array(width * height * 4);
-        if (s.depthWidth !== width || s.depthHeight !== height) s.depthPixels = null;
+        if (s.depthWidth !== width || s.depthHeight !== height) {
+          s.depthPixels = null;
+          s.sampleDepthPixels = null;
+        }
         s.samplePixels = null;
         if (!s.attributes.alpha) for (let i = 3; i < s.pixels.length; i += 4) s.pixels[i] = 255;
       }
@@ -714,8 +717,12 @@
         if (depth) {
           const rect = s.enabled.get(3089) ? s.scissor : [0, 0, width, height];
           for (let y = Math.max(0, rect[1]); y < Math.min(height, rect[1] + rect[3]); y++)
-            for (let x = Math.max(0, rect[0]); x < Math.min(width, rect[0] + rect[2]); x++)
-              depth.depthPixels[y * width + x] = s.depthClear;
+            for (let x = Math.max(0, rect[0]); x < Math.min(width, rect[0] + rect[2]); x++) {
+              const index = y * width + x;
+              depth.depthPixels[index] = s.depthClear;
+              if (depth.sampleDepthPixels)
+                for (const sample of depth.sampleDepthPixels) sample[index] = s.depthClear;
+            }
         }
       }
       if (mask & 1024) s.stencilValue = s.stencilClear;
@@ -888,6 +895,7 @@
         if (s.width === dim.width && s.height === dim.height) return;
         s.pixels = null;
         s.depthPixels = null;
+        s.sampleDepthPixels = null;
         s.depthWidth = s.depthHeight = 0;
         s.samplePixels = null;
         s.drawCommands = [];
@@ -911,14 +919,10 @@
       dim.onTransfer = () => {
         s.pixels = null;
         s.depthPixels = null;
+        s.sampleDepthPixels = null;
+        s.samplePixels = null;
         s.depthWidth = s.depthHeight = 0;
         s.drawCommands = [];
-      };
-      dim.onResize = () => {
-        if (dim.width !== s.width || dim.height !== s.height) {
-          s.pixels = null;
-          s.drawCommands = [];
-        }
       };
       return context;
     };

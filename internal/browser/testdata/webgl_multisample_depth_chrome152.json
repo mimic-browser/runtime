@@ -1,0 +1,129 @@
+{
+  "browser": "Chrome/152.0.7977.82",
+  "metadata": {
+    "existingBrowser": true,
+    "isolatedBrowserContext": true,
+    "syntheticSecureContext": false,
+    "localHeaderEcho": false,
+    "cookieEcho": false,
+    "fixture": "internal/browser/testdata/webgl_multisample_depth_oracle.js",
+    "fixtureSHA256": "305db973fde4dcd111bdb8590cdcdecb588565308093eef89f594b7df5844214",
+    "fixtureHashNormalization": "LF",
+    "worker": false
+  },
+  "result": {
+    "antialias": true,
+    "samples": 4,
+    "partial": [
+      255,
+      0,
+      0,
+      255,
+      127,
+      0,
+      0,
+      255,
+      127,
+      0,
+      0,
+      255,
+      0,
+      0,
+      0,
+      255
+    ],
+    "farther": [
+      255,
+      0,
+      0,
+      255,
+      127,
+      127,
+      0,
+      255,
+      127,
+      127,
+      0,
+      255,
+      0,
+      255,
+      0,
+      255
+    ],
+    "blendedPartial": [
+      127,
+      0,
+      0,
+      191,
+      64,
+      0,
+      0,
+      223,
+      64,
+      0,
+      0,
+      223,
+      0,
+      0,
+      0,
+      255
+    ],
+    "blendedOverlap": [
+      64,
+      127,
+      0,
+      159,
+      32,
+      127,
+      0,
+      175,
+      32,
+      127,
+      0,
+      175,
+      0,
+      127,
+      0,
+      191
+    ],
+    "error": 0
+  },
+  "captureMetadata": {
+    "chromeVersion": "Chrome/152.0.7977.82",
+    "v8Version": "15.2.124.21",
+    "chromiumRevision": "1669021",
+    "chromiumCommit": "d04cdb24d67b081f6cf80200ffc5233f44b61109",
+    "platform": "windows-x64",
+    "browserMode": "headful",
+    "profileFreshness": "fresh-controlled",
+    "environmentProfileId": "chrome-152-windows-x64-headful-controlled-v1",
+    "commandLineFeatureOverrides": [],
+    "chromeSHA256": "EA36DD818A90176F1A70616F0363D9BE527229389A6C073A0B1688B9E73F67E9",
+    "launchArguments": [
+      "--remote-debugging-port=9343",
+      "--user-data-dir=C:\\Users\\moreveal\\Desktop\\mimic-contract-poc\\my-runs\\offline-hsw-latest\\webgl-multisample-blend-chrome152-20261013\\chrome-profile",
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--window-size=1280,800",
+      "about:blank"
+    ],
+    "state": {
+      "webdriver": false,
+      "descriptor": "function get webdriver() { [native code] }",
+      "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+      "languages": [
+        "ru-RU"
+      ],
+      "inner": [
+        1272,
+        653
+      ],
+      "outer": [
+        1280,
+        800
+      ],
+      "dpr": 1
+    },
+    "recording": "explicit Runtime.evaluate after direct launch"
+  }
+}

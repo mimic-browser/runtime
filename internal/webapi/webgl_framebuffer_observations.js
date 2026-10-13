@@ -283,6 +283,7 @@ const depthTarget = (s, binding, width, height) => {
   if (!s.attributes.depth) return null;
   if (!s.depthPixels || s.depthWidth !== width || s.depthHeight !== height) {
     s.depthPixels = new Float32Array(width * height).fill(1);
+    s.sampleDepthPixels = null;
     s.depthWidth = width;
     s.depthHeight = height;
   }
