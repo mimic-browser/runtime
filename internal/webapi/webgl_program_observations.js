@@ -533,8 +533,19 @@ const drawVertices = (s, mode, first, count, indices = null, instance = 0) => {
       clippedPosition[2] = Math.max(depthMin, Math.min(position[3], clippedPosition[2]));
     vertices.push({ position: clippedPosition, varyings: vertexResult.captured });
   }
-  if (s.enabled.get(2929) || s.enabled.get(2960) || s.enabled.get(2884))
-    fail('shader depth/stencil/blend observations');
+  if (s.enabled.get(2960) || s.enabled.get(2884)) fail('shader depth/stencil/blend observations');
+  if (!s.drawFramebuffer) ensureStorage(s);
+  const depthEnabled = !!s.enabled.get(2929);
+  const depthSurface = depthEnabled
+    ? depthTarget(
+        s,
+        s.drawFramebuffer,
+        colorAttachment?.width ?? s.dim.width,
+        colorAttachment?.height ?? s.dim.height,
+      )
+    : null;
+  if (depthEnabled && s.drawFramebuffer && framebufferDepth(s, s.drawFramebuffer) && !depthSurface)
+    fail('shader depth attachment');
   (s.drawCommands || (s.drawCommands = [])).push({
     queries: [...(s.activeQueries?.values() || [])].map((value) => resources.get(value)),
     vertices,
@@ -548,6 +559,10 @@ const drawVertices = (s, mode, first, count, indices = null, instance = 0) => {
     depthClamp: !!s.enabled.get(0x864f),
     mask: s.mask.slice(),
     colorAttachment,
+    depthEnabled,
+    depthSurface,
+    depthFunc: s.depthFunc,
+    depthMask: s.depthMask,
     blend: !!blendEnabled,
     blendFactors: [
       s.blendSrcRGB ?? 1,
@@ -798,6 +813,34 @@ const materializePrograms = (s) => {
           }
           if (color === null) continue;
           if (!Array.isArray(color) || color.length !== 4) fail('fragment output');
+          if (command.depthEnabled && command.depthSurface) {
+            const index = y * width + x;
+            const prior = command.depthSurface.depthPixels[index];
+            const mode = command.depthFunc;
+            const passed =
+              mode === 512
+                ? false
+                : mode === 513
+                  ? depth < prior
+                  : mode === 514
+                    ? depth === prior
+                    : mode === 515
+                      ? depth <= prior
+                      : mode === 516
+                        ? depth > prior
+                        : mode === 517
+                          ? depth !== prior
+                          : mode === 518
+                            ? depth >= prior
+                            : true;
+            if (!passed) continue;
+            if (command.depthMask) {
+              const bits = command.depthSurface.storageFormat === 33189 ? 16 : 24;
+              const maximum = 2 ** bits - 1;
+              command.depthSurface.depthPixels[index] =
+                Math.round(Math.max(0, Math.min(1, depth)) * maximum) / maximum;
+            }
+          }
           for (const query of command.queries) query.samplesPassed = true;
           const i = (y * width + x) * 4;
           const floatAttachment = !!command.colorAttachment?.floatPixels;

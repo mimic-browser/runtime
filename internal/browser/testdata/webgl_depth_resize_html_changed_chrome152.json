@@ -1,0 +1,44 @@
+{
+  "captureMetadata": {
+    "chromeVersion": "Chrome/152.0.7977.82",
+    "v8Version": "15.2.124.21",
+    "browserMode": "headful",
+    "profileFreshness": "fresh-controlled",
+    "chromeSHA256": "ea36dd818a90176f1a70616f0363d9be527229389a6c073a0b1688b9e73f67e9",
+    "state": {
+      "webdriver": false,
+      "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+      "inner": [
+        1272,
+        653
+      ],
+      "outer": [
+        1280,
+        800
+      ],
+      "dpr": 1
+    },
+    "recording": "explicit Runtime.evaluate after direct launch",
+    "schemaVersion": 1,
+    "chromiumRevision": "1669021",
+    "chromiumCommit": "d04cdb24d67b081f6cf80200ffc5233f44b61109",
+    "platform": "windows-x64",
+    "environmentProfileId": "chrome-152-windows-x64-headful-controlled-v1",
+    "commandLineFeatureOverrides": [],
+    "probeSHA256": "b1ed8b8591687d7c817a2d10c6de8a8fc0f058674be78fd8b04dc28ef6fbf648"
+  },
+  "result": {
+    "pixels": [
+      0,
+      255,
+      0,
+      255,
+      0,
+      255,
+      0,
+      255
+    ],
+    "depthEnabled": true,
+    "error": 0
+  }
+}

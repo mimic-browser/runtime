@@ -161,6 +161,7 @@ method('renderbufferStorage', (s, t, format, width, height) => {
     error(s, 1280);
     return;
   }
+  materializePrograms(s);
   Object.assign(r, {
     format,
     storageFormat: format,
@@ -173,6 +174,7 @@ method('renderbufferStorage', (s, t, format, width, height) => {
           ? new Uint8Array(width * height * 4)
           : null,
     floatPixels: format === 34836,
+    depthPixels: [33189, 34041].includes(format) ? new Float32Array(width * height).fill(1) : null,
   });
 });
 method('getRenderbufferParameter', (s, t, p) => {
@@ -265,6 +267,26 @@ const framebufferColor = (s, binding) => {
     resource = resources.get(value),
     image = framebuffer?.attachmentImages.get(36064);
   return image ? resource?.levels.get(image.target + ':' + image.level) : resource;
+};
+const framebufferDepth = (s, binding) => {
+  const framebuffer = resources.get(binding),
+    value = framebuffer?.attachments.get(36096),
+    resource = resources.get(value),
+    image = framebuffer?.attachmentImages.get(36096);
+  return image ? resource?.levels.get(image.target + ':' + image.level) : resource;
+};
+const depthTarget = (s, binding, width, height) => {
+  if (binding) {
+    const depth = framebufferDepth(s, binding);
+    return depth?.depthPixels?.length === width * height ? depth : null;
+  }
+  if (!s.attributes.depth) return null;
+  if (!s.depthPixels || s.depthWidth !== width || s.depthHeight !== height) {
+    s.depthPixels = new Float32Array(width * height).fill(1);
+    s.depthWidth = width;
+    s.depthHeight = height;
+  }
+  return s;
 };
 method('checkFramebufferStatus', (s, t) => {
   t = framebufferTarget(s, t);

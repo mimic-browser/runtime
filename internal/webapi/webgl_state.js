@@ -293,6 +293,7 @@
       if (p === 3088) return new Int32Array(s.scissor);
       if (p === 3333) return s.pack;
       if (p === 2931) return s.depthClear;
+      if (p === 2932) return s.depthFunc;
       if (p === 2961) return s.stencilClear;
       if (p === 2930) return s.depthMask;
       if (p === 0x935c || p === 0x935d) {
@@ -624,6 +625,14 @@
     method('depthMask', (s, value) => {
       s.depthMask = Boolean(value);
     });
+    method('depthFunc', (s, value) => {
+      value = Number(value) >>> 0;
+      if (value < 512 || value > 519) {
+        error(s, 1280);
+        return;
+      }
+      s.depthFunc = value;
+    });
     method('polygonOffset', (s, factor, units) => {
       s.polygonOffsetFactor = Math.fround(factor);
       s.polygonOffsetUnits = Math.fround(units);
@@ -668,18 +677,23 @@
       if (Number(p) === 3317) s.unpackAlignment = value;
       else s.pack = value;
     });
-    const storage = (s) => {
+    const ensureStorage = (s) => {
       const { width, height } = s.dim;
       if (width * height > 16 * 1024 * 1024) fail('drawing buffer allocation limit');
       if (!s.pixels || s.width !== width || s.height !== height) {
         s.width = width;
         s.height = height;
         s.pixels = new Uint8Array(width * height * 4);
+        if (s.depthWidth !== width || s.depthHeight !== height) s.depthPixels = null;
         s.samplePixels = null;
         if (!s.attributes.alpha) for (let i = 3; i < s.pixels.length; i += 4) s.pixels[i] = 255;
       }
-      materializePrograms(s);
       return s.pixels;
+    };
+    const storage = (s) => {
+      const pixels = ensureStorage(s);
+      materializePrograms(s);
+      return pixels;
     };
     method('clear', (s, mask) => {
       mask = Number(mask) >>> 0;
@@ -687,7 +701,23 @@
         error(s, 1281);
         return;
       }
-      if (mask & 256) s.depthValue = s.depthMask ? s.depthClear : s.depthValue;
+      if (!mask) return;
+      materializePrograms(s);
+      if (mask & 256 && s.depthMask) {
+        const width = s.drawFramebuffer
+            ? framebufferColor(s, s.drawFramebuffer)?.width
+            : s.dim.width,
+          height = s.drawFramebuffer
+            ? framebufferColor(s, s.drawFramebuffer)?.height
+            : s.dim.height,
+          depth = depthTarget(s, s.drawFramebuffer, width, height);
+        if (depth) {
+          const rect = s.enabled.get(3089) ? s.scissor : [0, 0, width, height];
+          for (let y = Math.max(0, rect[1]); y < Math.min(height, rect[1] + rect[3]); y++)
+            for (let x = Math.max(0, rect[0]); x < Math.min(width, rect[0] + rect[2]); x++)
+              depth.depthPixels[y * width + x] = s.depthClear;
+        }
+      }
       if (mask & 1024) s.stencilValue = s.stencilClear;
       if (!(mask & 16384)) return;
       if (s.drawFramebuffer) {
@@ -850,8 +880,18 @@
       s.depthClear = 1;
       s.stencilClear = 0;
       s.depthMask = true;
-      s.depthValue = 1;
+      s.depthFunc = 513;
       s.stencilValue = 0;
+      dim.onResize = () => {
+        // An unchanged OffscreenCanvas dimension leaves WebGL's drawing buffer
+        // intact; an actual size change discards deferred color and depth.
+        if (s.width === dim.width && s.height === dim.height) return;
+        s.pixels = null;
+        s.depthPixels = null;
+        s.depthWidth = s.depthHeight = 0;
+        s.samplePixels = null;
+        s.drawCommands = [];
+      };
       dim.readPixels = () => {
         const src = storage(s),
           out = new Uint8ClampedArray(src.length);
@@ -870,6 +910,8 @@
       };
       dim.onTransfer = () => {
         s.pixels = null;
+        s.depthPixels = null;
+        s.depthWidth = s.depthHeight = 0;
         s.drawCommands = [];
       };
       dim.onResize = () => {

@@ -51,7 +51,7 @@ uniform and program changes. Arithmetic uses float32 rounding; UNORM conversion
 matches measured Windows Chrome midpoint behavior in the retained probes. This
 is not a promise of GPU transcendental or compiler-optimization equivalence.
 
-Arbitrary clip-space geometry, depth/stencil/cull execution, additional blend
+Arbitrary clip-space geometry, stencil/cull execution, additional blend
 equations and factors, and multisampling remain explicit
 boundaries. Sample evaluation is bounded to 65,536 drawing-buffer pixels, 65,536
 vertices per draw, 4,096 evaluator steps per invocation and 1,024 loop iterations.
@@ -65,6 +65,12 @@ pixels with texture uploads, scissored clears, shader writes, SRC_ALPHA
 blending and readback;
 RGBA32F renderbuffer clear/readback uses the same attachment path. A pending
 shader draw materializes before a later subimage upload to that texture.
+Default and DEPTH_COMPONENT16 renderbuffer depth surfaces retain per-pixel
+clear/draw order, depth comparison, write masks and scissored clears. Draws
+deferred before a depth-only clear still update the unaffected pixels.
+Changing canvas dimensions discards queued draws and depth, while assigning
+the existing dimensions preserves WebGL contents in the retained Chrome
+controls for both HTMLCanvasElement and OffscreenCanvas.
 Deleting a texture detaches it
 from the bound framebuffer while an unbound framebuffer retains the attached
 image until it is detached or deleted, matching the retained Chrome controls.
@@ -96,6 +102,9 @@ The source SHA-256 and reference results are retained under
 - `internal/browser/testdata/webgl_rgba_blend_chrome152.json`: two ordered
   SRC_ALPHA draws on the default, renderbuffer and texture-backed RGBA8
   surfaces in direct headful Chrome 152.
+- `internal/browser/testdata/webgl_depth*_chrome152.json`: ordered depth
+  comparisons, write masks and local depth clears on the default and
+  renderbuffer-backed surfaces in direct headful Chrome 152.
 - `webgl-validation-chrome152.json`: invalid shader cases, inactive inputs,
   uniform type errors and stale locations after relinking.
 
