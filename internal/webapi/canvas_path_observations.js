@@ -2,7 +2,11 @@
 // presentation surface. Curves use bounded geometric approximation; stable
 // operation snapshots preserve local changes, overlapping reads and ordering.
 const pathCopy = (p) =>
-  p.map((s) => ({ closed: s.closed, points: s.points.map((p) => p.slice()) }));
+  p.map((s) => ({
+    closed: s.closed,
+    curved: !!s.curved,
+    points: s.points.map((p) => p.slice()),
+  }));
 const transformPoint = (m, x, y) => [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]];
 const currentPath = (c) => c.path || (c.path = []);
 const appendPoint = (c, x, y, move = false) => {
@@ -737,6 +741,20 @@ const pathPixelCoverage = (op, x, y) => {
       )
         return 1;
     }
+    if (op.frequentRead && op.path.some((sub) => sub.curved) && op.scan) {
+      // Skia's raster canvas integrates curved edges on four vertically
+      // quantized scan rows. It is observably different from the geometric
+      // polygon area used by accelerated canvases, most clearly for arcs only
+      // a few device pixels wide. Preserve that CPU readback boundary without
+      // increasing the work for ordinary polygon paths.
+      let area = 0;
+      for (let row = 0; row < 4; row++) {
+        const interval = scanlineInterval(op.scan, y + (row + 0.2946) / 4);
+        if (interval)
+          area += Math.max(0, Math.min(x + 1, interval.right) - Math.max(x, interval.left));
+      }
+      return Math.min(1, area / 4);
+    }
     return Math.min(1, Math.abs(polygonPixelArea(op.coveragePolygon, x, y)));
   }
   if (
@@ -1090,6 +1108,7 @@ const installPathObservations = (proto) => {
       const sub = path[path.length - 1],
         start = sub.points[sub.points.length - 1],
         control = [];
+      sub.curved = true;
       for (let i = 0; i < n; i += 2)
         control.push(transformPoint(c.draw.transform, args[i], args[i + 1]));
       for (let step = 1; step <= 32; step++) {
@@ -1121,12 +1140,15 @@ const installPathObservations = (proto) => {
     const steps = Math.max(1, Math.ceil((Math.abs(delta) / tau) * 128)),
       co = Math.cos(rotation),
       si = Math.sin(rotation);
+    const before = currentPath(c).length;
     for (let i = 0; i <= steps; i++) {
       const t = start + (delta * i) / steps,
         px = rx * Math.cos(t),
         py = ry * Math.sin(t);
       appendPoint(c, x + px * co - py * si, y + px * si + py * co);
     }
+    const path = currentPath(c);
+    if (path.length) path[Math.max(0, before - 1)].curved = true;
   });
   method('arc', function (x, y, r, start, end, ccw = false) {
     return this.ellipse(x, y, r, r, 0, start, end, ccw);

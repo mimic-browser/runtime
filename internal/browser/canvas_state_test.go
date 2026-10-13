@@ -155,6 +155,22 @@ func TestCanvasFullTurnArcsInBothDirections(t *testing.T) {
 	}
 }
 
+func TestCanvasFrequentReadArcCoverageMatchesFrozenChrome152(t *testing.T) {
+	parallelBrowserTest(t)
+	p := blitzStandardsPage(t)
+	value, err := p.Evaluate(context.Background(), `(()=>{
+  const ctx=new OffscreenCanvas(2,2).getContext('2d',{willReadFrequently:true});
+  ctx.fillStyle='black';ctx.fillRect(0,0,2,2);
+  ctx.fillStyle='white';ctx.fillRect(2,2,1,1);
+  ctx.beginPath();ctx.arc(0,0,2,0,1,true);ctx.fill();
+  return Array.from(ctx.getImageData(0,0,2,2).data).join(',');
+})()`)
+	const want = "255,255,255,255,192,192,192,255,244,244,244,255,53,53,53,255"
+	if err != nil || value != want {
+		t.Fatalf("frozen Chrome 152 frequent-read curved coverage: %v %v", value, err)
+	}
+}
+
 func TestCanvasShadowsMaterializeForPathsAndText(t *testing.T) {
 	parallelBrowserTest(t)
 	p := blitzStandardsPage(t)
