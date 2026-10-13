@@ -21,16 +21,24 @@ WebP encoding remain explicit unsupported boundaries rather than independent
 approximate image models.
 
 Paths approximate curves with bounded line segments and 8-by-8 coverage samples.
-COLRv1 color glyphs in unscaled, identity-transform, source-over `fillText` calls
-are rendered from the selected font's paint graph into that same Canvas surface.
-The module is Page/realm-owned and loads a font only when a color glyph is read.
-Exact radial-gradient edge cases, Path2D, URL-dependent filters, transformed
-or scaled color text, monochrome glyph
-rasterization, exact text metrics, image decoding and general image resampling
-remain incomplete. Unsupported text modes retain the diagnosed coarse coverage
-model. CPU raster output is close to the retained Chrome 152 emoji control but
-is not pixel-identical; it differs in 172 of 400 pixels, mostly at antialiased
-edges and gradients. Diagnostics identify approximate text/path observations.
+Open-stroke caps, joins, miter fallback and dash phase are part of the immutable
+operation snapshot. `arcTo()` and `roundRect()` construct transformed canonical
+paths before rasterization. COLRv1 color glyphs, including affine transformed
+glyphs, are rendered from the selected font's paint graph into that same Canvas
+surface. The module is Page/realm-owned and loads a font only when a color glyph
+is read. CPU raster output is close to the retained Chrome 152 emoji control but
+is not pixel-identical; the retained 20-by-20 identity control differs in 164 of
+400 pixels, mostly at antialiased edges and gradients.
+
+Decoded image, `ImageBitmap` and Canvas sources share one immutable image-source
+descriptor. Cropping, orientation, alpha premultiplication and resize quality use
+the same CPU resampler as `drawImage()` in Window and Worker. Ordinary sRGB PNG
+and lossless WebP controls are exact or near-exact; JPEG IDCT/color conversion and
+one translucent PNG premultiplication case retain small channel-rounding
+differences. Embedded ICC conversion, EXIF orientation, animated-frame selection,
+lossy WebP qualification, monochrome DirectWrite-compatible glyph masks, exact
+radial-gradient edge cases, Path2D and URL-dependent filters remain explicit
+incomplete boundaries. Diagnostics identify approximate observations.
 
 Canvas color filters share one validated, immutable operation snapshot across
 paths, text and images. The canonical RGBA8 surface preserves exact alpha and
