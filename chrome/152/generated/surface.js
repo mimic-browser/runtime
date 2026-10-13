@@ -1282,7 +1282,7 @@
       });
       Object.defineProperty(globals,spec.name,{value:ctor,writable:true,configurable:true});
     }
-    if(lazyDomain)lazy.cell(interfaceName,'constructor');
+    if(lazyDomain){lazy.cell(interfaceName,'constructor');lazy.facade(interfaceName,ctor)}
     if(!Object.hasOwn(ctor.prototype,Symbol.toStringTag))Object.defineProperty(ctor.prototype,Symbol.toStringTag,{value:spec.name,configurable:true});
     if(realmExposure==='Window')for(const alias of spec.legacyWindowAliases||[])Object.defineProperty(globals,alias,{value:ctor,writable:true,configurable:true});
     const parent=spec.parent&&globals[spec.parent];

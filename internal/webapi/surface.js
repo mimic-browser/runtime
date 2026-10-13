@@ -106,6 +106,11 @@
   const lazyDomainInterfaces = new Map();
   const lazyDomainState = new Map();
   const lazyBehaviorCells = new Map();
+  // Keep the browser-owned interface objects independently of writable and
+  // configurable Window properties. A cold domain can be materialized after
+  // author code deletes or replaces a sibling constructor; Blink's bindings
+  // do not consult the current global property in that case.
+  const lazyInterfaceFacades = new Map();
   const lazySingletons = new Map();
   // Audio materializes after RTC installation. Both domains must retain the
   // same realm-owned track slots without publishing a bootstrap handoff global.
@@ -299,6 +304,10 @@
         let cell = lazyBehaviorCells.get(key);
         if (!cell) lazyBehaviorCells.set(key, (cell = { implementation: undefined }));
         return cell;
+      },
+      facade(interfaceName, value) {
+        if (arguments.length > 1) lazyInterfaceFacades.set(interfaceName, value);
+        return lazyInterfaceFacades.get(interfaceName);
       },
       invoke: invokeLazyBehavior,
     },

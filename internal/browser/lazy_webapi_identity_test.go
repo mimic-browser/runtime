@@ -39,6 +39,23 @@ func TestLazyAudioMaterializationPreservesObservableIdentity(t *testing.T) {
 	})
 }
 
+func TestLazyAudioMaterializationIgnoresDeletedSiblingGlobal(t *testing.T) {
+	serialBrowserTest(t)
+	historyTestPages(t, func(t *testing.T, page *Page) {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		value, err := page.Evaluate(ctx, `(()=>{
+ const Offline=OfflineAudioContext;
+ delete globalThis.AudioBuffer;
+ const context=new Offline(1,8,8000);
+ return context.length===8 && !('AudioBuffer' in globalThis);
+})()`)
+		if err != nil || value != true {
+			t.Fatalf("author global mutation affected lazy audio materialization: value=%v error=%v", value, err)
+		}
+	})
+}
+
 func TestLazyWebGLMaterializationPreservesObservableIdentity(t *testing.T) {
 	serialBrowserTest(t)
 	historyTestPages(t, func(t *testing.T, page *Page) {

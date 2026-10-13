@@ -28,11 +28,7 @@
 // DSP adapted from Chromium 152 periodic_wave.cc and dynamics_compressor.cc.
 // CPU-side PCM observations. No audio device, native renderer or global graph.
 (() => {
-  if (
-    typeof globalThis.OfflineAudioContext !== 'function' ||
-    typeof globalThis.AudioBuffer !== 'function'
-  )
-    return;
+  const facade = (name) => lazyInterfaceFacades.get(name) || globalThis[name];
   const buffers = new WeakMap(),
     contexts = new WeakMap(),
     nodes = new WeakMap(),
@@ -71,8 +67,9 @@
       synchronizeOwner(this);
       return Reflect.apply(implementation, this, args);
     };
-    if (!globalThis[type]) return;
-    const prior = Object.getOwnPropertyDescriptor(globalThis[type].prototype, name);
+    const constructor = facade(type);
+    if (!constructor) return;
+    const prior = Object.getOwnPropertyDescriptor(constructor.prototype, name);
     Object.defineProperty(value, 'name', { value: name, configurable: true });
     if (prior?.value)
       Object.defineProperty(value, 'length', { value: prior.value.length, configurable: true });
@@ -81,7 +78,7 @@
       bindLazyBehavior(type, name, value);
       return;
     }
-    Object.defineProperty(globalThis[type].prototype, name, {
+    Object.defineProperty(constructor.prototype, name, {
       value,
       writable: true,
       configurable: true,
@@ -89,7 +86,8 @@
     });
   };
   const getter = (type, name, map, key = name, set) => {
-    if (!globalThis[type]) return;
+    const constructor = facade(type);
+    if (!constructor) return;
     const get = function () {
       const s = requireSlot(map, this);
       return typeof key === 'function' ? key(s) : s[key];
@@ -103,13 +101,13 @@
       };
       markNative(set, name, 'set ');
     }
-    const prior = Object.getOwnPropertyDescriptor(globalThis[type].prototype, name);
+    const prior = Object.getOwnPropertyDescriptor(constructor.prototype, name);
     if (lazyDomainInterfaces.get(type) === 'audio' && prior) {
       if (get) bindLazyBehavior(type, name, get, 'get');
       if (set) bindLazyBehavior(type, name, set, 'set');
       return;
     }
-    Object.defineProperty(globalThis[type].prototype, name, {
+    Object.defineProperty(constructor.prototype, name, {
       get,
       set,
       configurable: true,
@@ -117,9 +115,9 @@
     });
   };
   const install = (name, ctor) => {
-    const facade = globalThis[name];
-    Object.setPrototypeOf(ctor, Object.getPrototypeOf(facade));
-    ctor.prototype = facade.prototype;
+    const interfaceFacade = facade(name);
+    Object.setPrototypeOf(ctor, Object.getPrototypeOf(interfaceFacade));
+    ctor.prototype = interfaceFacade.prototype;
     if (lazyDomainInterfaces.get(name) === 'audio') {
       bindLazyBehavior(name, 'constructor', ctor);
       return;
@@ -954,8 +952,8 @@
     getter(type, key, contexts, key, function (value) {
       requireSlot(contexts, this)[key] = typeof value === 'function' ? value : null;
     });
-  for (const name of Object.getOwnPropertyNames(BaseAudioContext.prototype)) {
-    const d = Object.getOwnPropertyDescriptor(BaseAudioContext.prototype, name);
+  for (const name of Object.getOwnPropertyNames(facade('BaseAudioContext').prototype)) {
+    const d = Object.getOwnPropertyDescriptor(facade('BaseAudioContext').prototype, name);
     if (name !== 'constructor' && typeof d.value === 'function')
       method('BaseAudioContext', name, function () {
         requireSlot(contexts, this);
