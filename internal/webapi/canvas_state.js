@@ -1182,16 +1182,46 @@ const canvasCompatibilityState = (() => {
         return;
       if (image.unavailable) return;
       if (image.originClean === false) destination.originClean = false;
+      // Negative dimensions grow in the opposite direction; they do not flip
+      // the image. Clip the source rectangle before sampling and project the
+      // clipped interval back into destination space, as Skia does.
+      if (sw < 0) {
+        sx += sw;
+        sw = -sw;
+      }
+      if (sh < 0) {
+        sy += sh;
+        sh = -sh;
+      }
+      if (dw < 0) {
+        dx += dw;
+        dw = -dw;
+      }
+      if (dh < 0) {
+        dy += dh;
+        dh = -dh;
+      }
+      const sourceLeft = Math.max(0, sx),
+        sourceTop = Math.max(0, sy),
+        sourceRight = Math.min(image.width, sx + sw),
+        sourceBottom = Math.min(image.height, sy + sh);
+      if (sourceLeft >= sourceRight || sourceTop >= sourceBottom) return;
+      const sourceScaleX = dw / sw,
+        sourceScaleY = dh / sh;
+      dx += (sourceLeft - sx) * sourceScaleX;
+      dy += (sourceTop - sy) * sourceScaleY;
+      dw = (sourceRight - sourceLeft) * sourceScaleX;
+      dh = (sourceBottom - sourceTop) * sourceScaleY;
+      sx = sourceLeft;
+      sy = sourceTop;
+      sw = sourceRight - sourceLeft;
+      sh = sourceBottom - sourceTop;
       const m = c.draw.transform;
       if (
         m[1] ||
         m[2] ||
         m[0] < 0 ||
         m[3] < 0 ||
-        sw < 0 ||
-        sh < 0 ||
-        dw < 0 ||
-        dh < 0 ||
         !supportedComposite.has(c.draw.globalCompositeOperation)
       ) {
         record(c, 'drawImage', args);
@@ -1220,27 +1250,133 @@ const canvasCompatibilityState = (() => {
         (image.colorSpace || 'srgb') === (destination.colorSpace || 'srgb') &&
         (c.draw.globalCompositeOperation === 'source-over' ||
           c.draw.globalCompositeOperation === 'copy');
-      for (let yy = Math.max(0, Math.ceil(dy)); yy < Math.min(destination.height, dy + dh); yy++)
-        for (let xx = Math.max(0, Math.ceil(dx)); xx < Math.min(destination.width, dx + dw); xx++) {
+      if (c.draw.globalCompositeOperation === 'copy')
+        for (let clearY = 0; clearY < destination.height; clearY++)
+          for (let clearX = 0; clearX < destination.width; clearX++) {
+            if (!clipContains(c.draw.clipPaths, clearX + 0.5, clearY + 0.5)) continue;
+            const clearOffset = (clearY * destination.width + clearX) * 4;
+            p[clearOffset] = p[clearOffset + 1] = p[clearOffset + 2] = 0;
+            p[clearOffset + 3] = destination.opaque ? 255 : 0;
+          }
+      const smooth = c.draw.imageSmoothingEnabled,
+        smoothingQuality = c.draw.imageSmoothingQuality,
+        // Filtering may read neighboring texels outside the selected source
+        // rectangle. Only the image boundary clamps those taps.
+        sourceMinX = 0,
+        sourceMaxX = image.width - 1,
+        sourceMinY = 0,
+        sourceMaxY = image.height - 1,
+        cubicWeight = (distance) => {
+          const x = Math.abs(distance);
+          if (x < 1) return (7 * x * x * x - 12 * x * x + 16 / 3) / 6;
+          if (x < 2) return ((-7 / 3) * x * x * x + 12 * x * x - 20 * x + 32 / 3) / 6;
+          return 0;
+        },
+        sample = (u, v) => {
+          if (!smooth) {
+            const ix = Math.max(sourceMinX, Math.min(sourceMaxX, Math.floor(u + 0.5))),
+              iy = Math.max(sourceMinY, Math.min(sourceMaxY, Math.floor(v + 0.5))),
+              i = (iy * image.width + ix) * 4;
+            return [input[i], input[i + 1], input[i + 2], input[i + 3]];
+          }
+          if (smoothingQuality === 'high' && dw >= sw && dh >= sh) {
+            const sourceX = Math.floor(u),
+              sourceY = Math.floor(v),
+              sampled = [0, 0, 0, 0];
+            let totalWeight = 0;
+            for (let row = sourceY - 1; row <= sourceY + 2; row++)
+              for (let column = sourceX - 1; column <= sourceX + 2; column++) {
+                const weight = cubicWeight(u - column) * cubicWeight(v - row),
+                  ix = Math.max(sourceMinX, Math.min(sourceMaxX, column)),
+                  iy = Math.max(sourceMinY, Math.min(sourceMaxY, row)),
+                  offset = (iy * image.width + ix) * 4;
+                totalWeight += weight;
+                for (let channel = 0; channel < 4; channel++)
+                  sampled[channel] += input[offset + channel] * weight;
+              }
+            for (let channel = 0; channel < 4; channel++)
+              sampled[channel] = Math.max(0, Math.min(255, sampled[channel] / totalWeight));
+            return sampled;
+          }
+          if (smoothingQuality !== 'low' && (dw < sw || dh < sh)) {
+            const footprintX = Math.max(1, sw / dw),
+              footprintY = Math.max(1, sh / dh),
+              left = u - footprintX / 2,
+              right = u + footprintX / 2,
+              top = v - footprintY / 2,
+              bottom = v + footprintY / 2,
+              sampled = [0, 0, 0, 0];
+            let totalWeight = 0;
+            for (let row = Math.floor(top - 0.5); row <= Math.ceil(bottom + 0.5); row++)
+              for (
+                let column = Math.floor(left - 0.5);
+                column <= Math.ceil(right + 0.5);
+                column++
+              ) {
+                const weightX = Math.max(
+                    0,
+                    Math.min(right, column + 0.5) - Math.max(left, column - 0.5),
+                  ),
+                  weightY = Math.max(0, Math.min(bottom, row + 0.5) - Math.max(top, row - 0.5)),
+                  weight = weightX * weightY;
+                if (!weight) continue;
+                const ix = Math.max(sourceMinX, Math.min(sourceMaxX, column)),
+                  iy = Math.max(sourceMinY, Math.min(sourceMaxY, row)),
+                  offset = (iy * image.width + ix) * 4;
+                totalWeight += weight;
+                for (let channel = 0; channel < 4; channel++)
+                  sampled[channel] += input[offset + channel] * weight;
+              }
+            for (let channel = 0; channel < 4; channel++) sampled[channel] /= totalWeight;
+            return sampled;
+          }
+          const sourceX0 = Math.floor(u),
+            sourceY0 = Math.floor(v),
+            x0 = Math.max(sourceMinX, Math.min(sourceMaxX, sourceX0)),
+            x1 = Math.max(sourceMinX, Math.min(sourceMaxX, sourceX0 + 1)),
+            y0 = Math.max(sourceMinY, Math.min(sourceMaxY, sourceY0)),
+            y1 = Math.max(sourceMinY, Math.min(sourceMaxY, sourceY0 + 1)),
+            fx = Math.max(0, Math.min(1, u - sourceX0)),
+            fy = Math.max(0, Math.min(1, v - sourceY0)),
+            topLeft = (y0 * image.width + x0) * 4,
+            topRight = (y0 * image.width + x1) * 4,
+            bottomLeft = (y1 * image.width + x0) * 4,
+            bottomRight = (y1 * image.width + x1) * 4,
+            sampled = [];
+          for (let channel = 0; channel < 4; channel++)
+            sampled[channel] =
+              (input[topLeft + channel] * (1 - fx) + input[topRight + channel] * fx) * (1 - fy) +
+              (input[bottomLeft + channel] * (1 - fx) + input[bottomRight + channel] * fx) * fy;
+          return sampled;
+        };
+      for (
+        let yy = Math.max(0, Math.floor(dy + 0.5));
+        yy < Math.min(destination.height, Math.floor(dy + dh + 0.5));
+        yy++
+      )
+        for (
+          let xx = Math.max(0, Math.floor(dx + 0.5));
+          xx < Math.min(destination.width, Math.floor(dx + dw + 0.5));
+          xx++
+        ) {
           if (!clipContains(c.draw.clipPaths, xx + 0.5, yy + 0.5)) continue;
-          const ix = Math.floor(sx + ((xx - dx) * sw) / dw),
-            iy = Math.floor(sy + ((yy - dy) * sh) / dh);
-          if (ix < 0 || iy < 0 || ix >= image.width || iy >= image.height) continue;
-          const i = (iy * image.width + ix) * 4,
+          const u = sx + ((xx + 0.5 - dx) * sw) / dw - 0.5,
+            v = sy + ((yy + 0.5 - dy) * sh) / dh - 0.5,
+            sampled = sample(u, v),
             j = (yy * destination.width + xx) * 4,
-            ia = input[i + 3];
+            ia = sampled[3];
           if (directOpaque && ia === 255) {
-            p[j] = input[i];
-            p[j + 1] = input[i + 1];
-            p[j + 2] = input[i + 2];
+            p[j] = sampled[0];
+            p[j + 1] = sampled[1];
+            p[j + 2] = sampled[2];
             p[j + 3] = 255;
             continue;
           }
           const rgba = canvasConvertColor(
             [
-              ia ? (input[i] * 255) / ia : 0,
-              ia ? (input[i + 1] * 255) / ia : 0,
-              ia ? (input[i + 2] * 255) / ia : 0,
+              ia ? (sampled[0] * 255) / ia : 0,
+              ia ? (sampled[1] * 255) / ia : 0,
+              ia ? (sampled[2] * 255) / ia : 0,
               ia,
               image.colorSpace || 'srgb',
             ],
