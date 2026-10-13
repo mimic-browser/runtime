@@ -166,6 +166,7 @@ func (w *DedicatedWorker) run(ctx context.Context, source string, initialBlob *n
 	w.scheduler = workerScheduler
 	w.mu.Unlock()
 	var workerFonts *textmetrics.Engine
+	var workerFontProfileVersion uint64
 	defer func() {
 		w.stopFetches()
 		p.ctx.network.RevokeBlobsForOwner(fmt.Sprintf("%s/worker/%d", w.parent.ID, w.id))
@@ -227,6 +228,10 @@ func (w *DedicatedWorker) run(ctx context.Context, source string, initialBlob *n
 	installFontResourceHosts(host, runtime, func() *textmetrics.Engine {
 		if workerFonts == nil {
 			workerFonts = newTextMetricsEngine(p.environmentView().Fonts)
+			workerFontProfileVersion = p.fontProfileVersion.Load()
+		} else if version := p.fontProfileVersion.Load(); version != workerFontProfileVersion {
+			applyGenericFontFamilies(workerFonts, p.environmentView().Fonts)
+			workerFontProfileVersion = version
 		}
 		return workerFonts
 	})

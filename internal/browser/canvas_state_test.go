@@ -3,6 +3,7 @@ package browser
 import (
 	"context"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
@@ -20,6 +21,79 @@ const canvasStateFixture = `(async()=>{
  const other=new OffscreenCanvas(3,2);if(other.getContext('2d')===ctx)return 'isolation';
  return true;
 })()`
+
+func TestOffscreenCanvasSerializationSharesCanonicalPixelsAcrossRealms(t *testing.T) {
+	parallelBrowserTest(t)
+	p := blitzStandardsPage(t)
+	const observation = `async()=>{
+    const canvas=new OffscreenCanvas(3,2),ctx=canvas.getContext('2d');
+    ctx.fillStyle='rgba(240,80,20,.75)';ctx.fillRect(0,0,2,2);
+    ctx.putImageData(new ImageData(new Uint8ClampedArray([5,10,20,128]),1,1),2,1);
+    const before=Array.from(ctx.getImageData(0,0,3,2).data),blob=await canvas.convertToBlob(),bytes=new Uint8Array(await blob.arrayBuffer());
+    const bitmap=await createImageBitmap(canvas),copy=new OffscreenCanvas(3,2),copyContext=copy.getContext('2d');
+    copyContext.drawImage(bitmap,0,0);
+    const copied=Array.from(copyContext.getImageData(0,0,3,2).data);
+    ctx.reset();
+    return {before,copied,reset:Array.from(ctx.getImageData(0,0,3,2).data),type:blob.type,size:blob.size,signature:Array.from(bytes.slice(0,8))};
+  }`
+	value, err := p.Evaluate(context.Background(), `(async()=>JSON.stringify(await (`+observation+`)()))()`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	worker, err := p.Evaluate(context.Background(), `(async()=>new Promise((resolve,reject)=>{
+    const source='onmessage=async()=>postMessage(JSON.stringify(await ('+`+strconv.Quote(observation)+`+')()))';
+    const url=URL.createObjectURL(new Blob([source],{type:'text/javascript'})),w=new Worker(url);
+    w.onmessage=e=>{w.terminate();URL.revokeObjectURL(url);resolve(e.data)};w.onerror=reject;w.postMessage(null);
+  }))()`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if value != worker {
+		t.Fatalf("Window and Worker canvas serialization diverged:\nwindow=%v\nworker=%v", value, worker)
+	}
+	encoded := value.(string)
+	if !strings.Contains(encoded, `"type":"image/png"`) || !strings.Contains(encoded, `"signature":[137,80,78,71,13,10,26,10]`) {
+		t.Fatalf("unexpected canonical PNG observation: %s", encoded)
+	}
+	if !strings.Contains(encoded, `"reset":[0,0,0,0`) {
+		t.Fatalf("reset did not clear the authoritative surface: %s", encoded)
+	}
+}
+
+func TestGenericFontUpdateInvalidatesWindowAndExistingWorkerCanvasMetrics(t *testing.T) {
+	parallelBrowserTest(t)
+	p := blitzStandardsPage(t)
+	const start = `(()=>{
+    globalThis.fontWorker=new Worker(URL.createObjectURL(new Blob([
+      "onmessage=()=>{const x=new OffscreenCanvas(100,20).getContext('2d');x.font='16px serif';postMessage(x.measureText('iiiiWWWW').width)}"
+    ],{type:'text/javascript'})));
+    globalThis.workerMeasure=()=>new Promise((resolve,reject)=>{fontWorker.onmessage=e=>resolve(e.data);fontWorker.onerror=reject;fontWorker.postMessage(null)});
+    globalThis.mainMeasure=()=>{const x=new OffscreenCanvas(100,20).getContext('2d');x.font='16px serif';return x.measureText('iiiiWWWW').width};
+    return Promise.all([mainMeasure(),workerMeasure()]);
+  })()`
+	beforeValue, err := p.Evaluate(context.Background(), start)
+	if err != nil {
+		t.Fatal(err)
+	}
+	before := beforeValue.([]any)
+	if before[0] != before[1] {
+		t.Fatalf("initial Window/Worker font profile differs: %v", before)
+	}
+	if err := p.SetGenericFontFamilies("Courier New", "", ""); err != nil {
+		t.Fatal(err)
+	}
+	afterValue, err := p.Evaluate(context.Background(), `Promise.all([mainMeasure(),workerMeasure()])`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	after := afterValue.([]any)
+	if after[0] != after[1] {
+		t.Fatalf("updated Window/Worker font profile differs: %v", after)
+	}
+	if after[0] == before[0] {
+		t.Fatalf("cached generic-family metrics survived profile update: before=%v after=%v", before, after)
+	}
+}
 
 func TestCanvasFullTurnArcsInBothDirections(t *testing.T) {
 	parallelBrowserTest(t)

@@ -1514,6 +1514,21 @@ const canvasCompatibilityState = (() => {
       s.onTransfer?.();
       return bitmap;
     }
+    async convertToBlob(options = {}) {
+      const requested =
+        options.type === undefined || String(options.type).trim() === ''
+          ? 'image/png'
+          : String(options.type).trim().toLowerCase();
+      if (requested !== 'image/png')
+        fail('NotSupportedError', requested + ' canvas serialization is not implemented');
+      const bytes = pngBytes(this);
+      if (bytes === null)
+        fail(
+          'IndexSizeError',
+          "Failed to execute 'convertToBlob' on 'OffscreenCanvas': The size of the OffscreenCanvas is zero.",
+        );
+      return new Blob([bytes], { type: 'image/png' });
+    }
   }
   factories.set('2d', {
     canonical: '2d',

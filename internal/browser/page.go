@@ -94,6 +94,7 @@ type Page struct {
 	loadEventEnded        bool
 	messagePorts          map[string]*messagePortState
 	textMetrics           *textmetrics.Engine // Page event-loop owned; lazy local font resources.
+	fontProfileVersion    atomic.Uint64       // Invalidates Worker font selection without discarding registered faces.
 	// Cross-realm calls can enqueue jobs in an isolate other than the caller's.
 	// These fields are owned by the Page event loop, never by network goroutines.
 	pendingCheckpoints  []*Realm

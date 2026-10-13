@@ -77,10 +77,14 @@ func (c *textShapeCache) put(key textShapeKey, value string) {
 func newTextMetricsEngine(fonts state.Fonts) *textmetrics.Engine {
 	result := textmetrics.New()
 	result.SetFallbackFamilies(fonts.Fallback)
+	applyGenericFontFamilies(result, fonts)
+	return result
+}
+
+func applyGenericFontFamilies(result *textmetrics.Engine, fonts state.Fonts) {
 	for generic, family := range map[string]string{"serif": fonts.Serif, "sans-serif": fonts.SansSerif, "monospace": fonts.Monospace, "system-ui": fonts.SystemUI} {
 		result.SetGenericFamily(generic, family)
 	}
-	return result
 }
 func (p *Page) textMetricsEngine() *textmetrics.Engine {
 	if p.textMetrics == nil {
@@ -120,11 +124,17 @@ func (p *Page) SetGenericFontFamilies(serif, sansSerif, monospace string) error 
 		p.env.Fonts.Monospace = monospace
 	}
 	metrics := p.textMetrics
-	p.textMetrics = nil
 	p.mu.Unlock()
 	if metrics != nil {
-		_ = metrics.Close()
+		applyGenericFontFamilies(metrics, p.environmentView().Fonts)
 	}
+	// Generic-family selection participates in every cached Canvas/geometry
+	// measurement. Keep registered FontFace resources alive, but invalidate the
+	// projections which selected a previous generic resource.
+	for _, realm := range p.realmOwners {
+		realm.textShapeCache = nil
+	}
+	p.fontProfileVersion.Add(1)
 	return nil
 }
 
