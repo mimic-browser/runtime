@@ -1,0 +1,51 @@
+{
+  "browser": "Chrome/152.0.7977.82",
+  "metadata": {
+    "existingBrowser": true,
+    "isolatedBrowserContext": false,
+    "headful": true,
+    "freshProfile": true,
+    "fixture": "internal/browser/testdata/canvas_join_oracle.js",
+    "fixtureSHA256": "469a45aaa059ff317f0e376481a81ff7e2ffeb3f3418836a61cf44e4294f5d75",
+    "fixtureHashNormalization": "LF",
+    "chromeSHA256": "ea36dd818a90176f1a70616f0363d9be527229389a6c073a0b1688b9e73f67e9",
+    "v8": "15.2.124.21",
+    "originalWebdriver": false,
+    "launchArguments": [
+      "--remote-debugging-port=19518",
+      "--user-data-dir=C:\\Users\\moreveal\\Desktop\\mimic-contract-poc\\my-runs\\offline-hsw-latest\\canvas-join-chrome152-20261013-002\\chrome-profile",
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--window-size=1280,800",
+      "about:blank"
+    ]
+  },
+  "result": {
+    "state": {
+      "round": [
+        "round",
+        10
+      ],
+      "bevel": [
+        "bevel",
+        10
+      ],
+      "miter": [
+        "miter",
+        10
+      ],
+      "limited": [
+        "miter",
+        1
+      ],
+      "snapshot": [
+        "bevel",
+        1
+      ]
+    },
+    "limitedMatchesBevel": true,
+    "snapshotMatchesRound": true,
+    "distinct": true,
+    "coverageOrder": true
+  }
+}

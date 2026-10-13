@@ -298,6 +298,69 @@ const strokeEdgesContain = (edges, x, y, width, lineCap) => {
   for (const edge of edges) if (strokeSegmentContains(x, y, width, lineCap, edge)) return true;
   return false;
 };
+const pointInConvexJoin = (points, x, y) => {
+  let sign = 0;
+  for (let i = 0; i < points.length; i++) {
+    const a = points[i],
+      b = points[(i + 1) % points.length],
+      cross = (b[0] - a[0]) * (y - a[1]) - (b[1] - a[1]) * (x - a[0]);
+    if (!cross) continue;
+    if (sign && Math.sign(cross) !== sign) return false;
+    sign = Math.sign(cross);
+  }
+  return true;
+};
+const strokeJoins = (op) => {
+  if (op.strokeJoins) return op.strokeJoins;
+  const radius = op.width / 2,
+    joins = [];
+  for (const sub of op.path) {
+    const points = sub.points,
+      start = sub.closed ? 0 : 1,
+      end = sub.closed ? points.length : points.length - 1;
+    for (let i = start; i < end; i++) {
+      const previous = points[(i - 1 + points.length) % points.length],
+        point = points[i],
+        next = points[(i + 1) % points.length],
+        firstLength = Math.hypot(point[0] - previous[0], point[1] - previous[1]),
+        secondLength = Math.hypot(next[0] - point[0], next[1] - point[1]);
+      if (!firstLength || !secondLength) continue;
+      const first = [
+          (point[0] - previous[0]) / firstLength,
+          (point[1] - previous[1]) / firstLength,
+        ],
+        second = [(next[0] - point[0]) / secondLength, (next[1] - point[1]) / secondLength],
+        turn = first[0] * second[1] - first[1] * second[0];
+      if (Math.abs(turn) < 1e-12) continue;
+      if (op.lineJoin === 'round') {
+        joins.push({ kind: 'round', point, radius });
+        continue;
+      }
+      const side = turn > 0 ? 1 : -1,
+        firstCorner = [point[0] + side * first[1] * radius, point[1] - side * first[0] * radius],
+        secondCorner = [point[0] + side * second[1] * radius, point[1] - side * second[0] * radius];
+      let polygon = [point, firstCorner, secondCorner];
+      if (op.lineJoin === 'miter') {
+        const delta = [secondCorner[0] - firstCorner[0], secondCorner[1] - firstCorner[1]],
+          distance = (delta[0] * second[1] - delta[1] * second[0]) / turn,
+          miter = [firstCorner[0] + first[0] * distance, firstCorner[1] + first[1] * distance];
+        if (Math.hypot(miter[0] - point[0], miter[1] - point[1]) <= op.miterLimit * radius)
+          polygon = [point, firstCorner, miter, secondCorner];
+      }
+      joins.push({ kind: 'polygon', points: polygon });
+    }
+  }
+  op.strokeJoins = joins;
+  return joins;
+};
+const strokeJoinsContain = (op, x, y) => {
+  for (const join of strokeJoins(op)) {
+    if (join.kind === 'round') {
+      if ((x - join.point[0]) ** 2 + (y - join.point[1]) ** 2 <= join.radius ** 2) return true;
+    } else if (pointInConvexJoin(join.points, x, y)) return true;
+  }
+  return false;
+};
 const paintSnapshot = (style, space = 'srgb', scheme = 'light', transform = [1, 0, 0, 1, 0, 0]) => {
   const pattern = patterns.get(style);
   if (pattern) {
@@ -716,6 +779,8 @@ const queuePath = (c, path, rule, stroke = false, clear = false) => {
     stroke,
     width: d.lineWidth * scale,
     lineCap: d.lineCap,
+    lineJoin: d.lineJoin,
+    miterLimit: d.miterLimit,
     frequentRead: c.attributes.willReadFrequently,
     paint,
     alpha: clear ? 1 : d.globalAlpha,
@@ -869,7 +934,6 @@ const pathPixelCoverage = (op, x, y) => {
   // Intersect clips and compound winding/strokes at a bounded common subpixel
   // grid, rather than multiplying independent coverage fractions.
   const edges = op.stroke ? strokePixelEdges(op, x, y) : null;
-  if (edges && !edges.length) return 0;
   let count = 0;
   for (let yy = 0; yy < 8; yy++)
     for (let xx = 0; xx < 8; xx++) {
@@ -878,9 +942,10 @@ const pathPixelCoverage = (op, x, y) => {
       if (
         clipContains(op.clips, px, py) &&
         (op.stroke
-          ? edges
-            ? strokeEdgesContain(edges, px, py, op.width, op.lineCap)
-            : strokeContains(op.path, px, py, op.width, op.lineCap)
+          ? (edges
+              ? strokeEdgesContain(edges, px, py, op.width, op.lineCap)
+              : strokeContains(op.path, px, py, op.width, op.lineCap)) ||
+            strokeJoinsContain(op, px, py)
           : containsWindingSnapshot(op, px, py))
       )
         count++;
@@ -951,7 +1016,9 @@ const frequentReadHairlineMask = (s, op, left, right, top, bottom) => {
 const materializePath = (s, op) => {
   const ps = op.path.flatMap((p) => p.points);
   if (!ps.length) return;
-  const pad = op.stroke ? op.width / 2 : 0,
+  const pad = op.stroke
+      ? (op.lineJoin === 'miter' ? Math.max(1, op.miterLimit) : 1) * (op.width / 2)
+      : 0,
     unbounded =
       !op.clear &&
       ['copy', 'source-in', 'source-out', 'destination-in', 'destination-atop'].includes(
