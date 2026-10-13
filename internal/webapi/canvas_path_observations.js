@@ -64,6 +64,13 @@ const dashedPath = (path, pattern, offset) => {
   return result;
 };
 const transformPoint = (m, x, y) => [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]];
+const inverseTransformPoint = (m, x, y) => {
+  const determinant = m[0] * m[3] - m[1] * m[2];
+  if (!determinant) return null;
+  x -= m[4];
+  y -= m[5];
+  return [(m[3] * x - m[2] * y) / determinant, (-m[1] * x + m[0] * y) / determinant];
+};
 const currentPath = (c) => c.path || (c.path = []);
 const appendPoint = (c, x, y, move = false) => {
   const p = currentPath(c),
@@ -1290,6 +1297,59 @@ const installPathObservations = (proto) => {
   });
   method('arc', function (x, y, r, start, end, ccw = false) {
     return this.ellipse(x, y, r, r, 0, start, end, ccw);
+  });
+  method('arcTo', function (x1, y1, x2, y2, radius) {
+    const c = contextState(this),
+      values = [x1, y1, x2, y2, radius].map(Number);
+    if (!values.every(Number.isFinite)) return;
+    [x1, y1, x2, y2, radius] = values;
+    if (radius < 0) fail('IndexSizeError', 'Negative radius');
+    const path = currentPath(c),
+      sub = path[path.length - 1];
+    if (!sub?.points.length) {
+      appendPoint(c, x1, y1, true);
+      return;
+    }
+    const current = inverseTransformPoint(c.draw.transform, ...sub.points[sub.points.length - 1]);
+    // A singular CTM cannot contribute finite observable geometry. Chrome
+    // keeps the existing current point and otherwise leaves the path alone.
+    if (!current) return;
+    const first = [current[0] - x1, current[1] - y1],
+      second = [x2 - x1, y2 - y1],
+      firstLength = Math.hypot(...first),
+      secondLength = Math.hypot(...second),
+      cross = first[0] * second[1] - first[1] * second[0];
+    if (!radius || !firstLength || !secondLength || Math.abs(cross) < 1e-12) {
+      appendPoint(c, x1, y1);
+      return;
+    }
+    const firstUnit = [first[0] / firstLength, first[1] / firstLength],
+      secondUnit = [second[0] / secondLength, second[1] / secondLength],
+      cosine = Math.max(
+        -1,
+        Math.min(1, firstUnit[0] * secondUnit[0] + firstUnit[1] * secondUnit[1]),
+      ),
+      angle = Math.acos(cosine),
+      distance = radius / Math.tan(angle / 2),
+      tangent1 = [x1 + firstUnit[0] * distance, y1 + firstUnit[1] * distance],
+      tangent2 = [x1 + secondUnit[0] * distance, y1 + secondUnit[1] * distance],
+      side = cross > 0 ? 1 : -1,
+      center = [
+        tangent1[0] + side * -firstUnit[1] * radius,
+        tangent1[1] + side * firstUnit[0] * radius,
+      ];
+    appendPoint(c, ...tangent1);
+    let start = Math.atan2(tangent1[1] - center[1], tangent1[0] - center[0]),
+      end = Math.atan2(tangent2[1] - center[1], tangent2[0] - center[0]),
+      delta = end - start;
+    if (cross > 0 && delta < 0) delta += Math.PI * 2;
+    else if (cross < 0 && delta > 0) delta -= Math.PI * 2;
+    const steps = Math.max(1, Math.ceil((Math.abs(delta) / (Math.PI * 2)) * 128));
+    sub.curved = true;
+    for (let step = 1; step <= steps; step++) {
+      const angle = start + (delta * step) / steps;
+      appendPoint(c, center[0] + radius * Math.cos(angle), center[1] + radius * Math.sin(angle));
+    }
   });
   const fillRule = (value) => {
     value = value === undefined ? 'nonzero' : String(value);

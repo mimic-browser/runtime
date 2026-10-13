@@ -1,0 +1,45 @@
+{
+  "browser": "Chrome/152.0.7977.82",
+  "metadata": {
+    "existingBrowser": true,
+    "isolatedBrowserContext": false,
+    "headful": true,
+    "freshProfile": true,
+    "fixture": "internal/browser/testdata/canvas_arcto_oracle.js",
+    "fixtureSHA256": "d958ea6aecfee8abddb17058c712a98907b0e4c296ff8150f2b13ce3deca5825",
+    "fixtureHashNormalization": "LF",
+    "chromeSHA256": "ea36dd818a90176f1a70616f0363d9be527229389a6c073a0b1688b9e73f67e9",
+    "v8": "15.2.124.21",
+    "originalWebdriver": false,
+    "launchArguments": [
+      "--remote-debugging-port=19519",
+      "--user-data-dir=C:\\Users\\moreveal\\Desktop\\mimic-contract-poc\\my-runs\\offline-hsw-latest\\canvas-arcto-chrome152-20261013-002\\chrome-profile",
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--window-size=1280,800",
+      "about:blank"
+    ],
+    "observedViewport": {
+      "outer": [
+        1280,
+        800
+      ],
+      "inner": [
+        1272,
+        653
+      ],
+      "deviceScaleFactor": 1,
+      "visibility": "visible"
+    }
+  },
+  "result": {
+    "negativeRadius": [
+      "IndexSizeError",
+      true
+    ],
+    "nanRadius": "none",
+    "roundedDiffersFromZero": true,
+    "transformDiffers": true,
+    "snapshotMatchesRounded": true
+  }
+}

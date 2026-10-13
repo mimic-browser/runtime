@@ -11,7 +11,7 @@ import (
 
 func TestGraphicsObservationOracles(t *testing.T) {
 	parallelBrowserTest(t)
-	for _, fixture := range []struct{ name, capture string }{{"canvas_paths", "canvas-paths"}, {"canvas_relations", "canvas-relations"}, {"canvas_dash", "canvas-dash"}, {"canvas_join", "canvas-join"}, {"webgl_programs", "webgl-programs"}, {"webgl_framebuffers", "webgl-framebuffers"}, {"webgl_validation", "webgl-validation"}, {"webgl_geometry", "webgl-geometry"}, {"webgl_framebuffer_lifecycle", "webgl-framebuffer-lifecycle"}} {
+	for _, fixture := range []struct{ name, capture string }{{"canvas_paths", "canvas-paths"}, {"canvas_relations", "canvas-relations"}, {"canvas_dash", "canvas-dash"}, {"canvas_join", "canvas-join"}, {"canvas_arcto", "canvas-arcto"}, {"webgl_programs", "webgl-programs"}, {"webgl_framebuffers", "webgl-framebuffers"}, {"webgl_validation", "webgl-validation"}, {"webgl_geometry", "webgl-geometry"}, {"webgl_framebuffer_lifecycle", "webgl-framebuffer-lifecycle"}} {
 		t.Run(fixture.name, func(t *testing.T) {
 			parallelOracle(t)
 			source, err := os.ReadFile("testdata/" + fixture.name + "_oracle.js")
