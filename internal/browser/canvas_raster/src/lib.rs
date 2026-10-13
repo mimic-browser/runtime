@@ -54,7 +54,12 @@ pub unsafe extern "C" fn raster_glyph(
     size: f32,
     x: f32,
     y: f32,
-    scale_x: f32,
+    transform_a: f64,
+    transform_b: f64,
+    transform_c: f64,
+    transform_d: f64,
+    transform_e: f64,
+    transform_f: f64,
     stroke_width: f32,
     width: u32,
     height: u32,
@@ -66,8 +71,16 @@ pub unsafe extern "C" fn raster_glyph(
         || width > 4096
         || height > 4096
         || width as usize * height as usize * 4 > 64 << 20
-        || !scale_x.is_finite()
-        || scale_x <= 0.0
+        || ![
+            transform_a,
+            transform_b,
+            transform_c,
+            transform_d,
+            transform_e,
+            transform_f,
+        ]
+        .iter()
+        .all(|value| value.is_finite())
         || !stroke_width.is_finite()
         || stroke_width < 0.0
     {
@@ -91,10 +104,17 @@ pub unsafe extern "C" fn raster_glyph(
             (width as usize * sample_factor) as u16,
             (height as usize * sample_factor) as u16,
         );
-        context.set_transform(Affine::scale_non_uniform(
-            scale_x as f64 * sample_factor as f64,
-            sample_factor as f64,
-        ));
+        context.set_transform(
+            Affine::scale(sample_factor as f64)
+                * Affine::new([
+                    transform_a,
+                    transform_b,
+                    transform_c,
+                    transform_d,
+                    transform_e,
+                    transform_f,
+                ]),
+        );
         let glyphs = [Glyph { id: glyph_id, x, y }];
         let result = if stroke_width > 0.0 {
             context.set_stroke(Stroke::new(stroke_width as f64));

@@ -481,18 +481,31 @@ const canvasCompatibilityState = (() => {
     const raster = rasterInstance();
     const fontID = rasterFontID(glyph);
     const strokeWidth = run.stroke && !glyph.color ? run.lineWidth : 0,
-      margin = Math.ceil(strokeWidth / 2) + 2,
-      left = Math.floor(run.x + glyph.left * run.scale) - margin,
-      top = Math.floor(run.y + glyph.top) - margin,
-      right = Math.ceil(run.x + glyph.right * run.scale) + margin,
-      bottom = Math.ceil(run.y + glyph.bottom) + margin,
+      m = run.matrix,
+      transformScale = Math.max(Math.hypot(m[0], m[1]), Math.hypot(m[2], m[3])),
+      margin = Math.ceil((strokeWidth * transformScale) / 2) + 2,
+      localLeft = run.x + glyph.left * run.scale,
+      localTop = run.y + glyph.top,
+      localRight = run.x + glyph.right * run.scale,
+      localBottom = run.y + glyph.bottom,
+      corners = [
+        [localLeft, localTop],
+        [localRight, localTop],
+        [localLeft, localBottom],
+        [localRight, localBottom],
+      ].map(([x, y]) => transformPoint(m, x, y)),
+      left = Math.floor(Math.min(...corners.map((point) => point[0]))) - margin,
+      top = Math.floor(Math.min(...corners.map((point) => point[1]))) - margin,
+      right = Math.ceil(Math.max(...corners.map((point) => point[0]))) + margin,
+      bottom = Math.ceil(Math.max(...corners.map((point) => point[1]))) + margin,
       width = right - left,
       height = bottom - top;
     if (width <= 0 || height <= 0 || width > 4096 || height > 4096)
       fail('NotSupportedError', 'Canvas color glyph exceeds the raster limit');
-    const glyphX = (run.x + glyph.originX * run.scale - left) / run.scale,
-      glyphY = run.y + glyph.originY - top,
-      key = `${fontID}:${glyph.glyphID}:${run.fontSize}:${glyphX}:${glyphY}:${run.scale}:${strokeWidth}:${width}:${height}`;
+    const glyphX = run.x / run.scale + glyph.originX,
+      glyphY = run.y + glyph.originY,
+      affine = [m[0] * run.scale, m[1] * run.scale, m[2], m[3], m[4] - left, m[5] - top],
+      key = `${fontID}:${glyph.glyphID}:${run.fontSize}:${glyphX}:${glyphY}:${affine.join(':')}:${strokeWidth}:${width}:${height}`;
     const cached = rasterMapGet(rasterTiles, key);
     if (cached) return { left, top, width, height, pixels: cached };
     const length = width * height * 4,
@@ -505,7 +518,7 @@ const canvasCompatibilityState = (() => {
         run.fontSize,
         glyphX,
         glyphY,
-        run.scale,
+        ...affine,
         strokeWidth,
         width,
         height,
@@ -735,12 +748,7 @@ const canvasCompatibilityState = (() => {
         top = s.height,
         bottom = 0;
       for (const glyph of run.glyphs) {
-        if (
-          glyph.rasterID &&
-          run.composite === 'source-over' &&
-          m.every((value, i) => value === [1, 0, 0, 1, 0, 0][i]) &&
-          rasterModuleCtor !== undefined
-        ) {
+        if (glyph.rasterID && run.composite === 'source-over' && rasterModuleCtor !== undefined) {
           const tile = rasterGlyphTile(run, glyph);
           if (glyph.color) colorTiles.push(tile);
           else maskTiles.push(tile);

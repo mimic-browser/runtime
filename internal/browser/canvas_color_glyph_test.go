@@ -118,6 +118,54 @@ func TestCanvasColorGlyphMetricsUsePaintClip(t *testing.T) {
 	}
 }
 
+func TestCanvasColorGlyphRasterFollowsCurrentTransform(t *testing.T) {
+	serialBrowserTest(t)
+	p := bootstrapSnapshotPage(t)
+	defer p.Close()
+	value, err := p.Evaluate(context.Background(), `(() => {
+  const draw = transform => {
+    const context = new OffscreenCanvas(64,64).getContext('2d',{willReadFrequently:true});
+    context.font='15px system-ui, sans-serif';
+    transform(context);
+    context.fillText('😀',5,20);
+    const pixels=context.getImageData(0,0,64,64).data;
+    let nonzero=0,alpha=0;
+    for(let i=3;i<pixels.length;i+=4){if(pixels[i])nonzero++;alpha+=pixels[i]}
+    const at=(x,y)=>Array.from(pixels.slice((y*64+x)*4,(y*64+x)*4+4));
+    return {nonzero,alpha,at};
+  };
+  const scale=draw(context=>context.scale(1.5,1.25));
+  const affine=draw(context=>context.transform(1.25,.25,-.15,.9,8,7));
+  return JSON.stringify({scale:{nonzero:scale.nonzero,alpha:scale.alpha,sample:scale.at(19,10)},
+    affine:{nonzero:affine.nonzero,alpha:affine.alpha,sample:affine.at(23,18)}});
+})()`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got struct {
+		Scale, Affine struct {
+			Nonzero int   `json:"nonzero"`
+			Alpha   int   `json:"alpha"`
+			Sample  []int `json:"sample"`
+		}
+	}
+	if err := json.Unmarshal([]byte(value.(string)), &got); err != nil {
+		t.Fatal(err)
+	}
+	// Retained direct headful Chrome 152 observations are respectively
+	// 361/85893 and 224/52695. Pin their transformed ink envelopes and two
+	// exact opaque COLRv1 paint samples; a transformed bounding-box substitute
+	// painted only 96-alpha black and covered 480/296 pixels.
+	if got.Scale.Nonzero < 350 || got.Scale.Nonzero > 370 ||
+		got.Scale.Alpha < 82000 || got.Scale.Alpha > 88000 ||
+		got.Affine.Nonzero < 215 || got.Affine.Nonzero > 235 ||
+		got.Affine.Alpha < 50000 || got.Affine.Alpha > 55000 ||
+		len(got.Scale.Sample) != 4 || got.Scale.Sample[0] != 252 || got.Scale.Sample[1] != 188 || got.Scale.Sample[2] != 61 || got.Scale.Sample[3] != 255 ||
+		len(got.Affine.Sample) != 4 || got.Affine.Sample[0] != 255 || got.Affine.Sample[1] != 195 || got.Affine.Sample[2] != 73 || got.Affine.Sample[3] != 255 {
+		t.Fatalf("transformed color glyph differs from Chrome 152: %+v", got)
+	}
+}
+
 // Direct frozen headful Chrome 152 keeps emoji painted in color during
 // strokeText, while the monochrome letters use stroke outlines. The two text
 // modes therefore have different alpha coverage on the same font run.
