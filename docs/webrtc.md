@@ -105,8 +105,7 @@ Complete Chrome SDP and conferencing compatibility remain outside this scope.
 Chrome's full codec catalog, balanced transport allocation across media
 sections, exact ICE priorities and interface enumeration, some stats fields,
 ICE TCP, simulcast and insertable streams remain unsupported or differ. The
-unchanged full frozen RTC session regression continues to detect these gaps.
-Its additional scoped regression compares exact empty/DataChannel offers and
+scoped frozen regression compares exact empty/DataChannel offers and
 environment-independent lifecycle fields in ordinary and restored realms;
 network tests separately verify actual candidate endpoints and payloads.
 Chrome's ordinary HTTP proxy can still send direct STUN; Mimic intentionally

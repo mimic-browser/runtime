@@ -11,9 +11,9 @@ import (
 	chrome152 "github.com/moreveal/mimic/chrome/152"
 )
 
-// This is an additional scoped assertion against unchanged frozen evidence.
-// The complete RTC session oracle continues to test the full Chrome codec
-// catalog and the reference machine's candidate enumeration.
+// Compare supported empty/DataChannel SDP and environment-independent lifecycle
+// behavior against preserved frozen evidence. The full Chrome codec catalog and
+// the reference machine's candidate enumeration are outside this test's scope.
 func TestRTCNativeDataSDPMatchesFrozenChrome152(t *testing.T) {
 	serialBrowserTest(t)
 	source, err := os.ReadFile("testdata/rtc_session_oracle.js")
