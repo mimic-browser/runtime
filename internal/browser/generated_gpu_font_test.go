@@ -151,7 +151,11 @@ func TestGeneratedGPUFontRecipesAgreeAcrossRealms(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := counts.([]any); !reflect.DeepEqual(got, []any{float64(20), float64(13)}) {
+	// Keep this pinned to the installed profile's implemented Chrome 152
+	// inventory. Generated recipes above may select another coherent inventory,
+	// but closing their Contexts must restore the baseline rather than leak the
+	// last selected recipe into a new Context.
+	if got := counts.([]any); !reflect.DeepEqual(got, []any{float64(24), float64(32)}) {
 		t.Fatalf("installed Chrome 152 extension inventory leaked a generated recipe: %v", got)
 	}
 }
