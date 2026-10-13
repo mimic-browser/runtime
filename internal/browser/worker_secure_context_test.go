@@ -50,3 +50,10 @@ func TestLoopbackWorkerAndDocumentSelectSecureExposure(t *testing.T) {
 		historyEval(t, p, `new Promise((resolve,reject)=>{if(!isSecureContext)throw Error('document insecure');const url=URL.createObjectURL(new Blob(['onmessage=()=>postMessage(isSecureContext && OffscreenCanvas.length===2)'])),worker=new Worker(url);worker.onerror=e=>reject(Error(e.message));worker.onmessage=e=>{worker.terminate();URL.revokeObjectURL(url);resolve(e.data)};worker.postMessage(null)})`, true)
 	})
 }
+
+func TestWorkerOffscreenCanvasCreatesWebGLContext(t *testing.T) {
+	parallelBrowserTest(t)
+	historyTestPages(t, func(t *testing.T, p *Page) {
+		historyEval(t, p, `new Promise((resolve,reject)=>{const source="onmessage=()=>{try{const canvas=new OffscreenCanvas(1,1),gl=canvas.getContext('webgl2')||canvas.getContext('webgl'),formats=[];for(const shader of [gl.VERTEX_SHADER,gl.FRAGMENT_SHADER])for(const precision of [gl.LOW_FLOAT,gl.MEDIUM_FLOAT,gl.HIGH_FLOAT,gl.HIGH_INT]){const value=gl.getShaderPrecisionFormat(shader,precision);formats.push(value&&[value.rangeMin,value.rangeMax,value.precision])}postMessage(Object.prototype.toString.call(canvas)==='[object OffscreenCanvas]'&&Object.prototype.toString.call(gl)==='[object WebGL2RenderingContext]'&&gl.getParameter(gl.VENDOR)==='WebKit'&&gl.getSupportedExtensions().length>0&&formats.every(Boolean))}catch(error){postMessage(String(error))}}";const url=URL.createObjectURL(new Blob([source],{type:'text/javascript'})),worker=new Worker(url);worker.onerror=e=>reject(Error(e.message));worker.onmessage=e=>{worker.terminate();URL.revokeObjectURL(url);resolve(e.data)};worker.postMessage(null)})`, true)
+	})
+}
