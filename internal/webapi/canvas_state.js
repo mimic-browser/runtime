@@ -386,7 +386,7 @@ const canvasCompatibilityState = (() => {
     colorRaster = new rasterInstanceCtor(new rasterModuleCtor(bytes)).exports;
     return colorRaster;
   };
-  const rasterColorGlyph = (run, glyph) => {
+  const rasterGlyphTile = (run, glyph) => {
     const raster = rasterInstance();
     let fontID = rasterMapGet(rasterFontIDs, glyph.rasterID);
     if (fontID === undefined) {
@@ -401,17 +401,19 @@ const canvasCompatibilityState = (() => {
       }
       rasterMapSet(rasterFontIDs, glyph.rasterID, fontID);
     }
-    const left = Math.floor(run.x + glyph.left) - 2,
-      top = Math.floor(run.y + glyph.top) - 2,
-      right = Math.ceil(run.x + glyph.right) + 2,
-      bottom = Math.ceil(run.y + glyph.bottom) + 2,
+    const strokeWidth = run.stroke && !glyph.color ? run.lineWidth : 0,
+      margin = Math.ceil(strokeWidth / 2) + 2,
+      left = Math.floor(run.x + glyph.left * run.scale) - margin,
+      top = Math.floor(run.y + glyph.top) - margin,
+      right = Math.ceil(run.x + glyph.right * run.scale) + margin,
+      bottom = Math.ceil(run.y + glyph.bottom) + margin,
       width = right - left,
       height = bottom - top;
     if (width <= 0 || height <= 0 || width > 4096 || height > 4096)
       fail('NotSupportedError', 'Canvas color glyph exceeds the raster limit');
-    const glyphX = run.x + glyph.originX - left,
+    const glyphX = (run.x + glyph.originX * run.scale - left) / run.scale,
       glyphY = run.y + glyph.originY - top,
-      key = `${fontID}:${glyph.glyphID}:${run.fontSize}:${glyphX}:${glyphY}:${width}:${height}`;
+      key = `${fontID}:${glyph.glyphID}:${run.fontSize}:${glyphX}:${glyphY}:${run.scale}:${strokeWidth}:${width}:${height}`;
     const cached = rasterMapGet(rasterTiles, key);
     if (cached) return { left, top, width, height, pixels: cached };
     const length = width * height * 4,
@@ -424,6 +426,8 @@ const canvasCompatibilityState = (() => {
         run.fontSize,
         glyphX,
         glyphY,
+        run.scale,
+        strokeWidth,
         width,
         height,
         pointer,
@@ -620,6 +624,7 @@ const canvasCompatibilityState = (() => {
       clips: d.clipPaths || [],
       shadow: shadowSnapshot(d, c.surface, c.attributes.willReadFrequently),
       stroke,
+      lineWidth: d.lineWidth,
     });
     if (pending.length >= 256) {
       ensurePixels(c.surface);
@@ -645,20 +650,21 @@ const canvasCompatibilityState = (() => {
         det = m[0] * m[3] - m[1] * m[2];
       if (!det) continue;
       const colorTiles = [];
+      const maskTiles = [];
       let left = s.width,
         right = 0,
         top = s.height,
         bottom = 0;
       for (const glyph of run.glyphs) {
         if (
-          glyph.color &&
-          !run.stroke &&
-          run.scale === 1 &&
+          glyph.rasterID &&
           run.composite === 'source-over' &&
           m.every((value, i) => value === [1, 0, 0, 1, 0, 0][i]) &&
           rasterModuleCtor !== undefined
         ) {
-          colorTiles.push(rasterColorGlyph(run, glyph));
+          const tile = rasterGlyphTile(run, glyph);
+          if (glyph.color) colorTiles.push(tile);
+          else maskTiles.push(tile);
           continue;
         }
         const x = run.x + glyph.left * run.scale,
@@ -685,6 +691,22 @@ const canvasCompatibilityState = (() => {
               py = (-m[1] * (xx + 0.5 - m[4]) + m[0] * (yy + 0.5 - m[5])) / det;
             if (px >= x && px < x + w && py >= y && py < y + h)
               coverage[yy * s.width + xx] = Math.max(coverage[yy * s.width + xx], glyph.coverage);
+          }
+      }
+      for (const tile of maskTiles) {
+        const l = Math.max(0, tile.left),
+          r = Math.min(s.width, tile.left + tile.width),
+          t = Math.max(0, tile.top),
+          b = Math.min(s.height, tile.top + tile.height);
+        left = Math.min(left, l);
+        right = Math.max(right, r);
+        top = Math.min(top, t);
+        bottom = Math.max(bottom, b);
+        for (let yy = t; yy < b; yy++)
+          for (let xx = l; xx < r; xx++) {
+            const source = ((yy - tile.top) * tile.width + xx - tile.left) * 4 + 3,
+              target = yy * s.width + xx;
+            coverage[target] = Math.max(coverage[target], tile.pixels[source]);
           }
       }
       if (run.shadow) {

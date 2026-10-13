@@ -1,7 +1,10 @@
 use std::{cell::RefCell, ptr, sync::Arc};
 
 use vello_cpu::peniko::{Blob, FontData};
-use vello_cpu::{Glyph, Pixmap, RenderContext, Resources};
+use vello_cpu::{
+    Glyph, Pixmap, RenderContext, Resources,
+    kurbo::{Affine, Stroke},
+};
 
 thread_local! {
     static FONTS: RefCell<Vec<FontData>> = const { RefCell::new(Vec::new()) };
@@ -51,6 +54,8 @@ pub unsafe extern "C" fn raster_glyph(
     size: f32,
     x: f32,
     y: f32,
+    scale_x: f32,
+    stroke_width: f32,
     width: u32,
     height: u32,
     output: *mut u8,
@@ -61,6 +66,10 @@ pub unsafe extern "C" fn raster_glyph(
         || width > 4096
         || height > 4096
         || width as usize * height as usize * 4 > 64 << 20
+        || !scale_x.is_finite()
+        || scale_x <= 0.0
+        || !stroke_width.is_finite()
+        || stroke_width < 0.0
     {
         return -1;
     }
@@ -71,12 +80,21 @@ pub unsafe extern "C" fn raster_glyph(
         };
         let mut resources = Resources::new();
         let mut context = RenderContext::new(width as u16, height as u16);
-        if context
-            .glyph_run(&mut resources, font)
-            .font_size(size)
-            .fill_glyphs([Glyph { id: glyph_id, x, y }].into_iter())
-            .is_err()
-        {
+        context.set_transform(Affine::scale_non_uniform(scale_x as f64, 1.0));
+        let glyphs = [Glyph { id: glyph_id, x, y }];
+        let result = if stroke_width > 0.0 {
+            context.set_stroke(Stroke::new(stroke_width as f64));
+            context
+                .glyph_run(&mut resources, font)
+                .font_size(size)
+                .stroke_glyphs(glyphs.into_iter())
+        } else {
+            context
+                .glyph_run(&mut resources, font)
+                .font_size(size)
+                .fill_glyphs(glyphs.into_iter())
+        };
+        if result.is_err() {
             return -3;
         }
         let mut pixmap = Pixmap::new(width as u16, height as u16);

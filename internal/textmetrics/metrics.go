@@ -632,12 +632,10 @@ func (e *Engine) shapeWithFonts(text, families string, size, weight float64, ita
 			}
 			g := Glyph{Cluster: info.Cluster, Advance: float64(p.XAdvance) * scale, XOffset: float64(p.XOffset) * scale, YOffset: -float64(p.YOffset) * scale}
 			if hintInk {
-				if _, color := run.face.face.GlyphDataColor(tables.GlyphID(info.Glyph)); color {
-					g.GlyphID = uint32(info.Glyph)
-					g.RasterFace = run.face.resource.index
-					g.RasterID = e.rasterResourceID(run.face.resource)
-					g.Color = true
-				}
+				g.GlyphID = uint32(info.Glyph)
+				g.RasterFace = run.face.resource.index
+				g.RasterID = e.rasterResourceID(run.face.resource)
+				_, g.Color = run.face.face.GlyphDataColor(tables.GlyphID(info.Glyph))
 			}
 			if bounds, ok := run.face.face.GlyphExtents(info.Glyph); ok && bounds.Width != 0 && bounds.Height != 0 {
 				g.Ink = true

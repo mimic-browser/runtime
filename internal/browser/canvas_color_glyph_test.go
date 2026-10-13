@@ -84,3 +84,47 @@ func TestCanvasColorGlyphUsesCanonicalSurface(t *testing.T) {
 		})
 	}
 }
+
+// Direct frozen headful Chrome 152 keeps emoji painted in color during
+// strokeText, while the monochrome letters use stroke outlines. The two text
+// modes therefore have different alpha coverage on the same font run.
+func TestCanvasStrokeTextPreservesColorGlyphs(t *testing.T) {
+	serialBrowserTest(t)
+	p := bootstrapSnapshotPage(t)
+	value, err := p.Evaluate(context.Background(), `(() => {
+  const draw = method => {
+    const canvas=document.createElement('canvas');
+    canvas.width=canvas.height=20;
+    const ctx=canvas.getContext('2d');
+    ctx.font='7px Segoe UI Emoji, sans-serif';
+    ctx.strokeStyle='#000000';
+    ctx.fillStyle='#000000';
+    ctx[method+'Text']('xyz😃👾',0,12,16);
+    const pixels=ctx.getImageData(0,0,20,20).data;
+    let alpha=0;
+    for(let i=3;i<pixels.length;i+=4)alpha+=pixels[i];
+    return {alpha,sample:Array.from(pixels.slice((7*20+6)*4,(7*20+6)*4+4))};
+  };
+  return JSON.stringify({stroke:draw('stroke'),fill:draw('fill')});
+})()`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got struct {
+		Stroke struct {
+			Alpha  int   `json:"alpha"`
+			Sample []int `json:"sample"`
+		} `json:"stroke"`
+		Fill struct {
+			Alpha int `json:"alpha"`
+		} `json:"fill"`
+	}
+	if err := json.Unmarshal([]byte(value.(string)), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Stroke.Alpha <= got.Fill.Alpha+2000 || len(got.Stroke.Sample) != 4 ||
+		got.Stroke.Sample[0] <= 150 || got.Stroke.Sample[1] <= 80 ||
+		got.Stroke.Sample[2] <= 40 || got.Stroke.Sample[3] <= 70 {
+		t.Fatalf("strokeText lost Chrome's color glyph or outline behavior: %+v", got)
+	}
+}
