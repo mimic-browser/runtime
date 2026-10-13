@@ -8,6 +8,7 @@
     senders = new WeakMap(),
     remoteStreams = new WeakMap();
   const senderLists = new WeakMap();
+  const operationQueues = new WeakMap();
   const channelSlots = new WeakMap(),
     channelWrappers = new Map();
   const attachChannel = (peer, channel) => {
@@ -87,10 +88,26 @@
     }
     return id;
   };
-  const operation = (peer, name, data) =>
-    host
-      .rtcMediaOperation(ensure(peer, name === 'stats'), name, JSON.stringify(data))
-      .then(failure);
+  const enqueueOperation = (peer, run) => {
+    // Begin native work after the calling script returns, and preserve the
+    // peer's operation order even when an earlier operation rejects. Native
+    // workers must not race successive description changes on the same peer.
+    const previous = operationQueues.get(peer) || platformPromiseResolve();
+    const next = previous.then(run);
+    operationQueues.set(
+      peer,
+      next.then(
+        () => undefined,
+        () => undefined,
+      ),
+    );
+    return next;
+  };
+  const operation = (peer, name, data) => {
+    const id = ensure(peer, name === 'stats');
+    const raw = JSON.stringify(data);
+    return enqueueOperation(peer, () => host.rtcMediaOperation(id, name, raw).then(failure));
+  };
   const method = (prototype, name, value) =>
     Object.defineProperty(prototype, name, {
       value,
@@ -204,8 +221,10 @@
         if (!slot) return prior.get.call(this);
         syncTransceivers(slot.peer);
         if (name === 'sender' || name === 'receiver' || name === 'stopped') return slot[name];
-        if (name === 'mid' && !host.rtcMediaState(peers.get(slot.peer)).localDescription)
-          return null;
+        if (name === 'mid') {
+          const state = host.rtcMediaState(peers.get(slot.peer));
+          if (!state.localDescription && !state.remoteDescription) return null;
+        }
         if (name === 'currentDirection') {
           if (slot.stopped) return null;
           const state = host.rtcMediaState(peers.get(slot.peer));
@@ -350,6 +369,7 @@
         if (action === 'stats' && rtcPeerPrivate.get(this)?.closed && !peers.has(this))
           return platformPromiseResolve(new Map());
         if (name === 'createOffer') {
+          ensure(this);
           for (const [kind, option] of [
             ['audio', 'offerToReceiveAudio'],
             ['video', 'offerToReceiveVideo'],
@@ -364,21 +384,35 @@
           if (rtcPeerPrivate.get(this).restartPending) value = { ...value, iceRestart: true };
         }
         if (name === 'setLocalDescription' && value === undefined) {
-          const state = host.rtcMediaState(ensure(this));
-          return operation(
-            this,
-            state.signalingState === 'have-remote-offer' ? 'answer' : 'offer',
-            { iceRestart: !!rtcPeerPrivate.get(this).restartPending },
-          )
-            .then((description) => operation(this, 'local', description))
-            .then(() => {
-              rtcPeerPrivate.get(this).restartPending = false;
-            });
+          const id = ensure(this);
+          return enqueueOperation(this, () => {
+            const state = host.rtcMediaState(id);
+            return host
+              .rtcMediaOperation(
+                id,
+                state.signalingState === 'have-remote-offer' ? 'answer' : 'offer',
+                JSON.stringify({
+                  iceRestart: !!rtcPeerPrivate.get(this).restartPending,
+                }),
+              )
+              .then(failure)
+              .then((description) => {
+                return host
+                  .rtcMediaOperation(id, 'local', JSON.stringify(description))
+                  .then(failure)
+                  .then(() => {
+                    if (description.type === 'answer')
+                      rtcPeerPrivate.get(this).restartPending = false;
+                  });
+              });
+          });
         }
         return operation(this, action, value ?? (action === 'ice' ? null : {})).then((result) => {
           if (action === 'offer' || action === 'answer') {
-            rtcPeerPrivate.get(this).restartPending = false;
             return { sdp: result.sdp, type: result.type };
+          }
+          if ((action === 'local' || action === 'remote') && value?.type === 'answer') {
+            rtcPeerPrivate.get(this).restartPending = false;
           }
           if (action === 'stats') return new Map(Object.entries(result));
         });
@@ -389,9 +423,13 @@
   }
   method(RTCPeerConnection.prototype, 'restartIce', function () {
     ensure(this);
-    rtcPeerPrivate.get(this).restartPending = true;
+    const state = rtcPeerPrivate.get(this);
+    state.restartPending = true;
+    if (state.restartNegotiationQueued) return;
+    state.restartNegotiationQueued = true;
     setTimeout(() => {
-      if (!rtcPeerPrivate.get(this).closed) dispatchTrusted(this, new Event('negotiationneeded'));
+      state.restartNegotiationQueued = false;
+      if (!state.closed) dispatchTrusted(this, new Event('negotiationneeded'));
     }, 0);
   });
   const priorSenders = RTCPeerConnection.prototype.getSenders;

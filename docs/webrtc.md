@@ -78,25 +78,48 @@ to the proxy is not an ICE endpoint and is not published as a related address.
 Remote candidates supplied by the application remain remote signaling data.
 Local candidate events, SDP and stats use the same allocation addresses and ports.
 
-This is a functioning WebRTC transport, not complete Chrome SDP or conferencing
-compatibility. Native offers advertise the implemented H264/Opus media boundary
-rather than Chrome's full offline codec catalog. Native SDP ordering, ICE
-priorities, candidate enumeration, some stats fields and lifecycle timing differ
-from Chrome 152. Replacing a pending local offer and signaling rollback remain
-unsupported by the native backend. ICE TCP, simulcast, insertable streams and unsupported media
-codecs are outside the current implementation. See [media support](camera.md).
+Offers and answers come from the native peer, including Chrome-compatible
+empty/DataChannel SDP serialization and fresh MID reservations for repeated
+initial offers. The serialization step runs before native acceptance. Supported
+media remains H264/Opus; unsupported codecs are not advertised. See
+[media support](camera.md).
 
-The frozen Chrome SDP catalog regression currently detects these native-offer
-differences. Its expectations remain unchanged. Chrome's ordinary HTTP proxy can
-still send direct STUN; Mimic intentionally applies stronger Context isolation.
+Description operations use a per-peer Promise operation chain. An operation
+starts after the calling script returns, an unsuccessful operation does not
+block later operations, and implicit `setLocalDescription()` generates and
+applies its description as one queued operation. Gathering state is published
+on the Page scheduler before its notification event. Empty descriptions do not
+start ICE gathering. Native errors preserve their WebRTC error class.
+
+Generating an ICE restart offer stages credentials without restarting an active
+transport. Applying the accepted offer installs those exact credentials into
+the ICE agent. Repeated restart offers retain restart intent; candidate getters
+keep observations associated with the description's credential generation.
+Pending local offers can be replaced. Data-only rollback is supported while the
+active ICE transport has not restarted. Media rollback and rollback after
+applying an ICE restart reject with `NotSupportedError` before changing
+descriptions or signaling state. Preserving the previous transport across an
+applied restart requires additional native transport work.
+
+Complete Chrome SDP and conferencing compatibility remain outside this scope.
+Chrome's full codec catalog, balanced transport allocation across media
+sections, exact ICE priorities and interface enumeration, some stats fields,
+ICE TCP, simulcast and insertable streams remain unsupported or differ. The
+unchanged full frozen RTC session regression continues to detect these gaps.
+Its additional scoped regression compares exact empty/DataChannel offers and
+environment-independent lifecycle fields in ordinary and restored realms;
+network tests separately verify actual candidate endpoints and payloads.
+Chrome's ordinary HTTP proxy can still send direct STUN; Mimic intentionally
+applies stronger Context isolation.
 
 ## Reproducible network checks
 
 Run only the focused transport and browser checks:
 
 ```text
-go test ./internal/network -run '^(TestRTCProxyRelayEgressMatrix|TestRTCProxyFailuresNeverFallback|TestRTCIsolatedNetRejectsEveryDirectBoundary|TestRTCProxyRotationAndBrokenAllocation|TestRTCProxyCloseCancelsPendingHandshake|TestRTCProxyTURNAuthenticationFailure)$' -count=1
-go test ./internal/browser -run '^(TestRTCProxyBrowserRoundTripAndTeardown|TestRTCProxyBrowserUnsupportedGathering|TestRTCWithoutProxyPermissionFreeDataChannel|TestRTCWithoutProxyRealSTUNAndRelayPolicy|TestRTCWithoutProxyTURNUDPDataChannel|TestRTCWithoutProxyPermissionDependentHosts)$' -count=1
+python tools/testing/run_focused.py ./internal/network --run '^(TestRTCProxyRelayEgressMatrix|TestRTCProxyFailuresNeverFallback|TestRTCIsolatedNetRejectsEveryDirectBoundary|TestRTCProxyRotationAndBrokenAllocation|TestRTCProxyCloseCancelsPendingHandshake|TestRTCProxyTURNAuthenticationFailure)$' --race
+python tools/testing/run_focused.py ./internal/browser --run '^(TestRTCProxyBrowserRoundTripAndTeardown|TestRTCProxyBrowserUnsupportedGathering|TestRTCWithoutProxyPermissionFreeDataChannel|TestRTCWithoutProxyRealSTUNAndRelayPolicy|TestRTCWithoutProxyTURNUDPDataChannel|TestRTCWithoutProxyPermissionDependentHosts)$'
+python tools/testing/run_focused.py ./internal/browser --run '^(TestRTCNativeDataSDPMatchesFrozenChrome152|TestRTCOperationsStartAfterCallAndRecoverAfterRejection|TestRTCErrorClassesMatchChrome152|TestRTCNativeRestartRollbackPreservesNegotiationAndDataChannel|TestRTCMediaRollbackRejectsWithoutChangingDescriptions)$'
 ```
 
 The fixtures transfer real DataChannel payloads through TURN TCP/TLS and

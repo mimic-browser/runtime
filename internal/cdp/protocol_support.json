@@ -2047,6 +2047,28 @@
       "internal/cdp/debugger_native_test.go#TestDebuggerNativeBreakpointPreservesSourceAndAuthorStack"
     ]
   },
+  "Debugger.setBreakpointByUrl": {
+    "status": "unsupported",
+    "notes": "The pinned wire schema and independent-control scheduling classification include this command, but native Inspector dispatch does not expose URL, regex or script-hash breakpoints. Source-location breakpoints are available through Debugger.setBreakpoint.",
+    "tests": [
+      "internal/cdp/coverage_test.go#TestProtocolSupportManifestHasLiveEvidenceAndNoLostHandlers"
+    ]
+  },
+  "Debugger.removeBreakpoint": {
+    "status": "unsupported",
+    "notes": "The pinned wire schema and independent-control scheduling classification include this command, but native Inspector dispatch does not expose individual breakpoint removal. Debugger.disable releases the Inspector session and its retained debugger state.",
+    "tests": [
+      "internal/cdp/coverage_test.go#TestProtocolSupportManifestHasLiveEvidenceAndNoLostHandlers"
+    ]
+  },
+  "Debugger.setInstrumentationBreakpoint": {
+    "status": "unsupported",
+    "notes": "The pinned wire schema and independent-control scheduling classification include this command, but native Inspector dispatch does not expose instrumentation breakpoints. Schema availability does not imply execution support.",
+    "tests": [
+      "internal/cdp/protocol_test.go#TestProtocolSchemaIncludesCurrentBrowserAndAllV8Domains",
+      "internal/cdp/coverage_test.go#TestProtocolSupportManifestHasLiveEvidenceAndNoLostHandlers"
+    ]
+  },
   "Debugger.evaluateOnCallFrame": {
     "status": "implemented",
     "notes": "Native V8 call-frame evaluation while paused; explicit evaluation retains its requested author-visible effects.",

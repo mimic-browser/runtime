@@ -8,6 +8,7 @@ import (
 	"image"
 	"net"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -28,16 +29,39 @@ import (
 )
 
 type rtcMediaPeer struct {
-	id            string
-	pc            *webrtc.PeerConnection
-	senders       map[string]*rtcMediaSender
-	transceivers  map[*webrtc.RTPTransceiver]*rtcMediaTransceiver
-	stats         *rtcStatsInterceptor
-	channels      map[string]*rtcMediaDataChannel
-	connected     chan struct{}
-	everConnected atomic.Bool
-	proxy         *network.RTCProxyDialer
-	hideHost      bool
+	id             string
+	pc             *webrtc.PeerConnection
+	senders        map[string]*rtcMediaSender
+	transceivers   map[*webrtc.RTPTransceiver]*rtcMediaTransceiver
+	stats          *rtcStatsInterceptor
+	channels       map[string]*rtcMediaDataChannel
+	connected      chan struct{}
+	everConnected  atomic.Bool
+	proxy          *network.RTCProxyDialer
+	hideHost       bool
+	eventMu        sync.Mutex
+	localOperation bool
+	localEvents    []rtcMediaEvent
+	// Realm scheduler owns this published state. Native networking can complete
+	// gathering before the browser's gathering notification task is delivered.
+	gatheringState string
+}
+
+type rtcMediaEvent struct {
+	kind string
+	data any
+}
+
+// Pion gathering callbacks can occur inside SetLocalDescription. Browser
+// notifications follow completion of the description operation instead.
+func (r *Realm) emitRTCLocalEvent(peer *rtcMediaPeer, kind string, data any) {
+	peer.eventMu.Lock()
+	defer peer.eventMu.Unlock()
+	if peer.localOperation {
+		peer.localEvents = append(peer.localEvents, rtcMediaEvent{kind, data})
+		return
+	}
+	r.emitRTCMedia(peer.id, kind, data)
 }
 
 func rtcReadTimeout(err error) bool {
@@ -119,6 +143,11 @@ func (r *Realm) emitRTCMedia(id, kind string, data any) {
 		if r.closed || r.inactive || r.rtcMediaNotifier == nil {
 			return nil
 		}
+		if kind == "icegatheringstatechange" {
+			if peer := r.rtcMediaPeers[id]; peer != nil {
+				peer.gatheringState, _ = data.(string)
+			}
+		}
 		_, err := r.runtime.Call(ctx, r.rtcMediaNotifier, nil, r.val(id), r.val(kind), r.val(data))
 		return err
 	})
@@ -128,6 +157,11 @@ func (r *Realm) newRTCMedia(config webrtc.Configuration) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	settings.SetSDPGenerator(rtcChromeSDP)
+	settings.SetReserveUnappliedMIDs(true)
+	settings.SetSkipGatheringWithoutMedia(true)
+	settings.SetDataDescriptionOperations(true)
+	effective.RTPHeaderEncryptionPolicy = webrtc.RTPHeaderEncryptionPolicyDisable
 	success := false
 	defer func() {
 		if !success && proxy != nil {
@@ -137,7 +171,7 @@ func (r *Realm) newRTCMedia(config webrtc.Configuration) (string, error) {
 	m := &webrtc.MediaEngine{}
 	// Advertise only a codec we can actually encode. Packetization mode 1 is
 	// interoperable with Chrome's constrained baseline H264 negotiation.
-	if err := m.RegisterCodec(webrtc.RTPCodecParameters{RTPCodecCapability: webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeH264, ClockRate: 90000, SDPFmtpLine: "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f", RTCPFeedback: []webrtc.RTCPFeedback{{Type: "nack"}, {Type: "nack", Parameter: "pli"}, {Type: "ccm", Parameter: "fir"}, {Type: "goog-remb"}}}, PayloadType: 102}, webrtc.RTPCodecTypeVideo); err != nil {
+	if err := m.RegisterCodec(webrtc.RTPCodecParameters{RTPCodecCapability: webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeH264, ClockRate: 90000, SDPFmtpLine: "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f", RTCPFeedback: []webrtc.RTCPFeedback{{Type: "goog-remb"}, {Type: "transport-cc"}, {Type: "ccm", Parameter: "fir"}, {Type: "nack"}, {Type: "nack", Parameter: "pli"}}}, PayloadType: 108}, webrtc.RTPCodecTypeVideo); err != nil {
 		return "", err
 	}
 	if err := m.RegisterCodec(webrtc.RTPCodecParameters{RTPCodecCapability: webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeOpus, ClockRate: 48000, Channels: 2, SDPFmtpLine: "minptime=10;useinbandfec=1"}, PayloadType: 111}, webrtc.RTPCodecTypeAudio); err != nil {
@@ -157,6 +191,7 @@ func (r *Realm) newRTCMedia(config webrtc.Configuration) (string, error) {
 	id := uuid.NewString()
 	peer := &rtcMediaPeer{id: id, pc: pc, senders: map[string]*rtcMediaSender{}, transceivers: map[*webrtc.RTPTransceiver]*rtcMediaTransceiver{}, stats: stats, channels: map[string]*rtcMediaDataChannel{}, connected: make(chan struct{})}
 	peer.proxy, peer.hideHost = proxy, hideHost
+	peer.gatheringState = "new"
 	if r.rtcMediaPeers == nil {
 		r.rtcMediaPeers = map[string]*rtcMediaPeer{}
 	}
@@ -184,9 +219,11 @@ func (r *Realm) newRTCMedia(config webrtc.Configuration) (string, error) {
 			encoded, _ := json.Marshal(init)
 			json.Unmarshal(encoded, &data)
 		}
-		r.emitRTCMedia(id, "icecandidate", data)
+		r.emitRTCLocalEvent(peer, "icecandidate", data)
 	})
-	pc.OnICEGatheringStateChange(func(state webrtc.ICEGatheringState) { r.emitRTCMedia(id, "icegatheringstatechange", state.String()) })
+	pc.OnICEGatheringStateChange(func(state webrtc.ICEGatheringState) {
+		r.emitRTCLocalEvent(peer, "icegatheringstatechange", state.String())
+	})
 	pc.OnICEConnectionStateChange(func(state webrtc.ICEConnectionState) { r.emitRTCMedia(id, "iceconnectionstatechange", state.String()) })
 	pc.OnConnectionStateChange(func(state webrtc.PeerConnectionState) {
 		if state == webrtc.PeerConnectionStateConnected && peer.everConnected.CompareAndSwap(false, true) {
@@ -194,7 +231,8 @@ func (r *Realm) newRTCMedia(config webrtc.Configuration) (string, error) {
 		}
 		r.emitRTCMedia(id, "connectionstatechange", state.String())
 	})
-	pc.OnSignalingStateChange(func(state webrtc.SignalingState) { r.emitRTCMedia(id, "signalingstatechange", state.String()) })
+	// Signaling notifications are emitted by the serialized description
+	// operation; Pion invokes this callback asynchronously after state changes.
 	pc.OnNegotiationNeeded(func() { r.emitRTCMedia(id, "negotiationneeded", nil) })
 	pc.OnDataChannel(func(channel *webrtc.DataChannel) { r.receiveRTCMediaData(peer, channel) })
 	pc.OnTrack(func(track *webrtc.TrackRemote, receiver *webrtc.RTPReceiver) {
@@ -354,7 +392,7 @@ func rtcMediaDescription(d *webrtc.SessionDescription) any {
 }
 func rtcMediaState(peer *rtcMediaPeer) map[string]any {
 	pc := peer.pc
-	return map[string]any{"localDescription": rtcPublicDescription(pc.LocalDescription(), peer.hideHost), "currentLocalDescription": rtcPublicDescription(pc.CurrentLocalDescription(), peer.hideHost), "pendingLocalDescription": rtcPublicDescription(pc.PendingLocalDescription(), peer.hideHost), "remoteDescription": rtcMediaDescription(pc.RemoteDescription()), "currentRemoteDescription": rtcMediaDescription(pc.CurrentRemoteDescription()), "pendingRemoteDescription": rtcMediaDescription(pc.PendingRemoteDescription()), "signalingState": pc.SignalingState().String(), "iceGatheringState": pc.ICEGatheringState().String(), "iceConnectionState": pc.ICEConnectionState().String(), "connectionState": pc.ConnectionState().String()}
+	return map[string]any{"localDescription": rtcPublicDescription(pc.LocalDescription(), peer.hideHost), "currentLocalDescription": rtcPublicDescription(pc.CurrentLocalDescription(), peer.hideHost), "pendingLocalDescription": rtcPublicDescription(pc.PendingLocalDescription(), peer.hideHost), "remoteDescription": rtcMediaDescription(pc.RemoteDescription()), "currentRemoteDescription": rtcMediaDescription(pc.CurrentRemoteDescription()), "pendingRemoteDescription": rtcMediaDescription(pc.PendingRemoteDescription()), "signalingState": pc.SignalingState().String(), "iceGatheringState": peer.gatheringState, "iceConnectionState": pc.ICEConnectionState().String(), "connectionState": pc.ConnectionState().String()}
 }
 
 type rtcCameraFrame struct {
@@ -773,10 +811,17 @@ func addRTCMediaHosts(r *Realm, h map[string]any) {
 				var description webrtc.SessionDescription
 				err = json.Unmarshal([]byte(raw), &description)
 				if err == nil {
+					oldState := peer.pc.SignalingState()
 					if operation == "local" {
+						peer.eventMu.Lock()
+						peer.localOperation = true
+						peer.eventMu.Unlock()
 						err = peer.pc.SetLocalDescription(description)
 					} else {
 						err = peer.pc.SetRemoteDescription(description)
+					}
+					if err == nil && oldState != peer.pc.SignalingState() {
+						r.emitRTCMedia(peer.id, "signalingstatechange", peer.pc.SignalingState().String())
 					}
 				}
 			case "ice":
@@ -798,7 +843,7 @@ func addRTCMediaHosts(r *Realm, h map[string]any) {
 				err = fmt.Errorf("unsupported RTC operation %s", operation)
 			}
 			if err != nil {
-				result = cameraFailure("OperationError", err.Error(), "")
+				result = rtcOperationFailure(err)
 			}
 			r.scheduler.Post(scheduler.DOM, 0, func(context.Context) error {
 				if err == nil && operation == "remote" && !r.closed && !r.inactive {
@@ -806,6 +851,15 @@ func addRTCMediaHosts(r *Realm, h map[string]any) {
 				}
 				return promise.Resolve(result)
 			})
+			if operation == "local" {
+				peer.eventMu.Lock()
+				for _, event := range peer.localEvents {
+					r.emitRTCMedia(peer.id, event.kind, event.data)
+				}
+				peer.localEvents = nil
+				peer.localOperation = false
+				peer.eventMu.Unlock()
+			}
 		}()
 		return promise.Value, nil
 	})

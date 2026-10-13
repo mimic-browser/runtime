@@ -22,6 +22,9 @@ replace github.com/go-text/typesetting => ./third_party/go-text-typesetting
 // Bundle only the platform camera drivers; no external capture process or codecs.
 replace github.com/pion/mediadevices => ./third_party/mediadevices
 
+// Keep generated SDP and staged ICE credentials in the authoritative native peer.
+replace github.com/pion/webrtc/v4 => ./third_party/pion-webrtc
+
 // Keep the approximate screenshot renderer on the maintained Go 1.26 fork.
 replace github.com/go-webengine/engine => github.com/mimic-browser/renderer v0.4.4-0.20261008164033-cb62e5ed5a97
 
