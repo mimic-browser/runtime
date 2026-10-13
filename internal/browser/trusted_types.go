@@ -7,6 +7,7 @@ import (
 	"github.com/moreveal/mimic/internal/csp"
 	"github.com/moreveal/mimic/internal/dom"
 	"github.com/moreveal/mimic/internal/engine"
+	"github.com/moreveal/mimic/internal/trace"
 )
 
 // Policy state belongs to the committed document. A saved Document or iframe
@@ -37,6 +38,9 @@ func (r *Realm) refreshContentPolicy() {
 			continue
 		}
 		r.policy = append(r.policy, csp.Parse(node.Attributes["content"])...)
+	}
+	if err := setEvalSourcePolicy(r.runtime, r.policy.TrustedTypes()); err != nil {
+		r.agent.Page().trace.Add(trace.Error, "evalSourcePolicy", map[string]any{"realm": r.ID, "error": err.Error()})
 	}
 }
 

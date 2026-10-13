@@ -181,6 +181,10 @@ type ImportMetaRuntime interface {
 // or undefined to preserve native eval's non-string identity behavior.
 type EvalSourceRuntime interface {
 	SetEvalSourceResolver(Value) error
+	// SetEvalSourceUnconstrained lets native string eval skip the policy
+	// callback while the owning Document has neither enforced Trusted Types nor
+	// a CSP unsafe-eval restriction. Non-string sources still reach the resolver.
+	SetEvalSourceUnconstrained(bool) error
 }
 
 // DebuggerEvalRuntime scopes the inspector's CSP unsafe-eval exception to one

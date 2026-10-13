@@ -2395,6 +2395,9 @@ func (r *Realm) installBindingsOnOwner() error {
 	if err := installEvalSourceResolver(r.runtime); err != nil {
 		return err
 	}
+	if err := setEvalSourcePolicy(r.runtime, r.trustedTypesState()); err != nil {
+		return err
+	}
 	r.messageReceiver = r.runtime.Get("__receiveFrameMessage")
 	r.documentStreamReset = r.runtime.Get("__mimicResetDocumentStream")
 	r.documentStreamEvent = r.runtime.Get("__mimicDocumentStreamEvent")

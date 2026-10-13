@@ -494,6 +494,10 @@ func (w *DedicatedWorker) run(ctx context.Context, source string, initialBlob *n
 		_ = w.reportError(err)
 		return
 	}
+	if err := setEvalSourcePolicy(runtime, w.policy.TrustedTypes()); err != nil {
+		_ = w.reportError(err)
+		return
+	}
 	if err := w.installModules(ctx); err != nil {
 		_ = w.reportError(err)
 		return

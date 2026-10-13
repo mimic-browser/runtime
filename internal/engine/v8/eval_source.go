@@ -25,6 +25,13 @@ func (a *adapter) SetEvalSourceResolver(resolver engine.Value) error {
 	return err
 }
 
+func (a *adapter) SetEvalSourceUnconstrained(unconstrained bool) error {
+	_, err := a.run(func(_ *state, realm *gov8.Context, _ *gov8.Scope) (engine.Value, error) {
+		return nil, realm.AllowCodeGenerationFromStrings(unconstrained)
+	})
+	return err
+}
+
 func (a *adapter) installEvalSourceResolver(s *state, realm *gov8.Context, scope *gov8.Scope, resolver engine.Value) error {
 	local, err := a.local(scope, resolver)
 	if err != nil {
