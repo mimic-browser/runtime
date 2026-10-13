@@ -505,10 +505,10 @@ const supportedComposite = new Set([
   'screen',
   ...canvasBlendModes,
 ]);
-const shadowSnapshot = (d, s) => {
+const shadowSnapshot = (d, s, frequent) => {
   const rgba = paintSnapshot(d.shadowColor, s.colorSpace || 'srgb', canvasColorScheme(s));
   if (!Array.isArray(rgba) || !rgba[3]) return null;
-  return { rgba, blur: d.shadowBlur, x: d.shadowOffsetX, y: d.shadowOffsetY };
+  return { rgba, blur: d.shadowBlur, x: d.shadowOffsetX, y: d.shadowOffsetY, frequent };
 };
 // Blur the source alpha before painting the source. Keep this in the canonical
 // pixel buffer so crops, copies and later overlapping draws see the same shadow.
@@ -550,6 +550,8 @@ const materializeShadow = (s, source, shadow, alpha, composite, clips) => {
       const sx = x - shadow.x,
         sy = y - shadow.y;
       if (sx < 0 || sy < 0 || sx >= w || sy >= h) continue;
+      // Chrome's frequent-read CPU canvas rounds the blurred mask to A8
+      // before tinting. The ordinary canvas uses a different presentation path.
       const ix = Math.floor(sx),
         iy = Math.floor(sy),
         nx = Math.min(ix + 1, w - 1),
@@ -560,8 +562,9 @@ const materializeShadow = (s, source, shadow, alpha, composite, clips) => {
           mask[iy * w + ix] * (1 - fx) * (1 - fy) +
           mask[iy * w + nx] * fx * (1 - fy) +
           mask[ny * w + ix] * (1 - fx) * fy +
-          mask[ny * w + nx] * fx * fy;
-      if (coverage > 0 && clipContains(clips, x + 0.5, y + 0.5))
+          mask[ny * w + nx] * fx * fy,
+        maskAlpha = shadow.frequent ? Math.round(coverage * 255) / 255 : coverage;
+      if (maskAlpha > 0 && clipContains(clips, x + 0.5, y + 0.5))
         compositePixel(
           s.pixels,
           (y * w + x) * 4,
@@ -569,7 +572,7 @@ const materializeShadow = (s, source, shadow, alpha, composite, clips) => {
           alpha,
           composite,
           s.opaque,
-          coverage,
+          maskAlpha,
         );
     }
 };
@@ -605,7 +608,7 @@ const queuePath = (c, path, rule, stroke = false, clear = false) => {
     composite: clear ? 'copy' : d.globalCompositeOperation,
     clear,
     clips: d.clipPaths || [],
-    shadow: clear ? null : shadowSnapshot(d, c.surface),
+    shadow: clear ? null : shadowSnapshot(d, c.surface, c.attributes.willReadFrequently),
   });
   // Long-lived animations need bounded deferred state even when they never
   // clear the full canvas. Folding a batch into the canonical pixel model

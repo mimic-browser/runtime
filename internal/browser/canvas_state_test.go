@@ -83,6 +83,21 @@ func TestCanvasShadowBlurUsesFrozenChromeFloat32State(t *testing.T) {
 	}
 }
 
+func TestCanvasFrequentReadShadowMaskQuantizesBeforeColor(t *testing.T) {
+	parallelBrowserTest(t)
+	p := blitzStandardsPage(t)
+	value, err := p.Evaluate(context.Background(), `(()=>{
+  const ctx=new OffscreenCanvas(20,20).getContext('2d',{willReadFrequently:true});
+  ctx.shadowColor='#809980';
+  ctx.shadowBlur=9.79908737641225;
+  ctx.fillRect(10,10,1,1);
+  return Array.from(ctx.getImageData(7,3,1,1).data).join(',');
+})()`)
+	if err != nil || value != "255,255,255,1" {
+		t.Fatalf("Chrome 152 frequent-read shadow A8 mask before source color: %v %v", value, err)
+	}
+}
+
 func TestCanvasDrawImageBlendAndGrayscale(t *testing.T) {
 	parallelBrowserTest(t)
 	p := blitzStandardsPage(t)

@@ -618,7 +618,7 @@ const canvasCompatibilityState = (() => {
       alpha: d.globalAlpha,
       composite: d.globalCompositeOperation,
       clips: d.clipPaths || [],
-      shadow: shadowSnapshot(d, c.surface),
+      shadow: shadowSnapshot(d, c.surface, c.attributes.willReadFrequently),
       stroke,
     });
     if (pending.length >= 256) {
