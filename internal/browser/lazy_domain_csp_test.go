@@ -68,7 +68,7 @@ func TestLazyWebAPIDomainsIgnoreAuthorEvalCSP(t *testing.T) {
   catch(error){result.nativeTypeError=error instanceof NativeTypeError}
   finally{globalThis.TypeError=NativeTypeError;globalThis.RangeError=NativeRangeError;globalThis.Error=NativeError;globalThis.Proxy=NativeProxy}
   result.intrinsicEffects=effects;
-  const intrinsicNames=['Object','Function','Array','Map','Set','WeakMap','WeakSet','Reflect','Promise','Date','Math','Number','String','RegExp','JSON','ArrayBuffer','DataView','Uint8Array','Float32Array'];
+  const intrinsicNames=['Object','Function','Array','Map','Set','WeakMap','WeakSet','Reflect','Promise','Date','Math','Number','String','RegExp','JSON','ArrayBuffer','DataView','Uint8Array','Float32Array','parseInt','parseFloat','encodeURIComponent','decodeURIComponent'];
   const originals={};
   const pixels=new Uint8Array(4);
   for(const name of intrinsicNames){
@@ -83,8 +83,11 @@ func TestLazyWebAPIDomainsIgnoreAuthorEvalCSP(t *testing.T) {
   try{
     const attributes=document.createElement('div').attributes;
     const headers=new Headers([['x-test','ok']]);
+    const canvas=new OffscreenCanvas(1,1),context=canvas.getContext('2d');
+    context.fillStyle='#123456';
+    const params=new URLSearchParams([['x','a b']]);
     new OffscreenCanvas(1,1).getContext('webgl').readPixels(0,0,1,1,6408,5121,pixels);
-    broadIntrinsicResult=attributes.length===0&&headers.get('x-test')==='ok'&&pixels.length===4;
+    broadIntrinsicResult=attributes.length===0&&headers.get('x-test')==='ok'&&context.fillStyle==='#123456'&&params.toString()==='x=a+b'&&pixels.length===4;
   }catch(error){broadIntrinsicResult=error.name+':'+error.message}
   finally{for(const name of intrinsicNames)globalThis[name]=originals[name]}
   result.broadIntrinsicResult=broadIntrinsicResult;

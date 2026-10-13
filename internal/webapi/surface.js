@@ -39,6 +39,17 @@
   Float64Array,
   BigInt64Array,
   BigUint64Array,
+  BigInt,
+  parseInt,
+  parseFloat,
+  isNaN,
+  isFinite,
+  decodeURI,
+  decodeURIComponent,
+  encodeURI,
+  encodeURIComponent,
+  escape,
+  unescape,
 ) {
   'use strict';
   // Platform operations use realm intrinsics even when author code replaces
@@ -10579,4 +10590,15 @@
   Float64Array,
   BigInt64Array,
   BigUint64Array,
+  BigInt,
+  parseInt,
+  parseFloat,
+  isNaN,
+  isFinite,
+  decodeURI,
+  decodeURIComponent,
+  encodeURI,
+  encodeURIComponent,
+  escape,
+  unescape,
 );

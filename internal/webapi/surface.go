@@ -583,7 +583,7 @@ globalThis.__mimicNativeFunctionSources=nativeFunctionSourceState;
 	return wrapIntrinsicScope(worker)
 }
 
-const intrinsicParameters = "Error,EvalError,TypeError,RangeError,ReferenceError,SyntaxError,URIError,AggregateError,Proxy,Reflect,Object,Function,Array,Map,Set,WeakMap,WeakSet,Promise,Date,Math,Number,String,Boolean,Symbol,RegExp,JSON,ArrayBuffer,DataView,Int8Array,Uint8Array,Uint8ClampedArray,Int16Array,Uint16Array,Int32Array,Uint32Array,Float32Array,Float64Array,BigInt64Array,BigUint64Array"
+const intrinsicParameters = "Error,EvalError,TypeError,RangeError,ReferenceError,SyntaxError,URIError,AggregateError,Proxy,Reflect,Object,Function,Array,Map,Set,WeakMap,WeakSet,Promise,Date,Math,Number,String,Boolean,Symbol,RegExp,JSON,ArrayBuffer,DataView,Int8Array,Uint8Array,Uint8ClampedArray,Int16Array,Uint16Array,Int32Array,Uint32Array,Float32Array,Float64Array,BigInt64Array,BigUint64Array,BigInt,parseInt,parseFloat,isNaN,isFinite,decodeURI,decodeURIComponent,encodeURI,encodeURIComponent,escape,unescape"
 
 func wrapIntrinsicScope(source string) string {
 	return "(function(" + intrinsicParameters + "){\n" + source + "\n})(" + intrinsicParameters + ");"
