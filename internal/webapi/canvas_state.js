@@ -453,6 +453,7 @@ const canvasCompatibilityState = (() => {
   let colorRaster = null;
   const rasterFontIDs = new Map();
   const rasterTiles = new Map();
+  const rasterInkBounds = new Map();
   let rasterTileBytes = 0;
   const rasterInstance = () => {
     if (colorRaster) return colorRaster;
@@ -460,7 +461,7 @@ const canvasCompatibilityState = (() => {
     colorRaster = new rasterInstanceCtor(new rasterModuleCtor(bytes)).exports;
     return colorRaster;
   };
-  const rasterGlyphTile = (run, glyph) => {
+  const rasterFontID = (glyph) => {
     const raster = rasterInstance();
     let fontID = rasterMapGet(rasterFontIDs, glyph.rasterID);
     if (fontID === undefined) {
@@ -475,6 +476,69 @@ const canvasCompatibilityState = (() => {
       }
       rasterMapSet(rasterFontIDs, glyph.rasterID, fontID);
     }
+    return fontID;
+  };
+  const rasterColorInkBounds = (glyph, fontSize) => {
+    const raster = rasterInstance(),
+      fontID = rasterFontID(glyph),
+      key = `${fontID}:${glyph.glyphID}:${fontSize}:${glyph.originX}:${glyph.originY}`,
+      cached = rasterMapGet(rasterInkBounds, key);
+    if (cached !== undefined) return cached || null;
+    // Color-paint bounds can extend beyond the base glyph outline. Render into
+    // a bounded symmetric tile, then derive the same integer alpha-pixel edges
+    // that Blink exposes through TextMetrics.actualBoundingBox*.
+    const margin = Math.ceil(fontSize * 2) + 8,
+      width = margin * 2,
+      height = margin * 2,
+      length = width * height * 4,
+      pointer = raster.raster_alloc(length);
+    if (!pointer) fail('NotSupportedError', 'Canvas color glyph exceeds the raster limit');
+    try {
+      const status = raster.raster_glyph(
+        fontID,
+        glyph.glyphID,
+        fontSize,
+        margin + glyph.originX,
+        margin + glyph.originY,
+        1,
+        0,
+        width,
+        height,
+        pointer,
+      );
+      if (status !== 0) fail('NotSupportedError', 'Canvas color glyph could not be rasterized');
+      const pixels = new RasterUint8Array(raster.memory.buffer, pointer, length);
+      let minX = width,
+        minY = height,
+        maxX = -1,
+        maxY = -1;
+      for (let y = 0; y < height; y++)
+        for (let x = 0; x < width; x++)
+          if (pixels[(y * width + x) * 4 + 3] !== 0) {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+      const result =
+        maxX < minX
+          ? null
+          : {
+              left: minX - margin,
+              right: maxX + 1 - margin,
+              top: minY - margin,
+              bottom: maxY + 1 - margin,
+            };
+      if (rasterInkBounds.size >= 4096) rasterMapClear(rasterInkBounds);
+      rasterMapSet(rasterInkBounds, key, result || false);
+      return result;
+    } finally {
+      raster.raster_free(pointer, length);
+    }
+  };
+  const rasterGlyphTile = (run, glyph) => {
+    const raster = rasterInstance();
+    const fontID = rasterFontID(glyph);
     const strokeWidth = run.stroke && !glyph.color ? run.lineWidth : 0,
       margin = Math.ceil(strokeWidth / 2) + 2,
       left = Math.floor(run.x + glyph.left * run.scale) - margin,
@@ -577,6 +641,14 @@ const canvasCompatibilityState = (() => {
       const x = width + g.xOffset,
         y = g.yOffset;
       if (g.ink) {
+        if (g.color && g.rasterID) {
+          const bounds = rasterColorInkBounds({ ...g, originX: x, originY: y }, size);
+          if (bounds) {
+            g.right = bounds.right - x;
+            g.top = bounds.top - y;
+            g.bottom = bounds.bottom - y;
+          }
+        }
         left = Math.min(left, x + g.left);
         right = Math.max(right, x + g.right);
         top = Math.min(top, y + g.top);

@@ -89,6 +89,35 @@ func TestCanvasColorGlyphUsesCanonicalSurface(t *testing.T) {
 	}
 }
 
+func TestCanvasColorGlyphMetricsUseRasterInkBounds(t *testing.T) {
+	serialBrowserTest(t)
+	p := bootstrapSnapshotPage(t)
+	defer p.Close()
+	value, err := p.Evaluate(context.Background(), `(() => {
+  const context = new OffscreenCanvas(200, 100).getContext('2d');
+  context.font = '16px "Segoe UI Emoji", sans-serif';
+  return ['😀', '🤵‍♂️', '♨'].map(text => {
+    const metric = context.measureText(text);
+    return [metric.actualBoundingBoxAscent, metric.actualBoundingBoxDescent,
+      metric.actualBoundingBoxLeft, metric.actualBoundingBoxRight, metric.width];
+  });
+})()`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Direct frozen headful Chrome 152 observations. Color-paint layers extend
+	// beyond a glyph's base outline, so these edges must come from the same CPU
+	// raster surface used by fillText rather than the monochrome outline box.
+	want := []any{
+		[]any{float64(14), float64(3), float64(-2), float64(19), float64(21.96875)},
+		[]any{float64(14), float64(3), float64(-4), float64(18), float64(21.96875)},
+		[]any{float64(14), float64(3), float64(-3), float64(19), float64(21.96875)},
+	}
+	if diff := bootstrapSnapshotDifference("Canvas color glyph metrics", want, value); diff != "" {
+		t.Fatal(diff)
+	}
+}
+
 // Direct frozen headful Chrome 152 keeps emoji painted in color during
 // strokeText, while the monochrome letters use stroke outlines. The two text
 // modes therefore have different alpha coverage on the same font run.
