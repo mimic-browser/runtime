@@ -24,7 +24,7 @@ Paths approximate curves with bounded line segments and 8-by-8 coverage samples.
 COLRv1 color glyphs in unscaled, identity-transform, source-over `fillText` calls
 are rendered from the selected font's paint graph into that same Canvas surface.
 The module is Page/realm-owned and loads a font only when a color glyph is read.
-Stroke cap/join/dash fidelity, exact radial-gradient edge cases, Path2D, arcTo,
+Stroke join/miter fidelity, exact radial-gradient edge cases, Path2D, arcTo,
 roundRect, shadows, filters, transformed or scaled color text, monochrome glyph
 rasterization, exact text metrics, image decoding and general image resampling
 remain incomplete. Unsupported text modes retain the diagnosed coarse coverage
@@ -92,6 +92,8 @@ The source SHA-256 and reference results are retained under
 - `canvas-paths-chrome152.json`: clipping, winding, transforms, copy and reset.
 - `canvas-relations-chrome152.json`: repeated/local curve changes, gradient
   mutation/snapshots, text clipping and copy outside the glyph area.
+- `canvas-dash-chrome152.json`: dash phase, negative offsets, odd and all-zero
+  patterns, and immutable stroke snapshots.
 - `webgl-programs-chrome152.json`: linking, uniforms, arithmetic loops, readbacks,
   local scissor changes and deferred resource deletion.
 - `webgl-framebuffers-chrome152.json`: attachment lifecycle and integer/float

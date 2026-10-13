@@ -1,0 +1,241 @@
+{
+  "browser": "Chrome/152.0.7977.82",
+  "metadata": {
+    "existingBrowser": true,
+    "isolatedBrowserContext": false,
+    "headful": true,
+    "freshProfile": true,
+    "fixture": "internal/browser/testdata/canvas_dash_oracle.js",
+    "fixtureSHA256": "72310b7af3056f72f50381cf14ac55a3b9a108c6dbc28122da6c47fc1bf51a72",
+    "fixtureHashNormalization": "LF",
+    "chromeSHA256": "ea36dd818a90176f1a70616f0363d9be527229389a6c073a0b1688b9e73f67e9",
+    "v8": "15.2.124.21",
+    "originalWebdriver": false,
+    "launchArguments": [
+      "--remote-debugging-port=19516",
+      "--user-data-dir=C:\\Users\\moreveal\\Desktop\\mimic-contract-poc\\my-runs\\offline-hsw-latest\\canvas-dash-chrome152-20261013\\chrome-profile",
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--window-size=1280,800",
+      "about:blank"
+    ]
+  },
+  "result": {
+    "basic": {
+      "alpha": [
+        0,
+        0,
+        255,
+        255,
+        255,
+        255,
+        0,
+        0,
+        255,
+        255,
+        255,
+        255,
+        0,
+        0,
+        255,
+        255,
+        255,
+        255,
+        0,
+        0,
+        255,
+        255,
+        0,
+        0
+      ],
+      "sum": 7140,
+      "state": [
+        [
+          4,
+          2
+        ],
+        0
+      ]
+    },
+    "positive": {
+      "alpha": [
+        0,
+        0,
+        255,
+        255,
+        0,
+        0,
+        255,
+        255,
+        255,
+        255,
+        0,
+        0,
+        255,
+        255,
+        255,
+        255,
+        0,
+        0,
+        255,
+        255,
+        255,
+        255,
+        0,
+        0
+      ],
+      "sum": 7140,
+      "state": [
+        [
+          4,
+          2
+        ],
+        2
+      ]
+    },
+    "negative": {
+      "alpha": [
+        0,
+        0,
+        0,
+        0,
+        255,
+        255,
+        255,
+        255,
+        0,
+        0,
+        255,
+        255,
+        255,
+        255,
+        0,
+        0,
+        255,
+        255,
+        255,
+        255,
+        0,
+        0,
+        0,
+        0
+      ],
+      "sum": 6120,
+      "state": [
+        [
+          4,
+          2
+        ],
+        -2
+      ]
+    },
+    "odd": {
+      "alpha": [
+        0,
+        0,
+        255,
+        255,
+        255,
+        0,
+        0,
+        0,
+        255,
+        255,
+        255,
+        0,
+        0,
+        0,
+        255,
+        255,
+        255,
+        0,
+        0,
+        0,
+        255,
+        255,
+        0,
+        0
+      ],
+      "sum": 5610,
+      "state": [
+        [
+          3,
+          3
+        ],
+        0
+      ]
+    },
+    "zeros": {
+      "alpha": [
+        0,
+        0,
+        255,
+        255,
+        255,
+        255,
+        255,
+        255,
+        255,
+        255,
+        255,
+        255,
+        255,
+        255,
+        255,
+        255,
+        255,
+        255,
+        255,
+        255,
+        255,
+        255,
+        0,
+        0
+      ],
+      "sum": 10200,
+      "state": [
+        [
+          0,
+          0
+        ],
+        0
+      ]
+    },
+    "snapshot": {
+      "alpha": [
+        0,
+        0,
+        255,
+        255,
+        255,
+        255,
+        0,
+        0,
+        255,
+        255,
+        255,
+        255,
+        0,
+        0,
+        255,
+        255,
+        255,
+        255,
+        0,
+        0,
+        255,
+        255,
+        0,
+        0
+      ],
+      "sum": 7140,
+      "state": [
+        [
+          1,
+          1
+        ],
+        7
+      ]
+    }
+  }
+}

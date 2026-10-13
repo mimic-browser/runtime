@@ -7,6 +7,62 @@ const pathCopy = (p) =>
     curved: !!s.curved,
     points: s.points.map((p) => p.slice()),
   }));
+const dashedPath = (path, pattern, offset) => {
+  if (!pattern.length) return pathCopy(path);
+  const total = pattern.reduce((sum, value) => sum + value, 0);
+  // Frozen Chrome treats an all-zero dash list as a solid stroke.
+  if (!total) return pathCopy(path);
+  let phase = ((offset % total) + total) % total,
+    initialIndex = 0;
+  while (phase >= pattern[initialIndex]) {
+    phase -= pattern[initialIndex];
+    initialIndex = (initialIndex + 1) % pattern.length;
+  }
+  const result = [];
+  for (const sub of path) {
+    const points = sub.points,
+      edgeCount = Math.max(0, points.length - 1 + (sub.closed ? 1 : 0));
+    let index = initialIndex,
+      remaining = pattern[index] - phase,
+      active = null;
+    const advance = () => {
+      do {
+        index = (index + 1) % pattern.length;
+        remaining = pattern[index];
+      } while (!remaining);
+      active = null;
+    };
+    if (!remaining) advance();
+    for (let edge = 0; edge < edgeCount; edge++) {
+      const a = points[edge],
+        b = points[(edge + 1) % points.length],
+        dx = b[0] - a[0],
+        dy = b[1] - a[1],
+        length = Math.hypot(dx, dy);
+      if (!length) continue;
+      let consumed = 0;
+      while (consumed < length) {
+        const amount = Math.min(remaining, length - consumed),
+          start = [a[0] + (dx * consumed) / length, a[1] + (dy * consumed) / length],
+          end = [
+            a[0] + (dx * (consumed + amount)) / length,
+            a[1] + (dy * (consumed + amount)) / length,
+          ];
+        if (index % 2 === 0) {
+          if (!active) {
+            active = { closed: false, curved: !!sub.curved, points: [start] };
+            result.push(active);
+          }
+          active.points.push(end);
+        }
+        consumed += amount;
+        remaining -= amount;
+        if (remaining <= 1e-12) advance();
+      }
+    }
+  }
+  return result;
+};
 const transformPoint = (m, x, y) => [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]];
 const currentPath = (c) => c.path || (c.path = []);
 const appendPoint = (c, x, y, move = false) => {
@@ -644,10 +700,18 @@ const queuePath = (c, path, rule, stroke = false, clear = false) => {
     Math.hypot(d.transform[0], d.transform[1]),
     Math.hypot(d.transform[2], d.transform[3]),
   );
+  const strokePath =
+    stroke && d.dash.length
+      ? dashedPath(
+          path,
+          d.dash.map((value) => value * scale),
+          d.lineDashOffset * scale,
+        )
+      : pathCopy(path);
   const pending = c.surface.pendingText || (c.surface.pendingText = []);
   pending.push({
     kind: 'path',
-    path: pathCopy(path),
+    path: strokePath,
     rule,
     stroke,
     width: d.lineWidth * scale,
