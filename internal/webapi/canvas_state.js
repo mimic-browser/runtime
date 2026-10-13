@@ -27,6 +27,27 @@ const canvasCompatibilityState = (() => {
     }),
   );
   const decodedSourceImages = new WeakMap();
+  const imageBytesBase64 = (bytes) => {
+    let binary = '';
+    for (let offset = 0; offset < bytes.length; offset += 32768)
+      binary += String.fromCharCode(...bytes.subarray(offset, offset + 32768));
+    return btoa(binary);
+  };
+  const decodedImageBytes = (bytes, type) => {
+    const data = host.decodeImageBytes(imageBytesBase64(bytes), type || '');
+    if (data.error) fail('InvalidStateError', data.error);
+    const raw = atob(data.pixels),
+      pixels = new Uint8ClampedArray(raw.length);
+    for (let i = 0; i < raw.length; i++) pixels[i] = raw.charCodeAt(i);
+    return {
+      width: data.width,
+      height: data.height,
+      pixels,
+      colorSpace: 'srgb',
+      closed: false,
+      originClean: true,
+    };
+  };
   const sourceImage = (source) => {
     const data = host.imagePixels(elementSlot(source).nodeId);
     if (!data) {
@@ -1298,6 +1319,11 @@ const canvasCompatibilityState = (() => {
             ? new Uint8ClampedArray(image.pixels)
             : image.pixels.slice(),
         ga = c.draw.globalAlpha;
+      if (image.premultiplied === false)
+        for (let i = 0; i < input.length; i += 4) {
+          const alpha = input[i + 3] / 255;
+          for (let channel = 0; channel < 3; channel++) input[i + channel] *= alpha;
+        }
       const directOpaque =
         p instanceof Uint8ClampedArray &&
         input instanceof Uint8ClampedArray &&
@@ -1797,6 +1823,8 @@ const canvasCompatibilityState = (() => {
         for (let k = 0; k < 3; k++) canvasStore(pixels, i + k, (d.data[i + k] * scale * a) / 255);
       }
       b = { width: d.width, height: d.height, pixels, colorSpace: d.colorSpace, closed: false };
+    } else if (typeof Blob !== 'undefined' && source instanceof Blob) {
+      b = decodedImageBytes(new Uint8Array(await source.arrayBuffer()), source.type);
     } else fail('NotSupportedError', 'Decoding this ImageBitmap source is not implemented');
     if (!b.width || !b.height) fail('InvalidStateError', 'ImageBitmap source has zero dimensions');
     let options = args[0] || {};
@@ -1825,13 +1853,64 @@ const canvasCompatibilityState = (() => {
       b = { ...b, width: w, height: h, pixels };
       options = args[4] || {};
     } else if (args.length > 1) throw new TypeError('Invalid ImageBitmap arguments');
-    if (
-      options.resizeWidth !== undefined ||
-      options.resizeHeight !== undefined ||
-      options.imageOrientation === 'flipY' ||
-      options.premultiplyAlpha === 'none'
-    )
-      fail('NotSupportedError', 'ImageBitmap conversion options are not implemented');
+    if (options.imageOrientation === 'flipY') {
+      const pixels =
+        b.pixels instanceof Float32Array
+          ? new Float32Array(b.pixels.length)
+          : new Uint8ClampedArray(b.pixels.length);
+      const stride = b.width * 4;
+      for (let y = 0; y < b.height; y++)
+        pixels.set(b.pixels.subarray(y * stride, (y + 1) * stride), (b.height - y - 1) * stride);
+      b = { ...b, pixels };
+    }
+    const hasResizeWidth = options.resizeWidth !== undefined,
+      hasResizeHeight = options.resizeHeight !== undefined;
+    if (hasResizeWidth || hasResizeHeight) {
+      let width = hasResizeWidth ? Math.trunc(Number(options.resizeWidth)) : undefined,
+        height = hasResizeHeight ? Math.trunc(Number(options.resizeHeight)) : undefined;
+      if (
+        (hasResizeWidth && (!Number.isFinite(width) || width <= 0)) ||
+        (hasResizeHeight && (!Number.isFinite(height) || height <= 0))
+      )
+        fail('InvalidStateError', 'The resize dimensions must be greater than zero.');
+      if (width === undefined) width = Math.max(1, Math.round((b.width * height) / b.height));
+      if (height === undefined) height = Math.max(1, Math.round((b.height * width) / b.width));
+      const quality = options.resizeQuality || 'low';
+      if (!['pixelated', 'low', 'medium', 'high'].includes(quality))
+        throw new TypeError('Invalid ImageBitmap resize quality');
+      const canvas = new OffscreenCanvas(width, height),
+        context = canvas.getContext('2d', { willReadFrequently: true });
+      context.imageSmoothingEnabled = quality !== 'pixelated';
+      if (quality !== 'pixelated') context.imageSmoothingQuality = quality;
+      context.drawImage(new ImageBitmap(token, b), 0, 0, width, height);
+      const surface = sync(state(canvas));
+      b = {
+        ...b,
+        width,
+        height,
+        pixels: buffer(surface).slice(),
+        premultiplied: true,
+        unmodeled: b.unmodeled || surface.unmodeled,
+      };
+    }
+    const wantUnpremultiplied = options.premultiplyAlpha === 'none';
+    if (wantUnpremultiplied && b.premultiplied !== false) {
+      const pixels = b.pixels.slice();
+      for (let i = 0; i < pixels.length; i += 4) {
+        const alpha = pixels[i + 3];
+        if (!alpha) continue;
+        for (let channel = 0; channel < 3; channel++)
+          canvasStore(pixels, i + channel, (pixels[i + channel] * 255) / alpha);
+      }
+      b = { ...b, pixels, premultiplied: false };
+    } else if (!wantUnpremultiplied && b.premultiplied === false) {
+      const pixels = b.pixels.slice();
+      for (let i = 0; i < pixels.length; i += 4) {
+        const alpha = pixels[i + 3] / 255;
+        for (let channel = 0; channel < 3; channel++) pixels[i + channel] *= alpha;
+      }
+      b = { ...b, pixels, premultiplied: true };
+    }
     return new ImageBitmap(token, b);
   };
   // Canvas serialization consumes the same readback state as getImageData and

@@ -3,7 +3,23 @@ package browser
 import (
 	"encoding/base64"
 	"github.com/moreveal/mimic/internal/engine"
+	"github.com/moreveal/mimic/internal/imageresource"
 )
+
+func decodeImageBase64(encoded, contentType string) map[string]any {
+	data, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return map[string]any{"error": "The source image could not be decoded."}
+	}
+	decoded, err := imageresource.New(data, contentType).RequireDecodedImage()
+	if err != nil || decoded.Vector || decoded.PixelsUnavailable {
+		return map[string]any{"error": "The source image could not be decoded."}
+	}
+	return map[string]any{
+		"width": decoded.Width, "height": decoded.Height,
+		"pixels": base64.StdEncoding.EncodeToString(decoded.Pixels),
+	}
+}
 
 func (r *Realm) installImageResources(host map[string]any) {
 	host["compressCanvasScanline"] = r.fn(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
@@ -12,6 +28,9 @@ func (r *Realm) installImageResources(host map[string]any) {
 			return nil, err
 		}
 		return r.val(encoded), nil
+	})
+	host["decodeImageBytes"] = r.fn(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
+		return r.val(decodeImageBase64(strarg(args, 0), strarg(args, 1))), nil
 	})
 	host["imageInfo"] = r.fn(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
 		id := int64(numarg(args, 0))

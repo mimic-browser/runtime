@@ -402,6 +402,9 @@ func (w *DedicatedWorker) run(ctx context.Context, source string, initialBlob *n
 		}
 		return runtime.Value(encoded), nil
 	})
+	host["decodeImageBytes"] = runtime.Function(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
+		return runtime.Value(decodeImageBase64(strarg(args, 0), strarg(args, 1))), nil
+	})
 	host["randomUUID"] = runtime.Function(func(engine.Value, []engine.Value) (engine.Value, error) {
 		p.trace.Add(trace.API, "Crypto.randomUUID", map[string]any{"worker": w.id})
 		return runtime.Value(uuid.NewString()), nil
