@@ -691,15 +691,21 @@
       if (mask & 1024) s.stencilValue = s.stencilClear;
       if (!(mask & 16384)) return;
       if (s.drawFramebuffer) {
-        const framebuffer = resources.get(s.drawFramebuffer);
-        const color = resources.get(framebuffer?.attachments.get(36064));
-        if (!color?.pixels || color.storageFormat !== 34836) fail('attachment clear');
+        const color = framebufferColor(s, s.drawFramebuffer);
+        if (
+          !color?.pixels ||
+          ![6408, 32856, 34836].includes(color.internalformat || color.storageFormat)
+        )
+          fail('attachment clear');
         materializePrograms(s);
         const rect = s.enabled.get(3089) ? s.scissor : [0, 0, color.width, color.height];
         for (let y = Math.max(0, rect[1]); y < Math.min(color.height, rect[1] + rect[3]); y++)
           for (let x = Math.max(0, rect[0]); x < Math.min(color.width, rect[0] + rect[2]); x++)
             for (let c = 0; c < 4; c++)
-              if (s.mask[c]) color.pixels[(y * color.width + x) * 4 + c] = s.color[c];
+              if (s.mask[c])
+                color.pixels[(y * color.width + x) * 4 + c] = !color.floatPixels
+                  ? Math.ceil(s.color[c] * 255 - 0.5)
+                  : s.color[c];
         return;
       }
       const pixels = storage(s),
@@ -725,13 +731,17 @@
         return;
       }
       if (s.readFramebuffer) {
-        const framebuffer = resources.get(s.readFramebuffer);
-        const color = resources.get(framebuffer?.attachments.get(36064));
-        if (!color?.pixels || color.storageFormat !== 34836) fail('attachment readPixels');
+        const color = framebufferColor(s, s.readFramebuffer);
+        if (
+          !color?.pixels ||
+          ![6408, 32856, 34836].includes(color.internalformat || color.storageFormat)
+        )
+          fail('attachment readPixels');
+        const floating = !!color.floatPixels;
         if (
           Number(format) !== 6408 ||
-          Number(pixelType) !== 5126 ||
-          !(dest instanceof Float32Array)
+          Number(pixelType) !== (floating ? 5126 : 5121) ||
+          !(dest instanceof (floating ? Float32Array : Uint8Array))
         )
           fail('attachment readPixels format');
         if (dest.length < w * h * 4) {

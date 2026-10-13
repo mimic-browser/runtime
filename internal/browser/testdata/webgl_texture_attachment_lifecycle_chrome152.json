@@ -1,0 +1,17 @@
+{
+  "reference": "Chrome 152.0.7977.82 / Windows x64 / headful / direct-launch diagnostic; complete provenance retained privately",
+  "sourceSHA256": "e09c907efbd950b9634964447ab96dab61ee0b8a262bc84046d5843b51da9adc",
+  "observation": {
+    "attached": 36053,
+    "deleted": false,
+    "rebound": 36053,
+    "sameObject": true,
+    "pixels": [
+      11,
+      23,
+      47,
+      255
+    ],
+    "error": 0
+  }
+}

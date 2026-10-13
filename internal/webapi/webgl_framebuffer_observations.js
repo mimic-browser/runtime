@@ -8,6 +8,7 @@ const renderFormats = {
   36168: [0, 0, 0, 0, 0, 8],
   34041: [0, 0, 0, 0, 24, 8],
   32856: [8, 8, 8, 8, 0, 0],
+  6408: [8, 8, 8, 8, 0, 0],
   32849: [8, 8, 8, 0, 0, 0],
   33321: [8, 0, 0, 0, 0, 0],
   33323: [8, 8, 0, 0, 0, 0],
@@ -51,6 +52,7 @@ for (const [name, klass] of [
       deleted: false,
       bound: false,
       attachments: new Map(),
+      attachmentImages: name === 'Framebuffer' ? new Map() : undefined,
       width: 0,
       height: 0,
       format: 32854,
@@ -72,7 +74,10 @@ for (const [name, klass] of [
     if (name === 'Framebuffer') {
       if (s.drawFramebuffer === value) s.drawFramebuffer = null;
       if (s.readFramebuffer === value) s.readFramebuffer = null;
+      const attached = [...own.attachments.values()];
       own.attachments.clear();
+      for (const texture of attached) releaseTextureAttachment(value, texture);
+      own.attachmentImages.clear();
       own.multiview?.clear();
     } else {
       if (s.renderbuffer === value) s.renderbuffer = null;
@@ -161,7 +166,13 @@ method('renderbufferStorage', (s, t, format, width, height) => {
     storageFormat: format,
     width,
     height,
-    pixels: format === 34836 ? new Float32Array(width * height * 4) : null,
+    pixels:
+      format === 34836
+        ? new Float32Array(width * height * 4)
+        : format === 32856
+          ? new Uint8Array(width * height * 4)
+          : null,
+    floatPixels: format === 34836,
   });
 });
 method('getRenderbufferParameter', (s, t, p) => {
@@ -199,11 +210,62 @@ method('framebufferRenderbuffer', (s, t, a, rt, value) => {
     return;
   }
   if (value !== null && !resource(s, value, 'WebGLRenderbuffer')) return;
-  for (const key of a === 33306 ? [36096, 36128] : [a])
+  const keys = a === 33306 ? [36096, 36128] : [a],
+    old = keys.map((key) => f.attachments.get(key));
+  for (const key of keys)
     if (value === null) f.attachments.delete(key);
     else f.attachments.set(key, value);
-  for (const key of a === 33306 ? [36096, 36128] : [a]) f.multiview?.delete(key);
+  for (const key of keys) {
+    f.attachmentImages.delete(key);
+    f.multiview?.delete(key);
+  }
+  for (const previous of old) releaseTextureAttachment(framebufferBinding(s, t), previous);
 });
+method('framebufferTexture2D', (s, t, a, imageTarget, value, level) => {
+  t = framebufferTarget(s, t);
+  if (!t) return;
+  a = attachmentValid(s, a);
+  if (!a) return;
+  imageTarget = textureImageTarget(s, imageTarget);
+  if (!imageTarget) return;
+  level = Number(level) | 0;
+  if (level < 0 || (kind === 'webgl' && level !== 0)) {
+    error(s, 1281);
+    return;
+  }
+  const f = resources.get(framebufferBinding(s, t));
+  if (!f) {
+    error(s, 1282);
+    return;
+  }
+  if (value !== null) {
+    const texture = resource(s, value, 'WebGLTexture');
+    if (!texture) return;
+    const binding = imageTarget === 3553 ? 3553 : 34067;
+    if (texture.target !== binding) {
+      error(s, 1282);
+      return;
+    }
+  }
+  const old = f.attachments.get(a);
+  if (value === null) {
+    f.attachments.delete(a);
+    f.attachmentImages.delete(a);
+  } else {
+    f.attachments.set(a, value);
+    f.attachmentImages.set(a, { target: imageTarget, level });
+    resources.get(value).framebuffers.add(framebufferBinding(s, t));
+  }
+  releaseTextureAttachment(framebufferBinding(s, t), old);
+  f.multiview?.delete(a);
+});
+const framebufferColor = (s, binding) => {
+  const framebuffer = resources.get(binding),
+    value = framebuffer?.attachments.get(36064),
+    resource = resources.get(value),
+    image = framebuffer?.attachmentImages.get(36064);
+  return image ? resource?.levels.get(image.target + ':' + image.level) : resource;
+};
 method('checkFramebufferStatus', (s, t) => {
   t = framebufferTarget(s, t);
   if (!t) return 0;
@@ -223,19 +285,25 @@ method('checkFramebufferStatus', (s, t) => {
       continue;
     }
     const r = resources.get(value),
-      bits = renderFormats[r.storageFormat] || [0, 0, 0, 0, 0, 0];
+      image = f.attachmentImages.get(a),
+      level = image ? r.levels.get(image.target + ':' + image.level) : r,
+      bits = renderFormats[level?.internalformat || level?.storageFormat] || [0, 0, 0, 0, 0, 0];
     if (
-      !r.width ||
-      !r.height ||
+      !level?.width ||
+      !level?.height ||
       (a >= 36064 && a < 36096 && !bits[0]) ||
       (a === 36096 && !bits[4]) ||
       (a === 36128 && !bits[5])
     )
       return 36054;
-    if (kind === 'webgl' && width !== undefined && (width !== r.width || height !== r.height))
+    if (
+      kind === 'webgl' &&
+      width !== undefined &&
+      (width !== level.width || height !== level.height)
+    )
       return 36057;
-    width = r.width;
-    height = r.height;
+    width = level.width;
+    height = level.height;
   }
   return 36053;
 });
@@ -269,11 +337,22 @@ method('getFramebufferAttachmentParameter', (s, t, a, p) => {
     error(s, 1280);
     return null;
   }
-  if (p === 36048) return value ? 36161 : 0;
+  if (p === 36048) return value ? (f.attachmentImages.has(a) ? 5890 : 36161) : 0;
   if (p === 36049) return value || null;
   if (!value) {
     error(s, 1282);
     return null;
+  }
+  if (f.attachmentImages.has(a)) {
+    const image = f.attachmentImages.get(a),
+      level = r.levels.get(image.target + ':' + image.level);
+    if (p === 36050) return image.level;
+    if (p === 36051) return image.target === 3553 ? 0 : image.target;
+    if (p === 33296) return 9729;
+    if (p === 33297) return level?.floatPixels ? 5126 : 35863;
+    const i = [33298, 33299, 33300, 33301, 33302, 33303].indexOf(p);
+    if (i >= 0 && kind === 'webgl2')
+      return level ? (renderFormats[level.internalformat] || [0, 0, 0, 0, 0, 0])[i] : 0;
   }
   if (p === 33296) return 9729;
   if (p === 33297) {

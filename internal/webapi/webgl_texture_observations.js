@@ -34,6 +34,7 @@ method('createTexture', (s) => {
     bound: false,
     target: 0,
     levels: new Map(),
+    framebuffers: new Set(),
     parameters: new Map([
       [10240, 9729],
       [10241, 9986],
@@ -91,10 +92,29 @@ method('deleteTexture', (s, value) => {
   const r = resource(s, value, 'WebGLTexture');
   if (!r) return;
   r.deleted = true;
-  r.levels.clear();
   for (const unit of s.textureUnits?.values() || [])
     for (const [target, bound] of unit) if (bound === value) unit.set(target, null);
+  for (const bound of new Set([s.drawFramebuffer, s.readFramebuffer])) {
+    const framebuffer = resources.get(bound);
+    if (!framebuffer) continue;
+    for (const [attachment, attached] of framebuffer.attachments)
+      if (attached === value) {
+        framebuffer.attachments.delete(attachment);
+        framebuffer.attachmentImages.delete(attachment);
+        framebuffer.multiview?.delete(attachment);
+      }
+    if (![...framebuffer.attachments.values()].includes(value)) r.framebuffers.delete(bound);
+  }
+  if (!r.framebuffers.size) r.levels.clear();
 });
+const releaseTextureAttachment = (framebuffer, value) => {
+  const texture = resources.get(value);
+  if (texture?.type !== 'WebGLTexture') return;
+  const attached = resources.get(framebuffer)?.attachments;
+  if (!attached || ![...attached.values()].includes(value))
+    texture.framebuffers.delete(framebuffer);
+  if (texture.deleted && !texture.framebuffers.size) texture.levels.clear();
+};
 method('getTexParameter', (s, target, pname) => {
   const t = textureBound(s, target);
   if (!t) return null;

@@ -60,9 +60,14 @@ are derived from the captured geometry. Approximate shader observations are diag
 
 Framebuffer/renderbuffer objects retain binding, ownership, deletion, attachment,
 format, dimensions and completeness state. Float formats require the enabled
-extension. This supports capability/resource queries, not attachment pixel
-execution: attachment clear/read/draw, textures and multisample allocation stay
-explicitly unsupported. No duplicate attachment pixel model is introduced.
+extension. Attached RGBA8 textures and renderbuffers share their underlying
+pixels with texture uploads, scissored clears and readback; RGBA32F renderbuffer
+clear/readback uses the same attachment path. Deleting a texture detaches it
+from the bound framebuffer while an unbound framebuffer retains the attached
+image until it is detached or deleted, matching the retained Chrome controls.
+Other attachment formats, texture-backed shader drawing, multisample storage
+and blits remain explicit boundaries. No duplicate attachment pixel model is
+introduced.
 
 ## Evidence
 
@@ -81,6 +86,10 @@ The source SHA-256 and reference results are retained under
 - `webgl-geometry-chrome152.json`: triangle-strip facing and fragment depth/W.
 - `webgl-framebuffer-lifecycle-chrome152.json`: deletion while an attachment
   remains held by an unbound framebuffer.
+- `internal/browser/testdata/webgl*_attachment*_chrome152.json`: RGBA8
+  attachment upload, clear, readback and bound/unbound texture deletion in
+  direct headful Chrome 152 controls. Exact launch provenance is retained with
+  the private raw captures.
 - `webgl-validation-chrome152.json`: invalid shader cases, inactive inputs,
   uniform type errors and stale locations after relinking.
 
