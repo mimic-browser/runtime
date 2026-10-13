@@ -57,6 +57,20 @@ const cases = [
   },
   { path: [sub(circle)], stroke: true, width: 1.5 },
   {
+    path: [sub([[2, 12], [7, 2], [12, 12]], false)],
+    stroke: true,
+    width: 4,
+    lineJoin: 'miter',
+    miterLimit: 10,
+  },
+  {
+    path: [sub([[2, 12], [7, 2], [12, 12]], false)],
+    stroke: true,
+    width: 4,
+    lineJoin: 'round',
+    miterLimit: 10,
+  },
+  {
     path: [
       sub(
         [
@@ -100,7 +114,15 @@ for (let index = 0; index < cases.length; index++) {
             if (
               op.clips.every((c) => containsPath(c.path, px, py, c.rule)) &&
               (op.stroke
-                ? strokeContains(op.path, px, py, op.width)
+                ? strokeContains(
+                    op.path,
+                    px,
+                    py,
+                    op.width,
+                    op.lineCap,
+                    op.lineJoin,
+                    op.miterLimit,
+                  )
                 : containsPath(op.path, px, py, op.rule))
             )
               count++;

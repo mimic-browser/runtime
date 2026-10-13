@@ -625,7 +625,15 @@ const strokeJoins = (op) => {
         turn = first[0] * second[1] - first[1] * second[0];
       if (Math.abs(turn) < 1e-12) continue;
       if (op.lineJoin === 'round') {
-        joins.push({ kind: 'round', point, radius });
+        joins.push({
+          kind: 'round',
+          point,
+          radius,
+          left: point[0] - radius,
+          right: point[0] + radius,
+          top: point[1] - radius,
+          bottom: point[1] + radius,
+        });
         continue;
       }
       const side = turn > 0 ? 1 : -1,
@@ -639,20 +647,32 @@ const strokeJoins = (op) => {
         if (Math.hypot(miter[0] - point[0], miter[1] - point[1]) <= op.miterLimit * radius)
           polygon = [point, firstCorner, miter, secondCorner];
       }
-      joins.push({ kind: 'polygon', points: polygon });
+      joins.push({
+        kind: 'polygon',
+        points: polygon,
+        left: Math.min(...polygon.map((p) => p[0])),
+        right: Math.max(...polygon.map((p) => p[0])),
+        top: Math.min(...polygon.map((p) => p[1])),
+        bottom: Math.max(...polygon.map((p) => p[1])),
+      });
     }
   }
   op.strokeJoins = joins;
   return joins;
 };
-const strokeJoinsContain = (op, x, y) => {
-  for (const join of strokeJoins(op)) {
+const strokeJoinListContains = (joins, x, y) => {
+  for (const join of joins) {
     if (join.kind === 'round') {
       if ((x - join.point[0]) ** 2 + (y - join.point[1]) ** 2 <= join.radius ** 2) return true;
     } else if (pointInConvexJoin(join.points, x, y)) return true;
   }
   return false;
 };
+const strokeJoinsContain = (op, x, y) => strokeJoinListContains(strokeJoins(op), x, y);
+const strokePixelJoins = (op, x, y) =>
+  strokeJoins(op).filter(
+    (join) => x + 1 >= join.left && x <= join.right && y + 1 >= join.top && y <= join.bottom,
+  );
 // Keep hit testing, the unaccelerated predicate, and the per-pixel edge
 // accelerator on one complete stroke geometry. Canvas defaults are part of
 // the predicate because callers such as isPointInStroke do not pass a draw
@@ -1237,7 +1257,8 @@ const pathPixelCoverage = (op, x, y) => {
   }
   // Intersect clips and compound winding/strokes at a bounded common subpixel
   // grid, rather than multiplying independent coverage fractions.
-  const edges = op.stroke ? strokePixelEdges(op, x, y) : null;
+  const edges = op.stroke ? strokePixelEdges(op, x, y) : null,
+    joins = op.stroke ? strokePixelJoins(op, x, y) : null;
   let count = 0;
   for (let yy = 0; yy < 8; yy++)
     for (let xx = 0; xx < 8; xx++) {
@@ -1249,7 +1270,7 @@ const pathPixelCoverage = (op, x, y) => {
           ? (edges
               ? strokeEdgesContain(edges, px, py, op.width, op.lineCap)
               : strokeSegmentsContain(op.path, px, py, op.width, op.lineCap)) ||
-            strokeJoinsContain(op, px, py)
+            strokeJoinListContains(joins, px, py)
           : containsWindingSnapshot(op, px, py))
       )
         count++;
