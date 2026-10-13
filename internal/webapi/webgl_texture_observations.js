@@ -421,12 +421,14 @@ method('texSubImage2D', (s, target, level, x, y, width, height, format, type, va
   const pixels = textureUnpack(s, width, height, Number(format), Number(type), value);
   if (pixels && image.internalformat === 34842)
     for (let i = 0; i < pixels.length; i++) pixels[i] = halfFloat(toHalfFloat(pixels[i]));
-  if (pixels)
+  if (pixels) {
+    materializePrograms(s);
     for (let row = 0; row < height; row++)
       image.pixels.set(
         pixels.subarray(row * width * 4, (row + 1) * width * 4),
         ((row + y) * image.width + x) * 4,
       );
+  }
 });
 // Each draw retains the image/parameters it sampled, so author uploads between
 // draws cannot retroactively change a pending observation.

@@ -474,19 +474,18 @@ const drawVertices = (s, mode, first, count, indices = null, instance = 0) => {
   const blendEnabled = s.indexedBuffers?.get(0)?.blend ?? s.enabled.get(3042);
   let colorAttachment = null;
   if (s.drawFramebuffer) {
-    const framebuffer = resources.get(s.drawFramebuffer);
-    colorAttachment = resources.get(framebuffer?.attachments.get(36064));
-    if (!colorAttachment?.storageFormat || !colorAttachment.width || !colorAttachment.height) {
+    colorAttachment = framebufferColor(s, s.drawFramebuffer);
+    const format = colorAttachment?.internalformat || colorAttachment?.storageFormat;
+    if (!colorAttachment?.pixels || !colorAttachment.width || !colorAttachment.height) {
       error(s, 1282);
       return;
     }
-    if (colorAttachment.storageFormat !== 34836) fail('shader framebuffer format');
-    if (blendEnabled && !s.extensions.has('EXT_float_blend')) {
+    if (![6408, 32856, 34836].includes(format)) fail('shader framebuffer format');
+    if (blendEnabled && !colorAttachment.floatPixels) fail('shader framebuffer blending');
+    if (blendEnabled && colorAttachment.floatPixels && !s.extensions.has('EXT_float_blend')) {
       error(s, 1282);
       return;
     }
-    if (!colorAttachment.pixels)
-      colorAttachment.pixels = new Float32Array(colorAttachment.width * colorAttachment.height * 4);
   }
   const uniforms = { __sampleTexture: textureInputs(s, p) };
   for (const [name, value] of p.values)
@@ -817,7 +816,7 @@ const materializePrograms = (s) => {
                   color[k] * blendFactorValue(k === 3 ? srcAlpha : srcRGB, color, prior, k) +
                   prior[k] * blendFactorValue(k === 3 ? dstAlpha : dstRGB, color, prior, k);
               }
-              const value = command.colorAttachment
+              const value = command.colorAttachment?.floatPixels
                 ? Math.fround(output)
                 : Math.max(0, Math.ceil(Math.fround(Math.max(0, Math.min(1, output)) * 255) - 0.5));
               if (samplePixels) {

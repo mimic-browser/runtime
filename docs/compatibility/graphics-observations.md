@@ -61,12 +61,14 @@ are derived from the captured geometry. Approximate shader observations are diag
 Framebuffer/renderbuffer objects retain binding, ownership, deletion, attachment,
 format, dimensions and completeness state. Float formats require the enabled
 extension. Attached RGBA8 textures and renderbuffers share their underlying
-pixels with texture uploads, scissored clears and readback; RGBA32F renderbuffer
-clear/readback uses the same attachment path. Deleting a texture detaches it
+pixels with texture uploads, scissored clears, shader writes and readback;
+RGBA32F renderbuffer clear/readback uses the same attachment path. A pending
+shader draw materializes before a later subimage upload to that texture.
+Deleting a texture detaches it
 from the bound framebuffer while an unbound framebuffer retains the attached
 image until it is detached or deleted, matching the retained Chrome controls.
-Other attachment formats, texture-backed shader drawing, multisample storage
-and blits remain explicit boundaries. No duplicate attachment pixel model is
+Other attachment formats, texture-backed blending, multisample storage and
+blits remain explicit boundaries. No duplicate attachment pixel model is
 introduced.
 
 ## Evidence

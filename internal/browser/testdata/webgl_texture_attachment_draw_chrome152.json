@@ -1,0 +1,45 @@
+{
+  "reference": "Chrome 152.0.7977.82 / Windows x64 / headful / direct-launch diagnostic; complete provenance retained privately",
+  "sourceSHA256": "35f55f90013d9278cf23defe831f583a7ebcb40600481a1a84deae6ba91d76ec",
+  "observation": {
+    "linked": true,
+    "status": 36053,
+    "drawn": [
+      255,
+      0,
+      0,
+      255,
+      255,
+      0,
+      0,
+      255,
+      255,
+      0,
+      0,
+      255,
+      255,
+      0,
+      0,
+      255
+    ],
+    "subimageAfterDraw": [
+      255,
+      0,
+      0,
+      255,
+      255,
+      0,
+      0,
+      255,
+      255,
+      0,
+      0,
+      255,
+      0,
+      0,
+      255,
+      255
+    ],
+    "error": 0
+  }
+}

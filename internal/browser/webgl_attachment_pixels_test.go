@@ -14,7 +14,7 @@ import (
 
 func TestWebGLAttachmentPixelsFrozenChrome(t *testing.T) {
 	serialBrowserTest(t)
-	for _, name := range []string{"webgl_attachment_pixels", "webgl1_attachment_pixels", "webgl_texture_attachment_lifecycle"} {
+	for _, name := range []string{"webgl_attachment_pixels", "webgl1_attachment_pixels", "webgl_texture_attachment_lifecycle", "webgl_texture_attachment_draw"} {
 		t.Run(name, func(t *testing.T) {
 			source, err := os.ReadFile("testdata/" + name + "_oracle.js")
 			if err != nil {
