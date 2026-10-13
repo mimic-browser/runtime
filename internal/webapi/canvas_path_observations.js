@@ -1201,6 +1201,65 @@ const rectanglePath = (c, x, y, w, h) => [
     ].map((p) => transformPoint(c.draw.transform, ...p)),
   },
 ];
+const roundRectRadii = (value) => {
+  let values;
+  if (value !== null && typeof value !== 'string' && typeof value?.[Symbol.iterator] === 'function')
+    values = Array.from(value);
+  else values = [value];
+  if (!values.length || values.length > 4) throw new RangeError('Invalid radii length');
+  const radii = values.map((radius) => {
+    let x, y;
+    if (radius !== null && typeof radius === 'object') {
+      x = Number(radius.x ?? 0);
+      y = Number(radius.y ?? 0);
+    } else x = y = Number(radius);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    if (x < 0 || y < 0) throw new RangeError('Negative radius');
+    return { x, y };
+  });
+  if (radii.some((radius) => radius === null)) return null;
+  if (radii.length === 1) return [radii[0], radii[0], radii[0], radii[0]];
+  if (radii.length === 2) return [radii[0], radii[1], radii[0], radii[1]];
+  if (radii.length === 3) return [radii[0], radii[1], radii[2], radii[1]];
+  return radii;
+};
+const roundedRectanglePath = (c, x, y, width, height, radiusValue) => {
+  let radii = roundRectRadii(radiusValue);
+  if (!radii) return null;
+  if (width < 0) radii = [radii[1], radii[0], radii[3], radii[2]];
+  if (height < 0) radii = [radii[3], radii[2], radii[1], radii[0]];
+  const left = Math.min(x, x + width),
+    right = Math.max(x, x + width),
+    top = Math.min(y, y + height),
+    bottom = Math.max(y, y + height),
+    horizontal = Math.abs(width),
+    vertical = Math.abs(height),
+    ratios = [
+      horizontal / (radii[0].x + radii[1].x),
+      vertical / (radii[1].y + radii[2].y),
+      horizontal / (radii[2].x + radii[3].x),
+      vertical / (radii[3].y + radii[0].y),
+    ],
+    scale = Math.min(1, ...ratios.filter(Number.isFinite));
+  radii = radii.map((radius) => ({ x: radius.x * scale, y: radius.y * scale }));
+  const points = [[left + radii[0].x, top]],
+    corners = [
+      [right - radii[1].x, top + radii[1].y, radii[1], -Math.PI / 2],
+      [right - radii[2].x, bottom - radii[2].y, radii[2], 0],
+      [left + radii[3].x, bottom - radii[3].y, radii[3], Math.PI / 2],
+      [left + radii[0].x, top + radii[0].y, radii[0], Math.PI],
+    ];
+  for (const [cx, cy, radius, start] of corners)
+    for (let step = 0; step <= 32; step++) {
+      const angle = start + (step * Math.PI) / 64;
+      points.push([cx + radius.x * Math.cos(angle), cy + radius.y * Math.sin(angle)]);
+    }
+  return {
+    closed: true,
+    curved: true,
+    points: points.map((point) => transformPoint(c.draw.transform, ...point)),
+  };
+};
 const installPathObservations = (proto) => {
   const method = (name, fn) =>
     Object.defineProperty(proto, name, {
@@ -1239,6 +1298,14 @@ const installPathObservations = (proto) => {
     currentPath(c).push(...rectanglePath(c, ...a));
     const sub = c.path[c.path.length - 1];
     c.path.push({ closed: false, points: [sub.points[0].slice()] });
+  });
+  method('roundRect', function (x, y, width, height, radii = 0) {
+    const c = contextState(this),
+      values = [x, y, width, height].map(Number);
+    if (!values.every(Number.isFinite)) return;
+    const sub = roundedRectanglePath(c, ...values, radii);
+    if (!sub) return;
+    currentPath(c).push(sub, { closed: false, points: [sub.points[0].slice()] });
   });
   for (const [name, n] of [
     ['quadraticCurveTo', 4],

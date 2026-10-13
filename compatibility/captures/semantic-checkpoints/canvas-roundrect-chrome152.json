@@ -1,0 +1,56 @@
+{
+  "browser": "Chrome/152.0.7977.82",
+  "metadata": {
+    "existingBrowser": true,
+    "isolatedBrowserContext": false,
+    "headful": true,
+    "freshProfile": true,
+    "fixture": "internal/browser/testdata/canvas_roundrect_oracle.js",
+    "fixtureSHA256": "b739665d09242f25c46325a646e404604b9f11a84e3dc2b7a834f6ae08a6f2b2",
+    "fixtureHashNormalization": "LF",
+    "chromeSHA256": "ea36dd818a90176f1a70616f0363d9be527229389a6c073a0b1688b9e73f67e9",
+    "v8": "15.2.124.21",
+    "originalWebdriver": false,
+    "launchArguments": [
+      "--remote-debugging-port=19520",
+      "--user-data-dir=C:\\Users\\moreveal\\Desktop\\mimic-contract-poc\\my-runs\\offline-hsw-latest\\canvas-roundrect-chrome152-20261013\\chrome-profile",
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--window-size=1280,800",
+      "about:blank"
+    ],
+    "observedViewport": {
+      "outer": [
+        1280,
+        800
+      ],
+      "inner": [
+        1272,
+        653
+      ],
+      "deviceScaleFactor": 1,
+      "visibility": "visible"
+    }
+  },
+  "result": {
+    "empty": [
+      "RangeError",
+      false
+    ],
+    "tooMany": [
+      "RangeError",
+      false
+    ],
+    "negative": [
+      "RangeError",
+      false
+    ],
+    "nan": "none",
+    "scalarMatchesSingle": true,
+    "oversizedScales": true,
+    "negativeWidthSwapsCorners": true,
+    "pointIsElliptical": true,
+    "transformDiffers": true,
+    "snapshotMatchesScalar": true
+  }
+}

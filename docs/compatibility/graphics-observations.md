@@ -24,8 +24,8 @@ Paths approximate curves with bounded line segments and 8-by-8 coverage samples.
 COLRv1 color glyphs in unscaled, identity-transform, source-over `fillText` calls
 are rendered from the selected font's paint graph into that same Canvas surface.
 The module is Page/realm-owned and loads a font only when a color glyph is read.
-Exact radial-gradient edge cases, Path2D, roundRect, shadows, filters,
-transformed or scaled color text, monochrome glyph
+Exact radial-gradient edge cases, Path2D, shadows, filters, transformed or
+scaled color text, monochrome glyph
 rasterization, exact text metrics, image decoding and general image resampling
 remain incomplete. Unsupported text modes retain the diagnosed coarse coverage
 model. CPU raster output is close to the retained Chrome 152 emoji control but
@@ -98,6 +98,8 @@ The source SHA-256 and reference results are retained under
   fallback, and immutable join snapshots.
 - `canvas-arcto-chrome152.json`: tangent-arc construction, negative and
   non-finite radii, construction transforms, and immutable readback snapshots.
+- `canvas-roundrect-chrome152.json`: radius-list expansion, oversized-radius
+  scaling, negative dimensions, elliptical corners, transforms and snapshots.
 - `webgl-programs-chrome152.json`: linking, uniforms, arithmetic loops, readbacks,
   local scissor changes and deferred resource deletion.
 - `webgl-framebuffers-chrome152.json`: attachment lifecycle and integer/float
