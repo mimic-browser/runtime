@@ -603,6 +603,7 @@ const queuePath = (c, path, rule, stroke = false, clear = false) => {
     rule,
     stroke,
     width: d.lineWidth * scale,
+    frequentRead: c.attributes.willReadFrequently,
     paint,
     alpha: clear ? 1 : d.globalAlpha,
     composite: clear ? 'copy' : d.globalCompositeOperation,
@@ -759,6 +760,66 @@ const pathPixelCoverage = (op, x, y) => {
     }
   return count / 64;
 };
+// The frequent-read CPU canvas draws unit-width paths as antialiased hairlines.
+// Rasterize a straight segment in 26.6/16.16 fixed point so its endpoint caps
+// and two neighboring pixels share one mask used by both paint and shadow.
+const frequentReadHairlineMask = (s, op, left, right, top, bottom) => {
+  if (!op.frequentRead || !op.stroke || op.width !== 1 || op.clips.length) return null;
+  const paths = op.path.filter((sub) => sub.points.length);
+  if (paths.length !== 1 || paths[0].closed || paths[0].points.length !== 2) return null;
+  const [a, b] = paths[0].points;
+  if (
+    ![...a, ...b].every(Number.isFinite) ||
+    [...a, ...b].some((v) => Math.abs(v) > 32767) ||
+    a[0] < 0 ||
+    a[0] > s.width ||
+    b[0] < 0 ||
+    b[0] > s.width ||
+    a[1] < 0 ||
+    a[1] > s.height ||
+    b[1] < 0 ||
+    b[1] > s.height
+  )
+    return null;
+  let [x0, y0, x1, y1] = [...a, ...b].map((v) => Math.trunc(v * 64));
+  const horizontal = Math.abs(x1 - x0) > Math.abs(y1 - y0);
+  if ((horizontal && x0 > x1) || (!horizontal && y0 > y1)) {
+    [x0, x1] = [x1, x0];
+    [y0, y1] = [y1, y0];
+  }
+  const [u0, v0, u1, v1] = horizontal ? [x0, y0, x1, y1] : [y0, x0, y1, x1];
+  const stride = right - left;
+  if (u0 === u1) return new Uint8Array(stride * (bottom - top));
+  const start = Math.floor(u0 / 64),
+    stop = Math.ceil(u1 / 64),
+    slope = Math.trunc(((v1 - v0) * 65536) / (u1 - u0)),
+    first = v0 * 1024 + Math.floor((slope * (32 - (u0 & 63)) + 32) / 64),
+    mask = new Uint8Array(stride * (bottom - top));
+  for (let u = start; u < stop; u++) {
+    const scale =
+        stop - start === 1
+          ? u1 - u0
+          : u === start
+            ? 64 - (u0 & 63)
+            : u === stop - 1 && u1 & 63
+              ? u1 & 63
+              : 64,
+      fixed = first + (u - start) * slope + 32768,
+      v = Math.floor(fixed / 65536),
+      fraction = Math.floor(fixed / 256) & 255;
+    for (const [minor, alpha] of [
+      [v - 1, 255 - fraction],
+      [v, fraction],
+    ]) {
+      const [x, y] = horizontal ? [u, minor] : [minor, u];
+      if (x < left || x >= right || y < top || y >= bottom) continue;
+      const coverage = Math.floor((alpha * scale) / 64),
+        index = (y - top) * stride + x - left;
+      mask[index] = 255 - Math.floor(((255 - mask[index]) * (255 - coverage) + 127) / 255);
+    }
+  }
+  return mask;
+};
 const materializePath = (s, op) => {
   const ps = op.path.flatMap((p) => p.points);
   if (!ps.length) return;
@@ -776,11 +837,15 @@ const materializePath = (s, op) => {
     bottom = unbounded
       ? s.height
       : Math.min(s.height, Math.ceil(Math.max(...ps.map((p) => p[1])) + pad));
+  const hairline = unbounded ? null : frequentReadHairlineMask(s, op, left, right, top, bottom),
+    hairlineStride = right - left;
   if (op.shadow) {
     const source = new Float32Array(s.width * s.height);
     for (let y = top; y < bottom; y++)
       for (let x = left; x < right; x++) {
-        const coverage = pathPixelCoverage(op, x, y);
+        const coverage = hairline
+          ? hairline[(y - top) * hairlineStride + x - left] / 255
+          : pathPixelCoverage(op, x, y);
         if (coverage)
           source[y * s.width + x] = (coverage * paintColor(op.paint, x + 0.5, y + 0.5)[3]) / 255;
       }
@@ -854,7 +919,9 @@ const materializePath = (s, op) => {
         x = spanEnd - 1;
         continue;
       }
-      const coverage = pathPixelCoverage(op, x, y);
+      const coverage = hairline
+        ? hairline[(y - top) * hairlineStride + x - left] / 255
+        : pathPixelCoverage(op, x, y);
       if (!coverage && !unbounded) continue;
       if (unbounded) {
         if (!clipContains(op.clips, x + 0.5, y + 0.5)) continue;

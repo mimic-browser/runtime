@@ -98,6 +98,31 @@ func TestCanvasFrequentReadShadowMaskQuantizesBeforeColor(t *testing.T) {
 	}
 }
 
+func TestCanvasFrequentReadHairlineMatchesFrozenChrome152(t *testing.T) {
+	parallelBrowserTest(t)
+	p := blitzStandardsPage(t)
+	value, err := p.Evaluate(context.Background(), `(()=>{
+  const ctx=new OffscreenCanvas(20,20).getContext('2d',{willReadFrequently:true});
+  ctx.beginPath();
+  ctx.moveTo(3.2,4.7);
+  ctx.lineTo(15.8,11.3);
+  ctx.stroke();
+  const actual=ctx.getImageData(0,0,20,20).data;
+  const alpha={83:134,84:31,103:72,104:224,105:153,106:19,125:102,126:236,127:141,128:7,
+    147:114,148:248,149:128,169:127,170:250,171:116,190:5,191:139,192:238,193:104,
+    212:17,213:151,214:226,215:72,234:29,235:130};
+  for(let i=0;i<400;i++) {
+    const want=alpha[i]||0;
+    if(actual[i*4]||actual[i*4+1]||actual[i*4+2]||actual[i*4+3]!==want)
+      return i+':'+Array.from(actual.slice(i*4,i*4+4)).join(',')+'!='+want;
+  }
+  return 'exact';
+})()`)
+	if err != nil || value != "exact" {
+		t.Fatalf("frozen Chrome 152 frequent-read hairline pixels: %v %v", value, err)
+	}
+}
+
 func TestCanvasDrawImageBlendAndGrayscale(t *testing.T) {
 	parallelBrowserTest(t)
 	p := blitzStandardsPage(t)
