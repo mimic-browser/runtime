@@ -67,6 +67,22 @@ func TestCanvasShadowsMaterializeForPathsAndText(t *testing.T) {
 	}
 }
 
+func TestCanvasShadowBlurUsesFrozenChromeFloat32State(t *testing.T) {
+	parallelBrowserTest(t)
+	p := blitzStandardsPage(t)
+	value, err := p.Evaluate(context.Background(), `(()=>{
+  const ctx=new OffscreenCanvas(20,20).getContext('2d');
+  return [9.79908737641225,0.1,1e40,1e100,Infinity,NaN,-1,0].map(input=>{
+    ctx.shadowBlur=input;
+    return String(ctx.shadowBlur);
+  }).join(',');
+})()`)
+	const want = "9.799087524414062,0.10000000149011612,3.4028234663852886e+38,3.4028234663852886e+38,3.4028234663852886e+38,3.4028234663852886e+38,3.4028234663852886e+38,0"
+	if err != nil || value != want {
+		t.Fatalf("shadowBlur must retain Chrome 152's float32/clamped values: %v %v", value, err)
+	}
+}
+
 func TestCanvasDrawImageBlendAndGrayscale(t *testing.T) {
 	parallelBrowserTest(t)
 	p := blitzStandardsPage(t)

@@ -1314,6 +1314,7 @@ const canvasCompatibilityState = (() => {
             (key === 'shadowBlur' && value < 0)
           )
             return;
+          if (key === 'shadowBlur') value = Math.fround(Math.min(value, 3.4028234663852886e38));
         } else if (typeof c.draw[key] === 'boolean') value = !!value;
         else value = String(value);
         c.draw[key] = value;
