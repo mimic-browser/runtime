@@ -24,8 +24,8 @@ Paths approximate curves with bounded line segments and 8-by-8 coverage samples.
 COLRv1 color glyphs in unscaled, identity-transform, source-over `fillText` calls
 are rendered from the selected font's paint graph into that same Canvas surface.
 The module is Page/realm-owned and loads a font only when a color glyph is read.
-Exact radial-gradient edge cases, Path2D, shadows, filters, transformed or
-scaled color text, monochrome glyph
+Exact radial-gradient edge cases, Path2D, URL-dependent filters, transformed
+or scaled color text, monochrome glyph
 rasterization, exact text metrics, image decoding and general image resampling
 remain incomplete. Unsupported text modes retain the diagnosed coarse coverage
 model. CPU raster output is close to the retained Chrome 152 emoji control but
@@ -36,7 +36,8 @@ Canvas color filters share one validated, immutable operation snapshot across
 paths, text and images. The canonical RGBA8 surface preserves exact alpha and
 filter extent, but some filtered RGB readbacks differ by one byte from Chrome's
 higher-precision intermediate surface after alpha premultiplication. Blur and
-drop-shadow filter functions remain unsupported.
+drop-shadow use a bounded temporary source surface, include Canvas shadows and
+preserve sequential filter order before the result reaches the destination.
 
 ## WebGL
 
@@ -108,6 +109,8 @@ The source SHA-256 and reference results are retained under
   scaling, negative dimensions, elliptical corners, transforms and snapshots.
 - `canvas-filter-color-chrome152.json`: validated filter state, color-matrix and
   opacity chains, immutable snapshots, source extent and image/path agreement.
+- `canvas-filter-spatial-chrome152.json`: blur and drop-shadow expansion,
+  sequential chains, Canvas-shadow interaction, images and immutable snapshots.
 - `webgl-programs-chrome152.json`: linking, uniforms, arithmetic loops, readbacks,
   local scissor changes and deferred resource deletion.
 - `webgl-framebuffers-chrome152.json`: attachment lifecycle and integer/float

@@ -76,7 +76,7 @@ const parseCanvasFilter = (input) => {
   if (input === 'none') return [];
   const filters = [];
   let offset = 0;
-  const token = /\s*([a-z-]+)\(\s*([^)]*?)\s*\)/gy;
+  const token = /\s*([a-z-]+)\(\s*((?:[^()]|\([^()]*\))*)\s*\)/gy;
   while (offset < input.length) {
     token.lastIndex = offset;
     const match = token.exec(input);
@@ -85,6 +85,41 @@ const parseCanvasFilter = (input) => {
     const name = match[1],
       argument = match[2],
       amount = /^([+]?(?:\d+(?:\.\d*)?|\.\d+))(%)?$/.exec(argument);
+    if (name === 'blur') {
+      const length = /^([+]?(?:\d+(?:\.\d*)?|\.\d+))px$/.exec(argument);
+      if (!length) return null;
+      filters.push({ name, amount: Number(length[1]) });
+      continue;
+    }
+    if (name === 'drop-shadow') {
+      const shadow =
+        /^([+-]?(?:\d+(?:\.\d*)?|\.\d+))px\s+([+-]?(?:\d+(?:\.\d*)?|\.\d+))px(?:\s+([+]?(?:\d+(?:\.\d*)?|\.\d+))(?:px)?)?\s+(.+)$/.exec(
+          argument,
+        );
+      if (!shadow) return null;
+      let rgba = color(shadow[4]);
+      if (!rgba) {
+        const modernRGB =
+          /^rgba?\(\s*(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)(?:\s*\/\s*(\d+(?:\.\d+)?%?))?\s*\)$/.exec(
+            shadow[4],
+          );
+        if (modernRGB) {
+          const alpha = modernRGB[4]
+            ? Number.parseFloat(modernRGB[4]) * (modernRGB[4].endsWith('%') ? 2.55 : 255)
+            : 255;
+          rgba = [Number(modernRGB[1]), Number(modernRGB[2]), Number(modernRGB[3]), alpha];
+        }
+      }
+      if (!rgba) return null;
+      filters.push({
+        name,
+        x: Number(shadow[1]),
+        y: Number(shadow[2]),
+        blur: Number(shadow[3] || 0),
+        rgba: rgba.slice(0, 4),
+      });
+      continue;
+    }
     if (name === 'hue-rotate') {
       const angle = /^([+-]?(?:\d+(?:\.\d*)?|\.\d+))(deg|grad|rad|turn)?$/.exec(argument);
       if (!angle || (!angle[2] && Number(angle[1]) !== 0)) return null;
@@ -189,6 +224,137 @@ const filterCanvasColor = (filters, input) => {
     for (let i = 0; i < 4; i++) rgba[i] = Math.max(0, Math.min(255, rgba[i]));
   }
   return rgba;
+};
+const hasSpatialCanvasFilter = (filters) =>
+  filters?.some((filter) => filter.name === 'blur' || filter.name === 'drop-shadow');
+const blurCanvasPixels = (pixels, width, height, sigma) => {
+  const radius = Math.ceil(3 * sigma);
+  if (!radius) return pixels.slice();
+  if (!Number.isSafeInteger(radius) || radius > 4096 || width * height * (radius + 1) > 20_000_000)
+    fail('NotSupportedError', 'Canvas filter blur exceeds the CPU observation limit');
+  const weights = new Float64Array(radius + 1);
+  let total = 1;
+  weights[0] = 1;
+  for (let distance = 1; distance <= radius; distance++) {
+    weights[distance] = Math.exp((-distance * distance) / (2 * sigma * sigma));
+    total += 2 * weights[distance];
+  }
+  for (let distance = 0; distance <= radius; distance++) weights[distance] /= total;
+  let source = Float32Array.from(pixels);
+  for (const horizontal of [true, false]) {
+    const output = new Float32Array(source.length);
+    for (let y = 0; y < height; y++)
+      for (let x = 0; x < width; x++)
+        for (let channel = 0; channel < 4; channel++) {
+          let value = source[(y * width + x) * 4 + channel] * weights[0];
+          for (let distance = 1; distance <= radius; distance++) {
+            const before = horizontal ? x - distance : y - distance,
+              after = horizontal ? x + distance : y + distance;
+            if (before >= 0)
+              value +=
+                source[
+                  ((horizontal ? y : before) * width + (horizontal ? before : x)) * 4 + channel
+                ] * weights[distance];
+            if (after < (horizontal ? width : height))
+              value +=
+                source[
+                  ((horizontal ? y : after) * width + (horizontal ? after : x)) * 4 + channel
+                ] * weights[distance];
+          }
+          output[(y * width + x) * 4 + channel] = value;
+        }
+    source = output;
+  }
+  const output = new Uint8ClampedArray(source.length);
+  for (let index = 0; index < source.length; index++) output[index] = Math.round(source[index]);
+  return output;
+};
+const dropShadowCanvasPixels = (pixels, width, height, filter) => {
+  const alpha = new Uint8ClampedArray(pixels.length);
+  for (let index = 3; index < pixels.length; index += 4) alpha[index] = pixels[index];
+  const blurred = filter.blur ? blurCanvasPixels(alpha, width, height, filter.blur) : alpha,
+    output = new Uint8ClampedArray(pixels.length);
+  for (let y = 0; y < height; y++)
+    for (let x = 0; x < width; x++) {
+      const sx = Math.round(x - filter.x),
+        sy = Math.round(y - filter.y);
+      if (sx < 0 || sy < 0 || sx >= width || sy >= height) continue;
+      const mask = blurred[(sy * width + sx) * 4 + 3] / 255;
+      if (mask)
+        compositePixel(output, (y * width + x) * 4, filter.rgba, mask, 'source-over', false);
+    }
+  for (let index = 0; index < pixels.length; index += 4) {
+    const alpha = pixels[index + 3];
+    if (!alpha) continue;
+    compositePixel(
+      output,
+      index,
+      [
+        (pixels[index] * 255) / alpha,
+        (pixels[index + 1] * 255) / alpha,
+        (pixels[index + 2] * 255) / alpha,
+        alpha,
+      ],
+      1,
+      'source-over',
+      false,
+    );
+  }
+  return output;
+};
+const applyCanvasFilters = (pixels, width, height, filters) => {
+  let output = pixels;
+  for (const filter of filters) {
+    if (filter.name === 'blur') output = blurCanvasPixels(output, width, height, filter.amount);
+    else if (filter.name === 'drop-shadow')
+      output = dropShadowCanvasPixels(output, width, height, filter);
+    else {
+      const next = new Uint8ClampedArray(output.length);
+      for (let index = 0; index < output.length; index += 4) {
+        const alpha = output[index + 3];
+        if (!alpha) continue;
+        const rgba = filterCanvasColor(
+          [filter],
+          [
+            (output[index] * 255) / alpha,
+            (output[index + 1] * 255) / alpha,
+            (output[index + 2] * 255) / alpha,
+            alpha,
+          ],
+        );
+        next[index + 3] = Math.round(rgba[3]);
+        for (let channel = 0; channel < 3; channel++)
+          next[index + channel] = Math.round((rgba[channel] * rgba[3]) / 255);
+      }
+      output = next;
+    }
+  }
+  return output;
+};
+const compositeCanvasFilterSurface = (surface, pixels, composite) => {
+  for (let index = 0; index < pixels.length; index += 4) {
+    const alpha = pixels[index + 3];
+    if (
+      !alpha &&
+      !['copy', 'source-in', 'source-out', 'destination-in', 'destination-atop'].includes(composite)
+    )
+      continue;
+    compositePixel(
+      surface.pixels,
+      index,
+      alpha
+        ? [
+            (pixels[index] * 255) / alpha,
+            (pixels[index + 1] * 255) / alpha,
+            (pixels[index + 2] * 255) / alpha,
+            alpha,
+          ]
+        : [0, 0, 0, 0],
+      1,
+      composite,
+      surface.opaque,
+    );
+  }
 };
 const currentPath = (c) => c.path || (c.path = []);
 const appendPoint = (c, x, y, move = false) => {
@@ -1148,6 +1314,25 @@ const frequentReadHairlineMask = (s, op, left, right, top, bottom) => {
   return mask;
 };
 const materializePath = (s, op) => {
+  if (hasSpatialCanvasFilter(op.filters) || (op.shadow && op.filters.length)) {
+    const temporary = {
+      ...s,
+      pixels: new Uint8ClampedArray(s.width * s.height * 4),
+      opaque: false,
+      pendingText: [],
+    };
+    materializePath(temporary, {
+      ...op,
+      filters: [],
+      composite: 'source-over',
+    });
+    compositeCanvasFilterSurface(
+      s,
+      applyCanvasFilters(temporary.pixels, s.width, s.height, op.filters),
+      op.composite,
+    );
+    return;
+  }
   const ps = op.path.flatMap((p) => p.points);
   if (!ps.length) return;
   const pad = op.stroke

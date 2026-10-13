@@ -737,6 +737,21 @@ const canvasCompatibilityState = (() => {
         materializePath(s, run);
         continue;
       }
+      if (hasSpatialCanvasFilter(run.filters) || (run.shadow && run.filters.length)) {
+        const temporary = {
+          ...s,
+          pixels: new Uint8ClampedArray(s.width * s.height * 4),
+          opaque: false,
+          pendingText: [{ ...run, filters: [], composite: 'source-over' }],
+        };
+        materializeText(temporary);
+        compositeCanvasFilterSurface(
+          s,
+          applyCanvasFilters(temporary.pixels, s.width, s.height, run.filters),
+          run.composite,
+        );
+        continue;
+      }
       if (!supportedComposite.has(run.composite)) continue;
       const coverage = new Uint8Array(s.width * s.height),
         m = run.matrix,
@@ -1135,7 +1150,51 @@ const canvasCompatibilityState = (() => {
     }
     drawImage(source, ...args) {
       const c = contextState(this),
-        destination = c.surface;
+        destination = c.surface,
+        filters = canvasFilterSnapshot(c.draw);
+      if (
+        hasSpatialCanvasFilter(filters) ||
+        (shadowSnapshot(c.draw, destination, c.attributes.willReadFrequently) && filters.length)
+      ) {
+        buffer(destination);
+        const originalDraw = c.draw,
+          temporary = {
+            ...destination,
+            pixels: new Uint8ClampedArray(destination.width * destination.height * 4),
+            opaque: false,
+            pendingText: [],
+          };
+        c.surface = temporary;
+        c.draw = {
+          ...originalDraw,
+          filter: 'none',
+          filterFunctions: [],
+          globalCompositeOperation: 'source-over',
+        };
+        try {
+          this.drawImage(source, ...args);
+        } finally {
+          c.surface = destination;
+          c.draw = originalDraw;
+        }
+        let pixels = temporary.pixels;
+        const shadow = shadowSnapshot(originalDraw, destination, c.attributes.willReadFrequently);
+        if (shadow)
+          pixels = dropShadowCanvasPixels(pixels, destination.width, destination.height, {
+            name: 'drop-shadow',
+            x: shadow.x,
+            y: shadow.y,
+            blur: shadow.blur / 2,
+            rgba: shadow.rgba,
+          });
+        compositeCanvasFilterSurface(
+          destination,
+          applyCanvasFilters(pixels, destination.width, destination.height, filters),
+          originalDraw.globalCompositeOperation,
+        );
+        destination.unmodeled ||= temporary.unmodeled;
+        return;
+      }
       let image;
       if (bitmaps.has(source)) {
         image = bitmaps.get(source);
@@ -1238,8 +1297,7 @@ const canvasCompatibilityState = (() => {
           image.colorSpace === 'display-p3' && image.pixels instanceof Float32Array
             ? new Uint8ClampedArray(image.pixels)
             : image.pixels.slice(),
-        ga = c.draw.globalAlpha,
-        filters = canvasFilterSnapshot(c.draw);
+        ga = c.draw.globalAlpha;
       const directOpaque =
         p instanceof Uint8ClampedArray &&
         input instanceof Uint8ClampedArray &&

@@ -1,0 +1,63 @@
+{
+  "browser": "Chrome/152.0.7977.82",
+  "metadata": {
+    "existingBrowser": true,
+    "isolatedBrowserContext": false,
+    "headful": true,
+    "freshProfile": true,
+    "fixture": "internal/browser/testdata/canvas_filter_spatial_oracle.js",
+    "fixtureSHA256": "32198fa35d0ee88a3867127826e311110ed94966df36ec32534b2d983ff0a3c6",
+    "fixtureHashNormalization": "LF",
+    "chromeSHA256": "ea36dd818a90176f1a70616f0363d9be527229389a6c073a0b1688b9e73f67e9",
+    "v8": "15.2.124.21",
+    "originalWebdriver": false,
+    "launchArguments": [
+      "--remote-debugging-port=19526",
+      "--user-data-dir=C:\\Users\\moreveal\\Desktop\\mimic-contract-poc\\my-runs\\offline-hsw-latest\\canvas-filter-spatial-chrome152-20261013-002\\chrome-profile",
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--window-size=1280,800",
+      "about:blank"
+    ],
+    "observedViewport": {
+      "outer": [
+        1280,
+        800
+      ],
+      "inner": [
+        1272,
+        653
+      ],
+      "deviceScaleFactor": 1,
+      "visibility": "visible"
+    }
+  },
+  "result": {
+    "property": [
+      [
+        "blur(1px)",
+        "blur(1px)"
+      ],
+      [
+        "blur(-1px)",
+        "blur(1px)"
+      ],
+      [
+        "drop-shadow(2px 1px 0 rgb(0 255 0))",
+        "drop-shadow(2px 1px 0 rgb(0 255 0))"
+      ],
+      [
+        "drop-shadow(1px 1px -1px red)",
+        "drop-shadow(2px 1px 0 rgb(0 255 0))"
+      ]
+    ],
+    "blurSpreads": true,
+    "blurConservesAlpha": true,
+    "dropShadowExtends": true,
+    "chainAttenuates": true,
+    "chainOrderClose": true,
+    "imageMatchesPath": true,
+    "shadowParticipates": true,
+    "snapshotMatches": true
+  }
+}
