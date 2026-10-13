@@ -105,8 +105,8 @@ func TestSpeechPortableProviderQueueAndCancellation(t *testing.T) {
 				return v
 			}
 			eval(`0`)
-			if backend == nil {
-				t.Fatal("realm did not begin platform voice discovery during bootstrap")
+			if backend != nil {
+				t.Fatal("realm started platform voice discovery before getVoices")
 			}
 			drain := func() {
 				t.Helper()
@@ -114,7 +114,12 @@ func TestSpeechPortableProviderQueueAndCancellation(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			eval(`speechSynthesis.getVoices()`)
+			if v := eval(`speechSynthesis.getVoices().length`); v != int64(0) && v != float64(0) {
+				t.Fatalf("cold voice list: %v", v)
+			}
+			if backend == nil {
+				t.Fatal("getVoices did not begin platform voice discovery")
+			}
 			drain()
 			if v := eval(`(()=>{const a=speechSynthesis.getVoices(),b=speechSynthesis.getVoices();return a!==b&&a[0]===b[0]&&a[0].name==='Test voice'&&a[0].voiceURI==='Test voice'})()`); v != true {
 				t.Fatalf("provider projection: %v", v)
