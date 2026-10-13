@@ -29,6 +29,11 @@ func environment(mode state.BrowserMode) state.Environment {
 	environment.ProfileID = "chrome-152-windows-x64-headful-controlled-v1"
 	environment.Presentation.Mode = mode
 	environment.Platform.Architecture = "x86_64"
+	// The controlled Windows oracle has Ubuntu installed as its UI family;
+	// Chrome resolves the system-ui generic to that face. Keep the selection in
+	// the Environment profile so Canvas, CSS/layout, SVG and font inspection all
+	// project the same machine configuration.
+	environment.Fonts.SystemUI = "Ubuntu"
 	environment.Fonts.Fallback = []string{"Segoe UI Emoji", "Tahoma", "SimSun", "Segoe UI Symbol", "Segoe UI", "Arial"}
 	for _, name := range strings.Fields("background-fetch background-sync accelerometer gyroscope magnetometer screen-wake-lock clipboard-write payment-handler storage-access pointer-lock") {
 		environment.Permissions[name] = "granted"

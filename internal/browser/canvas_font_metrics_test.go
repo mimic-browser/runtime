@@ -101,3 +101,39 @@ func TestCanvasTypographicMetricsFontUsesChromeFontBoxAndGridFit(t *testing.T) {
 		t.Fatal(diff)
 	}
 }
+
+func TestCanvasSystemUIMetricsUseEnvironmentProfile(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("frozen control uses the installed Windows Ubuntu face")
+	}
+	serialBrowserTest(t)
+	p := bootstrapSnapshotPage(t)
+	defer p.Close()
+	navigateCapabilityFixture(t, p)
+	value, err := p.Evaluate(context.Background(), `(()=>{
+		const context = new OffscreenCanvas(200, 100).getContext('2d');
+		context.font = '16px system-ui';
+		const text = context.measureText('xyz');
+		const letter = context.measureText('A');
+		return [text.width, letter.width, text.fontBoundingBoxAscent,
+			text.fontBoundingBoxDescent, text.actualBoundingBoxAscent,
+			text.actualBoundingBoxDescent];
+	})()`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Direct headful Chrome 152 controlled-profile observation. The exact
+	// advances also identify the selected Ubuntu Regular face, rather than an
+	// unrelated host default with superficially similar line metrics.
+	want := []float64{23.663986206054688, 10.607986450195312, 15, 3, 8, 3}
+	got := value.([]any)
+	for index, expected := range want {
+		// HarfBuzz projects the same font-unit advance to a decimal double;
+		// Blink's DirectWrite bridge first rounds it through a float. The bound
+		// is far below one device subpixel and still uniquely identifies the
+		// frozen profile's selected face.
+		if actual := got[index].(float64); math.Abs(actual-expected) > 0.00002 {
+			t.Fatalf("system-ui Canvas metrics[%d]: got %v, Chrome %v", index, actual, expected)
+		}
+	}
+}
