@@ -89,7 +89,7 @@ func TestCanvasColorGlyphUsesCanonicalSurface(t *testing.T) {
 	}
 }
 
-func TestCanvasColorGlyphMetricsUseRasterInkBounds(t *testing.T) {
+func TestCanvasColorGlyphMetricsUsePaintClip(t *testing.T) {
 	serialBrowserTest(t)
 	p := bootstrapSnapshotPage(t)
 	defer p.Close()
@@ -106,8 +106,8 @@ func TestCanvasColorGlyphMetricsUseRasterInkBounds(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Direct frozen headful Chrome 152 observations. Color-paint layers extend
-	// beyond a glyph's base outline, so these edges must come from the same CPU
-	// raster surface used by fillText rather than the monochrome outline box.
+	// beyond a glyph's base outline, so these edges come from the COLR paint
+	// graph's clip rather than the monochrome outline box.
 	want := []any{
 		[]any{float64(14), float64(3), float64(-2), float64(19), float64(21.96875)},
 		[]any{float64(14), float64(3), float64(-4), float64(18), float64(21.96875)},

@@ -686,6 +686,30 @@ func (e *Engine) shapeWithFonts(text, families string, size, weight float64, ita
 					}
 				}
 			}
+			if hintInk && g.Color {
+				if clip, ok := run.face.face.COLR.ClipList.Search(tables.GlyphID(info.Glyph)); ok {
+					var xMin, yMin, xMax, yMax int16
+					switch value := clip.(type) {
+					case tables.ClipBoxFormat1:
+						xMin, yMin, xMax, yMax = value.XMin, value.YMin, value.XMax, value.YMax
+					case tables.ClipBoxFormat2:
+						// Environment fonts are instantiated at their default variation
+						// coordinates, for which the base clip values apply.
+						xMin, yMin, xMax, yMax = value.XMin, value.YMin, value.XMax, value.YMax
+					default:
+						result.Glyphs = append(result.Glyphs, g)
+						continue
+					}
+					// Chrome derives COLR TextMetrics from the paint graph's clip,
+					// including layers outside the base glyph outline. Project its
+					// closed font-unit box onto enclosing device-pixel edges.
+					g.Ink = true
+					g.Left = math.Floor(float64(xMin) * scale)
+					g.Right = math.Ceil(float64(xMax) * scale)
+					g.Top = -math.Ceil(float64(yMax) * scale)
+					g.Bottom = -math.Floor(float64(yMin) * scale)
+				}
+			}
 			result.Glyphs = append(result.Glyphs, g)
 		}
 		// Clear author text immediately, retaining only bounded scratch storage
