@@ -396,11 +396,27 @@ func (w *DedicatedWorker) run(ctx context.Context, source string, initialBlob *n
 		return runtime.Value(out), nil
 	})
 	host["compressCanvasScanline"] = runtime.Function(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
-		encoded, err := compressCanvasScanline(strarg(args, 0))
+		scan, ok := arg(args, 0).([]byte)
+		if !ok {
+			return nil, fmt.Errorf("invalid canvas scanline")
+		}
+		compressed, err := compressCanvasScanline(scan)
 		if err != nil {
 			return nil, err
 		}
-		return runtime.Value(encoded), nil
+		return runtime.Value(engine.BinaryBuffer(compressed)), nil
+	})
+	host["blurCanvasMask"] = runtime.Function(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
+		source, sourceOK := arg(args, 0).([]byte)
+		weights, weightsOK := arg(args, 3).([]byte)
+		if !sourceOK || !weightsOK {
+			return nil, fmt.Errorf("invalid canvas blur buffers")
+		}
+		blurred, err := blurCanvasMask(source, int(numarg(args, 1)), int(numarg(args, 2)), weights, int(numarg(args, 4)), int(numarg(args, 5)), int(numarg(args, 6)), int(numarg(args, 7)))
+		if err != nil {
+			return nil, err
+		}
+		return runtime.Value(engine.BinaryBuffer(blurred)), nil
 	})
 	host["decodeImageBytes"] = runtime.Function(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
 		return runtime.Value(decodeImageBase64(strarg(args, 0), strarg(args, 1))), nil

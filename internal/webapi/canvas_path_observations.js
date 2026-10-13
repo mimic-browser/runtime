@@ -980,6 +980,9 @@ const materializeShadow = (
   )
     fail('NotSupportedError', 'Canvas shadow blur exceeds the CPU observation limit');
   let mask = source;
+  let maskLeft = 0,
+    maskTop = 0,
+    maskWidth = sourceWidth;
   if (radius) {
     const weights = new Float64Array(radius + 1);
     let total = 1;
@@ -989,23 +992,24 @@ const materializeShadow = (
       total += 2 * weights[k];
     }
     for (let k = 0; k <= radius; k++) weights[k] /= total;
-    for (const horizontal of [true, false]) {
-      const next = new Float32Array(sourceWidth * sourceHeight);
-      for (let y = 0; y < sourceHeight; y++)
-        for (let x = 0; x < sourceWidth; x++) {
-          let value = mask[y * sourceWidth + x] * weights[0];
-          for (let k = 1; k <= radius; k++) {
-            const a = horizontal ? x - k : y - k,
-              b = horizontal ? x + k : y + k;
-            if (a >= 0)
-              value += mask[(horizontal ? y : a) * sourceWidth + (horizontal ? a : x)] * weights[k];
-            if (b < (horizontal ? sourceWidth : sourceHeight))
-              value += mask[(horizontal ? y : b) * sourceWidth + (horizontal ? b : x)] * weights[k];
-          }
-          next[y * sourceWidth + x] = value;
-        }
-      mask = next;
-    }
+    maskLeft = Math.max(0, Math.floor(-shadow.x - sourceLeft));
+    maskTop = Math.max(0, Math.floor(-shadow.y - sourceTop));
+    const maskRight = Math.min(sourceWidth, Math.floor(w - 1 - shadow.x - sourceLeft) + 2),
+      maskBottom = Math.min(sourceHeight, Math.floor(h - 1 - shadow.y - sourceTop) + 2);
+    maskWidth = Math.max(0, maskRight - maskLeft);
+    const maskHeight = Math.max(0, maskBottom - maskTop);
+    mask = new Float32Array(
+      host.blurCanvasMask(
+        new Uint8Array(source.buffer, source.byteOffset, source.byteLength),
+        sourceWidth,
+        sourceHeight,
+        new Uint8Array(weights.buffer),
+        maskLeft,
+        maskTop,
+        maskWidth,
+        maskHeight,
+      ),
+    );
   }
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++) {
@@ -1021,10 +1025,10 @@ const materializeShadow = (
         fx = sx - ix,
         fy = sy - iy,
         coverage =
-          mask[iy * sourceWidth + ix] * (1 - fx) * (1 - fy) +
-          mask[iy * sourceWidth + nx] * fx * (1 - fy) +
-          mask[ny * sourceWidth + ix] * (1 - fx) * fy +
-          mask[ny * sourceWidth + nx] * fx * fy,
+          mask[(iy - maskTop) * maskWidth + ix - maskLeft] * (1 - fx) * (1 - fy) +
+          mask[(iy - maskTop) * maskWidth + nx - maskLeft] * fx * (1 - fy) +
+          mask[(ny - maskTop) * maskWidth + ix - maskLeft] * (1 - fx) * fy +
+          mask[(ny - maskTop) * maskWidth + nx - maskLeft] * fx * fy,
         maskAlpha =
           (shadow.frequent ? Math.round(coverage * 255) / 255 : coverage) *
           (sourcePaint
@@ -1354,6 +1358,7 @@ const materializePath = (s, op) => {
     bottom = unbounded ? s.height : Math.min(s.height, pathBottom);
   const hairline = unbounded ? null : frequentReadHairlineMask(s, op, left, right, top, bottom),
     hairlineStride = right - left;
+  let shadowCoverage = null;
   if (op.shadow) {
     // Shadow blur sees geometry outside the canvas before the result is cropped
     // to the canvas. Restrict the extended mask to the pixels that can influence
@@ -1363,10 +1368,14 @@ const materializePath = (s, op) => {
       visibleRight = Math.ceil(s.width - op.shadow.x + 1),
       visibleTop = Math.floor(-op.shadow.y - 1),
       visibleBottom = Math.ceil(s.height - op.shadow.y + 1),
-      shadowLeft = Math.min(visibleLeft, Math.max(pathLeft, visibleLeft - radius)),
-      shadowRight = Math.max(visibleRight, Math.min(pathRight, visibleRight + radius)),
-      shadowTop = Math.min(visibleTop, Math.max(pathTop, visibleTop - radius)),
-      shadowBottom = Math.max(visibleBottom, Math.min(pathBottom, visibleBottom + radius)),
+      // Convolution only needs the intersection of the path's finite blur
+      // support and the source coordinates that can reach the visible canvas.
+      // Keep one kernel radius of zero padding at either boundary so this is
+      // numerically identical to convolving the former full-canvas mask.
+      shadowLeft = Math.max(pathLeft - radius, visibleLeft - radius),
+      shadowRight = Math.min(pathRight + radius, visibleRight + radius),
+      shadowTop = Math.max(pathTop - radius, visibleTop - radius),
+      shadowBottom = Math.min(pathBottom + radius, visibleBottom + radius),
       shadowWidth = shadowRight - shadowLeft,
       shadowHeight = shadowBottom - shadowTop;
     if (shadowWidth > 0 && shadowHeight > 0) {
@@ -1376,12 +1385,23 @@ const materializePath = (s, op) => {
       )
         fail('NotSupportedError', 'Canvas shadow mask exceeds the CPU observation limit');
       const source = new Float32Array(shadowWidth * shadowHeight);
-      for (let y = shadowTop; y < shadowBottom; y++)
-        for (let x = shadowLeft; x < shadowRight; x++) {
+      if (!hairline && right > left && bottom > top)
+        shadowCoverage = new Float32Array((right - left) * (bottom - top));
+      // Padding is known transparent; only rasterize the actual path bounds.
+      // This matters for large blur radii because pathPixelCoverage performs a
+      // subpixel winding/stroke evaluation for every visited pixel.
+      const rasterLeft = Math.max(shadowLeft, pathLeft),
+        rasterRight = Math.min(shadowRight, pathRight),
+        rasterTop = Math.max(shadowTop, pathTop),
+        rasterBottom = Math.min(shadowBottom, pathBottom);
+      for (let y = rasterTop; y < rasterBottom; y++)
+        for (let x = rasterLeft; x < rasterRight; x++) {
           const coverage =
             hairline && x >= left && x < right && y >= top && y < bottom
               ? hairline[(y - top) * hairlineStride + x - left] / 255
               : pathPixelCoverage(op, x, y);
+          if (shadowCoverage && x >= left && x < right && y >= top && y < bottom)
+            shadowCoverage[(y - top) * (right - left) + x - left] = coverage;
           if (coverage) source[(y - shadowTop) * shadowWidth + x - shadowLeft] = coverage;
         }
       materializeShadow(
@@ -1472,7 +1492,9 @@ const materializePath = (s, op) => {
       }
       const coverage = hairline
         ? hairline[(y - top) * hairlineStride + x - left] / 255
-        : pathPixelCoverage(op, x, y);
+        : shadowCoverage
+          ? shadowCoverage[(y - top) * (right - left) + x - left]
+          : pathPixelCoverage(op, x, y);
       if (!coverage && !unbounded) continue;
       if (unbounded) {
         if (!clipContains(op.clips, x + 0.5, y + 0.5)) continue;

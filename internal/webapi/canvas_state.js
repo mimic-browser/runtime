@@ -834,12 +834,23 @@ const canvasCompatibilityState = (() => {
           }
       }
       if (run.shadow) {
-        const source = new Float32Array(s.width * s.height);
+        // The separable blur has finite support. Keep the mask in that support
+        // instead of convolving a mostly-empty full canvas for every glyph.
+        // Padding by the kernel radius preserves the exact zero samples the
+        // full-size convolution observed at the former crop boundary.
+        const shadowRadius = Math.ceil((3 * run.shadow.blur) / 2),
+          sourceLeft = Math.max(0, left - shadowRadius),
+          sourceTop = Math.max(0, top - shadowRadius),
+          sourceRight = Math.min(s.width, right + shadowRadius),
+          sourceBottom = Math.min(s.height, bottom + shadowRadius),
+          sourceWidth = Math.max(0, sourceRight - sourceLeft),
+          sourceHeight = Math.max(0, sourceBottom - sourceTop),
+          source = new Float32Array(sourceWidth * sourceHeight);
         for (let yy = top; yy < bottom; yy++)
           for (let xx = left; xx < right; xx++) {
             const i = yy * s.width + xx;
             if (coverage[i])
-              source[i] =
+              source[(yy - sourceTop) * sourceWidth + xx - sourceLeft] =
                 (coverage[i] * paintColor(run.paint, xx + 0.5, yy + 0.5)[3]) / (255 * 255);
           }
         for (const tile of colorTiles)
@@ -847,12 +858,18 @@ const canvasCompatibilityState = (() => {
             for (let xx = 0; xx < tile.width; xx++) {
               const x = tile.left + xx,
                 y = tile.top + yy;
-              if (x < 0 || x >= s.width || y < 0 || y >= s.height) continue;
-              const i = y * s.width + x,
+              if (x < sourceLeft || x >= sourceRight || y < sourceTop || y >= sourceBottom)
+                continue;
+              const i = (y - sourceTop) * sourceWidth + x - sourceLeft,
                 a = tile.pixels[(yy * tile.width + xx) * 4 + 3] / 255;
               source[i] = 1 - (1 - source[i]) * (1 - a);
             }
-        materializeShadow(s, source, run.shadow, run.alpha, run.composite, run.clips);
+        materializeShadow(s, source, run.shadow, run.alpha, run.composite, run.clips, {
+          left: sourceLeft,
+          top: sourceTop,
+          width: sourceWidth,
+          height: sourceHeight,
+        });
       }
       for (const tile of colorTiles)
         for (let yy = 0; yy < tile.height; yy++)
@@ -1991,9 +2008,7 @@ const canvasCompatibilityState = (() => {
       scan[row] = 2;
       if (y > 0) for (let x = 1; x < stride; x++) scan[row + x] -= scan[row - stride + x];
     }
-    const compressed = atob(host.compressCanvasScanline(pngBase64(scan)));
-    const z = new Uint8Array(compressed.length);
-    for (let i = 0; i < compressed.length; i++) z[i] = compressed.charCodeAt(i);
+    const z = new Uint8Array(host.compressCanvasScanline(scan));
     const ihdr = pngU32(s.width).concat(pngU32(s.height), [8, 6, 0, 0, 0]);
     // Chrome's streaming PNG writer emits 4096-byte IDAT chunks and writes
     // the six-byte stream trailer as its own final IDAT chunk.

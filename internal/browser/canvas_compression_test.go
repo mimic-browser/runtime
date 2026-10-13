@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"image/png"
 	"io"
+	"math"
 	"strings"
 	"testing"
 )
@@ -80,6 +81,37 @@ func TestCanvasSerializationCompressesRepeatedPixels(t *testing.T) {
 	for row := 0; row < 150; row++ {
 		if filter := scanlines[row*(300*4+1)]; filter != 2 {
 			t.Fatalf("frozen Chrome 152 PNG row %d filter = %d, want Up (2)", row, filter)
+		}
+	}
+}
+
+func TestCanvasBlurMaskCropsWithoutChangingConvolution(t *testing.T) {
+	const width, height = 9, 7
+	source := make([]byte, width*height*4)
+	for i := 0; i < width*height; i++ {
+		value := float32((i%11)+1) / 13
+		binary.LittleEndian.PutUint32(source[i*4:], math.Float32bits(value))
+	}
+	weights := []float64{0.4, 0.2, 0.1}
+	weightBytes := make([]byte, len(weights)*8)
+	for i, value := range weights {
+		binary.LittleEndian.PutUint64(weightBytes[i*8:], math.Float64bits(value))
+	}
+	full, err := blurCanvasMask(source, width, height, weightBytes, 0, 0, width, height)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cropped, err := blurCanvasMask(source, width, height, weightBytes, 2, 1, 4, 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for y := 0; y < 3; y++ {
+		for x := 0; x < 4; x++ {
+			got := binary.LittleEndian.Uint32(cropped[(y*4+x)*4:])
+			want := binary.LittleEndian.Uint32(full[((y+1)*width+x+2)*4:])
+			if got != want {
+				t.Fatalf("blur pixel (%d,%d) = %08x, want %08x", x, y, got, want)
+			}
 		}
 	}
 }
