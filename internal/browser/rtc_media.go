@@ -15,6 +15,7 @@ import (
 	"github.com/moreveal/mimic/internal/camera"
 	"github.com/moreveal/mimic/internal/engine"
 	"github.com/moreveal/mimic/internal/microphone"
+	"github.com/moreveal/mimic/internal/network"
 	"github.com/moreveal/mimic/internal/scheduler"
 	"github.com/moreveal/mimic/internal/videocodec"
 	"github.com/pion/interceptor"
@@ -35,6 +36,8 @@ type rtcMediaPeer struct {
 	channels      map[string]*rtcMediaDataChannel
 	connected     chan struct{}
 	everConnected atomic.Bool
+	proxy         *network.RTCProxyDialer
+	hideHost      bool
 }
 
 func rtcReadTimeout(err error) bool {
@@ -94,6 +97,9 @@ func (r *Realm) announceRTCMedia(peer *rtcMediaPeer) {
 
 func (r *Realm) closeRTCMedia() {
 	for _, peer := range r.rtcMediaPeers {
+		if peer.proxy != nil {
+			peer.proxy.Close()
+		}
 		for _, channel := range peer.channels {
 			channel.cancel()
 		}
@@ -118,6 +124,16 @@ func (r *Realm) emitRTCMedia(id, kind string, data any) {
 	})
 }
 func (r *Realm) newRTCMedia(config webrtc.Configuration) (string, error) {
+	settings, effective, proxy, hideHost, err := r.rtcTransport(config)
+	if err != nil {
+		return "", err
+	}
+	success := false
+	defer func() {
+		if !success && proxy != nil {
+			proxy.Close()
+		}
+	}()
 	m := &webrtc.MediaEngine{}
 	// Advertise only a codec we can actually encode. Packetization mode 1 is
 	// interoperable with Chrome's constrained baseline H264 negotiation.
@@ -133,13 +149,14 @@ func (r *Realm) newRTCMedia(config webrtc.Configuration) (string, error) {
 	}
 	stats := &rtcStatsInterceptor{}
 	registry.Add(stats)
-	api := webrtc.NewAPI(webrtc.WithMediaEngine(m), webrtc.WithInterceptorRegistry(registry))
-	pc, err := api.NewPeerConnection(config)
+	api := webrtc.NewAPI(webrtc.WithMediaEngine(m), webrtc.WithInterceptorRegistry(registry), webrtc.WithSettingEngine(settings))
+	pc, err := api.NewPeerConnection(effective)
 	if err != nil {
 		return "", err
 	}
 	id := uuid.NewString()
 	peer := &rtcMediaPeer{id: id, pc: pc, senders: map[string]*rtcMediaSender{}, transceivers: map[*webrtc.RTPTransceiver]*rtcMediaTransceiver{}, stats: stats, channels: map[string]*rtcMediaDataChannel{}, connected: make(chan struct{})}
+	peer.proxy, peer.hideHost = proxy, hideHost
 	if r.rtcMediaPeers == nil {
 		r.rtcMediaPeers = map[string]*rtcMediaPeer{}
 	}
@@ -147,7 +164,24 @@ func (r *Realm) newRTCMedia(config webrtc.Configuration) (string, error) {
 	pc.OnICECandidate(func(candidate *webrtc.ICECandidate) {
 		var data any
 		if candidate != nil {
-			encoded, _ := json.Marshal(candidate.ToJSON())
+			public := *candidate
+			parsed, err := public.ToICE()
+			if err != nil {
+				return
+			}
+			serialized, allowed := rtcPublicCandidate(parsed, peer.hideHost)
+			if !allowed {
+				return
+			}
+			init := public.ToJSON()
+			init.Candidate = "candidate:" + serialized
+			for _, extension := range parsed.Extensions() {
+				if extension.Key == "ufrag" {
+					value := extension.Value
+					init.UsernameFragment = &value
+				}
+			}
+			encoded, _ := json.Marshal(init)
 			json.Unmarshal(encoded, &data)
 		}
 		r.emitRTCMedia(id, "icecandidate", data)
@@ -166,6 +200,7 @@ func (r *Realm) newRTCMedia(config webrtc.Configuration) (string, error) {
 	pc.OnTrack(func(track *webrtc.TrackRemote, receiver *webrtc.RTPReceiver) {
 		r.receiveRTCMedia(peer, track, receiver)
 	})
+	success = true
 	return id, nil
 }
 
@@ -319,7 +354,7 @@ func rtcMediaDescription(d *webrtc.SessionDescription) any {
 }
 func rtcMediaState(peer *rtcMediaPeer) map[string]any {
 	pc := peer.pc
-	return map[string]any{"localDescription": rtcMediaDescription(pc.LocalDescription()), "currentLocalDescription": rtcMediaDescription(pc.CurrentLocalDescription()), "pendingLocalDescription": rtcMediaDescription(pc.PendingLocalDescription()), "remoteDescription": rtcMediaDescription(pc.RemoteDescription()), "currentRemoteDescription": rtcMediaDescription(pc.CurrentRemoteDescription()), "pendingRemoteDescription": rtcMediaDescription(pc.PendingRemoteDescription()), "signalingState": pc.SignalingState().String(), "iceGatheringState": pc.ICEGatheringState().String(), "iceConnectionState": pc.ICEConnectionState().String(), "connectionState": pc.ConnectionState().String()}
+	return map[string]any{"localDescription": rtcPublicDescription(pc.LocalDescription(), peer.hideHost), "currentLocalDescription": rtcPublicDescription(pc.CurrentLocalDescription(), peer.hideHost), "pendingLocalDescription": rtcPublicDescription(pc.PendingLocalDescription(), peer.hideHost), "remoteDescription": rtcMediaDescription(pc.RemoteDescription()), "currentRemoteDescription": rtcMediaDescription(pc.CurrentRemoteDescription()), "pendingRemoteDescription": rtcMediaDescription(pc.PendingRemoteDescription()), "signalingState": pc.SignalingState().String(), "iceGatheringState": pc.ICEGatheringState().String(), "iceConnectionState": pc.ICEConnectionState().String(), "connectionState": pc.ConnectionState().String()}
 }
 
 type rtcCameraFrame struct {
@@ -614,8 +649,19 @@ func addRTCMediaHosts(r *Realm, h map[string]any) {
 			if err := json.Unmarshal([]byte(strarg(a, 2)), &config); err != nil {
 				return nil, err
 			}
+			var endpoints map[string]bool
+			if peer.proxy != nil {
+				var err error
+				config, endpoints, err = rtcProxyConfiguration(config)
+				if err != nil {
+					return r.val(cameraFailure("InvalidModificationError", err.Error(), "")), nil
+				}
+			}
 			if err := peer.pc.SetConfiguration(config); err != nil {
 				return r.val(cameraFailure("InvalidModificationError", err.Error(), "")), nil
+			}
+			if peer.proxy != nil {
+				peer.proxy.SetServers(endpoints)
 			}
 			return r.val(map[string]any{}), nil
 		case "add":
@@ -684,6 +730,9 @@ func addRTCMediaHosts(r *Realm, h map[string]any) {
 			json.Unmarshal(encoded, &result)
 			return r.val(result), nil
 		case "close":
+			if peer.proxy != nil {
+				peer.proxy.Close()
+			}
 			for _, channel := range peer.channels {
 				channel.cancel()
 			}
@@ -743,6 +792,7 @@ func addRTCMediaHosts(r *Realm, h map[string]any) {
 				rows := map[string]any{}
 				json.Unmarshal(encoded, &rows)
 				peer.stats.mergeInto(rows)
+				rtcCandidateStatsPrivacy(rows, peer.hideHost)
 				result = rows
 			default:
 				err = fmt.Errorf("unsupported RTC operation %s", operation)

@@ -7136,48 +7136,29 @@
       rtcPeerPrivate.get(this).configuration = normalizeRTCConfiguration(v);
     }
     createOffer() {
-      if (rtcPeerPrivate.get(this).closed)
-        return platformPromiseReject(
-          platformDOMException('The RTCPeerConnection is closed.', 'InvalidStateError'),
-        );
-      return platformPromiseResolve(
-        new RTCSessionDescription({
-          type: 'offer',
-          sdp: 'v=0\r\no=- 0 0 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\n',
-        }),
+      return platformPromiseReject(
+        platformDOMException('Native WebRTC transport is unavailable.', 'NotSupportedError'),
       );
     }
     createAnswer() {
-      return platformPromiseResolve(
-        new RTCSessionDescription({
-          type: 'answer',
-          sdp: 'v=0\r\no=- 0 0 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\n',
-        }),
+      return platformPromiseReject(
+        platformDOMException('Native WebRTC transport is unavailable.', 'NotSupportedError'),
       );
     }
-    setLocalDescription(description) {
-      const state = rtcPeerStates.get(this),
-        value =
-          description instanceof RTCSessionDescription
-            ? description
-            : new RTCSessionDescription(description || { type: 'offer' });
-      state.localDescription = value;
-      state.currentLocalDescription = value;
-      state.iceGatheringState = 'complete';
-      return platformPromiseResolve();
+    setLocalDescription() {
+      return platformPromiseReject(
+        platformDOMException('Native WebRTC transport is unavailable.', 'NotSupportedError'),
+      );
     }
-    setRemoteDescription(description) {
-      const state = rtcPeerStates.get(this),
-        value =
-          description instanceof RTCSessionDescription
-            ? description
-            : new RTCSessionDescription(description);
-      state.remoteDescription = value;
-      state.currentRemoteDescription = value;
-      return platformPromiseResolve();
+    setRemoteDescription() {
+      return platformPromiseReject(
+        platformDOMException('Native WebRTC transport is unavailable.', 'NotSupportedError'),
+      );
     }
     addIceCandidate() {
-      return platformPromiseResolve();
+      return platformPromiseReject(
+        platformDOMException('Native WebRTC transport is unavailable.', 'NotSupportedError'),
+      );
     }
     getSenders() {
       return [];
@@ -7237,168 +7218,6 @@
         throw platformDOMException('The RTCPeerConnection is closed.', 'InvalidStateError');
       state.hasDataChannel = true;
       return new RTCDataChannel(hostToken, label, options);
-    },
-    writable: true,
-    configurable: true,
-  });
-  const rtcRandomBytes = (n) => Uint8Array.from(host.internalRandomBytes(n));
-  const rtcHex = (bytes, separator = '') =>
-    Array.from(bytes, (x) => x.toString(16).padStart(2, '0').toUpperCase()).join(separator);
-  const rtcBase64 = (bytes) => btoa(String.fromCharCode(...bytes));
-  Object.defineProperty(RTCPeerConnection.prototype, 'setLocalDescription', {
-    value: function (description) {
-      const state = rtcPeerPrivate.get(this);
-      if (state.closed)
-        return platformPromiseReject(
-          platformDOMException('The RTCPeerConnection is closed.', 'InvalidStateError'),
-        );
-      const value =
-        description instanceof RTCSessionDescription
-          ? description
-          : new RTCSessionDescription(description || rtcSessionModel.offer(this));
-      const observable = rtcPeerStates.get(this);
-      return new platformPromise((resolve, reject) =>
-        setTimeout(() => {
-          if (state.closed) {
-            reject(platformDOMException('The RTCPeerConnection is closed.', 'InvalidStateError'));
-            return;
-          }
-          observable.localDescription = value;
-          observable.pendingLocalDescription = value;
-          rtcSessionModel.applyLocal(this, value);
-          if (value.type === 'offer') observable.signalingState = 'have-local-offer';
-          else if (value.type === 'answer') observable.signalingState = 'stable';
-          dispatchTrusted(this, new Event('signalingstatechange'));
-          resolve();
-          if (!/^m=/m.test(value.sdp)) return;
-          setTimeout(
-            () => {
-              if (state.closed) return;
-              observable.iceGatheringState = 'gathering';
-              dispatchTrusted(this, new Event('icegatheringstatechange'));
-              const environment = host.rtcEnvironment(),
-                hasSTUN = state.configuration.iceServers.some((server) =>
-                  server.urls.some((url) => /^stuns?:/i.test(url)),
-                ),
-                count = hasSTUN ? Math.max(1, Number(environment.hostCandidateCount) || 1) : 1,
-                reflexiveCount = hasSTUN
-                  ? Math.max(0, Number(environment.reflexiveCandidateCount) || 0)
-                  : 0,
-                networkCost = Math.max(0, Number(environment.networkCost) || 0),
-                id = host.internalRandomUUID(),
-                hostFoundation = String(parseInt(rtcHex(rtcRandomBytes(4)), 16) >>> 0),
-                reflexiveFoundation = String(parseInt(rtcHex(rtcRandomBytes(4)), 16) >>> 0),
-                priority = 2113937151,
-                reflexivePriority = 1677729535,
-                basePort = 49152 + (parseInt(rtcHex(rtcRandomBytes(2)), 16) % 16380),
-                hostCandidates = [],
-                reflexiveCandidates = [];
-              for (let index = 0; index < count; index++) {
-                const port = basePort + Number((environment.portOffsets || [])[index] ?? index * 2),
-                  suffix =
-                    ' generation 0 ufrag ' +
-                    String(state.iceUfrag || '') +
-                    ' network-cost ' +
-                    networkCost;
-                hostCandidates.push(
-                  new RTCIceCandidate({
-                    candidate:
-                      'candidate:' +
-                      hostFoundation +
-                      ' 1 udp ' +
-                      priority +
-                      ' ' +
-                      id +
-                      '.local ' +
-                      port +
-                      ' typ host' +
-                      suffix,
-                    sdpMid: '0',
-                    sdpMLineIndex: 0,
-                    usernameFragment: state.iceUfrag || null,
-                  }),
-                );
-              }
-              if (hasSTUN && environment.publicAddress)
-                for (let index = 0; index < reflexiveCount; index++) {
-                  const port =
-                      basePort +
-                      Number(
-                        (environment.reflexivePortOffsets || environment.portOffsets || [])[
-                          index
-                        ] ?? index * 2,
-                      ),
-                    suffix =
-                      ' generation 0 ufrag ' +
-                      String(state.iceUfrag || '') +
-                      ' network-cost ' +
-                      networkCost;
-                  reflexiveCandidates.push(
-                    new RTCIceCandidate({
-                      candidate:
-                        'candidate:' +
-                        reflexiveFoundation +
-                        ' 1 udp ' +
-                        reflexivePriority +
-                        ' ' +
-                        String(environment.publicAddress) +
-                        ' ' +
-                        port +
-                        ' typ srflx raddr 0.0.0.0 rport 0' +
-                        suffix,
-                      sdpMid: '0',
-                      sdpMLineIndex: 0,
-                      usernameFragment: state.iceUfrag || null,
-                    }),
-                  );
-                }
-              rtcSessionModel.expandCandidates(value.sdp, hostCandidates, state.configuration);
-              rtcSessionModel.expandCandidates(value.sdp, reflexiveCandidates, state.configuration);
-              const withCandidates = (candidates) =>
-                rtcSessionModel.candidateDescription(value, candidates);
-              const hostDescription = withCandidates(hostCandidates);
-              observable.localDescription = hostDescription;
-              observable.pendingLocalDescription = hostDescription;
-              for (const candidate of hostCandidates)
-                dispatchTrusted(this, new RTCPeerConnectionIceEvent('icecandidate', { candidate }));
-              setTimeout(
-                () => {
-                  if (state.closed) return;
-                  const allCandidates = hostCandidates.concat(reflexiveCandidates),
-                    reflexiveDescription = withCandidates(allCandidates);
-                  observable.localDescription = reflexiveDescription;
-                  observable.pendingLocalDescription = reflexiveDescription;
-                  for (const candidate of reflexiveCandidates)
-                    dispatchTrusted(
-                      this,
-                      new RTCPeerConnectionIceEvent('icecandidate', { candidate }),
-                    );
-                  setTimeout(
-                    () => {
-                      if (state.closed) return;
-                      observable.iceGatheringState = 'complete';
-                      dispatchTrusted(this, new Event('icegatheringstatechange'));
-                      dispatchTrusted(
-                        this,
-                        new RTCPeerConnectionIceEvent('icecandidate', { candidate: null }),
-                      );
-                    },
-                    Math.max(
-                      0,
-                      Number(environment.endDelayMillis) - Number(environment.reflexiveDelayMillis),
-                    ),
-                  );
-                },
-                Math.max(
-                  0,
-                  Number(environment.reflexiveDelayMillis) - Number(environment.hostDelayMillis),
-                ),
-              );
-            },
-            Math.max(0, Number(host.rtcEnvironment().hostDelayMillis) || 0),
-          );
-        }, 0),
-      );
     },
     writable: true,
     configurable: true,

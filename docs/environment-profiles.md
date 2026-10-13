@@ -114,8 +114,11 @@ Resource byte budgets do not cap process RSS, DOM, V8 or native allocation.
 HTTP, HTTPS and SOCKS5 proxy credentials use separate fields, not URL userinfo.
 The origin Chrome transport remains coupled to the installed bundle. Proxy
 failure does not fall back to direct requests; proxy mode disables HTTP/3.
-HTTP(S) resource-loader paths and Worker fetch use the Context proxy. Do not infer
-UDP/WebRTC routing from ICE metadata; broader proxy coverage remains an audit item.
+HTTP(S) resource-loader paths and Worker fetch use the Context proxy. WebRTC uses
+TURN TCP/TLS through that proxy and cannot fall back directly. STUN, TURN UDP,
+direct ICE and SOCKS UDP ASSOCIATE are unavailable in proxied Contexts. ICE
+profile metadata cannot configure live candidates or an exit IP; manual ICE
+overrides reject. See [WebRTC transports and limitations](webrtc.md).
 Credentials are omitted from profile reads and errors.
 
 ## Current diversity and RAM limits

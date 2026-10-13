@@ -106,24 +106,21 @@ type Network struct {
 	// WireProfile identifies the low-level TLS/HTTP behavior which must agree
 	// with Product. Its implementation is supplied by the compatibility bundle.
 	WireProfile string
-	// ICE is canonical network state observed by WebRTC. Candidate generation
-	// must project this state instead of inventing an unrelated network view in
-	// the JavaScript binding.
+	// ICE retains bundle observation metadata for profile serialization. It is
+	// not an input to live ICE: candidates, sockets and timing belong to the
+	// native peer's actual transport. Manual overrides are unsupported.
 	ICE ICEProfile
 }
 type ICEProfile struct {
 	HostCandidateCount      int
 	ReflexiveCandidateCount int
-	// PortOffsets describes socket allocation relative to the first host
-	// candidate and therefore belongs to canonical network state.
+	// These fields describe a retained capture, not an allocation recipe.
 	PortOffsets []int
-	// ReflexivePortOffsets preserves the host/network stack's observable STUN
-	// completion order. It may differ from local candidate enumeration order.
+	// Captured STUN completion order may differ from interface enumeration.
 	ReflexivePortOffsets []int
 	PublicAddress        string
 	NetworkCost          int
-	// Candidate discovery timing is machine/network state. It is kept apart
-	// from browser-version rules and reproduced only by the selected profile.
+	// Captured discovery timing does not schedule live gathering.
 	HostDelayMillis      float64
 	ReflexiveDelayMillis float64
 	EndDelayMillis       float64
@@ -194,7 +191,7 @@ func ChromeDesktopWindows(product Product) Environment {
 		Locale:      Locale{Languages: []string{"en-US", "en"}, IntlLocale: "en-US", Timezone: "UTC"},
 		Preferences: Preferences{ColorScheme: "dark"},
 		Time:        Time{WallOrigin: now, ExecutionScale: 1, NavigationScale: 1, NetworkScale: 1},
-		Network:     Network{Online: true, EffectiveType: "4g", DownlinkMbps: 10, RTTMillis: 50, CookiesEnabled: true, ICE: ICEProfile{HostCandidateCount: 1, PortOffsets: []int{0}, NetworkCost: 999}},
+		Network:     Network{Online: true, EffectiveType: "4g", DownlinkMbps: 10, RTTMillis: 50, CookiesEnabled: true},
 		Permissions: Permissions{"geolocation": "prompt", "notifications": "default"},
 	}
 }

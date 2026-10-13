@@ -1336,32 +1336,7 @@ func (r *Realm) installBindingsOnOwner() error {
 		g := p.environmentView().Graphics
 		return r.val(map[string]any{"vendor": g.Vendor, "renderer": g.Renderer, "maxTextureSize": g.MaxTextureSize, "capabilitiesJSON": g.WebGLCapabilities()}), nil
 	})
-	host["rtcEnvironment"] = r.transientFn(func(engine.Value, []engine.Value) (engine.Value, error) {
-		ice := p.environmentView().Network.ICE
-		count := ice.HostCandidateCount
-		if count < 0 {
-			count = 0
-		}
-		offsets := append([]int(nil), ice.PortOffsets...)
-		if len(offsets) != count {
-			offsets = make([]int, count)
-			for index := range offsets {
-				offsets[index] = index * 2
-			}
-		}
-		reflexiveOffsets := append([]int(nil), ice.ReflexivePortOffsets...)
-		reflexiveCount := ice.ReflexiveCandidateCount
-		if reflexiveCount < 0 {
-			reflexiveCount = 0
-		}
-		if len(reflexiveOffsets) != reflexiveCount {
-			reflexiveOffsets = make([]int, reflexiveCount)
-			for index := range reflexiveOffsets {
-				reflexiveOffsets[index] = index * 2
-			}
-		}
-		return r.val(map[string]any{"hostCandidateCount": count, "reflexiveCandidateCount": reflexiveCount, "portOffsets": offsets, "reflexivePortOffsets": reflexiveOffsets, "publicAddress": ice.PublicAddress, "networkCost": ice.NetworkCost, "hostDelayMillis": ice.HostDelayMillis, "reflexiveDelayMillis": ice.ReflexiveDelayMillis, "endDelayMillis": ice.EndDelayMillis}), nil
-	})
+
 	host["hasStorageAccess"] = r.transientFn(func(engine.Value, []engine.Value) (engine.Value, error) {
 		return r.val(p.environmentView().Network.CookiesEnabled && r.origin != "null"), nil
 	})

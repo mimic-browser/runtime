@@ -1,6 +1,6 @@
-// A peer acquires native transport only when media is attached or a remote
-// session must be negotiated. Offline offer observations retain their existing
-// catalog path; a connected peer's state comes exclusively from the transport.
+// Every negotiated description and ICE observation comes from one native peer.
+// Native allocation is lazy until an operation needs it, including offer-only
+// DataChannel peers; no Environment address or synthetic candidate is used.
 (() => {
   if (!cameraCaptureModel) return;
   const peers = new WeakMap(),
@@ -8,8 +8,7 @@
     senders = new WeakMap(),
     remoteStreams = new WeakMap();
   const senderLists = new WeakMap();
-  const deferredChannels = new WeakMap(),
-    channelSlots = new WeakMap(),
+  const channelSlots = new WeakMap(),
     channelWrappers = new Map();
   const attachChannel = (peer, channel) => {
     const state = rtcDataStates.get(channel);
@@ -43,19 +42,14 @@
     }
     return result;
   };
-  const ensure = (peer) => {
+  const ensure = (peer, allowClosed = false) => {
     const state = rtcPeerPrivate.get(peer);
     if (!state) throw new TypeError('Illegal invocation');
-    if (state.closed)
+    if (state.closed && !allowClosed)
       throw platformDOMException('The RTCPeerConnection is closed.', 'InvalidStateError');
     let id = peers.get(peer);
     if (!id) {
       const provisional = RTCPeerConnection.prototype.getTransceivers.call(peer);
-      if (rtcPeerStates.get(peer).localDescription)
-        throw platformDOMException(
-          'Attach media before applying an offline offer',
-          'NotSupportedError',
-        );
       const config = peer.getConfiguration();
       delete config.certificates;
       id = failure(host.rtcMediaCreate(JSON.stringify(config))).id;
@@ -90,13 +84,13 @@
         });
         transceiverWrappers.set(row.id, transceiver);
       }
-      for (const channel of deferredChannels.get(peer) || []) attachChannel(peer, channel);
-      deferredChannels.delete(peer);
     }
     return id;
   };
   const operation = (peer, name, data) =>
-    host.rtcMediaOperation(ensure(peer), name, JSON.stringify(data)).then(failure);
+    host
+      .rtcMediaOperation(ensure(peer, name === 'stats'), name, JSON.stringify(data))
+      .then(failure);
   const method = (prototype, name, value) =>
     Object.defineProperty(prototype, name, {
       value,
@@ -107,12 +101,8 @@
   const priorDataChannel = RTCPeerConnection.prototype.createDataChannel;
   method(RTCPeerConnection.prototype, 'createDataChannel', function (label, options = {}) {
     const channel = priorDataChannel.call(this, label, options);
-    if (peers.has(this)) attachChannel(this, channel);
-    else {
-      let channels = deferredChannels.get(this);
-      if (!channels) deferredChannels.set(this, (channels = []));
-      channels.push(channel);
-    }
+    ensure(this);
+    attachChannel(this, channel);
     return channel;
   });
   for (const name of ['id', 'readyState', 'bufferedAmount', 'bufferedAmountLowThreshold']) {
@@ -214,6 +204,8 @@
         if (!slot) return prior.get.call(this);
         syncTransceivers(slot.peer);
         if (name === 'sender' || name === 'receiver' || name === 'stopped') return slot[name];
+        if (name === 'mid' && !host.rtcMediaState(peers.get(slot.peer)).localDescription)
+          return null;
         if (name === 'currentDirection') {
           if (slot.stopped) return null;
           const state = host.rtcMediaState(peers.get(slot.peer));
@@ -353,22 +345,41 @@
     ['addIceCandidate', 'ice'],
     ['getStats', 'stats'],
   ]) {
-    const prior = RTCPeerConnection.prototype[name];
     method(RTCPeerConnection.prototype, name, function (value) {
-      if (!peers.has(this) && name !== 'setRemoteDescription') return prior.call(this, value);
       try {
+        if (action === 'stats' && rtcPeerPrivate.get(this)?.closed && !peers.has(this))
+          return platformPromiseResolve(new Map());
+        if (name === 'createOffer') {
+          for (const [kind, option] of [
+            ['audio', 'offerToReceiveAudio'],
+            ['video', 'offerToReceiveVideo'],
+          ]) {
+            if (
+              value?.[option] &&
+              !this.getTransceivers().some((t) => t.receiver.track.kind === kind)
+            ) {
+              this.addTransceiver(kind, { direction: 'recvonly' });
+            }
+          }
+          if (rtcPeerPrivate.get(this).restartPending) value = { ...value, iceRestart: true };
+        }
         if (name === 'setLocalDescription' && value === undefined) {
           const state = host.rtcMediaState(ensure(this));
           return operation(
             this,
             state.signalingState === 'have-remote-offer' ? 'answer' : 'offer',
-            {},
+            { iceRestart: !!rtcPeerPrivate.get(this).restartPending },
           )
             .then((description) => operation(this, 'local', description))
-            .then(() => undefined);
+            .then(() => {
+              rtcPeerPrivate.get(this).restartPending = false;
+            });
         }
         return operation(this, action, value ?? (action === 'ice' ? null : {})).then((result) => {
-          if (action === 'offer' || action === 'answer') return new RTCSessionDescription(result);
+          if (action === 'offer' || action === 'answer') {
+            rtcPeerPrivate.get(this).restartPending = false;
+            return { sdp: result.sdp, type: result.type };
+          }
           if (action === 'stats') return new Map(Object.entries(result));
         });
       } catch (error) {
@@ -376,6 +387,13 @@
       }
     });
   }
+  method(RTCPeerConnection.prototype, 'restartIce', function () {
+    ensure(this);
+    rtcPeerPrivate.get(this).restartPending = true;
+    setTimeout(() => {
+      if (!rtcPeerPrivate.get(this).closed) dispatchTrusted(this, new Event('negotiationneeded'));
+    }, 0);
+  });
   const priorSenders = RTCPeerConnection.prototype.getSenders;
   method(RTCPeerConnection.prototype, 'getSenders', function () {
     if (!peers.has(this)) return priorSenders.call(this);
@@ -384,12 +402,21 @@
   });
   const priorConfiguration = RTCPeerConnection.prototype.setConfiguration;
   method(RTCPeerConnection.prototype, 'setConfiguration', function (value) {
-    if (peers.has(this)) {
-      const copy = { ...value };
-      delete copy.certificates;
-      failure(host.rtcMediaTrack(peers.get(this), 'configuration', JSON.stringify(copy)));
+    const state = rtcPeerPrivate.get(this);
+    if (state.closed)
+      throw platformDOMException('The RTCPeerConnection is closed.', 'InvalidStateError');
+    const previous = state.configuration;
+    priorConfiguration.call(this, value);
+    try {
+      if (peers.has(this)) {
+        const copy = this.getConfiguration();
+        delete copy.certificates;
+        failure(host.rtcMediaTrack(peers.get(this), 'configuration', JSON.stringify(copy)));
+      }
+    } catch (error) {
+      state.configuration = previous;
+      throw error;
     }
-    return priorConfiguration.call(this, value);
   });
   for (const name of [
     'localDescription',
@@ -439,7 +466,7 @@
     });
   registerBootstrapCallback('installRTCMediaNotifier', (id, kind, data) => {
     const peer = peerWrappers.get(id);
-    if (!peer) return;
+    if (!peer || rtcPeerPrivate.get(peer).closed) return;
     if (kind === 'datachannel') {
       const channel = priorDataChannel.call(peer, data.label, data);
       channelSlots.set(channel, { peer, id: data.id });

@@ -1411,9 +1411,11 @@
   },
   "Mimic.createContext": {
     "status": "partial",
-    "notes": "Creates validated generated/imported environment contexts with optional canonical media configuration installed before creating Pages. Failed media configuration disposes the new Context. Existing profile token, proxy, resource policy and disposeOnDetach behavior are preserved.",
+    "notes": "Creates validated generated/imported environment contexts with optional canonical media configuration installed before creating Pages. Failed media configuration disposes the new Context. Existing profile token, proxy, resource policy and disposeOnDetach behavior are preserved. Context HTTP/HTTPS/SOCKS5 proxies enforce WebRTC relay transport through TURN TCP/TLS tunnels with no direct ICE, STUN, UDP TURN or DNS fallback; SOCKS UDP ASSOCIATE is unsupported.",
     "tests": [
-      "internal/cdp/media_profile_test.go#TestMimicMediaProfileCommands"
+      "internal/cdp/media_profile_test.go#TestMimicMediaProfileCommands",
+      "internal/browser/rtc_proxy_test.go#TestRTCProxyBrowserRoundTripAndTeardown",
+      "internal/network/rtc_proxy_test.go#TestRTCProxyRelayEgressMatrix"
     ]
   },
   "Mimic.getCompatibilityMatrix": {
@@ -1455,10 +1457,12 @@
   },
   "Mimic.configureContext": {
     "status": "partial",
-    "notes": "Atomically configures an existing empty framework-owned Context before Pages are created, preserving the real client Context object. Rejects live/initializing/closing Pages, retained uploads and capture workers; profile/proxy/resource/media validation failures leave the Context unchanged.",
+    "notes": "Atomically configures an existing empty framework-owned Context before Pages are created, preserving the real client Context object. Rejects live/initializing/closing Pages, retained uploads and capture workers; profile/proxy/resource/media validation failures leave the Context unchanged. Context HTTP/HTTPS/SOCKS5 proxies enforce WebRTC relay transport through TURN TCP/TLS tunnels with no direct ICE, STUN, UDP TURN or DNS fallback; SOCKS UDP ASSOCIATE is unsupported.",
     "tests": [
       "internal/cdp/configure_context_test.go#TestConfigureEmptyFrameworkContext",
-      "internal/browser/profile_test.go#TestConfigureProfileWaitsForRetainedUploads"
+      "internal/browser/profile_test.go#TestConfigureProfileWaitsForRetainedUploads",
+      "internal/browser/rtc_proxy_test.go#TestRTCProxyBrowserRoundTripAndTeardown",
+      "internal/network/rtc_proxy_test.go#TestRTCProxyRelayEgressMatrix"
     ]
   },
   "Mimic.cancelExecution": {
@@ -1507,9 +1511,10 @@
   },
   "Mimic.getProfileSchema": {
     "status": "partial",
-    "notes": "Canonical Context/Page environment profile projection and ordinary Page overrides. Generated/imported profile invariants and explicit mutability boundaries are enforced; no arbitrary profile override mechanism.",
+    "notes": "Canonical Context/Page environment profile projection and ordinary Page overrides. Generated/imported profile invariants and explicit mutability boundaries are enforced; no arbitrary profile override mechanism. ICE profile metadata is not a live transport recipe; manual ICE address/count/timing overrides reject as unsupported.",
     "tests": [
-      "internal/cdp/profile_test.go#TestMimicProfileContextsAndAtomicUpdates"
+      "internal/cdp/profile_test.go#TestMimicProfileContextsAndAtomicUpdates",
+      "internal/profile/profile_test.go#TestProfileCannotFabricateICE"
     ]
   },
   "Mimic.getResourcePolicy": {
@@ -1556,10 +1561,11 @@
   },
   "Mimic.importProfile": {
     "status": "partial",
-    "notes": "Manual import accepts arbitrary nonempty userAgent strings without CR/LF/NUL, preserving installed platform and Client Hints metadata. UA does not select a different engine or wire recipe. Generated/imported Contexts remain immutable. Other coherence and recipe validation remains authoritative.",
+    "notes": "Manual import accepts arbitrary nonempty userAgent strings without CR/LF/NUL, preserving installed platform and Client Hints metadata. UA does not select a different engine or wire recipe. Generated/imported Contexts remain immutable. Other coherence and recipe validation remains authoritative. ICE profile metadata is not a live transport recipe; manual ICE address/count/timing overrides reject as unsupported.",
     "tests": [
       "internal/cdp/portable_profile_test.go#TestPortableProfilesCDP",
-      "internal/profile/generate_test.go#TestManualImportAllowsArbitraryUserAgent"
+      "internal/profile/generate_test.go#TestManualImportAllowsArbitraryUserAgent",
+      "internal/profile/profile_test.go#TestProfileCannotFabricateICE"
     ]
   },
   "Mimic.pause": {

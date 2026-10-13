@@ -100,22 +100,6 @@ func environment(mode state.BrowserMode) state.Environment {
 	// Navigator.connection.rtt. Keep it in the environment profile: it describes
 	// the captured machine/network and is not a Chrome-version-wide constant.
 	environment.Network.RTTMillis = 100
-	// These are properties of the pinned differential-test machine/network,
-	// not of a target site. They remain canonical and externally configurable
-	// state, while the Chrome 152 bundle supplies the reproducible default.
-	environment.Network.ICE.HostCandidateCount = 3
-	environment.Network.ICE.PortOffsets = []int{0, 2, 7}
-	// Host and server-reflexive counts are independent environment facts;
-	// neither is a Chrome-version constant. This reproducible profile selects
-	// the three mappings observed in its baseline capture even though live
-	// differential runs may see fewer transient STUN results.
-	environment.Network.ICE.ReflexiveCandidateCount = 3
-	environment.Network.ICE.ReflexivePortOffsets = []int{0, 7, 2}
-	environment.Network.ICE.PublicAddress = "94.43.38.7"
-	environment.Network.ICE.NetworkCost = 999
-	environment.Network.ICE.HostDelayMillis = 21
-	environment.Network.ICE.ReflexiveDelayMillis = 30
-	environment.Network.ICE.EndDelayMillis = 130
 	if mode == state.BrowserModeHeadless {
 		// This is retained only as an explicit regression environment. It is not
 		// the default Chrome 152 oracle and cannot supply generic expectations.

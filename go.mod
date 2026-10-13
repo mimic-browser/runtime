@@ -45,11 +45,16 @@ require (
 	github.com/klauspost/compress v1.18.7
 	github.com/maclof/gov8 v0.1.1
 	github.com/nlnwa/whatwg-url v0.6.2
+	github.com/pion/ice/v4 v4.4.4
 	github.com/pion/interceptor v0.1.49
 	github.com/pion/mediadevices v0.10.0
 	github.com/pion/opus v0.1.1-0.20261005072002-44637de087b3
 	github.com/pion/rtcp v1.2.18
 	github.com/pion/rtp v1.10.5
+	github.com/pion/sdp/v3 v3.0.20
+	github.com/pion/stun/v4 v4.0.1
+	github.com/pion/transport/v5 v5.1.1
+	github.com/pion/turn/v5 v5.1.2
 	github.com/pion/webrtc/v4 v4.2.22
 	github.com/tdewolff/font v0.0.0-20241125190050-d899fdc808fc
 	github.com/woozymasta/bcn v0.7.0
@@ -82,16 +87,11 @@ require (
 	github.com/google/pprof v0.0.0-20240727154555-813a5fbdbec8 // indirect
 	github.com/pion/datachannel v1.6.3 // indirect
 	github.com/pion/dtls/v3 v3.1.9 // indirect
-	github.com/pion/ice/v4 v4.4.4 // indirect
 	github.com/pion/logging v0.2.4 // indirect
 	github.com/pion/mdns/v2 v2.2.1 // indirect
 	github.com/pion/randutil v0.1.0 // indirect
 	github.com/pion/sctp v1.11.3 // indirect
-	github.com/pion/sdp/v3 v3.0.20 // indirect
 	github.com/pion/srtp/v3 v3.1.0 // indirect
-	github.com/pion/stun/v4 v4.0.1 // indirect
-	github.com/pion/transport/v5 v5.1.1 // indirect
-	github.com/pion/turn/v5 v5.1.2 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/sergeymakinen/go-bmp v1.0.0 // indirect
 	github.com/sergeymakinen/go-ico v1.0.0 // indirect
