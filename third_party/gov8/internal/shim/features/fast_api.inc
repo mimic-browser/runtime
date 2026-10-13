@@ -14,8 +14,11 @@
 #include "v8-fast-api-calls.h"
 #include <algorithm>
 #include <atomic>
+#include <chrono>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <memory>
 #include <mutex>
 #include <unordered_map>
@@ -77,6 +80,77 @@ std::atomic<size_t> g_test_add_calls{0};
 std::atomic<size_t> g_test_one_calls{0};
 std::atomic<size_t> g_test_two_calls{0};
 
+struct ClockState {
+  int64_t base_unix_micros = 0;
+  int64_t base_steady_nanos = 0;
+  double scale = 1.0;
+};
+
+thread_local ClockState g_clock_state;
+
+int64_t SteadyNanos() {
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(
+             std::chrono::steady_clock::now().time_since_epoch())
+      .count();
+}
+
+int64_t ClockMicros() {
+  const int64_t elapsed = SteadyNanos() - g_clock_state.base_steady_nanos;
+  return g_clock_state.base_unix_micros +
+         static_cast<int64_t>((static_cast<double>(elapsed) / 1000.0) *
+                              g_clock_state.scale);
+}
+
+int64_t ClampMicros(int64_t micros, uint64_t seed, bool isolated) {
+  const bool negative = micros < 0;
+  if (negative) micros = -micros;
+  const int64_t step = isolated ? 5 : 100;
+  const int64_t low = micros % 10000000000LL;
+  int64_t bucket = low - low % step;
+  uint64_t hash = static_cast<uint64_t>(bucket) ^ seed;
+  hash ^= hash >> 33;
+  hash *= 0xff51afd7ed558ccdULL;
+  hash ^= hash >> 33;
+  hash *= 0xc4ceb9fe1a85ec53ULL;
+  hash ^= hash >> 33;
+  const double threshold =
+      static_cast<double>(hash & ((uint64_t{1} << 52) - 1)) /
+      static_cast<double>(uint64_t{1} << 52);
+  if (static_cast<double>(low - bucket) >= threshold * step) bucket += step;
+  const int64_t result = micros - low + bucket;
+  return negative ? -result : result;
+}
+
+struct ClockConfig {
+  int32_t kind;
+  int64_t origin_micros;
+  uint64_t seed;
+  double precision_base_millis;
+  bool isolated;
+};
+
+std::mutex g_clock_config_mutex;
+std::unordered_map<v8::Isolate*, std::vector<std::unique_ptr<ClockConfig>>>
+    g_clock_configs;
+
+void NativeClockCallback(const v8::FunctionCallbackInfo<v8::Value>& info) {
+  auto config = static_cast<ClockConfig*>(
+      v8::Local<v8::External>::Cast(info.Data())
+          ->Value(v8::kExternalPointerTypeTagDefault));
+  if (config->kind == 0) {
+    info.GetReturnValue().Set(static_cast<double>(ClockMicros()) / 1000.0);
+    return;
+  }
+  int64_t delta = ClampMicros(ClockMicros(), config->seed, config->isolated) -
+                  ClampMicros(config->origin_micros, config->seed,
+                              config->isolated);
+  if (delta < 0) delta = 0;
+  const double millis = static_cast<double>(delta) / 1000.0;
+  info.GetReturnValue().Set(
+      (config->precision_base_millis + millis) -
+      config->precision_base_millis);
+}
+
 uint32_t TestFastAdd(v8::Local<v8::Object>, uint32_t a, uint32_t b) {
   g_test_add_calls.fetch_add(1, std::memory_order_seq_cst);
   return a + b;
@@ -129,6 +203,59 @@ void RemoveDescriptorSet(v8::Isolate* isolate, DescriptorSet* target) {
 }  // namespace gov8_fast_api_impl
 
 extern "C" {
+
+__declspec(dllexport) int64_t gov8_fast_clock_publish(
+    int64_t unix_micros, uint64_t scale_bits) {
+  double scale = 1.0;
+  static_assert(sizeof(scale) == sizeof(scale_bits));
+  std::memcpy(&scale, &scale_bits, sizeof(scale));
+  if (!std::isfinite(scale) || scale < 0) {
+    SetErr("invalid fast clock scale");
+    return kErrBadArg;
+  }
+  gov8_fast_api_impl::g_clock_state = {
+      unix_micros, gov8_fast_api_impl::SteadyNanos(), scale};
+  return kOk;
+}
+
+__declspec(dllexport) int64_t gov8_native_clock_function_new(
+    v8::Isolate* isolate, void* scope, void* context_wire, int32_t kind,
+    int64_t origin_micros, uint64_t seed, uint64_t precision_base_bits,
+    int32_t isolated) {
+  using namespace gov8_fast_api_impl;
+  ClearErr();
+  auto context_wrap = AsCtx(context_wire);
+  if (isolate == nullptr || !ScopeIs(isolate, scope) ||
+      context_wrap == nullptr || context_wrap->iso != isolate ||
+      (kind != 0 && kind != 1) ||
+      (isolated != 0 && isolated != 1)) {
+    SetErr("invalid native clock function argument");
+    return kErrBadArg;
+  }
+  double precision_base = 0;
+  std::memcpy(&precision_base, &precision_base_bits, sizeof(precision_base));
+  auto config = std::make_unique<ClockConfig>(ClockConfig{
+      kind, origin_micros, seed, precision_base, isolated != 0});
+  ClockConfig* retained = config.get();
+  std::lock_guard<std::mutex> lock(g_clock_config_mutex);
+  g_clock_configs[isolate].push_back(std::move(config));
+  Gov8IsolateScope isolate_scope(isolate);
+  auto context = context_wrap->ctx->Get(isolate);
+  v8::Context::Scope context_scope(context);
+  auto data = v8::External::New(isolate, retained,
+                                v8::kExternalPointerTypeTagDefault);
+  v8::Local<v8::Function> function;
+  if (!v8::Function::New(context, NativeClockCallback, data, 0,
+                         v8::ConstructorBehavior::kThrow,
+                         v8::SideEffectType::kHasNoSideEffect)
+           .ToLocal(&function)) {
+    g_clock_configs[isolate].pop_back();
+    if (g_clock_configs[isolate].empty()) g_clock_configs.erase(isolate);
+    SetErr("native clock function construction failed");
+    return kErrGeneric;
+  }
+  return reinterpret_cast<int64_t>(ToWire(function));
+}
 
 __declspec(dllexport) int64_t gov8_fast_api_function_template_new(
     v8::Isolate* isolate, void* scope, void* host_context, int32_t length,
@@ -268,6 +395,10 @@ __declspec(dllexport) int64_t gov8_fast_api_after_isolate_dispose(
   v8::Isolate* isolate = reinterpret_cast<v8::Isolate*>(isolate_address);
   std::lock_guard<std::mutex> lock(g_descriptor_mutex);
   g_descriptor_sets.erase(isolate);
+  {
+    std::lock_guard<std::mutex> clock_lock(g_clock_config_mutex);
+    g_clock_configs.erase(isolate);
+  }
   return kOk;
 }
 

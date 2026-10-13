@@ -80,6 +80,14 @@ type Runtime interface {
 	Close() error
 }
 
+// FastClockRuntime keeps hot clock reads inside the engine while retaining the
+// browser scheduler as the authoritative source. Implementations publish a new
+// anchor before entering script; returned callables are realm-owned values.
+type FastClockRuntime interface {
+	SetTimeScale(float64)
+	NewPerformanceNow(time.Time, uint64, float64, bool) (Value, error)
+}
+
 // ReentrantRuntime permits a synchronous call into another actor-owned realm
 // while servicing calls back into this realm on its original actor thread.
 // The operation must use the supplied context and return before RunNested

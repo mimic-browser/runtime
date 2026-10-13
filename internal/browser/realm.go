@@ -402,6 +402,9 @@ func newRealmStateWithNavigation(p *Page, agent ExecutionAgent, d *dom.Document,
 		p.trace.Add(trace.Scheduler, t.Name, map[string]any{"taskId": t.TaskID, "source": t.Source, "due": t.Due, "realm": r.ID})
 	})
 	r.runtime.SetTimeSource(r.performanceClockNow)
+	if fastClock, ok := r.runtime.(engine.FastClockRuntime); ok {
+		fastClock.SetTimeScale(p.environmentView().Time.ExecutionScale)
+	}
 	r.runtime.SetGlobalAccessObserver(func(name string, supported bool) {
 		if r.apiTracking {
 			r.recordAPIAccess("Window."+name, supported)
@@ -1402,9 +1405,17 @@ func (r *Realm) installBindingsOnOwner() error {
 		return promise.Value, nil
 	})
 	performanceIsolated := r.securityState().crossOriginIsolated
-	host["performanceNow"] = r.transientFn(func(engine.Value, []engine.Value) (engine.Value, error) {
-		return r.val(p.performanceClamper.now(r.performanceClockNow(), r.performanceOrigin, performanceIsolated)), nil
-	})
+	if fastClock, ok := r.runtime.(engine.FastClockRuntime); ok {
+		performanceNow, err := fastClock.NewPerformanceNow(r.performanceOrigin, p.performanceClamper.seed, p.performanceClamper.precisionBaseMillis, performanceIsolated)
+		if err != nil {
+			return err
+		}
+		host["performanceNow"] = performanceNow
+	} else {
+		host["performanceNow"] = r.transientFn(func(engine.Value, []engine.Value) (engine.Value, error) {
+			return r.val(p.performanceClamper.now(r.performanceClockNow(), r.performanceOrigin, performanceIsolated)), nil
+		})
+	}
 	host["animationTimelineNow"] = r.transientFn(func(engine.Value, []engine.Value) (engine.Value, error) {
 		// Borrowed frame/world operations observe the active Page turn's sample.
 		clock := p.activeClock.Load()

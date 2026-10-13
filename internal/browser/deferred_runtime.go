@@ -13,11 +13,12 @@ import (
 // evaluation therefore never constructs a throwaway bootstrap/isolate. All
 // access remains inside the existing Page command boundary.
 type deferredRuntime struct {
-	realm    *Realm
-	now      func() time.Time
-	observer func(string, bool)
-	err      error
-	closed   bool
+	realm     *Realm
+	now       func() time.Time
+	timeScale float64
+	observer  func(string, bool)
+	err       error
+	closed    bool
 }
 
 func (d *deferredRuntime) ready() (engine.Runtime, error) {
@@ -40,6 +41,9 @@ func (d *deferredRuntime) ready() (engine.Runtime, error) {
 	d.realm.runtime = r
 	d.realm.runtimeGroup.add(d.realm)
 	r.SetTimeSource(d.now)
+	if fastClock, ok := r.(engine.FastClockRuntime); ok {
+		fastClock.SetTimeScale(d.timeScale)
+	}
 	r.SetGlobalAccessObserver(d.observer)
 	if err := d.realm.install(); err != nil {
 		d.realm.runtime.Close()
@@ -157,6 +161,23 @@ func (d *deferredRuntime) SetTimeSource(now func() time.Time) {
 	if d.realm.runtime != d {
 		d.realm.runtime.SetTimeSource(now)
 	}
+}
+func (d *deferredRuntime) SetTimeScale(scale float64) {
+	d.timeScale = scale
+	if fastClock, ok := d.realm.runtime.(engine.FastClockRuntime); ok && d.realm.runtime != d {
+		fastClock.SetTimeScale(scale)
+	}
+}
+func (d *deferredRuntime) NewPerformanceNow(origin time.Time, seed uint64, precisionBase float64, isolated bool) (engine.Value, error) {
+	r, err := d.ready()
+	if err != nil {
+		return nil, err
+	}
+	fastClock, ok := r.(engine.FastClockRuntime)
+	if !ok {
+		return nil, fmt.Errorf("engine does not support a native performance clock")
+	}
+	return fastClock.NewPerformanceNow(origin, seed, precisionBase, isolated)
 }
 func (d *deferredRuntime) SetGlobalAccessObserver(f func(string, bool)) {
 	d.observer = f

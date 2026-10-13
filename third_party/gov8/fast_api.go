@@ -5,10 +5,39 @@ package gov8
 import (
 	"errors"
 	"fmt"
+	"math"
 	"runtime"
 	"sync"
 	"unsafe"
 )
+
+// PublishFastClock anchors the isolate owner's native hot-path clock to the
+// browser-owned clock. It must run on the isolate thread before script.
+func PublishFastClock(unixMicros int64, scale float64) error {
+	return callErr("FastClock.Publish", proc("gov8_fast_clock_publish"),
+		uintptr(unixMicros), uintptr(math.Float64bits(scale)))
+}
+
+// NewNativeClockFunction creates a cold-path native V8 callback. Clock reads
+// never enter Go, including before TurboFan has optimized the calling script.
+func (i *Isolate) NewNativeClockFunction(s *Scope, c *Context, kind int, originMicros int64, seed uint64, precisionBase float64, isolated bool) (*Function, error) {
+	if err := i.check(); err != nil {
+		return nil, err
+	}
+	if s == nil || c == nil || s.iso != i || c.iso != i {
+		return nil, foreignIsolate("native clock")
+	}
+	isolatedWord := uintptr(0)
+	if isolated {
+		isolatedWord = 1
+	}
+	handle, err := callHandle("NativeClock.New", proc("gov8_native_clock_function_new"),
+		i.handleAssumingCheck(), s.handle, c.handle, uintptr(kind), uintptr(originMicros), uintptr(seed), uintptr(math.Float64bits(precisionBase)), isolatedWord)
+	if err != nil {
+		return nil, err
+	}
+	return &Function{Value: Value{iso: i, sc: s, h: handle}, ctx: c}, nil
+}
 
 // FastType mirrors v8::CTypeInfo::Type in pinned V8 15.2. The callback
 // options marker is the upstream out-of-enum sentinel 255.

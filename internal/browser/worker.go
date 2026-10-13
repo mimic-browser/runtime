@@ -189,6 +189,9 @@ func (w *DedicatedWorker) run(ctx context.Context, source string, initialBlob *n
 		p.trace.Add(trace.Scheduler, t.Name, map[string]any{"taskId": t.TaskID, "source": t.Source, "due": t.Due, "worker": w.id})
 	})
 	runtime.SetTimeSource(workerScheduler.Now)
+	if fastClock, ok := runtime.(engine.FastClockRuntime); ok {
+		fastClock.SetTimeScale(p.environmentView().Time.ExecutionScale)
+	}
 	runtime.SetGlobalAccessObserver(func(name string, supported bool) {
 		p.trace.Add(trace.API, "propertyAccess", map[string]any{"property": "DedicatedWorkerGlobalScope." + name, "supported": supported, "worker": w.id})
 		if !supported {
@@ -398,9 +401,18 @@ func (w *DedicatedWorker) run(ctx context.Context, source string, initialBlob *n
 		p.trace.Add(trace.API, "Crypto.randomUUID", map[string]any{"worker": w.id})
 		return runtime.Value(uuid.NewString()), nil
 	})
-	host["performanceNow"] = runtime.Function(func(engine.Value, []engine.Value) (engine.Value, error) {
-		return runtime.Value(p.performanceClamper.now(workerScheduler.Now(), w.performanceOrigin, w.performanceIsolated)), nil
-	})
+	if fastClock, ok := runtime.(engine.FastClockRuntime); ok {
+		performanceNow, err := fastClock.NewPerformanceNow(w.performanceOrigin, p.performanceClamper.seed, p.performanceClamper.precisionBaseMillis, w.performanceIsolated)
+		if err != nil {
+			_ = w.reportError(err)
+			return
+		}
+		host["performanceNow"] = performanceNow
+	} else {
+		host["performanceNow"] = runtime.Function(func(engine.Value, []engine.Value) (engine.Value, error) {
+			return runtime.Value(p.performanceClamper.now(workerScheduler.Now(), w.performanceOrigin, w.performanceIsolated)), nil
+		})
+	}
 	host["performanceTimeOrigin"] = runtime.Function(func(engine.Value, []engine.Value) (engine.Value, error) {
 		return runtime.Value(float64(p.performanceClamper.micros(w.performanceOrigin.UnixMicro(), w.performanceIsolated)) / 1000), nil
 	})

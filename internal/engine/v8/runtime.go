@@ -158,6 +158,7 @@ type adapter struct {
 	realm                       *Realm
 	release                     func() error
 	now                         func() time.Time
+	timeScale                   float64
 	observer                    func(string, bool)
 	closed                      bool
 	mu                          sync.Mutex
@@ -1219,16 +1220,17 @@ func (a *adapter) SetTimeSource(now func() time.Time) {
 	if now == nil {
 		return
 	}
-	_ = a.Set("__mimicDateNow", a.Function(func(engine.Value, []engine.Value) (engine.Value, error) {
-		// ECMAScript time values are integral milliseconds. performance.now()
-		// remains the independent high-resolution monotonic clock.
-		return a.Value(a.now().UnixMilli()), nil
-	}))
+	clockHolder, err := a.newFastClockFunction(0, time.Time{}, 0, 0, false)
+	if err != nil {
+		return
+	}
+	_ = a.Set("__mimicDateNow", clockHolder)
 	// Admit the clock wrapper as platform code at compilation: argument
 	// coercion can execute author callbacks and capture their native stacks.
 	_, _ = a.EvalBootstrap(context.Background(), `
-const mimicDateNow = globalThis.__mimicDateNow;
+const mimicClock = globalThis.__mimicDateNow;
 delete globalThis.__mimicDateNow;
+const mimicDateNow = () => mimicClock.clock();
 const NativeDate = Date;
 const MimicDate = new Proxy(NativeDate, {
   apply(target, thisArg, args) {
@@ -1242,7 +1244,7 @@ const MimicDate = new Proxy(NativeDate, {
 });
 Object.defineProperty(MimicDate, 'now', {
   value: function now() {
-    return mimicDateNow();
+    return Math.floor(mimicDateNow());
   },
   writable: true,
   configurable: true,
@@ -1398,6 +1400,13 @@ func (a *adapter) runCommand(operation realmOperation, outerOnly bool) (engine.V
 		a.activeIsolate = s.isolate
 		previousAdapter := s.activeAdapter
 		s.activeAdapter = a
+		if a.now != nil {
+			if err := gov8.PublishFastClock(a.now().UnixMicro(), a.timeScale); err != nil {
+				s.activeAdapter = previousAdapter
+				a.activeIsolate = previousIsolate
+				return response{err: err}
+			}
+		}
 		if a.evalSourceResolver != nil {
 			if err := a.installEvalSourceResolver(s, realm, scope, a.evalSourceResolver); err != nil {
 				s.activeAdapter = previousAdapter
