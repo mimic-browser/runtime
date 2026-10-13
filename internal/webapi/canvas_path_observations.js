@@ -510,14 +510,36 @@ const shadowSnapshot = (d, s, frequent) => {
   if (!Array.isArray(rgba) || !rgba[3]) return null;
   return { rgba, blur: d.shadowBlur, x: d.shadowOffsetX, y: d.shadowOffsetY, frequent };
 };
-// Blur the source alpha before painting the source. Keep this in the canonical
-// pixel buffer so crops, copies and later overlapping draws see the same shadow.
-const materializeShadow = (s, source, shadow, alpha, composite, clips) => {
+// Blur the source mask before painting the source. Paths shade the blurred
+// geometry afterward; text supplies its painted alpha directly. Keep the result
+// in the canonical pixel buffer for later crops, copies and overlapping draws.
+const materializeShadow = (
+  s,
+  source,
+  shadow,
+  alpha,
+  composite,
+  clips,
+  sourceBounds,
+  sourcePaint,
+) => {
   if (!shadow || !source.some((v) => v > 0)) return;
   const w = s.width,
     h = s.height,
+    sourceLeft = sourceBounds?.left ?? 0,
+    sourceTop = sourceBounds?.top ?? 0,
+    sourceWidth = sourceBounds?.width ?? w,
+    sourceHeight = sourceBounds?.height ?? h,
     sigma = shadow.blur / 2,
-    radius = Math.min(Math.ceil(3 * sigma), Math.max(w, h));
+    radius = Math.ceil(3 * sigma);
+  // Keep unsupported extreme blurs explicit instead of silently truncating
+  // their kernel or allocating an unbounded CPU mask.
+  if (
+    !Number.isSafeInteger(radius) ||
+    radius > 4096 ||
+    sourceWidth * sourceHeight * (radius + 1) > 20_000_000
+  )
+    fail('NotSupportedError', 'Canvas shadow blur exceeds the CPU observation limit');
   let mask = source;
   if (radius) {
     const weights = new Float64Array(radius + 1);
@@ -529,41 +551,46 @@ const materializeShadow = (s, source, shadow, alpha, composite, clips) => {
     }
     for (let k = 0; k <= radius; k++) weights[k] /= total;
     for (const horizontal of [true, false]) {
-      const next = new Float32Array(w * h);
-      for (let y = 0; y < h; y++)
-        for (let x = 0; x < w; x++) {
-          let value = mask[y * w + x] * weights[0];
+      const next = new Float32Array(sourceWidth * sourceHeight);
+      for (let y = 0; y < sourceHeight; y++)
+        for (let x = 0; x < sourceWidth; x++) {
+          let value = mask[y * sourceWidth + x] * weights[0];
           for (let k = 1; k <= radius; k++) {
             const a = horizontal ? x - k : y - k,
               b = horizontal ? x + k : y + k;
-            if (a >= 0) value += mask[(horizontal ? y : a) * w + (horizontal ? a : x)] * weights[k];
-            if (b < (horizontal ? w : h))
-              value += mask[(horizontal ? y : b) * w + (horizontal ? b : x)] * weights[k];
+            if (a >= 0)
+              value += mask[(horizontal ? y : a) * sourceWidth + (horizontal ? a : x)] * weights[k];
+            if (b < (horizontal ? sourceWidth : sourceHeight))
+              value += mask[(horizontal ? y : b) * sourceWidth + (horizontal ? b : x)] * weights[k];
           }
-          next[y * w + x] = value;
+          next[y * sourceWidth + x] = value;
         }
       mask = next;
     }
   }
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++) {
-      const sx = x - shadow.x,
-        sy = y - shadow.y;
-      if (sx < 0 || sy < 0 || sx >= w || sy >= h) continue;
+      const sx = x - shadow.x - sourceLeft,
+        sy = y - shadow.y - sourceTop;
+      if (sx < 0 || sy < 0 || sx >= sourceWidth || sy >= sourceHeight) continue;
       // Chrome's frequent-read CPU canvas rounds the blurred mask to A8
       // before tinting. The ordinary canvas uses a different presentation path.
       const ix = Math.floor(sx),
         iy = Math.floor(sy),
-        nx = Math.min(ix + 1, w - 1),
-        ny = Math.min(iy + 1, h - 1),
+        nx = Math.min(ix + 1, sourceWidth - 1),
+        ny = Math.min(iy + 1, sourceHeight - 1),
         fx = sx - ix,
         fy = sy - iy,
         coverage =
-          mask[iy * w + ix] * (1 - fx) * (1 - fy) +
-          mask[iy * w + nx] * fx * (1 - fy) +
-          mask[ny * w + ix] * (1 - fx) * fy +
-          mask[ny * w + nx] * fx * fy,
-        maskAlpha = shadow.frequent ? Math.round(coverage * 255) / 255 : coverage;
+          mask[iy * sourceWidth + ix] * (1 - fx) * (1 - fy) +
+          mask[iy * sourceWidth + nx] * fx * (1 - fy) +
+          mask[ny * sourceWidth + ix] * (1 - fx) * fy +
+          mask[ny * sourceWidth + nx] * fx * fy,
+        maskAlpha =
+          (shadow.frequent ? Math.round(coverage * 255) / 255 : coverage) *
+          (sourcePaint
+            ? paintColor(sourcePaint, x - shadow.x + 0.5, y - shadow.y + 0.5)[3] / 255
+            : 1);
       if (maskAlpha > 0 && clipContains(clips, x + 0.5, y + 0.5))
         compositePixel(
           s.pixels,
@@ -829,27 +856,62 @@ const materializePath = (s, op) => {
       ['copy', 'source-in', 'source-out', 'destination-in', 'destination-atop'].includes(
         op.composite,
       );
-  const left = unbounded ? 0 : Math.max(0, Math.floor(Math.min(...ps.map((p) => p[0])) - pad)),
-    right = unbounded
-      ? s.width
-      : Math.min(s.width, Math.ceil(Math.max(...ps.map((p) => p[0])) + pad)),
-    top = unbounded ? 0 : Math.max(0, Math.floor(Math.min(...ps.map((p) => p[1])) - pad)),
-    bottom = unbounded
-      ? s.height
-      : Math.min(s.height, Math.ceil(Math.max(...ps.map((p) => p[1])) + pad));
+  const pathLeft = Math.floor(Math.min(...ps.map((p) => p[0])) - pad),
+    pathRight = Math.ceil(Math.max(...ps.map((p) => p[0])) + pad),
+    pathTop = Math.floor(Math.min(...ps.map((p) => p[1])) - pad),
+    pathBottom = Math.ceil(Math.max(...ps.map((p) => p[1])) + pad),
+    left = unbounded ? 0 : Math.max(0, pathLeft),
+    right = unbounded ? s.width : Math.min(s.width, pathRight),
+    top = unbounded ? 0 : Math.max(0, pathTop),
+    bottom = unbounded ? s.height : Math.min(s.height, pathBottom);
   const hairline = unbounded ? null : frequentReadHairlineMask(s, op, left, right, top, bottom),
     hairlineStride = right - left;
   if (op.shadow) {
-    const source = new Float32Array(s.width * s.height);
-    for (let y = top; y < bottom; y++)
-      for (let x = left; x < right; x++) {
-        const coverage = hairline
-          ? hairline[(y - top) * hairlineStride + x - left] / 255
-          : pathPixelCoverage(op, x, y);
-        if (coverage)
-          source[y * s.width + x] = (coverage * paintColor(op.paint, x + 0.5, y + 0.5)[3]) / 255;
-      }
-    materializeShadow(s, source, op.shadow, op.alpha, op.composite, op.clips);
+    // Shadow blur sees geometry outside the canvas before the result is cropped
+    // to the canvas. Restrict the extended mask to the pixels that can influence
+    // the visible result, including blur support and the requested offset.
+    const radius = Math.ceil((3 * op.shadow.blur) / 2),
+      visibleLeft = Math.floor(-op.shadow.x - 1),
+      visibleRight = Math.ceil(s.width - op.shadow.x + 1),
+      visibleTop = Math.floor(-op.shadow.y - 1),
+      visibleBottom = Math.ceil(s.height - op.shadow.y + 1),
+      shadowLeft = Math.min(visibleLeft, Math.max(pathLeft, visibleLeft - radius)),
+      shadowRight = Math.max(visibleRight, Math.min(pathRight, visibleRight + radius)),
+      shadowTop = Math.min(visibleTop, Math.max(pathTop, visibleTop - radius)),
+      shadowBottom = Math.max(visibleBottom, Math.min(pathBottom, visibleBottom + radius)),
+      shadowWidth = shadowRight - shadowLeft,
+      shadowHeight = shadowBottom - shadowTop;
+    if (shadowWidth > 0 && shadowHeight > 0) {
+      if (
+        !Number.isSafeInteger(shadowWidth * shadowHeight) ||
+        shadowWidth * shadowHeight > 4_000_000
+      )
+        fail('NotSupportedError', 'Canvas shadow mask exceeds the CPU observation limit');
+      const source = new Float32Array(shadowWidth * shadowHeight);
+      for (let y = shadowTop; y < shadowBottom; y++)
+        for (let x = shadowLeft; x < shadowRight; x++) {
+          const coverage =
+            hairline && x >= left && x < right && y >= top && y < bottom
+              ? hairline[(y - top) * hairlineStride + x - left] / 255
+              : pathPixelCoverage(op, x, y);
+          if (coverage) source[(y - shadowTop) * shadowWidth + x - shadowLeft] = coverage;
+        }
+      materializeShadow(
+        s,
+        source,
+        op.shadow,
+        op.alpha,
+        op.composite,
+        op.clips,
+        {
+          left: shadowLeft,
+          top: shadowTop,
+          width: shadowWidth,
+          height: shadowHeight,
+        },
+        op.paint,
+      );
+    }
   }
   // RGBA8 constant source-over interiors have exactly unit coverage. Select their
   // scanline span once and store complete pixels in bulk; fractional edges keep
