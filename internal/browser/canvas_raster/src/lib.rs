@@ -79,8 +79,22 @@ pub unsafe extern "C" fn raster_glyph(
             return -2;
         };
         let mut resources = Resources::new();
-        let mut context = RenderContext::new(width as u16, height as u16);
-        context.set_transform(Affine::scale_non_uniform(scale_x as f64, 1.0));
+        // Supersampling improves CPU stroke coverage against the frozen
+        // Chrome control. Bound the temporary Pixmap to one million pixels.
+        let sample_factor: usize =
+            if stroke_width > 0.0 && width as usize * height as usize <= 262_144 {
+                2
+            } else {
+                1
+            };
+        let mut context = RenderContext::new(
+            (width as usize * sample_factor) as u16,
+            (height as usize * sample_factor) as u16,
+        );
+        context.set_transform(Affine::scale_non_uniform(
+            scale_x as f64 * sample_factor as f64,
+            sample_factor as f64,
+        ));
         let glyphs = [Glyph { id: glyph_id, x, y }];
         let result = if stroke_width > 0.0 {
             context.set_stroke(Stroke::new(stroke_width as f64));
@@ -97,13 +111,37 @@ pub unsafe extern "C" fn raster_glyph(
         if result.is_err() {
             return -3;
         }
-        let mut pixmap = Pixmap::new(width as u16, height as u16);
+        let mut pixmap = Pixmap::new(
+            (width as usize * sample_factor) as u16,
+            (height as usize * sample_factor) as u16,
+        );
         context.flush();
         context.render(&mut pixmap, &mut resources);
         let target =
             unsafe { std::slice::from_raw_parts_mut(output, width as usize * height as usize * 4) };
-        for (i, pixel) in pixmap.data().iter().enumerate() {
-            target[i * 4..i * 4 + 4].copy_from_slice(&pixel.to_u8_array());
+        if sample_factor == 1 {
+            for (i, pixel) in pixmap.data().iter().enumerate() {
+                target[i * 4..i * 4 + 4].copy_from_slice(&pixel.to_u8_array());
+            }
+        } else {
+            for y in 0..height as usize {
+                for x in 0..width as usize {
+                    let mut sums = [0u32; 4];
+                    for sy in 0..2 {
+                        for sx in 0..2 {
+                            let p = pixmap.data()[((y * 2 + sy) * width as usize * 2) + x * 2 + sx]
+                                .to_u8_array();
+                            for channel in 0..4 {
+                                sums[channel] += u32::from(p[channel]);
+                            }
+                        }
+                    }
+                    for channel in 0..4 {
+                        target[(y * width as usize + x) * 4 + channel] =
+                            ((sums[channel] + 2) / 4) as u8;
+                    }
+                }
+            }
         }
         0
     })

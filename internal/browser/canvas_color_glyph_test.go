@@ -122,7 +122,10 @@ func TestCanvasStrokeTextPreservesColorGlyphs(t *testing.T) {
 	if err := json.Unmarshal([]byte(value.(string)), &got); err != nil {
 		t.Fatal(err)
 	}
-	if got.Stroke.Alpha <= got.Fill.Alpha+2000 || len(got.Stroke.Sample) != 4 ||
+	// Frozen Chrome 152 sums to 13506 for this stroke. Its color glyphs are
+	// retained while the monochrome outline uses antialiased stroke coverage.
+	if got.Stroke.Alpha < 13000 || got.Stroke.Alpha > 14000 ||
+		got.Stroke.Alpha <= got.Fill.Alpha+2000 || len(got.Stroke.Sample) != 4 ||
 		got.Stroke.Sample[0] <= 150 || got.Stroke.Sample[1] <= 80 ||
 		got.Stroke.Sample[2] <= 40 || got.Stroke.Sample[3] <= 70 {
 		t.Fatalf("strokeText lost Chrome's color glyph or outline behavior: %+v", got)
