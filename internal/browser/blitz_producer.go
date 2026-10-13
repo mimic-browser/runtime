@@ -246,6 +246,27 @@ func (r *Realm) prepareBlitz() (resultErr error) {
 		return nil
 	}
 	accounting.mark("keyValidation")
+	// These admission failures depend only on canonical Page/realm state. Avoid
+	// projecting stylesheet and control inputs when no native owner can use them.
+	staticFallback := ""
+	if r.agent.Page().environmentView().Preferences.ReducedMotion {
+		staticFallback = "native reduced-motion device adapter pending"
+	}
+	if r.agent.Page().environmentView().Display.DeviceScaleFactor != 1 {
+		staticFallback = "native device-scale adapter pending"
+	}
+	if frame, ok := r.agent.(*Frame); ok && frame.parent != nil {
+		staticFallback = "frame viewport adapter pending"
+	}
+	if staticFallback != "" {
+		state.snapshot = nil
+		state.document.Close()
+		state.sheets = nil
+		state.fallback = staticFallback
+		state.key = key
+		r.agent.Page().Trace().Add(trace.JS, "blitzFallback", map[string]any{"reason": staticFallback})
+		return nil
+	}
 	var inputs struct {
 		Unsupported     string                 `json:"unsupported"`
 		RestyleOnChange bool                   `json:"restyleOnChange"`
@@ -279,15 +300,6 @@ func (r *Realm) prepareBlitz() (resultErr error) {
 	state.fallback = inputs.Unsupported
 	if state.fallback == "" {
 		state.fallback = layoutblitz.AdmissionReason(r.document)
-	}
-	if r.agent.Page().environmentView().Preferences.ReducedMotion {
-		state.fallback = "native reduced-motion device adapter pending"
-	}
-	if r.agent.Page().environmentView().Display.DeviceScaleFactor != 1 {
-		state.fallback = "native device-scale adapter pending"
-	}
-	if frame, ok := r.agent.(*Frame); ok && frame.parent != nil {
-		state.fallback = "frame viewport adapter pending"
 	}
 	if state.fallback != "" {
 		state.snapshot = nil

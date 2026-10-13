@@ -23,6 +23,29 @@ func TestBlitzDeviceScaleAdmissionInvalidatesAndRepairs(t *testing.T) {
 	}
 }
 
+func TestBlitzStaticFallbackSkipsUnusedInputProjection(t *testing.T) {
+	parallelBrowserTest(t)
+	for _, kind := range []string{"device-scale", "reduced-motion"} {
+		t.Run(kind, func(t *testing.T) {
+			p := blitzStandardsPage(t)
+			if kind == "device-scale" {
+				p.env.Display.DeviceScaleFactor = 2
+			} else {
+				p.env.Preferences.ReducedMotion = true
+			}
+			// Static admission is decided before the JS CSSOM projection. This
+			// projection cannot contribute to a native owner in these profiles.
+			p.Top.Realm.blitzInputs = nil
+			if _, err := p.Evaluate(context.Background(), `document.body.getBoundingClientRect().width`); err != nil {
+				t.Fatal(err)
+			}
+			if p.Top.Realm.blitz.document.Owner != nil || !strings.Contains(p.Top.Realm.blitz.fallback, kind) {
+				t.Fatalf("incorrect fallback: %q", p.Top.Realm.blitz.fallback)
+			}
+		})
+	}
+}
+
 func TestBlitzCanonicalColorSchemeInvalidatesNativeStyles(t *testing.T) {
 	parallelBrowserTest(t)
 	p := blitzStandardsPage(t)
