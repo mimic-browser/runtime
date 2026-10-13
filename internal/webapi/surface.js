@@ -1,5 +1,11 @@
 (function (host) {
   'use strict';
+  // Platform operations use realm intrinsics even when author code replaces
+  // the corresponding writable Window properties. Native WebIDL bindings do
+  // not resolve exception constructors through the author-visible global.
+  const IntrinsicError = Error;
+  const IntrinsicTypeError = TypeError;
+  const IntrinsicRangeError = RangeError;
   /* shared_promise_intrinsics */
   /* dev_preview_state */
   let hostToken = host.token();
@@ -45,7 +51,7 @@
     if (!generatedLazyInstaller || generatedLazyOperations.length === 0) return;
     const materialize = (id) => {
       const record = generatedLazyOperations[id];
-      if (!record) throw new RangeError('Unknown generated WebAPI member');
+      if (!record) throw new IntrinsicRangeError('Unknown generated WebAPI member');
       const { interfaceName, memberName, functionName, domain, length } = record;
       const implementation = domain
         ? {
@@ -88,7 +94,7 @@
       }
       const attributes = descriptor.enumerable ? 0 : 2;
       if (!generatedLazyInstaller(target, memberName, id, attributes))
-        throw new Error(
+        throw new IntrinsicError(
           'Failed to install generated lazy operation ' + record.interfaceName + '.' + memberName,
         );
       record.target = null;
@@ -120,7 +126,7 @@
     if (state.status === 'loading') return;
     // A page can replace eval. Never hand its replacement a privileged code
     // object; leave the domain cold so restoring the intrinsic can recover.
-    if (globalThis.eval !== nativeEval) throw new TypeError('Browser eval was replaced');
+    if (globalThis.eval !== nativeEval) throw new IntrinsicTypeError('Browser eval was replaced');
     state.status = 'loading';
     try {
       const source = host.lazyDomainSource(name);
@@ -147,7 +153,7 @@
     const implementation = cell.implementation;
     if (typeof implementation !== 'function') {
       host.semanticMissingAt('surface.js/lazyBehavior', interfaceName + '.' + member);
-      if (member === 'constructor') throw new TypeError('Illegal constructor');
+      if (member === 'constructor') throw new IntrinsicTypeError('Illegal constructor');
       return;
     }
     return newTarget
@@ -157,7 +163,7 @@
   const requireLazySingleton = (domain, name) => {
     ensureLazyDomain(domain);
     if (!lazySingletons.has(domain + '\0' + name))
-      throw new Error('lazy domain did not publish singleton ' + domain + '.' + name);
+      throw new IntrinsicError('lazy domain did not publish singleton ' + domain + '.' + name);
     return lazySingletons.get(domain + '\0' + name);
   };
   const publishLazySingleton = (domain, name, value) =>
@@ -182,7 +188,7 @@
   const installLazySingletonBindings = () => {
     if (!globalThis.Navigator?.prototype || !globalThis.GPU) return;
     const get = function () {
-      if (this !== nav) throw new TypeError('Illegal invocation');
+      if (this !== nav) throw new IntrinsicTypeError('Illegal invocation');
       return requireLazySingleton('webgpu', 'gpu');
     };
     markNative(get, 'gpu', 'get ');
@@ -307,7 +313,7 @@
   const registerRealmBinding = (value, kind, operations, unpreventable = false) => {
     const invoke = (receiver, operation, args) => {
       const binding = bindingGet(receiver);
-      if (!binding || binding.kind !== kind) throw new TypeError('Illegal invocation');
+      if (!binding || binding.kind !== kind) throw new IntrinsicTypeError('Illegal invocation');
       return binding.operations[operation](...args);
     };
     bindingSet(value, { kind, operations, invoke, unpreventable });
@@ -317,7 +323,7 @@
     if (local?.kind === kind) return local;
     const reference = referenceGet(value);
     if (reference?.binding?.kind === kind) return reference;
-    throw new TypeError('Illegal invocation');
+    throw new IntrinsicTypeError('Illegal invocation');
   };
   const callRealmBinding = (receiver, binding, operation, args) =>
     bindingGet(receiver) === binding
@@ -326,7 +332,8 @@
         : binding.operations[operation](...args)
       : unwrapCrossRealm(binding.frame, binding.binding.invoke)(receiver, operation, args);
   const bindingString = (value) => {
-    if (typeof value === 'symbol') throw new TypeError('Cannot convert a Symbol value to a string');
+    if (typeof value === 'symbol')
+      throw new IntrinsicTypeError('Cannot convert a Symbol value to a string');
     return String(value);
   };
   // Match the realm trace's once-per-(name,supported) contract before FFI.
@@ -365,7 +372,7 @@
     snapshotPublication ? snapshotPublication.engineKeys : Reflect.ownKeys(globalThis),
   );
   const illegal = (n) => {
-    throw new TypeError('Illegal constructor: ' + n);
+    throw new IntrinsicTypeError('Illegal constructor: ' + n);
   };
   const def = (o, n, d) =>
     Object.defineProperty(o, n, Object.assign({ enumerable: true, configurable: true }, d));
@@ -374,9 +381,13 @@
   // QuickJS intentionally keeps ECMA-402 optional. Chrome does not, so expose
   // the target profile's locale/time-zone through a small deterministic Intl
   // layer while richer CLDR-backed semantics are added behind the same API.
-  let intlEnvironment = host.intlEnvironment();
-  globalThis[Symbol.for('__mimicRefreshIntlEnvironment')] = () => {
-    intlEnvironment = host.intlEnvironment();
+  const intlEnvironment = {
+    get locale() {
+      return host.intlEnvironment().locale;
+    },
+    get timeZone() {
+      return host.intlEnvironment().timeZone;
+    },
   };
   const nativeIntl = typeof globalThis.Intl !== 'undefined';
   if (typeof globalThis.Intl === 'undefined') {
@@ -894,7 +905,7 @@
   const eventParents = new WeakMap();
   let dispatchEventCore = (target, event, trusted) => {
     const state = eventSlots.get(event);
-    if (!state) throw new TypeError('parameter 1 is not of type Event');
+    if (!state) throw new IntrinsicTypeError('parameter 1 is not of type Event');
     if (trusted) state.trusted = true;
     for (const listener of (listenersFor(target).get(state.type) || []).slice())
       listener.call(target, event);
@@ -2025,7 +2036,8 @@
   });
   let blitzLegacyTraces = 0;
   const uncachedCSSDeclarations = (element, pseudo = '') => {
-    if (blitzTraceEnabled && blitzLegacyTraces++ < 4) host.blitzLegacyTrace(new Error().stack);
+    if (blitzTraceEnabled && blitzLegacyTraces++ < 4)
+      host.blitzLegacyTrace(new IntrinsicError().stack);
     const matched = compatibilitySelectors.matchingStyles(
       element,
       styleSheetRules(element),
@@ -2252,7 +2264,7 @@
   const decodeBlitzPacket = (buffer, decoder = new TextDecoder()) => {
     const view = new DataView(buffer);
     if (view.getUint32(0, true) !== 2 || view.getUint32(12, true) !== blitzProperties.length)
-      throw new Error('Blitz snapshot schema mismatch');
+      throw new IntrinsicError('Blitz snapshot schema mismatch');
     return {
       view,
       buffer,
@@ -2839,7 +2851,7 @@
     appendChild(node) {
       const state = fragmentState(this);
       if (!isDOMNode(node))
-        throw new TypeError(
+        throw new IntrinsicTypeError(
           "Failed to execute 'appendChild' on 'Node': parameter 1 is not of type 'Node'.",
         );
       const old = syntheticParents.get(node);
@@ -3048,7 +3060,7 @@
     mediaTimeRanges: (element, kind) => {
       const slot = elementSlot(element);
       const tag = slot.tagName;
-      if (tag !== 'VIDEO' && tag !== 'AUDIO') throw new TypeError('Illegal invocation');
+      if (tag !== 'VIDEO' && tag !== 'AUDIO') throw new IntrinsicTypeError('Illegal invocation');
       const source = kind === 'seekable' ? host.mediaSourceState(slot.nodeId) : null;
       const ranges =
         source && Number.isFinite(source.duration) && source.duration >= 0
@@ -3062,7 +3074,8 @@
     operations: geometryOperations,
     invoke(receiver, operation, args) {
       const binding = bindingGet(receiver);
-      if (!binding || binding.kind !== 'ElementGeometry') throw new TypeError('Illegal invocation');
+      if (!binding || binding.kind !== 'ElementGeometry')
+        throw new IntrinsicTypeError('Illegal invocation');
       return binding.operations[operation](receiver, ...args);
     },
     unpreventable: false,
@@ -3128,7 +3141,7 @@
     }
     attachShadow(init) {
       if (!init || !['open', 'closed'].includes(String(init.mode)))
-        throw new TypeError(
+        throw new IntrinsicTypeError(
           "Failed to execute 'attachShadow' on 'Element': Failed to read the 'mode' property from 'ShadowRootInit'",
         );
       if (elementShadows.has(this))
@@ -3152,7 +3165,7 @@
     }
     set innerHTML(v) {
       const slot = elementSlot(this);
-      if (!slot) throw new TypeError('Illegal invocation');
+      if (!slot) throw new IntrinsicTypeError('Illegal invocation');
       host.setInnerHTML(
         slot.nodeId,
         trustedConvert(
@@ -3170,7 +3183,7 @@
     }
     set outerHTML(v) {
       const slot = elementSlot(this);
-      if (!slot) throw new TypeError('Illegal invocation');
+      if (!slot) throw new IntrinsicTypeError('Illegal invocation');
       const name = host.setOuterHTML(
         slot.nodeId,
         trustedConvert(
@@ -3186,7 +3199,7 @@
     }
     insertAdjacentHTML(position, text) {
       const id = elementSlot(this).nodeId;
-      if (arguments.length < 2) throw new TypeError('Not enough arguments');
+      if (arguments.length < 2) throw new IntrinsicTypeError('Not enough arguments');
       position = bindingString(position).toLowerCase();
       text = trustedConvert(
         text,
@@ -3397,7 +3410,7 @@
       registerPolyfilledShadowRoot(this);
       if (fragmentSlots.has(this)) {
         if (!isDOMNode(node))
-          throw new TypeError(
+          throw new IntrinsicTypeError(
             "Failed to execute 'appendChild' on 'Node': parameter 1 is not of type 'Node'.",
           );
         const state = fragmentState(this),
@@ -3521,7 +3534,7 @@
     removeNode = Node.prototype.removeChild;
   let validateTemplateInsertion = null;
   const prepareInsertion = (parent, node, before, forceValidation = false) => {
-    if (!isDOMNode(node)) throw new TypeError('Expected a Node');
+    if (!isDOMNode(node)) throw new IntrinsicTypeError('Expected a Node');
     if (
       !['element', 'document'].includes(elementSlot(parent)?.type) &&
       !isDOMFragment(parent) &&
@@ -4018,11 +4031,11 @@
         let target = element;
         if (elementSlot(target)?.type !== 'element') {
           if (elementSlot(target)?.type === 'fragment')
-            throw new Error('Node is not an element and does not have a parent element');
+            throw new IntrinsicError('Node is not an element and does not have a parent element');
           target = cssFontParent(target);
         }
         if (elementSlot(target)?.type !== 'element')
-          throw new Error('Node is not an element and does not have a parent element');
+          throw new IntrinsicError('Node is not an element and does not have a parent element');
         const names = new Set(cssComputedNames);
         for (
           let ancestor = target;
@@ -4174,8 +4187,8 @@
         n = (name) => Number.parseFloat(cssComputedValue(element, name)) || 0,
         q = (left, top, right, bottom) => [left, top, right, top, right, bottom, left, bottom];
       if (!host.isConnected(nodeID) || cssComputedValue(element, 'display') === 'none')
-        throw new Error('Could not compute box model');
-      if (!r.width || !r.height) throw new Error('Could not compute box model');
+        throw new IntrinsicError('Could not compute box model');
+      if (!r.width || !r.height) throw new IntrinsicError('Could not compute box model');
       const padding = q(
         r.left + n('border-left-width'),
         r.top + n('border-top-width'),
@@ -4432,7 +4445,7 @@
   });
   class DOMStringMap {
     constructor() {
-      throw new TypeError("Failed to construct 'DOMStringMap': Illegal constructor");
+      throw new IntrinsicTypeError("Failed to construct 'DOMStringMap': Illegal constructor");
     }
   }
   Object.defineProperty(DOMStringMap.prototype, Symbol.toStringTag, {
@@ -4973,13 +4986,13 @@
     }
     get contentWindow() {
       const slot = elementSlot(this);
-      if (slot?.tagName !== 'IFRAME') throw new TypeError('Illegal invocation');
+      if (slot?.tagName !== 'IFRAME') throw new IntrinsicTypeError('Illegal invocation');
       const id = host.iframeWindow(slot.nodeId, isNodeConnected(this));
       return id == null ? null : remoteWindow(id);
     }
     get contentDocument() {
       const slot = elementSlot(this);
-      if (slot?.tagName !== 'IFRAME') throw new TypeError('Illegal invocation');
+      if (slot?.tagName !== 'IFRAME') throw new IntrinsicTypeError('Illegal invocation');
       const id = host.iframeWindow(slot.nodeId, isNodeConnected(this));
       return id == null ? null : remoteDocument(id, true);
     }
@@ -5401,13 +5414,13 @@
     }
     item(index) {
       const binding = requireRealmBinding(this, 'HTMLCollection');
-      if (!arguments.length) throw new TypeError('Not enough arguments');
+      if (!arguments.length) throw new IntrinsicTypeError('Not enough arguments');
       index = +index >>> 0;
       return callRealmBinding(this, binding, 'item', [index]);
     }
     namedItem(name) {
       const binding = requireRealmBinding(this, 'HTMLCollection');
-      if (!arguments.length) throw new TypeError('Not enough arguments');
+      if (!arguments.length) throw new IntrinsicTypeError('Not enough arguments');
       name = bindingString(name);
       return callRealmBinding(this, binding, 'namedItem', [name]);
     }
@@ -5467,7 +5480,7 @@
     }
     item(index) {
       const binding = requireRealmBinding(this, 'NodeList');
-      if (!arguments.length) throw new TypeError('Not enough arguments');
+      if (!arguments.length) throw new IntrinsicTypeError('Not enough arguments');
       index = +index >>> 0;
       return callRealmBinding(this, binding, 'item', [index]);
     }
@@ -5666,14 +5679,14 @@
   class HTMLDocument extends Document {
     constructor(token) {
       if (token !== hostToken)
-        throw new TypeError("Failed to construct 'HTMLDocument': Illegal constructor");
+        throw new IntrinsicTypeError("Failed to construct 'HTMLDocument': Illegal constructor");
       super(token);
     }
   }
   Object.defineProperty(Document.prototype, 'createNodeIterator', {
     value: function (root, whatToShow = 0xffffffff, filter = null) {
       if (!isDOMNode(root))
-        throw new TypeError(
+        throw new IntrinsicTypeError(
           "Failed to execute 'createNodeIterator' on 'Document': parameter 1 is not of type 'Node'.",
         );
       const nodes = [],
@@ -5788,7 +5801,7 @@
       return Array.from(permissionsPolicySlots.get(this).clauses.keys()).sort();
     }
     allowsFeature(feature, origin) {
-      if (!permissionsPolicySlots.has(this)) throw new TypeError('Illegal invocation');
+      if (!permissionsPolicySlots.has(this)) throw new IntrinsicTypeError('Illegal invocation');
       const current = host.permissionsPolicy(),
         hint = current.clientHints[String(feature)];
       if (hint !== undefined) {
@@ -5810,7 +5823,7 @@
       return this.features().filter((feature) => this.allowsFeature(feature));
     }
     getAllowlistForFeature(feature) {
-      if (!permissionsPolicySlots.has(this)) throw new TypeError('Illegal invocation');
+      if (!permissionsPolicySlots.has(this)) throw new IntrinsicTypeError('Illegal invocation');
       const hint = host.permissionsPolicy().clientHints[String(feature)];
       if (hint !== undefined) return Array.from(hint || []);
       const state = permissionsPolicySlots.get(this),
@@ -5838,15 +5851,15 @@
   const pluginArraySlots = new WeakMap();
   const mimeArraySlots = new WeakMap();
   const legacySlot = (slots, receiver) => {
-    if (!slots.has(receiver)) throw new TypeError('Illegal invocation');
+    if (!slots.has(receiver)) throw new IntrinsicTypeError('Illegal invocation');
     return slots.get(receiver);
   };
   const legacyIndex = (args) => {
-    if (!args.length) throw new TypeError('1 argument required');
+    if (!args.length) throw new IntrinsicTypeError('1 argument required');
     return Number(args[0]) >>> 0;
   };
   const legacyName = (args) => {
-    if (!args.length) throw new TypeError('1 argument required');
+    if (!args.length) throw new IntrinsicTypeError('1 argument required');
     return String(args[0]);
   };
   class MimeType {
@@ -5958,7 +5971,7 @@
     });
   const uaDataSlots = new WeakMap();
   const uaSnapshot = (value) => {
-    if (!uaDataSlots.has(value)) throw new TypeError('Illegal invocation');
+    if (!uaDataSlots.has(value)) throw new IntrinsicTypeError('Illegal invocation');
     return host.navigator();
   };
   class NavigatorUAData {
@@ -6006,13 +6019,13 @@
     }
     assign(value) {
       const binding = requireRealmBinding(this, 'Location');
-      if (!arguments.length) throw new TypeError('Not enough arguments');
+      if (!arguments.length) throw new IntrinsicTypeError('Not enough arguments');
       value = bindingString(value);
       callRealmBinding(this, binding, 'assign', [value]);
     }
     replace(value) {
       const binding = requireRealmBinding(this, 'Location');
-      if (!arguments.length) throw new TypeError('Not enough arguments');
+      if (!arguments.length) throw new IntrinsicTypeError('Not enough arguments');
       value = bindingString(value);
       callRealmBinding(this, binding, 'replace', [value]);
     }
@@ -6044,7 +6057,7 @@
       value: {
         contains(value) {
           const binding = requireRealmBinding(this, 'DOMStringList');
-          if (!arguments.length) throw new TypeError('Not enough arguments');
+          if (!arguments.length) throw new IntrinsicTypeError('Not enough arguments');
           value = bindingString(value);
           return callRealmBinding(this, binding, 'contains', [value]);
         },
@@ -6057,7 +6070,7 @@
       value: {
         item(index) {
           const binding = requireRealmBinding(this, 'DOMStringList');
-          if (!arguments.length) throw new TypeError('Not enough arguments');
+          if (!arguments.length) throw new IntrinsicTypeError('Not enough arguments');
           index = +index >>> 0;
           return callRealmBinding(this, binding, 'item', [index]);
         },
@@ -6148,14 +6161,14 @@
     }
     pushState(s, t, u) {
       const binding = requireRealmBinding(this, 'History');
-      if (arguments.length < 2) throw new TypeError('2 arguments required');
+      if (arguments.length < 2) throw new IntrinsicTypeError('2 arguments required');
       bindingString(t);
       u = u == null ? '' : bindingString(u);
       return callRealmBinding(this, binding, 'update', [s, u, false]);
     }
     replaceState(s, t, u) {
       const binding = requireRealmBinding(this, 'History');
-      if (arguments.length < 2) throw new TypeError('2 arguments required');
+      if (arguments.length < 2) throw new IntrinsicTypeError('2 arguments required');
       bindingString(t);
       u = u == null ? '' : bindingString(u);
       return callRealmBinding(this, binding, 'update', [s, u, true]);
@@ -6203,26 +6216,26 @@
     }
     key(i) {
       const binding = requireRealmBinding(this, 'Storage');
-      if (!arguments.length) throw new TypeError('1 argument required');
+      if (!arguments.length) throw new IntrinsicTypeError('1 argument required');
       i = +i >>> 0;
       return callRealmBinding(this, binding, 'key', [i]);
     }
     getItem(k) {
       const binding = requireRealmBinding(this, 'Storage');
-      if (!arguments.length) throw new TypeError('1 argument required');
+      if (!arguments.length) throw new IntrinsicTypeError('1 argument required');
       k = bindingString(k);
       return callRealmBinding(this, binding, 'getItem', [k]);
     }
     setItem(k, v) {
       const binding = requireRealmBinding(this, 'Storage');
-      if (arguments.length < 2) throw new TypeError('2 arguments required');
+      if (arguments.length < 2) throw new IntrinsicTypeError('2 arguments required');
       k = bindingString(k);
       v = bindingString(v);
       return callRealmBinding(this, binding, 'setItem', [k, v]);
     }
     removeItem(k) {
       const binding = requireRealmBinding(this, 'Storage');
-      if (!arguments.length) throw new TypeError('1 argument required');
+      if (!arguments.length) throw new IntrinsicTypeError('1 argument required');
       k = bindingString(k);
       return callRealmBinding(this, binding, 'removeItem', [k]);
     }
@@ -6260,7 +6273,8 @@
     }
     enqueue(chunk) {
       const state = readableState(readableControllerSlots.get(this));
-      if (state.state !== 'readable') throw new TypeError('ReadableStream is not readable');
+      if (state.state !== 'readable')
+        throw new IntrinsicTypeError('ReadableStream is not readable');
       if (state.reads.length) state.reads.shift().resolve({ done: false, value: chunk });
       else state.queue.push(chunk);
     }
@@ -6283,8 +6297,8 @@
   class ReadableStreamDefaultReader {
     constructor(stream) {
       if (!(stream instanceof ReadableStream))
-        throw new TypeError('ReadableStreamDefaultReader requires a ReadableStream');
-      if (stream.locked) throw new TypeError('ReadableStream is locked');
+        throw new IntrinsicTypeError('ReadableStreamDefaultReader requires a ReadableStream');
+      if (stream.locked) throw new IntrinsicTypeError('ReadableStream is locked');
       const state = readableState(stream),
         closed =
           state.state === 'closed'
@@ -6303,7 +6317,7 @@
     read() {
       const slot = readerSlots.get(this),
         stream = slot.stream;
-      if (!stream) return platformPromiseReject(new TypeError('Reader has been released'));
+      if (!stream) return platformPromiseReject(new IntrinsicTypeError('Reader has been released'));
       const state = readableState(stream);
       state.disturbed = true;
       if (state.queue.length)
@@ -6320,14 +6334,15 @@
       const stream = readerSlots.get(this).stream;
       return stream
         ? stream.cancel(reason)
-        : platformPromiseReject(new TypeError('Reader has been released'));
+        : platformPromiseReject(new IntrinsicTypeError('Reader has been released'));
     }
     releaseLock() {
       const slot = readerSlots.get(this),
         stream = slot.stream;
       if (!stream) return;
       const state = readableState(stream);
-      if (state.reads.length) throw new TypeError('Cannot release a reader with pending reads');
+      if (state.reads.length)
+        throw new IntrinsicTypeError('Cannot release a reader with pending reads');
       state.reader = null;
       slot.stream = null;
     }
@@ -6363,7 +6378,8 @@
     }
     cancel(reason) {
       const state = readableState(this);
-      if (this.locked) return platformPromiseReject(new TypeError('Cannot cancel a locked stream'));
+      if (this.locked)
+        return platformPromiseReject(new IntrinsicTypeError('Cannot cancel a locked stream'));
       state.queue.length = 0;
       state.controller.close();
       try {
@@ -6452,7 +6468,7 @@
     }
     constructor(stream) {
       if (!(stream instanceof WritableStream) || stream.locked)
-        throw new TypeError('WritableStream is locked');
+        throw new IntrinsicTypeError('WritableStream is locked');
       this.__stream = stream;
       stream.__writer = this;
       writerSlots.set(this, {
@@ -6501,7 +6517,7 @@
     }
     __write(chunk) {
       if (this.__state !== 'writable')
-        return platformPromiseReject(new TypeError('WritableStream is not writable'));
+        return platformPromiseReject(new IntrinsicTypeError('WritableStream is not writable'));
       try {
         return platformPromiseResolve(
           typeof this.__sink.write === 'function' ? this.__sink.write(chunk, this) : undefined,
@@ -6512,7 +6528,7 @@
     }
     close() {
       if (this.__state !== 'writable')
-        return platformPromiseReject(new TypeError('WritableStream is not writable'));
+        return platformPromiseReject(new IntrinsicTypeError('WritableStream is not writable'));
       this.__state = 'closed';
       try {
         return platformPromiseResolve(
@@ -6596,7 +6612,7 @@
       );
       if (options == null) options = {};
       if (typeof options !== 'object' && typeof options !== 'function')
-        throw new TypeError(
+        throw new IntrinsicTypeError(
           "Failed to construct 'Worker': The provided value is not of type 'WorkerOptions'.",
         );
       // Web IDL dictionary members are converted in lexicographic order.
@@ -6605,7 +6621,7 @@
         const value = options[key];
         if (value === undefined) return fallback;
         if (typeof value === 'symbol')
-          throw new TypeError(
+          throw new IntrinsicTypeError(
             "Failed to construct 'Worker': Failed to read the '" +
               key +
               "' property from 'WorkerOptions': Cannot convert a Symbol value to a string",
@@ -6615,7 +6631,7 @@
       const optionEnum = (key, fallback, values, enumName) => {
         const value = optionString(key, fallback);
         if (!values.includes(value))
-          throw new TypeError(
+          throw new IntrinsicTypeError(
             "Failed to construct 'Worker': Failed to read the '" +
               key +
               "' property from 'WorkerOptions': The provided value '" +
@@ -6718,7 +6734,7 @@
   class SharedWorker extends EventTarget {
     constructor(scriptURL, options = {}) {
       super();
-      if (!arguments.length) throw new TypeError('Not enough arguments');
+      if (!arguments.length) throw new IntrinsicTypeError('Not enough arguments');
       const url = trustedConvert(
         scriptURL,
         'TrustedScriptURL',
@@ -6728,24 +6744,24 @@
       if (typeof options === 'string') options = { name: options };
       if (options == null) options = {};
       if (typeof options !== 'object' && typeof options !== 'function')
-        throw new TypeError(
+        throw new IntrinsicTypeError(
           "Failed to construct 'SharedWorker': The provided value is not of type 'StringOrSharedWorkerOptions'.",
         );
       const optionString = (key, fallback) => {
         const value = options[key];
         if (value === undefined) return fallback;
         if (typeof value === 'symbol')
-          throw new TypeError('Cannot convert a Symbol value to a string');
+          throw new IntrinsicTypeError('Cannot convert a Symbol value to a string');
         return bindingString(value);
       };
       const type = optionString('type', 'classic');
       if (type !== 'classic' && type !== 'module')
-        throw new TypeError(
+        throw new IntrinsicTypeError(
           "The provided value '" + type + "' is not a valid enum value of type WorkerType.",
         );
       const credentials = optionString('credentials', 'same-origin');
       if (!['omit', 'same-origin', 'include'].includes(credentials))
-        throw new TypeError(
+        throw new IntrinsicTypeError(
           "The provided value '" +
             credentials +
             "' is not a valid enum value of type RequestCredentials.",
@@ -6798,7 +6814,7 @@
         view instanceof Float64Array ||
         view instanceof DataView
       )
-        throw new TypeError(
+        throw new IntrinsicTypeError(
           "Failed to execute 'getRandomValues' on 'Crypto': parameter 1 is not of type 'ArrayBufferView'.",
         );
       if (view.byteLength > 65536)
@@ -6851,7 +6867,7 @@
   const rtcDescriptionSlots = new WeakMap();
   const rtcDescriptionState = (value) => {
     const state = rtcDescriptionSlots.get(value);
-    if (!state) throw new TypeError('Illegal invocation');
+    if (!state) throw new IntrinsicTypeError('Illegal invocation');
     return state;
   };
   class RTCSessionDescription {
@@ -6875,7 +6891,7 @@
   class RTCIceCandidate {
     constructor(init = {}) {
       if (init.sdpMid == null && init.sdpMLineIndex == null && String(init.candidate || ''))
-        throw new TypeError(
+        throw new IntrinsicTypeError(
           "Failed to construct 'RTCIceCandidate': sdpMid and sdpMLineIndex are both null.",
         );
       rtcCandidateSlots.set(this, {
@@ -7560,7 +7576,7 @@
       },
       set location(value) {
         const target = documentLocation(this);
-        if (target === null) throw new TypeError('Document has no browsing context');
+        if (target === null) throw new IntrinsicTypeError('Document has no browsing context');
         target.href = value;
       },
     },
@@ -7885,7 +7901,7 @@
                 : referenceGet(receiver)?.type === 'window'
                   ? referenceGet(receiver).frame
                   : null;
-          if (target === null) throw new TypeError('Illegal invocation');
+          if (target === null) throw new IntrinsicTypeError('Illegal invocation');
           return postToFrame(target, args);
         }
         if (result.eval) {
@@ -8028,7 +8044,7 @@
         ? host.createUndetectable({
             __proto__: null,
             call(args, construct, receiver) {
-              if (construct) throw new TypeError('Illegal constructor');
+              if (construct) throw new IntrinsicTypeError('Illegal constructor');
               return traps.apply(target, receiver, args);
             },
             get(property) {
@@ -8144,7 +8160,7 @@
   );
   const postToFrame = (id, args) => {
     if (args.length === 0)
-      throw new TypeError(
+      throw new IntrinsicTypeError(
         "Failed to execute 'postMessage' on 'Window': 1 argument required, but only 0 present.",
       );
     const message = args[0];
@@ -8391,7 +8407,7 @@
     constructor(url, protocols = []) {
       super();
       if (arguments.length === 0)
-        throw new TypeError(
+        throw new IntrinsicTypeError(
           "Failed to construct 'WebSocket': 1 argument required, but only 0 present.",
         );
       let parsed;
@@ -8476,7 +8492,7 @@
     }
     send(data) {
       const state = webSocketSlots.get(this);
-      if (!state) throw new TypeError('Illegal invocation');
+      if (!state) throw new IntrinsicTypeError('Illegal invocation');
       if (state.readyState === 0)
         throw platformDOMException('Still in CONNECTING state.', 'InvalidStateError');
       if (state.readyState !== 1) return;
@@ -8495,7 +8511,7 @@
     }
     close(code = undefined, reason = '') {
       const state = webSocketSlots.get(this);
-      if (!state) throw new TypeError('Illegal invocation');
+      if (!state) throw new IntrinsicTypeError('Illegal invocation');
       if (code !== undefined && code !== 1000 && (Number(code) < 3000 || Number(code) > 4999))
         throw platformDOMException(
           `The code must be either 1000, or between 3000 and 4999.`,
@@ -8516,19 +8532,19 @@
     def(WebSocket.prototype, key, {
       get() {
         const state = webSocketSlots.get(this);
-        if (!state) throw new TypeError('Illegal invocation');
+        if (!state) throw new IntrinsicTypeError('Illegal invocation');
         return state[key];
       },
     });
   def(WebSocket.prototype, 'binaryType', {
     get() {
       const state = webSocketSlots.get(this);
-      if (!state) throw new TypeError('Illegal invocation');
+      if (!state) throw new IntrinsicTypeError('Illegal invocation');
       return state.binaryType;
     },
     set(value) {
       const state = webSocketSlots.get(this);
-      if (!state) throw new TypeError('Illegal invocation');
+      if (!state) throw new IntrinsicTypeError('Illegal invocation');
       value = String(value);
       if (value === 'blob' || value === 'arraybuffer') state.binaryType = value;
     },
@@ -8552,12 +8568,12 @@
     xhrEventTargetSlots = new WeakMap(),
     xhrState = (xhr) => {
       const state = xhrSlots.get(xhr);
-      if (!state) throw new TypeError('Illegal invocation');
+      if (!state) throw new IntrinsicTypeError('Illegal invocation');
       return state;
     },
     xhrEventTargetState = (target) => {
       const state = xhrEventTargetSlots.get(target);
-      if (!state) throw new TypeError('Illegal invocation');
+      if (!state) throw new IntrinsicTypeError('Illegal invocation');
       return state;
     };
   const fireXHREvent = (xhr, type) => dispatchTrusted(xhr, new Event(type)),
@@ -8570,7 +8586,7 @@
   const xhrConstructionToken = {};
   class XMLHttpRequestEventTarget extends EventTarget {
     constructor(token) {
-      if (token !== xhrConstructionToken) throw new TypeError('Illegal constructor');
+      if (token !== xhrConstructionToken) throw new IntrinsicTypeError('Illegal constructor');
       super();
       xhrEventTargetSlots.set(this, {
         onloadstart: null,
@@ -8586,7 +8602,9 @@
   class XMLHttpRequestUpload extends XMLHttpRequestEventTarget {
     constructor(token) {
       if (token !== xhrConstructionToken)
-        throw new TypeError("Failed to construct 'XMLHttpRequestUpload': Illegal constructor");
+        throw new IntrinsicTypeError(
+          "Failed to construct 'XMLHttpRequestUpload': Illegal constructor",
+        );
       super(token);
     }
   }
@@ -8827,7 +8845,7 @@
       const state = xhrState(this),
         type = String(value);
       if (!['', 'text', 'json', 'arraybuffer', 'blob'].includes(type))
-        throw new TypeError('Invalid XMLHttpRequest responseType');
+        throw new IntrinsicTypeError('Invalid XMLHttpRequest responseType');
       if (state.readyState === 3 || state.readyState === 4)
         throw platformDOMException("The object's state must be OPENED.", 'InvalidStateError');
       state.responseType = type;
@@ -8892,7 +8910,7 @@
     def(Request.prototype, key, {
       get() {
         const state = requestSlots.get(this);
-        if (!state) throw new TypeError('Illegal invocation');
+        if (!state) throw new IntrinsicTypeError('Illegal invocation');
         return state[key];
       },
     });
@@ -8904,7 +8922,7 @@
     constructor(body = null, init = {}) {
       const status = init.status === undefined ? 200 : Number(init.status);
       if (status !== 0 && (status < 200 || status > 599))
-        throw new RangeError('Invalid status code');
+        throw new IntrinsicRangeError('Invalid status code');
       responseSlots.set(this, {
         body,
         headers: new Headers(init.headers),
@@ -8942,7 +8960,7 @@
     def(Response.prototype, key, {
       get() {
         const state = responseSlots.get(this);
-        if (!state) throw new TypeError('Illegal invocation');
+        if (!state) throw new IntrinsicTypeError('Illegal invocation');
         return state[key];
       },
     });
@@ -8987,7 +9005,7 @@
   window.onerror = null;
   const NodeFilter = {
     NodeFilter() {
-      throw new TypeError('Illegal constructor');
+      throw new IntrinsicTypeError('Illegal constructor');
     },
   }.NodeFilter;
   for (const [name, value] of Object.entries({
@@ -9219,7 +9237,7 @@
         bridgeAccess(id);
         return id;
       }
-    throw new TypeError('Illegal invocation');
+    throw new IntrinsicTypeError('Illegal invocation');
   };
   const originDescriptor = Object.getOwnPropertyDescriptor(
     {
@@ -9427,13 +9445,13 @@
       const receiver = this == null ? window : this,
         reference = receiver === window ? null : referenceGet(receiver);
       if (receiver !== window && reference?.type !== 'window')
-        throw new TypeError('Illegal invocation');
+        throw new IntrinsicTypeError('Illegal invocation');
       return postToFrame(receiver === window ? host.selfFrameID() : reference.frame, arguments);
     },
   }.postMessage;
   registerRealmBinding(bridgeOriginalPostMessage, 'WindowPostMessage', {});
   window.queueMicrotask = function queueMicrotask(callback) {
-    if (typeof callback !== 'function') throw new TypeError('callback is not a function');
+    if (typeof callback !== 'function') throw new IntrinsicTypeError('callback is not a function');
     platformPromiseResolve().then(() => {
       if (host.executionContextActive()) callback();
     });
@@ -9458,7 +9476,7 @@
   window.DOMStringList = DOMStringList;
   window.getComputedStyle = (e, pseudo = null) => {
     if (elementSlot(e)?.type !== 'element')
-      throw new TypeError(
+      throw new IntrinsicTypeError(
         "Failed to execute 'getComputedStyle' on 'Window': parameter 1 is not of type 'Element'.",
       );
     pseudo = pseudo == null ? '' : String(pseudo);
@@ -9546,7 +9564,7 @@
             ? { value: globalThis[name], writable: true, configurable: true }
             : undefined);
         if (descriptor && !descriptor.configurable)
-          throw new Error('non-configurable global publication: ' + name);
+          throw new IntrinsicError('non-configurable global publication: ' + name);
         descriptors.set(name, descriptor);
         delete globalThis[name];
       }
@@ -10370,13 +10388,10 @@
         value: 'Window',
         configurable: true,
       });
+      // V8 brands a bare realm global with its own configurable "global" tag.
+      // Blink's WindowProxy has no own toStringTag; it inherits Window's tag.
+      delete globalThis[Symbol.toStringTag];
       Object.setPrototypeOf(globalThis, globalThis.Window.prototype);
-      // QuickJS gives its realm global an internal "global" brand which wins
-      // over an inherited tag. Blink exposes the local WindowProxy as Window.
-      Object.defineProperty(globalThis, Symbol.toStringTag, {
-        value: 'Window',
-        configurable: true,
-      });
     }
     markNative(frameElement, 'frameElement', 'get ');
     Object.defineProperty(globalThis, 'frameElement', {
@@ -10408,7 +10423,6 @@
     host = freshHost;
     hostToken = host.token();
     bridgeRealmID = host.selfRealmID();
-    intlEnvironment = host.intlEnvironment();
     security = host.documentSecurity();
     const policy = permissionsPolicySlots.get(
       new PermissionsPolicy(hostToken, host.permissionsPolicy()),
@@ -10442,11 +10456,15 @@
       resolve(specifier) {
         const text = `${specifier}`;
         if (!/^(?:[A-Za-z][A-Za-z0-9+.-]*:|\/|\.\.?\/)/.test(text))
-          throw new TypeError('Failed to resolve module specifier ' + JSON.stringify(text));
+          throw new IntrinsicTypeError(
+            'Failed to resolve module specifier ' + JSON.stringify(text),
+          );
         try {
           return host.urlParts(text, base).href;
         } catch {
-          throw new TypeError('Failed to resolve module specifier ' + JSON.stringify(text));
+          throw new IntrinsicTypeError(
+            'Failed to resolve module specifier ' + JSON.stringify(text),
+          );
         }
       },
     }.resolve;

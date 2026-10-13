@@ -134,5 +134,9 @@
   Promise.resolve().then(() => order.push('promise'));
   await Promise.resolve();
   order.push('continuation');
-  return JSON.stringify({ observations, order });
+  const windowSurface = {
+    tag: Object.prototype.toString.call(window),
+    ownSymbols: Object.getOwnPropertySymbols(window).map(String),
+  };
+  return JSON.stringify({ observations, order, windowSurface });
 })();

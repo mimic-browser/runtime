@@ -2172,6 +2172,56 @@ func TestGlobalAccessTracingPreservesWindowSemantics(t *testing.T) {
 	}
 }
 
+func TestWindowBrandDoesNotAddOwnSymbols(t *testing.T) {
+	parallelBrowserTest(t)
+	p := testPage(t)
+	v, err := p.Evaluate(context.Background(), `({
+    tag: Object.prototype.toString.call(window),
+    symbols: Object.getOwnPropertySymbols(window).map(String),
+    inheritedTag: Object.getOwnPropertyDescriptor(Window.prototype, Symbol.toStringTag).value,
+  })`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := v.(map[string]any)
+	if m["tag"] != "[object Window]" || m["inheritedTag"] != "Window" || len(m["symbols"].([]any)) != 0 {
+		t.Fatalf("unexpected Window brand projection: %#v", m)
+	}
+}
+
+func TestPlatformTypeErrorDoesNotResolveThroughWindow(t *testing.T) {
+	parallelBrowserTest(t)
+	p := testPage(t)
+	v, err := p.Evaluate(context.Background(), `(() => {
+    const NativeTypeError = TypeError;
+    const effects = [];
+    globalThis.TypeError = new Proxy(NativeTypeError, {
+      apply() { effects.push('apply'); },
+      construct() { effects.push('construct'); },
+    });
+    try {
+      navigator.plugins.item();
+      return { threw: false, effects };
+    } catch (error) {
+      return {
+        threw: true,
+        effects,
+        native: error instanceof NativeTypeError,
+        name: error.name,
+      };
+    } finally {
+      globalThis.TypeError = NativeTypeError;
+    }
+  })()`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := v.(map[string]any)
+	if m["threw"] != true || m["native"] != true || m["name"] != "TypeError" || len(m["effects"].([]any)) != 0 {
+		t.Fatalf("platform exception used author-visible TypeError: %#v", m)
+	}
+}
+
 func TestPerformanceObserverBufferedDelivery(t *testing.T) {
 	parallelBrowserTest(t)
 	p := testPage(t)
