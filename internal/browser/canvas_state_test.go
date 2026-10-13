@@ -2,6 +2,7 @@ package browser
 
 import (
 	"context"
+	"encoding/json"
 	"strconv"
 	"strings"
 	"testing"
@@ -92,6 +93,45 @@ func TestGenericFontUpdateInvalidatesWindowAndExistingWorkerCanvasMetrics(t *tes
 	}
 	if after[0] == before[0] {
 		t.Fatalf("cached generic-family metrics survived profile update: before=%v after=%v", before, after)
+	}
+}
+
+func TestCanvasStrokeCapsUseSnapshottedGeometryAcrossRealms(t *testing.T) {
+	parallelBrowserTest(t)
+	p := blitzStandardsPage(t)
+	const observation = `()=>{
+    const draw=cap=>{const c=new OffscreenCanvas(20,20),x=c.getContext('2d');x.lineWidth=6;x.lineCap=cap;x.beginPath();x.moveTo(5,10);x.lineTo(15,10);x.stroke();x.lineCap=cap==='butt'?'square':'butt';const data=Array.from(x.getImageData(0,0,20,20).data),alpha=data.filter((_,i)=>i%4===3),a=(px,py)=>data[(py*20+px)*4+3];return [a(3,9),a(2,7),alpha.filter(Boolean).length,alpha.reduce((sum,v)=>sum+v,0)]};
+    return {butt:draw('butt'),round:draw('round'),square:draw('square')};
+  }`
+	main, err := p.Evaluate(context.Background(), `JSON.stringify((`+observation+`)())`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	worker, err := p.Evaluate(context.Background(), `(async()=>new Promise((resolve,reject)=>{
+    const source='onmessage=()=>postMessage(JSON.stringify(('+`+strconv.Quote(observation)+`+')()))';
+    const url=URL.createObjectURL(new Blob([source],{type:'text/javascript'})),w=new Worker(url);
+    w.onmessage=e=>{w.terminate();URL.revokeObjectURL(url);resolve(e.data)};w.onerror=reject;w.postMessage(null);
+  }))()`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if main != worker {
+		t.Fatalf("Window and Worker stroke caps differ: main=%v worker=%v", main, worker)
+	}
+	var got struct {
+		Butt, Round, Square []float64
+	}
+	if err := json.Unmarshal([]byte(main.(string)), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Butt[0] != 0 || got.Round[0] == 0 || got.Square[0] == 0 {
+		t.Fatalf("endpoint cap geometry differs from Chrome semantics: %+v", got)
+	}
+	if got.Square[1] <= got.Round[1] {
+		t.Fatalf("round/square corner geometry collapsed: %+v", got)
+	}
+	if !(got.Butt[3] < got.Round[3] && got.Round[3] < got.Square[3]) {
+		t.Fatalf("stroke cap coverage ordering is incoherent: %+v", got)
 	}
 }
 

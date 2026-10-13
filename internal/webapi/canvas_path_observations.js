@@ -151,8 +151,20 @@ const clipContains = (clips, x, y) =>
     }
     return containsWindingSnapshot(clip, x, y);
   });
-const strokeContains = (path, x, y, width) => {
+const strokeSegmentContains = (x, y, width, lineCap, edge) => {
   const radius = width / 2;
+  const { a, dx, dy, length, capStart, capEnd } = edge;
+  let t = ((x - a[0]) * dx + (y - a[1]) * dy) / length;
+  if (lineCap === 'square') {
+    const extension = radius / Math.sqrt(length);
+    if ((capStart ? t < -extension : t < 0) || (capEnd ? t > 1 + extension : t > 1)) return false;
+  } else if (t < 0 || t > 1) {
+    if (lineCap !== 'round' || (t < 0 ? !capStart : !capEnd)) return false;
+    t = t < 0 ? 0 : 1;
+  }
+  return (x - a[0] - t * dx) ** 2 + (y - a[1] - t * dy) ** 2 <= radius * radius;
+};
+const strokeContains = (path, x, y, width, lineCap) => {
   for (const sub of path) {
     const ps = sub.points,
       n = ps.length;
@@ -163,9 +175,17 @@ const strokeContains = (path, x, y, width) => {
         dy = b[1] - a[1],
         length = dx * dx + dy * dy;
       if (!length) continue;
-      const t = ((x - a[0]) * dx + (y - a[1]) * dy) / length;
-      if (t < 0 || t > 1) continue;
-      if ((x - a[0] - t * dx) ** 2 + (y - a[1] - t * dy) ** 2 <= radius * radius) return true;
+      if (
+        strokeSegmentContains(x, y, width, lineCap, {
+          a,
+          dx,
+          dy,
+          length,
+          capStart: !sub.closed && i === 1,
+          capEnd: !sub.closed && i === n - 1,
+        })
+      )
+        return true;
     }
   }
   return false;
@@ -200,6 +220,8 @@ const strokePixelEdges = (op, x, y) => {
             dx,
             dy,
             length,
+            capStart: !sub.closed && i === 1,
+            capEnd: !sub.closed && i === ps.length - 1,
             left: Math.min(a[0], b[0]) - radius - 1e-5,
             right: Math.max(a[0], b[0]) + radius + 1e-5,
             top: Math.min(a[1], b[1]) - radius - 1e-5,
@@ -212,13 +234,8 @@ const strokePixelEdges = (op, x, y) => {
     (e) => x + 1 >= e.left && x <= e.right && y + 1 >= e.top && y <= e.bottom,
   );
 };
-const strokeEdgesContain = (edges, x, y, width) => {
-  const radius = width / 2;
-  for (const { a, dx, dy, length } of edges) {
-    const t = ((x - a[0]) * dx + (y - a[1]) * dy) / length;
-    if (t < 0 || t > 1) continue;
-    if ((x - a[0] - t * dx) ** 2 + (y - a[1] - t * dy) ** 2 <= radius * radius) return true;
-  }
+const strokeEdgesContain = (edges, x, y, width, lineCap) => {
+  for (const edge of edges) if (strokeSegmentContains(x, y, width, lineCap, edge)) return true;
   return false;
 };
 const paintSnapshot = (style, space = 'srgb', scheme = 'light', transform = [1, 0, 0, 1, 0, 0]) => {
@@ -630,6 +647,7 @@ const queuePath = (c, path, rule, stroke = false, clear = false) => {
     rule,
     stroke,
     width: d.lineWidth * scale,
+    lineCap: d.lineCap,
     frequentRead: c.attributes.willReadFrequently,
     paint,
     alpha: clear ? 1 : d.globalAlpha,
@@ -779,8 +797,8 @@ const pathPixelCoverage = (op, x, y) => {
         clipContains(op.clips, px, py) &&
         (op.stroke
           ? edges
-            ? strokeEdgesContain(edges, px, py, op.width)
-            : strokeContains(op.path, px, py, op.width)
+            ? strokeEdgesContain(edges, px, py, op.width, op.lineCap)
+            : strokeContains(op.path, px, py, op.width, op.lineCap)
           : containsWindingSnapshot(op, px, py))
       )
         count++;
@@ -791,7 +809,8 @@ const pathPixelCoverage = (op, x, y) => {
 // Rasterize a straight segment in 26.6/16.16 fixed point so its endpoint caps
 // and two neighboring pixels share one mask used by both paint and shadow.
 const frequentReadHairlineMask = (s, op, left, right, top, bottom) => {
-  if (!op.frequentRead || !op.stroke || op.width !== 1 || op.clips.length) return null;
+  if (!op.frequentRead || !op.stroke || op.width !== 1 || op.lineCap !== 'butt' || op.clips.length)
+    return null;
   const paths = op.path.filter((sub) => sub.points.length);
   if (paths.length !== 1 || paths[0].closed || paths[0].points.length !== 2) return null;
   const [a, b] = paths[0].points;
