@@ -715,6 +715,7 @@ const canvasCompatibilityState = (() => {
       composite: d.globalCompositeOperation,
       clips: d.clipPaths || [],
       shadow: shadowSnapshot(d, c.surface, c.attributes.willReadFrequently),
+      filters: canvasFilterSnapshot(d),
       stroke,
       lineWidth: d.lineWidth,
     });
@@ -833,12 +834,12 @@ const canvasCompatibilityState = (() => {
             compositePixel(
               p,
               (y * s.width + x) * 4,
-              [
+              filterCanvasColor(run.filters, [
                 Math.min(255, Math.round((tile.pixels[source] * 255) / a)),
                 Math.min(255, Math.round((tile.pixels[source + 1] * 255) / a)),
                 Math.min(255, Math.round((tile.pixels[source + 2] * 255) / a)),
                 a,
-              ],
+              ]),
               run.alpha,
               run.composite,
               s.opaque,
@@ -860,7 +861,7 @@ const canvasCompatibilityState = (() => {
           compositePixel(
             p,
             (y * s.width + x) * 4,
-            paintColor(run.paint, x + 0.5, y + 0.5),
+            filterCanvasColor(run.filters, paintColor(run.paint, x + 0.5, y + 0.5)),
             (run.alpha * coverage[y * s.width + x]) / 255,
             run.composite,
             s.opaque,
@@ -1237,16 +1238,13 @@ const canvasCompatibilityState = (() => {
           image.colorSpace === 'display-p3' && image.pixels instanceof Float32Array
             ? new Uint8ClampedArray(image.pixels)
             : image.pixels.slice(),
-        ga = c.draw.globalAlpha;
-      const grayscale = /^grayscale\(\s*((?:\d+(?:\.\d*)?|\.\d+))(%)?\s*\)$/.exec(c.draw.filter);
-      const grayscaleAmount = grayscale
-        ? Math.min(1, Number(grayscale[1]) / (grayscale[2] ? 100 : 1))
-        : 0;
+        ga = c.draw.globalAlpha,
+        filters = canvasFilterSnapshot(c.draw);
       const directOpaque =
         p instanceof Uint8ClampedArray &&
         input instanceof Uint8ClampedArray &&
         ga === 1 &&
-        !grayscaleAmount &&
+        !filters.length &&
         (image.colorSpace || 'srgb') === (destination.colorSpace || 'srgb') &&
         (c.draw.globalCompositeOperation === 'source-over' ||
           c.draw.globalCompositeOperation === 'copy');
@@ -1382,11 +1380,14 @@ const canvasCompatibilityState = (() => {
             ],
             destination.colorSpace || 'srgb',
           );
-          if (grayscaleAmount) {
-            const gray = rgba[0] * 0.2126 + rgba[1] * 0.7152 + rgba[2] * 0.0722;
-            for (let k = 0; k < 3; k++) rgba[k] += (gray - rgba[k]) * grayscaleAmount;
-          }
-          compositePixel(p, j, rgba, ga, c.draw.globalCompositeOperation, destination.opaque);
+          compositePixel(
+            p,
+            j,
+            filterCanvasColor(filters, rgba),
+            ga,
+            c.draw.globalCompositeOperation,
+            destination.opaque,
+          );
         }
       destination.unmodeled ||= image.unmodeled;
     }
@@ -1524,6 +1525,14 @@ const canvasCompatibilityState = (() => {
           const parsed = serializeCanvasFont(String(value));
           if (parsed === null) return;
           c.draw[key] = parsed;
+          return;
+        }
+        if (key === 'filter') {
+          value = String(value);
+          const parsed = parseCanvasFilter(value);
+          if (parsed === null) return;
+          c.draw[key] = value.trim();
+          c.draw.filterFunctions = parsed;
           return;
         }
         if (key === 'letterSpacing' || key === 'wordSpacing') {

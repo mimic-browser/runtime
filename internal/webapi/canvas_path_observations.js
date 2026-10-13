@@ -71,6 +71,125 @@ const inverseTransformPoint = (m, x, y) => {
   y -= m[5];
   return [(m[3] * x - m[2] * y) / determinant, (-m[1] * x + m[0] * y) / determinant];
 };
+const parseCanvasFilter = (input) => {
+  input = String(input).trim();
+  if (input === 'none') return [];
+  const filters = [];
+  let offset = 0;
+  const token = /\s*([a-z-]+)\(\s*([^)]*?)\s*\)/gy;
+  while (offset < input.length) {
+    token.lastIndex = offset;
+    const match = token.exec(input);
+    if (!match) return null;
+    offset = token.lastIndex;
+    const name = match[1],
+      argument = match[2],
+      amount = /^([+]?(?:\d+(?:\.\d*)?|\.\d+))(%)?$/.exec(argument);
+    if (name === 'hue-rotate') {
+      const angle = /^([+-]?(?:\d+(?:\.\d*)?|\.\d+))(deg|grad|rad|turn)?$/.exec(argument);
+      if (!angle || (!angle[2] && Number(angle[1]) !== 0)) return null;
+      const value = Number(angle[1]),
+        radians =
+          angle[2] === 'rad'
+            ? value
+            : angle[2] === 'turn'
+              ? value * Math.PI * 2
+              : angle[2] === 'grad'
+                ? (value * Math.PI) / 200
+                : (value * Math.PI) / 180;
+      filters.push({ name, amount: radians });
+      continue;
+    }
+    if (
+      !['brightness', 'contrast', 'grayscale', 'opacity', 'invert', 'sepia', 'saturate'].includes(
+        name,
+      ) ||
+      !amount
+    )
+      return null;
+    const value = Number(amount[1]) / (amount[2] ? 100 : 1);
+    filters.push({ name, amount: value });
+  }
+  return filters.length ? filters : null;
+};
+const canvasFilterSnapshot = (draw) =>
+  (draw.filterFunctions || []).map((filter) => ({ ...filter }));
+const filterCanvasColor = (filters, input) => {
+  if (!filters?.length) return input;
+  let rgba = input.slice();
+  const matrix = (values) => {
+    const [r, g, b] = rgba;
+    rgba[0] = r * values[0] + g * values[1] + b * values[2];
+    rgba[1] = r * values[3] + g * values[4] + b * values[5];
+    rgba[2] = r * values[6] + g * values[7] + b * values[8];
+  };
+  for (const filter of filters) {
+    const amount = filter.amount;
+    if (filter.name === 'brightness') for (let i = 0; i < 3; i++) rgba[i] *= amount;
+    else if (filter.name === 'contrast')
+      for (let i = 0; i < 3; i++) rgba[i] = (rgba[i] - 127.5) * amount + 127.5;
+    else if (filter.name === 'opacity') rgba[3] = Math.floor(rgba[3] * Math.min(1, amount));
+    else if (filter.name === 'invert')
+      for (let i = 0; i < 3; i++) rgba[i] = rgba[i] * (1 - amount) + (255 - rgba[i]) * amount;
+    else if (filter.name === 'grayscale') {
+      const value = 1 - Math.min(1, amount);
+      matrix([
+        0.2126 + 0.7874 * value,
+        0.7152 - 0.7152 * value,
+        0.0722 - 0.0722 * value,
+        0.2126 - 0.2126 * value,
+        0.7152 + 0.2848 * value,
+        0.0722 - 0.0722 * value,
+        0.2126 - 0.2126 * value,
+        0.7152 - 0.7152 * value,
+        0.0722 + 0.9278 * value,
+      ]);
+    } else if (filter.name === 'sepia') {
+      const value = Math.min(1, amount),
+        inverse = 1 - value;
+      matrix([
+        inverse + 0.393 * value,
+        0.769 * value,
+        0.189 * value,
+        0.349 * value,
+        inverse + 0.686 * value,
+        0.168 * value,
+        0.272 * value,
+        0.534 * value,
+        inverse + 0.131 * value,
+      ]);
+    } else if (filter.name === 'saturate') {
+      const value = amount;
+      matrix([
+        0.213 + 0.787 * value,
+        0.715 - 0.715 * value,
+        0.072 - 0.072 * value,
+        0.213 - 0.213 * value,
+        0.715 + 0.285 * value,
+        0.072 - 0.072 * value,
+        0.213 - 0.213 * value,
+        0.715 - 0.715 * value,
+        0.072 + 0.928 * value,
+      ]);
+    } else if (filter.name === 'hue-rotate') {
+      const cosine = Math.cos(amount),
+        sine = Math.sin(amount);
+      matrix([
+        0.213 + 0.787 * cosine - 0.213 * sine,
+        0.715 - 0.715 * cosine - 0.715 * sine,
+        0.072 - 0.072 * cosine + 0.928 * sine,
+        0.213 - 0.213 * cosine + 0.143 * sine,
+        0.715 + 0.285 * cosine + 0.14 * sine,
+        0.072 - 0.072 * cosine - 0.283 * sine,
+        0.213 - 0.213 * cosine - 0.787 * sine,
+        0.715 - 0.715 * cosine + 0.715 * sine,
+        0.072 + 0.928 * cosine + 0.072 * sine,
+      ]);
+    }
+    for (let i = 0; i < 4; i++) rgba[i] = Math.max(0, Math.min(255, rgba[i]));
+  }
+  return rgba;
+};
 const currentPath = (c) => c.path || (c.path = []);
 const appendPoint = (c, x, y, move = false) => {
   const p = currentPath(c),
@@ -802,6 +921,7 @@ const queuePath = (c, path, rule, stroke = false, clear = false) => {
     clear,
     clips: d.clipPaths || [],
     shadow: clear ? null : shadowSnapshot(d, c.surface, c.attributes.willReadFrequently),
+    filters: clear ? [] : canvasFilterSnapshot(d),
   });
   // Long-lived animations need bounded deferred state even when they never
   // clear the full canvas. Folding a batch into the canonical pixel model
@@ -1107,6 +1227,7 @@ const materializePath = (s, op) => {
     !op.stroke &&
     !op.clear &&
     !op.shadow &&
+    !op.filters.length &&
     !op.clips.length &&
     op.composite === 'source-over' &&
     Array.isArray(op.paint) &&
@@ -1172,7 +1293,9 @@ const materializePath = (s, op) => {
         compositePixel(
           s.pixels,
           (y * s.width + x) * 4,
-          coverage ? paintColor(op.paint, x + 0.5, y + 0.5) : [0, 0, 0, 0],
+          coverage
+            ? filterCanvasColor(op.filters, paintColor(op.paint, x + 0.5, y + 0.5))
+            : [0, 0, 0, 0],
           op.alpha * coverage,
           op.composite,
           s.opaque,
@@ -1181,7 +1304,7 @@ const materializePath = (s, op) => {
         compositePixel(
           s.pixels,
           (y * s.width + x) * 4,
-          paintColor(op.paint, x + 0.5, y + 0.5),
+          filterCanvasColor(op.filters, paintColor(op.paint, x + 0.5, y + 0.5)),
           op.alpha,
           op.composite,
           s.opaque,

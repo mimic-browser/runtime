@@ -1,0 +1,558 @@
+{
+  "browser": "Chrome/152.0.7977.82",
+  "metadata": {
+    "existingBrowser": true,
+    "isolatedBrowserContext": false,
+    "headful": true,
+    "freshProfile": true,
+    "fixture": "internal/browser/testdata/canvas_filter_color_oracle.js",
+    "fixtureSHA256": "11a5594943c0a241b9f641474a95731b9dc068d92430d825eea0c77d807a27c6",
+    "fixtureHashNormalization": "LF",
+    "chromeSHA256": "ea36dd818a90176f1a70616f0363d9be527229389a6c073a0b1688b9e73f67e9",
+    "v8": "15.2.124.21",
+    "originalWebdriver": false,
+    "launchArguments": [
+      "--remote-debugging-port=19524",
+      "--user-data-dir=C:\\Users\\moreveal\\Desktop\\mimic-contract-poc\\my-runs\\offline-hsw-latest\\canvas-filter-color-chrome152-20261013-003\\chrome-profile",
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--window-size=1280,800",
+      "about:blank"
+    ],
+    "observedViewport": {
+      "outer": [
+        1280,
+        800
+      ],
+      "inner": [
+        1272,
+        653
+      ],
+      "deviceScaleFactor": 1,
+      "visibility": "visible"
+    },
+    "precisionNote": "centerBucket is floor(channel / 4); alpha sums and affected extents are exact. exactReference retains Chrome RGBA bytes from the immediately preceding fresh-profile capture.",
+    "exactReference": {
+      "results": {
+        "none": {
+          "center": [
+            100,
+            150,
+            200,
+            204
+          ],
+          "edge": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "outside": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "alphaSum": 3264,
+          "nonzero": 16
+        },
+        "brightness(50%)": {
+          "center": [
+            50,
+            75,
+            100,
+            204
+          ],
+          "edge": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "outside": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "alphaSum": 3264,
+          "nonzero": 16
+        },
+        "contrast(150%)": {
+          "center": [
+            86,
+            161,
+            236,
+            204
+          ],
+          "edge": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "outside": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "alphaSum": 3264,
+          "nonzero": 16
+        },
+        "grayscale(75%)": {
+          "center": [
+            132,
+            145,
+            158,
+            204
+          ],
+          "edge": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "outside": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "alphaSum": 3264,
+          "nonzero": 16
+        },
+        "opacity(40%)": {
+          "center": [
+            101,
+            151,
+            201,
+            81
+          ],
+          "edge": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "outside": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "alphaSum": 1296,
+          "nonzero": 16
+        },
+        "invert(60%)": {
+          "center": [
+            132,
+            122,
+            112,
+            204
+          ],
+          "edge": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "outside": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "alphaSum": 3264,
+          "nonzero": 16
+        },
+        "sepia(80%)": {
+          "center": [
+            174,
+            168,
+            146,
+            204
+          ],
+          "edge": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "outside": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "alphaSum": 3264,
+          "nonzero": 16
+        },
+        "saturate(200%)": {
+          "center": [
+            57,
+            158,
+            255,
+            204
+          ],
+          "edge": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "outside": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "alphaSum": 3264,
+          "nonzero": 16
+        },
+        "hue-rotate(90deg)": {
+          "center": [
+            200,
+            121,
+            186,
+            204
+          ],
+          "edge": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "outside": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "alphaSum": 3264,
+          "nonzero": 16
+        },
+        "brightness(50%) opacity(40%)": {
+          "center": [
+            50,
+            76,
+            101,
+            81
+          ],
+          "edge": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "outside": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "alphaSum": 1296,
+          "nonzero": 16
+        }
+      },
+      "drawImage": {
+        "center": [
+          86,
+          161,
+          236,
+          204
+        ],
+        "edge": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "outside": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "alphaSum": 3264,
+        "nonzero": 16
+      },
+      "snapshot": [
+        50,
+        75,
+        100,
+        204
+      ]
+    }
+  },
+  "result": {
+    "property": [
+      [
+        "brightness(50%)",
+        "brightness(50%)"
+      ],
+      [
+        "bogus(2)",
+        "brightness(50%)"
+      ],
+      [
+        "contrast(-1)",
+        "brightness(50%)"
+      ],
+      [
+        "none",
+        "none"
+      ]
+    ],
+    "results": {
+      "none": {
+        "centerBucket": [
+          25,
+          37,
+          50,
+          51
+        ],
+        "edge": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "outside": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "alphaSum": 3264,
+        "nonzero": 16
+      },
+      "brightness(50%)": {
+        "centerBucket": [
+          12,
+          18,
+          25,
+          51
+        ],
+        "edge": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "outside": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "alphaSum": 3264,
+        "nonzero": 16
+      },
+      "contrast(150%)": {
+        "centerBucket": [
+          21,
+          40,
+          59,
+          51
+        ],
+        "edge": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "outside": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "alphaSum": 3264,
+        "nonzero": 16
+      },
+      "grayscale(75%)": {
+        "centerBucket": [
+          33,
+          36,
+          39,
+          51
+        ],
+        "edge": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "outside": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "alphaSum": 3264,
+        "nonzero": 16
+      },
+      "opacity(40%)": {
+        "centerBucket": [
+          25,
+          37,
+          50,
+          20
+        ],
+        "edge": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "outside": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "alphaSum": 1296,
+        "nonzero": 16
+      },
+      "invert(60%)": {
+        "centerBucket": [
+          33,
+          30,
+          28,
+          51
+        ],
+        "edge": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "outside": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "alphaSum": 3264,
+        "nonzero": 16
+      },
+      "sepia(80%)": {
+        "centerBucket": [
+          43,
+          42,
+          36,
+          51
+        ],
+        "edge": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "outside": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "alphaSum": 3264,
+        "nonzero": 16
+      },
+      "saturate(200%)": {
+        "centerBucket": [
+          14,
+          39,
+          63,
+          51
+        ],
+        "edge": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "outside": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "alphaSum": 3264,
+        "nonzero": 16
+      },
+      "hue-rotate(90deg)": {
+        "centerBucket": [
+          50,
+          30,
+          46,
+          51
+        ],
+        "edge": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "outside": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "alphaSum": 3264,
+        "nonzero": 16
+      },
+      "brightness(50%) opacity(40%)": {
+        "centerBucket": [
+          12,
+          19,
+          25,
+          20
+        ],
+        "edge": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "outside": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "alphaSum": 1296,
+        "nonzero": 16
+      }
+    },
+    "drawImage": {
+      "centerBucket": [
+        21,
+        40,
+        59,
+        51
+      ],
+      "edge": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "outside": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "alphaSum": 3264,
+      "nonzero": 16
+    },
+    "snapshotBucket": [
+      12,
+      18,
+      25,
+      51
+    ]
+  }
+}

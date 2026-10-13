@@ -32,6 +32,12 @@ model. CPU raster output is close to the retained Chrome 152 emoji control but
 is not pixel-identical; it differs in 172 of 400 pixels, mostly at antialiased
 edges and gradients. Diagnostics identify approximate text/path observations.
 
+Canvas color filters share one validated, immutable operation snapshot across
+paths, text and images. The canonical RGBA8 surface preserves exact alpha and
+filter extent, but some filtered RGB readbacks differ by one byte from Chrome's
+higher-precision intermediate surface after alpha premultiplication. Blur and
+drop-shadow filter functions remain unsupported.
+
 ## WebGL
 
 A bounded arithmetic GLSL parser/evaluator supports scalar/vector expressions,
@@ -100,6 +106,8 @@ The source SHA-256 and reference results are retained under
   non-finite radii, construction transforms, and immutable readback snapshots.
 - `canvas-roundrect-chrome152.json`: radius-list expansion, oversized-radius
   scaling, negative dimensions, elliptical corners, transforms and snapshots.
+- `canvas-filter-color-chrome152.json`: validated filter state, color-matrix and
+  opacity chains, immutable snapshots, source extent and image/path agreement.
 - `webgl-programs-chrome152.json`: linking, uniforms, arithmetic loops, readbacks,
   local scissor changes and deferred resource deletion.
 - `webgl-framebuffers-chrome152.json`: attachment lifecycle and integer/float
