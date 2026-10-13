@@ -5,6 +5,7 @@ const perfWorker = host.performance('worker'),
   perfSlots = new WeakMap(),
   perfWrappers = new Map(),
   perfConstructors = {};
+let perfPrimaryObject;
 const perfString = (value) => {
   if (typeof value === 'symbol') throw new TypeError('Cannot convert a Symbol value to a string');
   return String(value);
@@ -488,6 +489,10 @@ function perfObserve(observer, args) {
 const perfMethods = {
   Performance: {
     now(args) {
+      // The realm's canonical object is overwhelmingly the hot path. Keep its
+      // clock read inside V8 without traversing the generic cross-realm binding
+      // machinery; borrowed methods still take the full branded path below.
+      if (this === perfPrimaryObject) return host.performanceNow();
       return perfBound(this, 'Performance', 'now');
     },
     toJSON(args) {
@@ -808,6 +813,7 @@ for (const kind of ['PerformanceTiming', 'PerformanceNavigation'])
       configurable: true,
     });
 function installPerformanceObject(object) {
+  if (perfPrimaryObject === undefined) perfPrimaryObject = object;
   const timing = perfWorker ? null : perfLegacy('PerformanceTiming'),
     navigation = perfWorker ? null : perfLegacy('PerformanceNavigation');
   let handler = null,
