@@ -1573,23 +1573,33 @@ const canvasCompatibilityState = (() => {
         }
       }
     }
+    // Frozen headful Chrome 152 serializes RGBA canvas rows with PNG Up
+    // filtering, including the first row. Walk backward so the previous row
+    // still contains its unfiltered bytes when computing each delta.
+    const stride = s.width * 4 + 1;
+    for (let y = s.height - 1; y >= 0; y--) {
+      const row = y * stride;
+      scan[row] = 2;
+      if (y > 0) for (let x = 1; x < stride; x++) scan[row + x] -= scan[row - stride + x];
+    }
     const compressed = atob(host.compressCanvasScanline(pngBase64(scan)));
     const z = new Uint8Array(compressed.length);
     for (let i = 0; i < compressed.length; i++) z[i] = compressed.charCodeAt(i);
     const ihdr = pngU32(s.width).concat(pngU32(s.height), [8, 6, 0, 0, 0]);
-    return new Uint8Array([
-      137,
-      80,
-      78,
-      71,
-      13,
-      10,
-      26,
-      10,
-      ...pngChunk('IHDR', ihdr),
-      ...pngChunk('IDAT', z),
-      ...pngChunk('IEND', []),
-    ]);
+    // Chrome's streaming PNG writer emits 4096-byte IDAT chunks and writes
+    // the six-byte stream trailer as its own final IDAT chunk.
+    const chunks = [pngChunk('IHDR', ihdr)];
+    for (let i = 0; i < z.length - 6; i += 4096)
+      chunks.push(pngChunk('IDAT', z.subarray(i, Math.min(i + 4096, z.length - 6))));
+    chunks.push(pngChunk('IDAT', z.subarray(z.length - 6)), pngChunk('IEND', []));
+    const png = new Uint8Array(8 + chunks.reduce((size, chunk) => size + chunk.length, 0));
+    png.set([137, 80, 78, 71, 13, 10, 26, 10]);
+    let offset = 8;
+    for (const chunk of chunks) {
+      png.set(chunk, offset);
+      offset += chunk.length;
+    }
+    return png;
   };
   const pngBase64 = (bytes) => {
     let binary = '';
