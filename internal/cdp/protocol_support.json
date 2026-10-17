@@ -457,10 +457,11 @@
   },
   "Fetch.requestPaused": {
     "status": "partial",
-    "notes": "Shared-loader request/response-stage pauses; auth and some redirect metadata are unsupported.",
+    "notes": "Shared-loader request/response-stage pauses; auth and some redirect metadata are unsupported. Request postData decodes valid UTF-8 or maps the entire invalid body bytewise to U+0000..U+00FF, matching Chrome 152; postDataEntries retains exact Base64 bytes.",
     "tests": [
       "internal/cdp/intercept_test.go#TestInterceptionResponsePatternsAndPerRequestOverride",
-      "compatibility/cdp_automation.py#network.interception_fulfill_body"
+      "compatibility/cdp_automation.py#network.interception_fulfill_body",
+      "internal/cdp/intercept_test.go#TestInterceptionBinaryPostDataSurvivesJSON"
     ]
   },
   "Input.dispatchKeyEvent": {
@@ -635,19 +636,21 @@
   },
   "Network.requestIntercepted": {
     "status": "partial",
-    "notes": "Shared-loader request/response-stage pauses; auth and some redirect metadata are unsupported.",
+    "notes": "Shared-loader request/response-stage pauses; auth and some redirect metadata are unsupported. Request postData decodes valid UTF-8 or maps the entire invalid body bytewise to U+0000..U+00FF, matching Chrome 152; postDataEntries retains exact Base64 bytes.",
     "tests": [
       "internal/cdp/intercept_test.go#TestInterceptionResponsePatternsAndPerRequestOverride",
-      "compatibility/cdp_automation.py#network.interception_fulfill_body"
+      "compatibility/cdp_automation.py#network.interception_fulfill_body",
+      "internal/cdp/intercept_test.go#TestInterceptionBinaryPostDataSurvivesJSON"
     ]
   },
   "Network.requestWillBeSent": {
     "status": "partial",
-    "notes": "Canonical request/response/failure, frame/loader identity and transport protocol. Initiator stacks, redirect-ID reuse, extra-info and complete timing/security/error details are incomplete.",
+    "notes": "Canonical request/response/failure, frame/loader identity and transport protocol. Initiator stacks, redirect-ID reuse, extra-info and complete timing/security/error details are incomplete. Request postData decodes valid UTF-8 or maps the entire invalid body bytewise to U+0000..U+00FF, matching Chrome 152; postDataEntries retains exact Base64 bytes.",
     "tests": [
       "internal/cdp/server_test.go#TestCDPProtocolProjectsActualTransportProtocol",
       "internal/cdp/server_test.go#TestCDPProjectsChildFrameTreeLifecycleAndExecutionContext",
-      "compatibility/cdp_automation.py#network.response_body_extra_headers"
+      "compatibility/cdp_automation.py#network.response_body_extra_headers",
+      "internal/cdp/inspector_network_test.go#TestInspectorBinaryPostEntriesMatchTransportBytes"
     ]
   },
   "Network.responseReceived": {
@@ -1868,11 +1871,12 @@
   },
   "Network.getRequestPostData": {
     "status": "partial",
-    "notes": "Network-enabled sessions retain nonempty post bodies on demand, limited to 128 entries, 4 MiB total and 1 MiB per body. Network.disable/disconnect release history; absent, evicted, empty or oversized bodies return an explicit unavailable-data error.",
+    "notes": "Network-enabled sessions retain nonempty post bodies on demand, limited to 128 entries, 4 MiB total and 1 MiB per body. Network.disable/disconnect release history; absent, evicted, empty or oversized bodies return an explicit unavailable-data error. Valid UTF-8 bodies return text with base64Encoded=false; invalid UTF-8 returns exact Base64 with base64Encoded=true, matching Chrome 152.",
     "tests": [
       "internal/cdp/inspector_network_test.go#TestInspectorNetworkRedirectPostAndBodies",
       "internal/cdp/inspector_network_test.go#TestInspectorPostHistoryIsLazyAndBounded",
-      "internal/cdp/inspector_network_test.go#TestInspectorNetworkFailureAndMissingBodies"
+      "internal/cdp/inspector_network_test.go#TestInspectorNetworkFailureAndMissingBodies",
+      "internal/cdp/inspector_network_test.go#TestInspectorBinaryPostEntriesMatchTransportBytes"
     ]
   },
   "DOM.attributeModified": {

@@ -127,3 +127,22 @@ This is partial geometry support rather than pixel rendering. User-agent shadow
 trees are not modeled, so `includeUserAgentShadowDOM` adds no internal control
 nodes. Complex transformed/clipped shapes and visual viewport zoom are not
 established as Chrome-equivalent by the location-query regressions.
+
+## Request body inspection
+
+Request bodies remain bytes in the transport. Network request and interception
+objects project `postData` as UTF-8 when the complete body is valid UTF-8;
+otherwise every source byte maps to the corresponding U+0000..U+00FF character,
+matching Chrome 152. This fallback applies to the entire body, including any
+valid UTF-8 subsequences. `postDataEntries[].bytes` carries the original bytes
+as Base64 and is the lossless source for binary capture and replay.
+
+`Network.getRequestPostData` returns `base64Encoded: false` with valid UTF-8 text
+or `base64Encoded: true` with Base64 for a non-UTF-8 body. Clients must honor that
+flag. Existing body-history size and lifetime limits still apply.
+
+Diagnostic request traces retain the same display text plus `postDataBase64`
+for non-UTF-8 bodies. Offline replay reads that field in preference to display
+text and rejects malformed Base64. UTF-8-encoding a binary display string does
+not reconstruct its source bytes. Previously exported replacement characters
+cannot recover bytes already lost; use retained binary entries when available.

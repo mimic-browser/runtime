@@ -17,9 +17,10 @@ import (
 )
 
 type recordedRequest struct {
-	ID, URL, Method, Context, Initiator, PostData string
-	Headers                                       map[string]string
-	Sequence                                      uint64
+	ID, URL, Method, Context, Initiator string
+	PostData                            []byte
+	Headers                             map[string]string
+	Sequence                            uint64
 }
 
 type fixture struct {
@@ -78,7 +79,14 @@ func readCapture(dir string) (*capture, error) {
 		id := stringField(d, "id")
 		switch event.Name {
 		case "request":
-			r := recordedRequest{ID: id, URL: stringField(d, "url"), Method: stringField(d, "method"), Context: stringField(d, "context"), Initiator: stringField(d, "initiator"), PostData: stringField(d, "postData"), Headers: stringMap(d["headers"]), Sequence: event.Sequence}
+			r := recordedRequest{ID: id, URL: stringField(d, "url"), Method: stringField(d, "method"), Context: stringField(d, "context"), Initiator: stringField(d, "initiator"), PostData: []byte(stringField(d, "postData")), Headers: stringMap(d["headers"]), Sequence: event.Sequence}
+			if encoded, ok := d["postDataBase64"].(string); ok {
+				body, err := base64.StdEncoding.DecodeString(encoded)
+				if err != nil {
+					return nil, fmt.Errorf("request %d postDataBase64: %w", event.Sequence, err)
+				}
+				r.PostData = body
+			}
 			requests[id] = append(requests[id], r)
 			if c.DocumentURL == "" && r.Initiator == "navigation" {
 				c.DocumentURL = r.URL

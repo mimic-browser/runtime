@@ -44,6 +44,16 @@ func (s *session) rememberPostData(id, data string) {
 	}
 }
 
+// Request events and interception expose the same Chrome body projection.
+func setRequestPostData(request map[string]any, body []byte) {
+	if len(body) == 0 {
+		return
+	}
+	request["postData"] = network.PostDataText(body)
+	request["hasPostData"] = true
+	request["postDataEntries"] = []any{map[string]any{"bytes": base64.StdEncoding.EncodeToString(body)}}
+}
+
 func (s *session) networkEvent(e trace.Event) {
 	if !s.domainEnabled("Network") || strings.HasPrefix(stringValue(e.Data["url"]), "data:") {
 		return
@@ -60,13 +70,17 @@ func (s *session) networkEvent(e trace.Event) {
 	timestamp := float64(e.Time.UnixMilli()) / 1000
 	if e.Name == "request" {
 		postData := stringValue(e.Data["postData"])
+		if encoded, ok := e.Data["postDataBase64"].(string); ok {
+			body, err := base64.StdEncoding.DecodeString(encoded)
+			if err != nil {
+				s.page.Trace().Add(trace.Error, "requestPostData", map[string]any{"id": id, "error": err.Error()})
+				return
+			}
+			postData = string(body)
+		}
 		s.rememberPostData(id, postData)
 		request := map[string]any{"url": e.Data["url"], "method": e.Data["method"], "headers": e.Data["headers"]}
-		if postData != "" {
-			request["postData"] = postData
-			request["hasPostData"] = true
-			request["postDataEntries"] = []any{map[string]any{"bytes": base64.StdEncoding.EncodeToString([]byte(postData))}}
-		}
+		setRequestPostData(request, []byte(postData))
 		payload := map[string]any{"requestId": id, "loaderId": loaderID, "documentURL": s.page.URL(), "request": request, "timestamp": timestamp, "wallTime": float64(e.Time.UnixMilli()) / 1000, "initiator": map[string]any{"type": "other"}, "type": resourceTypeFromTrace(e.Data["initiator"]), "frameId": frameID}
 		s.stateMu.Lock()
 		if history := s.networkInspection; history != nil {

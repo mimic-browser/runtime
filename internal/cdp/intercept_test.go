@@ -1,8 +1,12 @@
 package cdp
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -327,5 +331,50 @@ func TestInterceptionCanceledResponseOverrideIsReleased(t *testing.T) {
 			t.Fatal("response override retained canceled request")
 		case <-time.After(time.Millisecond):
 		}
+	}
+}
+
+func TestInterceptionBinaryPostDataSurvivesJSON(t *testing.T) {
+	for _, fetch := range []bool{false, true} {
+		t.Run(fmt.Sprint(fetch), func(t *testing.T) {
+			body := []byte{0xce, 0xa9, 0xff, 0, 0x80}
+			var interceptor *ControlInterceptor
+			interceptor = NewControlInterceptor(func(method string, payload any) {
+				raw, err := json.Marshal(payload)
+				if err != nil {
+					t.Fatal(err)
+				}
+				var params map[string]any
+				if err := json.Unmarshal(raw, &params); err != nil {
+					t.Fatal(err)
+				}
+				request := params["request"].(map[string]any)
+				if request["postData"] != "\u00ce\u00a9\u00ff\x00\u0080" {
+					t.Errorf("%s text: %q", method, request["postData"])
+				}
+				data, err := base64.StdEncoding.DecodeString(request["postDataEntries"].([]any)[0].(map[string]any)["bytes"].(string))
+				if err != nil || !bytes.Equal(data, body) {
+					t.Errorf("%s bytes: %x %v", method, data, err)
+				}
+				key := "interceptionId"
+				if fetch {
+					key = "requestId"
+				}
+				if err := interceptor.Resolve(params[key].(string), interceptAnswer{action: "continue"}); err != nil {
+					t.Error(err)
+				}
+			})
+			if fetch {
+				interceptor.Enable(true)
+			} else {
+				interceptor.EnableNetwork(true)
+			}
+			request := interceptionRequest()
+			request.Method = "POST"
+			request.Body = body
+			if _, err := interceptor.Before(context.Background(), request); err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 }

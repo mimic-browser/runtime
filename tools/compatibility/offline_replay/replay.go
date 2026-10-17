@@ -189,7 +189,7 @@ func (t *replay) RoundTrip(r *http.Request) (*http.Response, error) {
 		}
 	}
 	sort.Strings(differentHeaders)
-	event := map[string]any{"kind": "fixture", "fixtureIndex": f.Index, "cycle": f.Cycle, "method": r.Method, "urlHash": shortHash(r.URL.String()), "requestContextHash": shortHash(actual.Context), "recordedContextHash": shortHash(f.Request.Context), "requestBodyBytes": len(body), "recordedBodyBytes": len(f.Request.PostData), "requestBodySHA256": digest(body), "recordedBodySHA256": digest([]byte(f.Request.PostData)), "requestBodyEqual": bytes.Equal(body, []byte(f.Request.PostData)), "differentHeaderNames": differentHeaders, "criticalRetryCopy": f.CriticalRetryCopy}
+	event := map[string]any{"kind": "fixture", "fixtureIndex": f.Index, "cycle": f.Cycle, "method": r.Method, "urlHash": shortHash(r.URL.String()), "requestContextHash": shortHash(actual.Context), "recordedContextHash": shortHash(f.Request.Context), "requestBodyBytes": len(body), "recordedBodyBytes": len(f.Request.PostData), "requestBodySHA256": digest(body), "recordedBodySHA256": digest(f.Request.PostData), "requestBodyEqual": bytes.Equal(body, f.Request.PostData), "differentHeaderNames": differentHeaders, "criticalRetryCopy": f.CriticalRetryCopy}
 	if f.Failure != "" {
 		event["kind"] = "recorded-failure"
 		event["failureSHA256"] = digest([]byte(f.Failure))

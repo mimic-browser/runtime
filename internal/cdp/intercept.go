@@ -257,7 +257,8 @@ func (i *ControlInterceptor) pause(ctx context.Context, stage string, req networ
 		}
 		i.mu.Unlock()
 	}()
-	requestData := map[string]any{"url": req.URL.String(), "method": req.Method, "headers": flatHeaders(req.Headers), "postData": string(req.Body)}
+	requestData := map[string]any{"url": req.URL.String(), "method": req.Method, "headers": flatHeaders(req.Headers), "postData": ""}
+	setRequestPostData(requestData, req.Body)
 	if !fetch {
 		params := map[string]any{"interceptionId": id, "request": requestData, "frameId": req.ContextID, "resourceType": resourceType(req.Initiator), "isNavigationRequest": req.Initiator == network.Navigation || req.Initiator == network.Iframe, "isDownload": false}
 		if req.ID != "" {

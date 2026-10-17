@@ -979,7 +979,11 @@ func (s *session) handleCommand(m message) (afterUnlock func()) {
 		if !ok {
 			err = fmt.Errorf("No post data available for the request")
 		} else {
-			result = map[string]any{"postData": data}
+			encoded := !utf8.ValidString(data)
+			if encoded {
+				data = base64.StdEncoding.EncodeToString([]byte(data))
+			}
+			result = map[string]any{"postData": data, "base64Encoded": encoded}
 		}
 	case "Network.getCookies":
 		result = map[string]any{"cookies": s.cookiesForURLs(p)}

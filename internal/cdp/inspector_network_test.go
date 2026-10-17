@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -78,7 +79,7 @@ func TestInspectorNetworkRedirectPostAndBodies(t *testing.T) {
 			}
 			if test.body != "" {
 				post := w.call(t, sessionID, "Network.getRequestPostData", map[string]any{"requestId": id})
-				if post["postData"] != test.body {
+				if post["postData"] != test.body || post["base64Encoded"] != false {
 					t.Fatalf("post body: %v", post)
 				}
 			}
@@ -100,7 +101,10 @@ func TestInspectorNetworkRedirectPostAndBodies(t *testing.T) {
 }
 
 func TestInspectorBinaryPostEntriesMatchTransportBytes(t *testing.T) {
-	body := []byte{0x92, 0xda, 0x02, 0xf6, '{', 0, 0xff, 0x80}
+	body := []byte{0xce, 0xa9, 0x92, 0xda, 0x02, 0xf6, '{', 0, 0xff, 0x80}
+	for value := 0; value < 256; value++ {
+		body = append(body, byte(value))
+	}
 	transport := make(chan []byte, 1)
 	fixture := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		received, _ := io.ReadAll(r.Body)
@@ -109,6 +113,7 @@ func TestInspectorBinaryPostEntriesMatchTransportBytes(t *testing.T) {
 	}))
 	t.Cleanup(fixture.Close)
 	s, addr := runningServer(t)
+	s.Page.Trace().Start()
 	w, sessionID := inspectorSession(t, s, addr)
 	w.call(t, sessionID, "Network.enable", map[string]any{})
 	u, _ := url.Parse(fixture.URL)
@@ -117,6 +122,42 @@ func TestInspectorBinaryPostEntriesMatchTransportBytes(t *testing.T) {
 		t.Fatal(err)
 	}
 	request := w.event(t, "Network.requestWillBeSent")["request"].(map[string]any)
+	wantText := make([]rune, len(body))
+	for i, value := range body {
+		wantText[i] = rune(value)
+	}
+	if request["postData"] != string(wantText) {
+		t.Fatalf("binary text projection: %q", request["postData"])
+	}
+	post := w.call(t, sessionID, "Network.getRequestPostData", map[string]any{"requestId": "binary-post"})
+	decoded, decodeErr := base64.StdEncoding.DecodeString(stringValue(post["postData"]))
+	if post["base64Encoded"] != true || decodeErr != nil || !bytes.Equal(decoded, body) {
+		t.Fatalf("binary getRequestPostData: %v %v", post, decodeErr)
+	}
+	traceJSON, marshalErr := json.Marshal(s.Page.Trace().Events())
+	if marshalErr != nil {
+		t.Fatal(marshalErr)
+	}
+	var recorded []struct {
+		Name string
+		Data map[string]any
+	}
+	if err := json.Unmarshal(traceJSON, &recorded); err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, event := range recorded {
+		if event.Name == "request" && event.Data["id"] == "binary-post" {
+			found = true
+			decoded, err := base64.StdEncoding.DecodeString(stringValue(event.Data["postDataBase64"]))
+			if err != nil || !bytes.Equal(decoded, body) || event.Data["postData"] != string(wantText) {
+				t.Fatalf("serialized trace corrupted request: %v", event.Data)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("missing retained request trace")
+	}
 	entries := request["postDataEntries"].([]any)
 	if len(entries) != 1 {
 		t.Fatalf("binary body entries: %v", entries)

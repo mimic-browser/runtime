@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"compress/zlib"
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -17,6 +18,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unicode/utf8"
 
 	"github.com/andybalholm/brotli"
 	"github.com/google/uuid"
@@ -522,7 +524,13 @@ func (l *Loader) Load(ctx context.Context, r Request) (response Response, loadEr
 	}
 	visibleHeaders := headerStrings(r.Headers)
 	requestStarted := monotime.Now()
-	l.trace.Add(trace.Network, "request", map[string]any{"id": r.ID, "url": r.URL.String(), "method": r.Method, "headers": visibleHeaders, "postData": string(r.Body), "initiator": r.Initiator, "context": r.ContextID, "performanceOwner": r.PerformanceOwner, "performanceStart": r.PerformanceStart})
+	requestData := map[string]any{"id": r.ID, "url": r.URL.String(), "method": r.Method, "headers": visibleHeaders, "postData": PostDataText(r.Body), "initiator": r.Initiator, "context": r.ContextID, "performanceOwner": r.PerformanceOwner, "performanceStart": r.PerformanceStart}
+	// JSON strings cannot carry invalid UTF-8. Preserve the source bytes beside
+	// the Chrome-compatible display text for diagnostics and offline replay.
+	if !utf8.Valid(r.Body) {
+		requestData["postDataBase64"] = base64.StdEncoding.EncodeToString(r.Body)
+	}
+	l.trace.Add(trace.Network, "request", requestData)
 	requestIssued = true
 	l.trace.Add(trace.Resource, "loadStart", map[string]any{"id": r.ID, "url": r.URL.String(), "type": r.Initiator, "context": r.ContextID})
 	decision := ResourceDecision{}

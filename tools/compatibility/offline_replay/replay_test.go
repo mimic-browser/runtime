@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -202,6 +204,53 @@ func TestReadCaptureResponseOnlyDataIsLocal(t *testing.T) {
 			r.observe(correct)
 			if !r.used[1] || r.events[len(r.events)-1]["statusEqual"] != true {
 				t.Fatal("response-only data load was not accounted for")
+			}
+		})
+	}
+}
+
+func TestReadCapturePreservesBinaryPostData(t *testing.T) {
+	for _, encoded := range []string{base64.StdEncoding.EncodeToString([]byte{0xce, 0xa9, 0xff, 0, 0x80}), "invalid base64"} {
+		t.Run(encoded, func(t *testing.T) {
+			dir := t.TempDir()
+			events := []trace.Event{
+				{Sequence: 1, Kind: trace.Network, Name: "request", Data: map[string]any{"id": "binary", "url": "https://example.test/", "method": "POST", "context": "top", "initiator": "navigation", "postData": "display only", "postDataBase64": encoded}},
+				{Sequence: 2, Kind: trace.Network, Name: "response", Data: map[string]any{"id": "binary"}},
+			}
+			raw, err := json.Marshal(map[string]any{"result": map[string]any{"events": events}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(dir, "trace.json"), raw, 0600); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(dir, "root-binary.json"), []byte(`{"response":{"status":200,"url":"https://example.test/","headers":{}},"result":{"body":"ok"}}`), 0600); err != nil {
+				t.Fatal(err)
+			}
+			captured, err := readCapture(dir)
+			if encoded == "invalid base64" {
+				if err == nil {
+					t.Fatal("invalid body silently accepted")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := []byte{0xce, 0xa9, 0xff, 0, 0x80}
+			if len(captured.Fixtures) != 1 || !bytes.Equal(captured.Fixtures[0].Request.PostData, want) {
+				t.Fatalf("binary capture: %+v", captured.Fixtures)
+			}
+			raw, err = json.Marshal(captured.Fixtures[0].Request)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var roundTrip recordedRequest
+			if err := json.Unmarshal(raw, &roundTrip); err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(roundTrip.PostData, want) {
+				t.Fatal("fixture serialization lost bytes")
 			}
 		})
 	}
