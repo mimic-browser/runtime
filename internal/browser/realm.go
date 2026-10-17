@@ -2038,6 +2038,7 @@ func (r *Realm) installBindingsOnOwner() error {
 	installURLHost(host, r.runtime, r.documentURL)
 	installWebCryptoHost(host, r.runtime)
 	installTextDecoderHost(host, r.runtime)
+	installBase64Host(host, r.runtime)
 	r.installCSSPropertyRegistrationHosts(host)
 	host["setLocationPart"] = r.fn(func(_ engine.Value, a []engine.Value) (engine.Value, error) {
 		part, v := strarg(a, 0), strarg(a, 1)

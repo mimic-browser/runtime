@@ -4309,9 +4309,16 @@
   let constructCustomElement = null,
     customElementCloneInert = 0;
   let templateTreeIsInert = () => false;
-  const viewportClientElement = (element) =>
-    (element === document.documentElement && document.compatMode !== 'BackCompat') ||
-    (element === document.body && document.compatMode === 'BackCompat');
+  const viewportClientElement = (element) => {
+    // Only HTML/BODY can project viewport client dimensions. Ordinary elements
+    // need neither document-root lookup; those reads cross the DOM boundary.
+    const tagName = elementSlot(element)?.tagName;
+    if (tagName !== 'HTML' && tagName !== 'BODY') return false;
+    return (
+      (element === document.documentElement && document.compatMode !== 'BackCompat') ||
+      (element === document.body && document.compatMode === 'BackCompat')
+    );
+  };
   const innerTextExcludedTags = new Set(['SCRIPT', 'STYLE', 'TEMPLATE', 'NOSCRIPT']);
   const innerTextBlockDisplays = new Set([
     'block',

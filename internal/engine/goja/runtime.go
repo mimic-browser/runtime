@@ -79,7 +79,7 @@ func (r *runtime) nativeValue(v any) any {
 }
 
 // Retain the existing live Go map/slice projection when no explicit binary
-// value occurs. Only records containing BinaryBuffer need a converted copy.
+// value occurs. Only records containing explicit binary values need a converted copy.
 func (r *runtime) binaryProjection(v any, path []uintptr) (any, bool) {
 	// Ordinary Go projections may be cyclic. Leave back edges untouched; this
 	// conversion is only needed for acyclic, by-value binary transport records.
@@ -94,6 +94,8 @@ func (r *runtime) binaryProjection(v any, path []uintptr) (any, bool) {
 		path = append(path, identity)
 	}
 	switch v := v.(type) {
+	case engine.BinaryString:
+		return v.UTF8(), true
 	case engine.BinaryBuffer:
 		return r.vm.NewArrayBuffer(append([]byte(nil), v...)), true
 	case map[string]any:

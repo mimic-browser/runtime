@@ -513,6 +513,10 @@ func (r *runtime) unwrapOrUndefined(v engine.Value) (*quickjs.Value, error) {
 }
 
 func (r *runtime) marshal(x any) (*quickjs.Value, error) {
+	if text, ok := x.(engine.BinaryString); ok {
+		return r.context.Marshal(text.UTF8())
+	}
+
 	if buffer, ok := x.(engine.BinaryBuffer); ok {
 		return r.context.NewArrayBuffer(buffer), nil
 	}

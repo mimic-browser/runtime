@@ -168,6 +168,7 @@ type adapter struct {
 	activeContext               context.Context   // actor-thread only; inherited by cross-realm calls
 	runDepth                    int               // actor-thread only; includes cooperatively serviced calls
 	transientFrames             []*transientFrame // owner-thread only; bounded scratch storage
+	binaryStringScratch         []byte            // owner-thread only; at most 64 KiB, copied synchronously to V8
 	packedStore                 *gov8.BackingStore
 	packedMemory                *[packedBytes]byte
 	packedBuffer                *gov8.Global
@@ -1374,6 +1375,7 @@ func (a *adapter) Close() error {
 		a.packedMemory = nil
 		a.packedFactories = nil
 		a.packedFrames = nil
+		a.binaryStringScratch = nil
 		return nil, nil
 	}, true)
 	return errors.Join(cleanupErr, a.realm.Dispose(), a.release())
@@ -1632,6 +1634,10 @@ func (a *adapter) localCallbackOrUndefined(scope *gov8.CallbackScope, value engi
 }
 
 func (a *adapter) marshal(scope *gov8.Scope, realm *gov8.Context, value any) (gov8.Value, error) {
+	if _, ok := value.(binaryStringFunction); ok {
+		return a.makeBinaryStringFunction(scope, realm)
+	}
+
 	if buffer, ok := value.(engine.BinaryBuffer); ok {
 		return marshalBinaryBuffer(scope, realm, buffer)
 	}
@@ -1869,6 +1875,9 @@ func marshalPrimitive(scope *gov8.Scope, value any) (gov8.Value, bool, error) {
 	case nil:
 		v, e := scope.Null()
 		return v, true, e
+	case engine.BinaryString:
+		v, e := scope.NewStringFromOneByte(value, gov8.StringNormal)
+		return v, true, e
 	case string:
 		v, e := scope.NewString(value)
 		return v, true, e
@@ -2065,6 +2074,9 @@ func (a *adapter) callbackValueWithJSON(scope *gov8.CallbackScope, realm *gov8.C
 	if native, ok := value.(engine.Value); ok {
 		return a.localCallback(native)
 	}
+	if text, ok := value.(engine.BinaryString); ok {
+		return scope.Scope().NewStringFromOneByte(text, gov8.StringNormal)
+	}
 	if buffer, ok := value.(engine.BinaryBuffer); ok {
 		return marshalBinaryBuffer(scope.Scope(), realm, buffer)
 	}
@@ -2193,7 +2205,7 @@ func (a *adapter) callbackValueWithJSON(scope *gov8.CallbackScope, realm *gov8.C
 // that the recursive engine conversion does not support.
 func callbackJSONEligible(value any) bool {
 	switch value.(type) {
-	case engine.BinaryBuffer, engine.Value:
+	case engine.BinaryString, engine.BinaryBuffer, engine.Value:
 		return false
 	}
 	switch value.(type) {

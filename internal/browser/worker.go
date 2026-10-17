@@ -238,6 +238,7 @@ func (w *DedicatedWorker) run(ctx context.Context, source string, initialBlob *n
 	installURLHost(host, runtime, func() *url.URL { return w.url })
 	installWebCryptoHost(host, runtime)
 	installTextDecoderHost(host, runtime)
+	installBase64Host(host, runtime)
 	host["createObjectURL"] = runtime.Function(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
 		source := w.url
 		if source.Scheme == "blob" {

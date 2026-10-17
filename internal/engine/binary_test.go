@@ -53,3 +53,68 @@ func TestBinaryBufferCopiesIntoRealmOwnedStorage(t *testing.T) {
 		})
 	}
 }
+
+func TestBinaryStringCopiesLatin1WithoutAuthorCode(t *testing.T) {
+	for name, factory := range map[string]engine.Factory{"goja": gojaengine.Factory{}, "v8": v8engine.Factory{}} {
+		t.Run(name, func(t *testing.T) {
+			r := factory.New()
+			defer r.Close()
+			source := make([]byte, 256)
+			for i := range source {
+				source[i] = byte(i)
+			}
+			if err := r.Set("textRecord", map[string]any{"body": engine.BinaryString(source), "empty": engine.BinaryString(nil)}); err != nil {
+				t.Fatal(err)
+			}
+			source[0] = 99
+			result, err := r.Eval(context.Background(), `(() => {
+  if (
+    typeof textRecord.body !== 'string' ||
+    textRecord.empty !== '' ||
+    textRecord.body.length !== 256
+  )
+    return false;
+  for (let i = 0; i < 256; i++) if (textRecord.body.charCodeAt(i) !== i) return false;
+  globalThis.String = function () {
+    throw Error('author constructor');
+  };
+  return true;
+})();`, "binary-string.js")
+			if err != nil || result.Export() != true {
+				t.Fatalf("Latin-1 mapping: %v, %v", result, err)
+			}
+			if err := r.Set("readText", r.Function(func(engine.Value, []engine.Value) (engine.Value, error) {
+				return r.Value(map[string]any{"nested": []any{engine.BinaryString(source)}}), nil
+			})); err != nil {
+				t.Fatal(err)
+			}
+			promise := r.NewPromise()
+			if err := r.Set("pendingText", promise.Value); err != nil {
+				t.Fatal(err)
+			}
+			if err := promise.Resolve(map[string]any{"body": engine.BinaryString(source)}); err != nil {
+				t.Fatal(err)
+			}
+			source[0] = 111
+			_, err = r.Eval(context.Background(), `globalThis.textResult = false;
+pendingText.then((x) => {
+  const value = readText().nested[0];
+  textResult =
+    typeof value === 'string' &&
+    value.length === 256 &&
+    value.charCodeAt(0) === 111 &&
+    value.charCodeAt(255) === 255 &&
+    x.body.charCodeAt(0) === 99;
+});`, "promise-text.js")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := r.MicrotaskCheckpoint(); err != nil {
+				t.Fatal(err)
+			}
+			if r.Get("textResult").Export() != true {
+				t.Fatal("callback or Promise lost binary text")
+			}
+		})
+	}
+}

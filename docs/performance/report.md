@@ -3,6 +3,107 @@
 Mimic's performance claims describe specific measured workloads. They do not
 establish a universal speedup over Chrome or complete website compatibility.
 
+## Base64 decoding and client dimension reads
+
+Large `atob` inputs use V8's private captured `Uint8Array.fromBase64` intrinsic
+for forgiving validation and decoding in one operation. A synchronous native
+callback copies the resulting viewed bytes into an owned one-byte V8 string.
+This avoids regular-expression validation, UTF-8 input export and a JavaScript
+output loop. The intrinsic is captured before browser constructor exposure
+shaping and remains independent of author replacements. Inputs below 1,024
+encoded characters retain the indexed quartet loop; other engines retain the
+shared validation and Go decoder. `btoa` is unchanged.
+
+The binary SHA-256 identities are
+`956766987d4b33d468453634d4ec77db1487e4679d535a2d79de8b970a69334d`
+(previous Go decoder with JavaScript validation) and
+`fb14266a39f1601b60e067b1cb09129e3cbf1372adafece95f30638d295b4dd5`
+(native V8 decoder and direct string callback). No SDK/vendor, VM flag or
+scheduler changes are involved.
+
+The offline `tools/performance/js_runtime_microbench.py` probe preserves the
+executed fixture, hash and raw samples and refuses to overwrite a capture.
+Every row below consumes **8 MiB** of deterministic decoded output, including
+indexed reads that materialize the returned string. Two fresh processes per
+Mimic condition ran in ABBA order, excluding the first sample per process and
+retaining sixteen warm samples per condition:
+
+| Decoded bytes per call | Previous Mimic | Current Mimic | Reduction | Chrome 152 reference |
+| --- | ---: | ---: | ---: | ---: |
+| 32 | 127.15 ms | 127.60 ms | within noise | 35.90 ms |
+| 1,024 | 32.00 ms | 14.45 ms | 54.8% | 3.05 ms |
+| 65,536 | 20.80 ms | 5.00 ms | 76.0% | 2.20 ms |
+
+The large-input improvement is **4.16x** against the preceding decoder. Chrome
+remains approximately **2.27x faster** for that row. The Chrome column reuses
+eight warm samples of the same fixture captured in the same measurement
+session; it is not an additional interleaved run for each later candidate.
+These are synthetic operation timings, not page-loading or public benchmark
+speed claims.
+
+The frozen Chrome executable SHA-256 is
+`ea36dd818a90176f1a70616f0363d9be527229389a6c073a0b1688b9e73f67e9`.
+The reference was launched directly, headful, with a fresh dedicated profile,
+a fixed nonzero CDP port and no feature overrides. The original
+`navigator.webdriver === false`, actual command line, environment observations
+and launch receipt are retained. The window was requested hidden by the OS;
+actual OS visibility was not separately measured. Chrome references require a
+launch receipt; reuse saved evidence when comparing later Mimic candidates.
+
+Independent phase probes, each processing the same 8 MiB in 64 KiB blocks,
+identified the old boundary costs. The following medians exclude one cold
+sample and retain six warm samples:
+
+| Isolated operation | Median |
+| --- | ---: |
+| JavaScript whitespace, padding and alphabet validation | 12.97 ms |
+| Input string export through a synchronous host callback | 3.06 ms |
+| Go Base64 decode with output allocation, without JS crossings | 4.87 ms |
+| SDK SIMD decode with output allocation, without JS crossings | 3.51 ms |
+| Return a prepared byte payload as a one-byte V8 string | 0.76 ms |
+
+These are independent counterfactuals with different allocation and call
+boundaries; their timings must not be added as an exact full-call breakdown.
+Replacing only Go decoding with SDK SIMD left input export and JavaScript
+validation intact. The selected V8 path removes those boundaries instead.
+Capturing a separate character-construction helper regressed small inputs and
+was not retained.
+
+The transfer buffer is private to one realm, allocated lazily, bounded to
+64 KiB and released on close. Larger conversions use temporary storage.
+The callback cannot execute author code or reenter JavaScript; V8 copies the
+contents before the scratch buffer is reused. Tests cover viewed byte ranges,
+all 256 code units, empty output, cutoff and scratch-limit boundaries, retained
+strings after later writes, source ownership and teardown. Browser regressions
+cover padding, ASCII whitespace, discarded tail bits, malformed Unicode,
+coercion and exception identity, author method replacements, Window, Worker
+and restored realms. The expanded Window/Worker semantic fixture also passed
+on the retained frozen Chrome reference.
+
+At four independent Pages, four measured waves per condition after one excluded
+warmup wave per process improved full synthetic-evaluation throughput from
+**61.18 to 87.11 evaluations/s**, with CPU per Page **109.4 to 70.3 ms**.
+Active workload RSS was **344.6/323.2 MiB**, private memory **403.1/383.6 MiB**,
+and post-teardown RSS **260.3/235.4 MiB**. These are measurements of this
+specific four-Page workload, without forced GC. The wave includes evaluation
+setup outside the decoder's inner timing span; its throughput cannot be
+substituted for decoder-only timings or a general memory claim.
+
+Ordinary `clientWidth`/`clientHeight` reads no longer look up the Document's
+root and body merely to test viewport eligibility: only HTML/BODY can qualify.
+An independent standards-mode comparison reduced 1,000 unchanged
+`clientWidth` observations from **19.65 to 4.75 ms**; Chrome measured **0.60 ms**.
+Root/body selection remains unchanged. Existing quirks-mode root metrics still
+diverge from Chrome; this optimization does not establish full geometry parity.
+Attribute reads and mutation-triggered layout remain separate bottlenecks.
+A pure-JavaScript arithmetic/dispatch control did not reproduce a general VM
+slowdown. These probes cannot attribute an unrelated workload's profile window.
+
+The unchanged Wikipedia E2E gate previously failed on both its control and
+candidate at the first heading lookup with `TypeError: value.o is not iterable`.
+These microbenchmarks do **not** establish a complete Wikipedia E2E improvement.
+The gate and its assertions were retained unchanged.
+
 ## CDP transport backpressure
 
 CDP response encoding and socket writes no longer retain Page/session ownership.
