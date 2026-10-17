@@ -25,7 +25,7 @@ func TestInspectorOverlayAndRendererBoundaries(t *testing.T) {
 	w.call(t, id, "Page.screencastFrameAck", map[string]any{"sessionId": 1})
 	w.call(t, id, "DOM.getDocument", map[string]any{})
 	w.call(t, id, "Runtime.evaluate", map[string]any{"expression": "document.body.textContent = 'inspection remains live'"})
-	for _, method := range []string{"DOM.getNodeForLocation", "Overlay.highlightNode", "Overlay.setInspectMode"} {
+	for _, method := range []string{"Overlay.highlightNode", "Overlay.setInspectMode"} {
 		if response := w.request(t, id, method, map[string]any{"x": 1, "y": 1, "mode": "searchForNode"}); response["error"] == nil {
 			t.Fatalf("visual command accepted: %s", method)
 		}

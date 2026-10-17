@@ -134,6 +134,20 @@ func (s *session) handleDOM(ctx context.Context, method string, p map[string]any
 	}
 	empty := map[string]any{}
 	switch method {
+	case "DOM.getNodeForLocation":
+		frame, local, err := s.page.NodeForLocation(ctx, coordinateValue(p["x"]), coordinateValue(p["y"]), p["ignorePointerEventsNone"] == true)
+		if err != nil {
+			return nil, true, err
+		}
+		id := s.page.InspectorNodeID(frame, local)
+		result := map[string]any{"backendNodeId": id, "frameId": frame.ID}
+		topDocument, hasDocument := s.page.Document()
+		if s.domInspector != nil && hasDocument && s.domInspector.nodes[s.page.InspectorNodeID(s.page.Top, topDocument.Root().ID)] != nil {
+			document, _ := s.page.InspectorDocument(frame)
+			s.emitDOMAncestors(document, local)
+			result["nodeId"] = id
+		}
+		return result, true, nil
 	case "DOM.pushNodesByBackendIdsToFrontend":
 		ids := []any{}
 		for _, value := range p["backendNodeIds"].([]any) {

@@ -5341,7 +5341,7 @@
     return proxy;
   };
   globalThis.__mimicDispatchFrameLoad = (nodeId) => {
-    const element = elementWrappers.get(String(nodeId));
+    const element = wrap(nodeId);
     if (element) dispatchNative(element, new Event('load'));
   };
   globalThis.__mimicDispatchResourceEvent = (nodeId, type) => {

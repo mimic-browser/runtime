@@ -164,20 +164,58 @@ const cssBoxModel = (() => {
     const entries = nativeDisplay !== null ? [] : computedCSSDeclarations(element),
       properties = new Map(entries.map((entry) => [entry.name, entry.value])),
       resolved = new Map();
+    let insetMapping = null;
+    const logicalInset = (name) => {
+      if (!['left', 'right', 'top', 'bottom'].includes(name)) return null;
+      if (insetMapping === null) {
+        const logicalNames = [
+            'inset-inline-start',
+            'inset-inline-end',
+            'inset-block-start',
+            'inset-block-end',
+          ],
+          specified = logicalNames.map((logical) =>
+            nativeDisplay !== null ? blitzStyleValue(element, logical) : properties.get(logical),
+          );
+        insetMapping = {};
+        if (specified.some((value) => value != null && value !== 'auto')) {
+          const writing = result.inherited('writing-mode') || 'horizontal-tb',
+            rtl = result.inherited('direction') === 'rtl',
+            vertical = writing.startsWith('vertical') || writing.startsWith('sideways'),
+            blockStart = vertical ? (writing.endsWith('-rl') ? 'right' : 'left') : 'top',
+            inlineStart = vertical ? (rtl ? 'bottom' : 'top') : rtl ? 'right' : 'left',
+            opposite = { left: 'right', right: 'left', top: 'bottom', bottom: 'top' };
+          insetMapping[inlineStart] = specified[0];
+          insetMapping[opposite[inlineStart]] = specified[1];
+          insetMapping[blockStart] = specified[2];
+          insetMapping[opposite[blockStart]] = specified[3];
+        }
+      }
+      return insetMapping[name] ?? null;
+    };
     const get = (name) => {
       if (resolved.has(name)) return resolved.get(name);
+      let value;
       if (nativeDisplay !== null) {
-        const value = blitzStyleValue(element, name);
-        resolved.set(name, value);
-        return value;
+        value = blitzStyleValue(element, name);
+      } else {
+        value = geometryValue(
+          element,
+          properties.get(name) ??
+            (tag(element) === 'BODY' && /^margin-(top|right|bottom|left)$/.test(name)
+              ? '8px'
+              : undefined),
+        );
       }
-      const value = geometryValue(
-        element,
-        properties.get(name) ??
-          (tag(element) === 'BODY' && /^margin-(top|right|bottom|left)$/.test(name)
-            ? '8px'
-            : undefined),
-      );
+      const logical = logicalInset(name);
+      if (logical != null && logical !== 'auto') {
+        // Stylo can expose a physical used inset derived from an as-yet
+        // unplaced box. Resolve the authored logical inset before placement
+        // when no physical inset declaration competes with it.
+        const declarations = nativeDisplay !== null ? computedCSSDeclarations(element) : entries;
+        if (!declarations.some((entry) => entry.name === name))
+          value = geometryValue(element, logical);
+      }
       resolved.set(name, value);
       return value;
     };

@@ -17,8 +17,8 @@
     "types": 611,
     "methods": {
       "implemented": 14,
-      "partial": 137,
-      "unsupported": 514
+      "partial": 138,
+      "unsupported": 513
     },
     "events": {
       "implemented": 3,
@@ -3176,10 +3176,15 @@
         "nodeId"
       ],
       "support": {
-        "status": "unsupported",
-        "notes": "Visual page presentation, rendering and node picking are unsupported. Harmless frontend initialization and stop/ACK controls may be acknowledged without visual behavior.",
+        "status": "partial",
+        "notes": "Document CSS-pixel coordinates converted through canonical root scroll state to the viewport hit testing shared with mouse input; descends frame content boxes and supports ignorePointerEventsNone. Returns backend/frame IDs and frontend nodeId after DOM.getDocument. Author shadow trees are included. UA shadow trees are not modeled; includeUserAgentShadowDOM has no additional effect. Existing geometry limitations apply, including complex transformed and clipped shapes.",
         "tests": [
-          "internal/cdp/inspector_boundaries_test.go#TestInspectorOverlayAndRendererBoundaries"
+          "internal/cdp/input_hit_target_test.go#TestNodeForLocationGeometryAndNativeClick",
+          "internal/cdp/input_hit_target_test.go#TestFrameControlScrollMeasureAndClickWithoutRuntime",
+          "internal/cdp/input_hit_target_test.go#TestNodeForLocationNestedCrossOriginFrames",
+          "internal/cdp/input_hit_target_test.go#TestNodeForLocationAuthorShadowRoot",
+          "internal/cdp/input_hit_target_test.go#TestNodeForLocationDocumentCoordinatesAfterWheel",
+          "internal/cdp/input_hit_target_test.go#TestNodeForLocationOutsideViewport"
         ]
       }
     },

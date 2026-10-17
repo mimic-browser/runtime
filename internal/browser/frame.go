@@ -481,17 +481,35 @@ func (r *Realm) finishChildFrameParsing(ctx context.Context, navigation *childNa
 	if navigation.realm.readyState == "loading" {
 		navigation.realm.SetReadyState("interactive")
 	}
+	// Child parsers must attach their own iframe browsing contexts just as the
+	// top document parser does. Otherwise nested frames exist only after an
+	// author contentWindow read and browser hit testing cannot descend into them.
+	var parserFrames []*Frame
+	for _, iframe := range navigation.document.FindAllByTagName("iframe") {
+		frame, err := navigation.realm.ensureChildFrameInternal(iframe.ID, false, false)
+		if err != nil {
+			return err
+		}
+		if frame != nil {
+			parserFrames = append(parserFrames, frame)
+		}
+	}
 	eventLoop := r.browserEventLoop()
 	eventLoop.Post(scheduler.DOM, 0, func(eventContext context.Context) error {
 		if !r.childNavigationCurrent(navigation) || navigation.frame.Realm != navigation.realm {
 			r.finishChildNavigation(navigation)
 			return nil
 		}
+		for _, frame := range parserFrames {
+			navigation.realm.scheduleChildFrameNavigation(frame, frame.ElementNodeID())
+		}
 		// Queue the Window load turn before DOMContentLoaded listeners enqueue
 		// posted-message tasks. Chrome completes the child and fires the owner
 		// iframe load before those newly posted messages are delivered.
-		eventLoop.Post(scheduler.DOM, 0, func(loadContext context.Context) error {
-			return r.completeChildFrameLoad(loadContext, navigation)
+		navigation.realm.requestLoad(func(loadContext context.Context) {
+			if err := r.completeChildFrameLoad(loadContext, navigation); err != nil {
+				p.trace.Add(trace.Error, "childFrameLoad", map[string]any{"frameId": navigation.frame.ID, "error": err.Error()})
+			}
 		})
 		navigation.realm.performanceLifecycle("domContentLoadedEventStart")
 		_, eventErr := navigation.realm.Evaluate(eventContext, `document.dispatchEvent(new Event('DOMContentLoaded'))`, "mimic:frame-dom-content-loaded")
@@ -513,12 +531,6 @@ func (r *Realm) completeChildFrameLoad(ctx context.Context, navigation *childNav
 		return nil
 	}
 	p := r.agent.Page()
-	navigation.realm.SetReadyState("complete")
-	navigation.realm.performanceLifecycle("loadEventStart")
-	if _, eventErr := navigation.realm.Evaluate(ctx, `dispatchEvent(new Event('load'))`, "mimic:frame-load"); eventErr != nil {
-		r.finishChildNavigation(navigation)
-		return eventErr
-	}
 	if checkpointErr := navigation.realm.checkpoint(ctx); checkpointErr != nil {
 		r.finishChildNavigation(navigation)
 		return checkpointErr

@@ -719,8 +719,8 @@
       compatibilityScrolling.revision()
     );
   };
-  const pointTargets = (x, y, externalHints = []) => {
-    const version = pointObservationVersion();
+  const pointTargets = (x, y, externalHints = [], ignorePointerEvents = false) => {
+    const version = pointObservationVersion() + ':' + ignorePointerEvents;
     if (version === pointHitsVersion && x === pointHitsX && y === pointHitsY)
       return pointHits.slice();
     const hits = withStyleReadCache(() => {
@@ -797,7 +797,7 @@
         return (
           visibility !== 'hidden' &&
           visibility !== 'collapse' &&
-          cssComputedValue(element, 'pointer-events') !== 'none'
+          (ignorePointerEvents || cssComputedValue(element, 'pointer-events') !== 'none')
         );
       };
       const hits = [];
@@ -1075,12 +1075,14 @@
       return stringify({ value: control(element, params.operation, params.key, params.args) });
     if (operation === 'active') return stringify({ nodeID: nodeID(active.call(document)) });
     if (operation === 'focused') return stringify({ nodeID: nodeID(originalFocused()) });
+    if (operation === 'scrollPosition') return stringify(compatibilityScrolling.position(null));
     if (operation === 'points')
       return stringify({
         nodes: pointTargets(
           params.x,
           params.y,
           Array.isArray(params.hints) ? params.hints.map(wrap).filter(Boolean) : [],
+          params.ignorePointerEventsNone === true,
         ).map(nodeID),
       });
     if (operation === 'rect') {

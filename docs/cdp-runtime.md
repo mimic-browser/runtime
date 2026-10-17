@@ -104,3 +104,26 @@ Requests carry their client's security origin separately from the source
 document URL. An inherited about:blank frame therefore uses its real origin
 for CORS, credentials and Fetch Metadata without inventing a Referer header or
 mistaking an author-provided base URL for its origin.
+
+## DOM location queries and input coordinates
+
+`DOM.getNodeForLocation` uses document CSS pixels, matching Chrome 152.
+`DOM.getBoxModel`, `DOM.getContentQuads`, `document.elementFromPoint`,
+`document.elementsFromPoint`, and `Input.dispatchMouseEvent` use viewport CSS
+pixels. Add the root scroll offset reported by `Page.getLayoutMetrics` when
+converting a measured viewport point to a location query; send the original
+viewport point to mouse input. Root scrolling is applied once, before descending
+through iframe content origins. Each child document applies its own scrolling
+through the shared canonical geometry model.
+
+Location queries share the internal input hit tester, including frame paint
+order, author shadow trees, visibility and pointer styles. They do not call
+page-defined point-query or geometry methods. `ignorePointerEventsNone` affects
+only the query, including its frame descent; subsequent mouse input still honors
+pointer styles. `backendNodeId` and `frameId` identify the hit document's node;
+`nodeId` is included after that session requests `DOM.getDocument`.
+
+This is partial geometry support rather than pixel rendering. User-agent shadow
+trees are not modeled, so `includeUserAgentShadowDOM` adds no internal control
+nodes. Complex transformed/clipped shapes and visual viewport zoom are not
+established as Chrome-equivalent by the location-query regressions.

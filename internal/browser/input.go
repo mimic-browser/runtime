@@ -197,6 +197,54 @@ func (p *Page) profileInputPhase(method, phase string, started time.Time) {
 	})
 }
 
+// NodeForLocation uses the same canonical hit testing and frame-content offsets
+// as protocol mouse input. Chrome node picking accepts document CSS pixels,
+// whereas protocol quads and mouse input use viewport CSS pixels.
+func (p *Page) NodeForLocation(ctx context.Context, x, y float64, ignorePointerEvents bool) (*Frame, int64, error) {
+	r := p.Top.Realm
+	if r == nil || r.closed || r.inactive {
+		return nil, 0, fmt.Errorf("input document is unavailable")
+	}
+	var frame *Frame
+	var id int64
+	err := r.scheduler.RunInline(ctx, func(ctx context.Context) error {
+		rawPosition, err := r.invokeInputWorld(ctx, r, 0, "scrollPosition", "{}")
+		if err != nil {
+			return err
+		}
+		var position struct{ X, Y float64 }
+		if err := json.Unmarshal([]byte(rawPosition), &position); err != nil {
+			return err
+		}
+		x, y = x-position.X, y-position.Y
+		target, local, err := p.mouseInputTarget(ctx, r, map[string]any{"x": x, "y": y, "ignorePointerEventsNone": ignorePointerEvents})
+		if err != nil {
+			return err
+		}
+		payload, err := json.Marshal(local)
+		if err != nil {
+			return err
+		}
+		raw, err := target.invokeInputWorld(ctx, target, 0, "points", string(payload))
+		if err != nil {
+			return err
+		}
+		var hits struct {
+			Nodes []int64 `json:"nodes"`
+		}
+		if err := json.Unmarshal([]byte(raw), &hits); err != nil {
+			return err
+		}
+		if len(hits.Nodes) == 0 {
+			return fmt.Errorf("No node found at given location")
+		}
+		frame, _ = target.agent.(*Frame)
+		id = hits.Nodes[0]
+		return nil
+	})
+	return frame, id, err
+}
+
 // mouseInputTarget maps top-level CDP coordinates through the active iframe
 // tree. CDP exposes one input surface per Page even though DOM handles belong
 // to individual frame realms.
@@ -217,7 +265,11 @@ func (p *Page) mouseInputTarget(ctx context.Context, owner *Realm, params map[st
 	// A frame's rectangle alone does not establish a hit. Sibling frames,
 	// overlays, visibility and pointer-events participate in the parent's paint
 	// order before coordinates can enter a child document.
-	rawHits, err := owner.invokeInputWorld(ctx, owner, 0, "points", fmt.Sprintf(`{"x":%g,"y":%g}`, x, y))
+	payload, err := json.Marshal(params)
+	if err != nil {
+		return nil, nil, err
+	}
+	rawHits, err := owner.invokeInputWorld(ctx, owner, 0, "points", string(payload))
 	if err != nil {
 		return nil, nil, err
 	}
