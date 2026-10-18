@@ -108,6 +108,8 @@ jobs:
           python-version: '3.12'
       - name: Install Linux native build dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
+      - name: Verify Linux V8 build configuration guard
+        run: python3 -m unittest discover -s third_party/gov8/scripts -p test_setup_linux.py
       - name: Cache native style and layout build
         uses: actions/cache@v4
         with:

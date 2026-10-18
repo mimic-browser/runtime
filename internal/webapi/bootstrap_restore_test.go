@@ -27,12 +27,13 @@ func handwrittenSurfaceSection(t *testing.T, startMarker, endMarker string) stri
 // Full snapshot deserialization and cross-frame behavior belong to browser tests.
 func TestBootstrapRestoreRebindsState(t *testing.T) {
 	section := handwrittenSurfaceSection(t, "globalThis.__mimicRestoreBootstrap", "globalThis.__mimicEvalSourceResolver")
+	intlSection := handwrittenSurfaceSection(t, "const intlEnvironment =", "const nativeIntl")
 	runtime := goja.New()
 	_, err := runtime.RunString(`
  const window=globalThis,document={},documentPolicy={},permissionsPolicySlots=new WeakMap();
  const originalPolicy={clauses:new Map([['old','()']]),origin:'old'};
  permissionsPolicySlots.set(documentPolicy,originalPolicy);
- let host,hostToken=1,bridgeRealmID="old-realm",intlEnvironment={},security={},windowRelations,windowTop,windowParent,frameElementCache={},uaData={};
+ let host,hostToken=1,bridgeRealmID="old-realm",security={},windowRelations,windowTop,windowParent,frameElementCache={},uaData={};
  const remoteWindowCache=new Map(),remoteDocumentCache=new Map(),crossRealmCache=new Map(),crossRealmSymbols=new Map(),crossRealmSymbolReferences=new Map(),localCrossRealmSymbols=new Map(),elementWrappers=new Map(),documentWrappers=new Map(),tracedAccesses=new Map();
  const caches=[remoteWindowCache,remoteDocumentCache,crossRealmCache,crossRealmSymbols,crossRealmSymbolReferences,localCrossRealmSymbols,elementWrappers,documentWrappers,tracedAccesses];
  const setTraceActive=enabled=>{tracedAccesses.clear()};
@@ -46,9 +47,9 @@ func TestBootstrapRestoreRebindsState(t *testing.T) {
  const remoteWindow=id=>({id});
  const freshHost={token:()=>2,selfRealmID:()=>"new-realm",intlEnvironment:()=>({locale:'en',timeZone:'UTC'}),documentSecurity:()=>({secureContext:true}),permissionsPolicy:()=>({origin:'https://new.test'}),windowRelations:()=>({self:9,top:10,parent:9}),documentRootID:()=>99,ready:()=>calls.push('ready')};
  for(const [name,args] of bootstrapCallbacks)freshHost[name]=(...actual)=>{if(actual.length!==args.length||actual.some((v,i)=>v!==args[i]))throw Error('callback identity');calls.push(name)};
- ` + section + `
+ ` + intlSection + section + `
  __mimicRestoreBootstrap(freshHost);
- if(host!==freshHost||hostToken!==2||bridgeRealmID!=="new-realm"||intlEnvironment.locale!=='en'||!security.secureContext)throw Error('host state');
+ if(host!==freshHost||hostToken!==2||bridgeRealmID!=="new-realm"||intlEnvironment.locale!=='en'||intlEnvironment.timeZone!=='UTC'||!security.secureContext)throw Error('host state');
  if(permissionsPolicySlots.get(documentPolicy)!==originalPolicy||originalPolicy.origin!=='https://new.test'||originalPolicy.clauses.has('old'))throw Error('canonical policy');
  // Restoring a bootstrap must not create native WindowProxy references before
  // its profile/host has been rebound. Topology IDs are eager; objects are lazy.

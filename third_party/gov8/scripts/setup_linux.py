@@ -12,6 +12,7 @@ import json
 import os
 from pathlib import Path
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -56,6 +57,24 @@ def run(*args, **kwargs):
     subprocess.run([str(arg) for arg in args], check=True, **kwargs)
 
 
+def verify_archive_configuration(archive):
+    # These ABI switches must match internal/shim/v8-gn.h. A stock archive
+    # links successfully but aborts at InitializePlatform with mismatched cages.
+    args_path = archive.parent.parent / "args.gn"
+    expected = {
+        "v8_enable_pointer_compression": True,
+        "v8_enable_pointer_compression_shared_cage": False,
+        "v8_enable_sandbox": False,
+        "v8_monolithic_for_shared_library": True,
+    }
+    source = args_path.read_text(encoding="utf-8")
+    for name, enabled in expected.items():
+        match = re.search(r"^\s*" + re.escape(name) + r"\s*=\s*(true|false)\s*(?:#.*)?$", source, re.M)
+        if not match or (match.group(1) == "true") != enabled:
+            raise RuntimeError(f"{args_path}: {name} must be {str(enabled).lower()} for this shim")
+    return {"archive_sha256": sha(archive), "args_sha256": sha(args_path), "features": expected}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--build-dir", type=Path, default=ROOT / "build/linux-amd64")
@@ -74,6 +93,8 @@ def main():
         native_source = args.native_source.resolve()
         verify(native_source)
         native_archive = args.native_archive.resolve(strict=True)
+        native_configuration = verify_archive_configuration(native_archive)
+        (build / "native-configuration.json").write_text(json.dumps(native_configuration, indent=2))
         crate = build / "v8.crate"
         acquire(crate, f"https://static.crates.io/crates/v8/v8-{VERSION}.crate", CRATE_SHA)
         # Fresh verified headers each run; never trust a stale extracted header tree.

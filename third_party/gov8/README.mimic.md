@@ -117,8 +117,8 @@ verification are shared with Windows.
 
 The pointer-compressed Linux archive SHA-256 is
 `1763c87ca75ef8717434b49dcccc745dd760e307e56817d502a1d7f94bd7dde8`.
-The packaged library is 59,009,184 bytes, SHA-256
-`1a1b716e400c4b2ef20b3d84bf8ddcc9d3b862117983d9891c8aec1146ef461d`.
+The packaged library is 59,013,280 bytes, SHA-256
+`b2ef45b0a84d94c4b7772fecbbe035ec1858cf54f893bc52bb7eede5d4be6b1b`.
 Under WSL, use `--build-dir` on the Linux filesystem to avoid extracting the
 pinned source tree through the Windows filesystem mount.
 
@@ -130,6 +130,12 @@ python3 third_party/gov8/scripts/setup_linux.py \
   --native-archive /path/to/target/release/gn_out/obj/librusty_v8.a
 go test ./internal/engine/v8 -run 'Test(PropertyObservation|NumberExport|BootstrapSnapshotIdentity)' -count=1
 ```
+
+The setup script verifies the archive's adjacent `gn_out/args.gn` before linking.
+Pointer compression must be enabled with separate cages, sandbox disabled and
+`v8_monolithic_for_shared_library=true`; a mismatched archive is rejected before
+it can replace the packaged library. The build retains archive and GN-argument
+hashes in `native-configuration.json`.
 
 The shim rebuild requires Python 3.11+, Rust/cargo, Go 1.26.4+, binutils and glibc
 headers. It verifies the source patch, uses the hash-pinned crate's Chromium
