@@ -3,6 +3,52 @@
 Mimic's performance claims describe specific measured workloads. They do not
 establish a universal speedup over Chrome or complete website compatibility.
 
+## Shared selector analysis during style indexing
+
+Style index construction parses each selector once for the leaf bucket, static
+classification, mutation dependencies and required ancestors. These analyses
+only read tokens; the mutating selector compiler retains its separate input.
+No computed matches, invalidation epochs, resource policies or scheduling rules
+change, and the parsed AST is not retained after index construction.
+
+The measured binary SHA-256 identities are
+`439793d22b9d8f84f0d6c73048a36a457ae9b8a0fc9a08e0c46c5643833397eb`
+(previous) and
+`c424103a21f768a9a4b6fb90442e109020dd09842170b30154edd126b2857cd1`
+(current). Raw captures and build/workload hashes are retained locally.
+
+Five alternating fresh-process pairs on a saved resource-heavy HTML/CSS/script
+replay each execute two fresh contexts, including navigation, the attached-node
+wait and the original extraction callback. All 20 Mimic executions return
+identical complete results with no missing replay requests or JavaScript errors.
+The reference responses retain their original URLs; supplementary responses
+are explicitly recorded, and telemetry responses match by endpoint while their
+request IDs and timestamps vary. This intercepted offline replay isolates
+runtime cost; it does not establish live-server latency or a Chrome semantic
+oracle. Profiling is disabled for the latency series.
+
+| Median, ten executions per build | Previous | Current |
+| --- | ---: | ---: |
+| Navigation to DOMContentLoaded | 897.9 ms | 779.1 ms |
+| Navigation, selector and extraction | 1121.1 ms | 996.9 ms |
+
+Complete extraction latency improves in every paired execution (6.2–16.0%).
+A separate three-pair diagnostic series measures repeated-context runtime CPU
+at 1953/1703 ms, active peak RSS at 434.9/420.6 MiB and post-context-teardown
+RSS at 296.5/294.0 MiB (previous/current medians). CPU uses the three repeated
+visits with bracketed process samples; RSS uses all six visits per build.
+Three matched four-Page waves complete all 24 extractions with identical results:
+median full-wave time, including context creation and teardown, is 1636/1461 ms.
+These small samples do not establish general memory or throughput gains.
+
+All eight unchanged Wikipedia E2E executions pass. Previous/current medians are
+14.601/13.234 s, with ranges 11.298–17.069/11.993–17.348 s; the variation does
+not establish a stable Wikipedia improvement. Focused Goja/V8 tests cover
+ancestor and relational dependencies, attribute and CSSOM mutations, escaped
+selectors, unsupported-selector handling, cross-realm reads and navigation.
+The saved replay still has substantial native style preparation and utility
+world overhead; this change does not establish Chrome parity.
+
 ## Sparse CSS background resource discovery
 
 When native style admission fails, background resource discovery first matches

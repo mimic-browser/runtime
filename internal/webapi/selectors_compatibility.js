@@ -422,8 +422,7 @@ const compatibilitySelectors = (() => {
         !journal.overflow &&
         journal.records.every(
           (mutation) =>
-            mutation.kind === 'attribute' &&
-            !attributes.has(mutation.attribute.toLowerCase()),
+            mutation.kind === 'attribute' && !attributes.has(mutation.attribute.toLowerCase()),
         )
       ) {
         previous.revision = cache.documentRevision;
@@ -554,14 +553,8 @@ const compatibilitySelectors = (() => {
     }
     return bits;
   };
-  const ancestorRequirements = (rule) => {
-    const selector = rule.pseudo ? rule.selector.replace(/::?(before|after)$/, '') : rule.selector;
-    let groups;
-    try {
-      groups = library.parse(selector);
-    } catch {
-      return null;
-    }
+  const ancestorRequirements = (groups) => {
+    if (!groups) return null;
     if (groups.length !== 1) return null;
     const bits = [0, 0, 0, 0];
     let ancestor = false;
@@ -580,14 +573,8 @@ const compatibilitySelectors = (() => {
     }
     return bits.some(Boolean) ? bits : null;
   };
-  function styleKey(rule) {
-    const selector = rule.pseudo ? rule.selector.replace(/::?(before|after)$/, '') : rule.selector;
-    let groups;
-    try {
-      groups = library.parse(selector);
-    } catch {
-      return '*';
-    }
+  function styleKey(groups) {
+    if (!groups) return '*';
     if (groups.length !== 1) return '*';
     let key = '*';
     for (let i = groups[0].length - 1; i >= 0; i--) {
@@ -610,15 +597,8 @@ const compatibilitySelectors = (() => {
     }
     return key;
   }
-  const styleSelectorDependencies = (rule) => {
-    let groups;
-    try {
-      groups = library.parse(
-        rule.pseudo ? rule.selector.replace(/::?(before|after)$/, '') : rule.selector,
-      );
-    } catch {
-      return null;
-    }
+  const styleSelectorDependencies = (groups) => {
+    if (!groups) return null;
     const attributes = new Set();
     let local = groups.length === 1;
     const visit = (tokens, nested) => {
@@ -689,22 +669,27 @@ const compatibilitySelectors = (() => {
         index.local = true;
         index.attributes = new Set();
         for (const rule of rules) {
-          const leaf = styleKey(rule),
+          // These analyses only read selector tokens. Parse once for the whole
+          // index entry; do not share the AST with the mutating compiler.
+          let groups;
+          try {
+            groups = library.parse(
+              rule.pseudo ? rule.selector.replace(/::?(before|after)$/, '') : rule.selector,
+            );
+          } catch {}
+          const leaf = styleKey(groups),
             key = rule.pseudo + '|' + leaf;
           if (leaf.startsWith('a:')) index.hasAttributeKeys = true;
           let bucket = index.get(key);
           if (!bucket) index.set(key, (bucket = []));
           let stable = false,
             journalStableRelational = false;
-          try {
-            const groups = library.parse(
-              rule.pseudo ? rule.selector.replace(/::?(before|after)$/, '') : rule.selector,
-            );
+          if (groups) {
             stable = staticStyleSelector(groups);
             journalStableRelational =
               !stable && rule.selector.includes(':has(') && journalStableRelationalSelector(groups);
-          } catch {}
-          const dependencies = styleSelectorDependencies(rule);
+          }
+          const dependencies = styleSelectorDependencies(groups);
           if (!dependencies) index.reusable = false;
           else {
             index.local &&= dependencies.local;
@@ -713,7 +698,7 @@ const compatibilitySelectors = (() => {
           bucket.push({
             rule,
             stable,
-            ancestors: ancestorRequirements(rule),
+            ancestors: ancestorRequirements(groups),
             journalStableRelational,
             attributes: dependencies?.attributes,
           });
