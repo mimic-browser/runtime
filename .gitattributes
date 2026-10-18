@@ -19,6 +19,9 @@ internal/browser/testdata/camera_capture_oracle.js -text
 internal/browser/testdata/camera_webrtc_chrome152/** -text
 internal/browser/testdata/microphone_webrtc_chrome152/** -text
 
+# DOM inspector whitespace is fixture data; retain the captured bytes.
+internal/cdp/testdata/dom_whitespace.html -text -whitespace
+
 # Retain third-party legal texts, including upstream whitespace.
 tools/release/licenses/*.txt -whitespace
 

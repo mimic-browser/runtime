@@ -251,22 +251,12 @@ func (s *session) handleDOM(ctx context.Context, method string, p map[string]any
 			return nil, true, err
 		}
 		d, _ := s.page.InspectorDocument(owner)
-		children := []any{}
 		depth := intValue(p["depth"], 1)
 		if depth == 0 {
 			return nil, true, fmt.Errorf("Depth should be a positive number or -1")
 		}
 		parent, _ := s.page.InspectorCanonicalNode(owner, id)
-		for _, childID := range parent.Children {
-			if child, ok := d.Get(childID); ok {
-				children = append(children, s.inspectorCDPNode(d, child, depth-1))
-			}
-		}
-		if s.domInspector != nil {
-			if node := s.domInspector.nodes[s.page.InspectorNodeID(owner, id)]; node != nil {
-				node.expanded = true
-			}
-		}
+		children := s.inspectorCDPNode(d, parent, depth)["children"]
 		s.event("DOM.setChildNodes", map[string]any{"parentId": s.page.InspectorNodeID(owner, id), "nodes": children})
 		return empty, true, nil
 	case "DOM.focus":
@@ -367,7 +357,9 @@ func (s *session) emitDOMAncestors(d *dom.Document, id int64) {
 	}
 	children := []any{}
 	for _, child := range d.Children(n.Parent) {
-		children = append(children, s.inspectorCDPNode(d, child, 0))
+		if s.inspectorVisible(child) {
+			children = append(children, s.inspectorCDPNode(d, child, 0))
+		}
 	}
 	if s.domInspector != nil {
 		if node := s.domInspector.nodes[parentID]; node != nil {

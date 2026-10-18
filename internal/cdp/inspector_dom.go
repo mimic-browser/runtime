@@ -4,6 +4,8 @@ import (
 	"context"
 	"slices"
 	"sort"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/moreveal/mimic/internal/browser"
@@ -20,14 +22,104 @@ type inspectorNode struct {
 	text        string
 	attrs       map[string]string
 	children    []int64
+	childCount  int
 	expanded    bool
 	shadowRoots []int64
 }
 
 type domInspector struct {
-	document *dom.Document
-	revision uint64
-	nodes    map[int64]*inspectorNode
+	document               *dom.Document
+	revision               uint64
+	nodes                  map[int64]*inspectorNode
+	characterMu            sync.Mutex
+	characterChanges       map[inspectorParent]*inspectorCharacterChanges
+	characterParents       map[inspectorParent]bool
+	characterOwners        map[inspectorParent]int64
+	characterSubscriptions map[*dom.Document]func()
+}
+
+type inspectorParent struct {
+	frame   *browser.Frame
+	localID int64
+}
+
+// Only counts and touched node IDs are retained, never author strings or an
+// unbounded record per write. Repeated writes to one node use constant space.
+type inspectorCharacterChanges struct {
+	// A zero entry still records a hidden text write, so a visibility change
+	// does not masquerade as a structural child removal.
+	touched map[int64]int
+}
+
+func (s *session) clearDOMInspector() {
+	if i := s.domInspector; i != nil {
+		for _, remove := range i.characterSubscriptions {
+			remove()
+		}
+		i.characterMu.Lock()
+		i.characterChanges = nil
+		i.characterParents = nil
+		i.characterOwners = nil
+		i.characterMu.Unlock()
+	}
+	s.domInspector = nil
+}
+
+func (s *session) observeInspectorCharacterData(d *dom.Document, frame *browser.Frame) {
+	i := s.domInspector
+	if i.characterSubscriptions == nil {
+		i.characterSubscriptions = make(map[*dom.Document]func())
+	}
+	if i.characterSubscriptions[d] != nil {
+		return
+	}
+	includeWhitespace := s.domIncludeWhitespace
+	i.characterSubscriptions[d] = d.SubscribeCharacterData(func(change dom.CharacterDataChange) {
+		i.characterMu.Lock()
+		defer i.characterMu.Unlock()
+		// Synthetic ShadowRoot handles are not arena parents. Use the
+		// inspected attachment's child ownership without entering the realm.
+		if parent := i.characterOwners[inspectorParent{frame, change.NodeID}]; parent != 0 {
+			change.ParentID = parent
+		}
+		key := inspectorParent{frame, change.ParentID}
+		if !i.characterParents[key] {
+			return
+		}
+		if i.characterChanges == nil {
+			i.characterChanges = make(map[inspectorParent]*inspectorCharacterChanges)
+		}
+		pending := i.characterChanges[key]
+		if pending == nil {
+			pending = &inspectorCharacterChanges{touched: make(map[int64]int)}
+			i.characterChanges[key] = pending
+		}
+		writes := pending.touched[change.NodeID]
+		if inspectorNodeVisible(change.Type, change.Text, includeWhitespace) {
+			writes++
+		}
+		pending.touched[change.NodeID] = writes
+	})
+}
+
+// Blink's inspector omits text containing only ASCII whitespace (including
+// vertical tab), independently of CSS white-space and without changing the DOM.
+func (s *session) inspectorVisible(n dom.Node) bool {
+	return inspectorNodeVisible(n.Type, n.Text, s.domIncludeWhitespace)
+}
+
+func inspectorNodeVisible(nodeType, text string, includeWhitespace bool) bool {
+	return includeWhitespace || nodeType != "text" || strings.Trim(text, " \t\n\r\v\f") != ""
+}
+
+func (s *session) inspectorChildren(frame *browser.Frame, children []int64) []int64 {
+	visible := make([]int64, 0, len(children))
+	for _, id := range children {
+		if node, ok := s.page.InspectorCanonicalNode(frame, id); ok && s.inspectorVisible(node) {
+			visible = append(visible, id)
+		}
+	}
+	return visible
 }
 
 func (s *session) inspectorTurn() {
@@ -66,6 +158,7 @@ func (s *session) releaseInspectorTurn() {
 func (s *session) rememberDOM(d *dom.Document, node map[string]any) {
 	top, _ := s.page.Document()
 	if s.domInspector == nil || s.domInspector.document != top {
+		s.clearDOMInspector()
 		s.domInspector = &domInspector{document: top, nodes: make(map[int64]*inspectorNode)}
 		s.ensureInspectorTurn()
 	}
@@ -78,9 +171,11 @@ func (s *session) rememberDOM(d *dom.Document, node map[string]any) {
 	if !ok {
 		return
 	}
+	s.observeInspectorCharacterData(d, frame)
 	prior := s.domInspector.nodes[id]
-	state := &inspectorNode{text: n.Text, attrs: make(map[string]string, len(n.Attributes)), children: slices.Clone(n.Children)}
+	state := &inspectorNode{text: n.Text, attrs: make(map[string]string, len(n.Attributes)), children: s.inspectorChildren(frame, n.Children)}
 	state.frame, state.document, state.localID = frame, d, localID
+	state.childCount = int(coordinateValue(node["childNodeCount"]))
 	for index, child := range state.children {
 		state.children[index] = s.page.InspectorNodeID(frame, child)
 	}
@@ -115,6 +210,33 @@ func (s *session) rememberDOM(d *dom.Document, node map[string]any) {
 		}
 	}
 	s.domInspector.nodes[id] = state
+	i := s.domInspector
+	i.characterMu.Lock()
+	key := inspectorParent{frame, localID}
+	if localID >= 1<<31 {
+		for child, parent := range i.characterOwners {
+			if child.frame == frame && parent == localID {
+				delete(i.characterOwners, child)
+			}
+		}
+	}
+	if !state.expanded {
+		if i.characterParents == nil {
+			i.characterParents = make(map[inspectorParent]bool)
+		}
+		i.characterParents[key] = true
+		if n.Type == "fragment" && localID >= 1<<31 {
+			if i.characterOwners == nil {
+				i.characterOwners = make(map[inspectorParent]int64)
+			}
+			for _, child := range n.Children {
+				i.characterOwners[inspectorParent{frame, child}] = localID
+			}
+		}
+	} else {
+		delete(i.characterParents, key)
+	}
+	i.characterMu.Unlock()
 	s.domInspector.revision = s.page.InspectorRevision()
 }
 
@@ -138,13 +260,15 @@ func (s *session) inspectorCDPNode(d *dom.Document, n dom.Node, depth int) map[s
 	var project func(dom.Node, int) map[string]any
 	project = func(node dom.Node, depth int) map[string]any {
 		out := cdpNode(d, node, 0)
+		visibleChildren := s.inspectorChildren(frame, node.Children)
+		out["childNodeCount"] = len(visibleChildren)
 		out["nodeId"], out["backendNodeId"] = s.page.InspectorNodeID(frame, node.ID), s.page.InspectorNodeID(frame, node.ID)
 		if node.Type == "document" {
 			out["documentURL"], out["baseURL"], out["xmlVersion"] = frame.URL(), frame.URL(), ""
 		}
 		if depth != 0 {
 			children := []any{}
-			for _, id := range node.Children {
+			for _, id := range visibleChildren {
 				if child, ok := d.Get(id); ok {
 					children = append(children, project(child, depth-1))
 				}
@@ -157,10 +281,11 @@ func (s *session) inspectorCDPNode(d *dom.Document, n dom.Node, depth int) map[s
 				wire["nodeName"] = "#document-fragment"
 				wire["nodeType"] = 11
 				wire["shadowRootType"] = shadow.Mode
-				wire["childNodeCount"] = len(shadow.Children)
+				visibleShadowChildren := s.inspectorChildren(frame, shadow.Children)
+				wire["childNodeCount"] = len(visibleShadowChildren)
 				if depth != 0 {
 					children := []any{}
-					for _, id := range shadow.Children {
+					for _, id := range visibleShadowChildren {
 						if child, exists := d.Get(id); exists {
 							children = append(children, project(child, depth-1))
 						}
@@ -189,13 +314,17 @@ func (s *session) publishDOMChanges() {
 	i := s.domInspector
 	d, ok := s.page.Document()
 	if !ok || d != i.document {
-		s.domInspector = nil
+		s.clearDOMInspector()
 		s.domSearches = nil
 		s.publishDocumentUpdated(d)
 		s.releaseInspectorTurn()
 		return
 	}
-	if revision := s.page.InspectorRevision(); revision == i.revision {
+	i.characterMu.Lock()
+	characterChanges := i.characterChanges
+	i.characterChanges = nil
+	i.characterMu.Unlock()
+	if revision := s.page.InspectorRevision(); revision == i.revision && len(characterChanges) == 0 {
 		return
 	} else {
 		i.revision = revision
@@ -203,7 +332,7 @@ func (s *session) publishDOMChanges() {
 	s.page.PruneInspectorNodeIDs()
 	for _, node := range i.nodes {
 		if current, ok := s.page.InspectorDocument(node.frame); !ok || current != node.document {
-			s.domInspector = nil
+			s.clearDOMInspector()
 			s.event("DOM.documentUpdated", map[string]any{})
 			s.releaseInspectorTurn()
 			return
@@ -274,7 +403,7 @@ func (s *session) publishDOMChanges() {
 		}
 		n, ok := s.currentInspectorNode(old)
 		if !ok {
-			delete(i.nodes, id)
+			s.forgetDOM(id)
 			continue
 		}
 		keys := make([]string, 0, len(old.attrs)+len(n.Attributes))
@@ -310,11 +439,48 @@ func (s *session) publishDOMChanges() {
 				}
 				previous = child
 			}
-		} else if len(n.Children) != len(old.children) {
-			s.event("DOM.childNodeCountUpdated", map[string]any{"nodeId": id, "childNodeCount": len(n.Children)})
+			old.childCount = len(n.Children)
+		} else {
+			// Chrome keeps a frontend counter for unexpanded parents. An unbound
+			// visible character-data notification increments it as an insertion,
+			// even for a same-value write; hidden text writes do not decrement it.
+			beforeCount := old.childCount
+			pending := characterChanges[inspectorParent{old.frame, old.localID}]
+			touched := map[int64]bool{}
+			visibleWrites := 0
+			if pending != nil {
+				for localID, writes := range pending.touched {
+					wireID := s.page.InspectorNodeID(old.frame, localID)
+					touched[wireID] = true
+					if i.nodes[wireID] == nil {
+						visibleWrites += writes
+					}
+				}
+			}
+			delta := inspectorChildrenChanges(old.children, n.Children)
+			for child := range delta.removed {
+				if !touched[child] {
+					old.childCount--
+				}
+			}
+			for child := range delta.inserted {
+				if !touched[child] {
+					old.childCount++
+				}
+			}
+			if visibleWrites != 0 {
+				for range visibleWrites {
+					old.childCount++
+					s.event("DOM.childNodeCountUpdated", map[string]any{"nodeId": id, "childNodeCount": old.childCount})
+				}
+			}
+			if visibleWrites == 0 && old.childCount != beforeCount {
+				s.event("DOM.childNodeCountUpdated", map[string]any{"nodeId": id, "childNodeCount": old.childCount})
+			}
 		}
 		wire := cdpNode(old.document, n, 0)
 		wire["nodeId"] = id
+		wire["childNodeCount"] = old.childCount
 		s.rememberDOM(old.document, wire)
 	}
 }
@@ -344,6 +510,7 @@ func (s *session) currentInspectorNode(old *inspectorNode) (dom.Node, bool) {
 			}
 		}
 	}
+	n.Children = s.inspectorChildren(old.frame, n.Children)
 	for index, child := range n.Children {
 		n.Children[index] = s.page.InspectorNodeID(old.frame, child)
 	}
@@ -393,6 +560,18 @@ func inspectorChildrenChanges(before, after []int64) inspectorChildChanges {
 
 func (s *session) forgetDOM(id int64) {
 	if old := s.domInspector.nodes[id]; old != nil {
+		s.domInspector.characterMu.Lock()
+		key := inspectorParent{old.frame, old.localID}
+		delete(s.domInspector.characterParents, key)
+		delete(s.domInspector.characterChanges, key)
+		if old.localID >= 1<<31 {
+			for child, parent := range s.domInspector.characterOwners {
+				if child.frame == old.frame && parent == old.localID {
+					delete(s.domInspector.characterOwners, child)
+				}
+			}
+		}
+		s.domInspector.characterMu.Unlock()
 		delete(s.domInspector.nodes, id)
 		for _, child := range old.children {
 			s.forgetDOM(child)

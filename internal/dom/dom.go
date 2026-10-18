@@ -90,6 +90,7 @@ type nodeArena struct {
 	observationJournals      map[int64][]MutationRecord
 	observationJournalStarts map[int64]int
 	activeObservationRoots   map[int64]bool
+	characterDataSubscribers map[*characterDataSubscriber]struct{}
 }
 
 type Document struct {
@@ -1035,6 +1036,7 @@ func (d *Document) setTextContent(id int64, value, encoded string) error {
 		d.markConnectedMutationLocked(id)
 		n.Text = value
 		n.TextJSON = encoded
+		d.publishCharacterDataLocked(n)
 		return nil
 	}
 	d.markConnectedMutationLocked(id)

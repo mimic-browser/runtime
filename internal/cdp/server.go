@@ -166,6 +166,7 @@ type session struct {
 	documentUpdatedDocument *dom.Document
 	styleTracking           *computedStyleTracking
 	domInspector            *domInspector
+	domIncludeWhitespace    bool
 	removeInspectorTurn     func()
 	styleSheets             map[string]inspectorSheet
 	styleSheetRevision      uint64
@@ -262,7 +263,7 @@ func (s *session) unbindPage() {
 		s.removeInspectorTurn()
 		s.removeInspectorTurn = nil
 	}
-	s.domInspector = nil
+	s.clearDOMInspector()
 	s.domSearches = nil
 	s.setDomain("DOM", false)
 	if s.domainEnabled("CSS") {
@@ -773,11 +774,15 @@ func (s *session) handleCommand(m message) (afterUnlock func()) {
 	case "Input.dispatchKeyEvent", "Input.insertText", "Input.dispatchMouseEvent", "Input.setIgnoreInputEvents":
 		err = s.page.DispatchProtocolInput(runtimeCtx, m.Method, p)
 	case "Page.enable", "Network.enable", "DOM.enable", "Log.enable", "Performance.enable", "Security.enable", "Inspector.enable":
+		if m.Method == "DOM.enable" && !s.domainEnabled("DOM") {
+			s.domIncludeWhitespace = stringValue(p["includeWhitespace"]) == "all"
+		}
 		s.setDomain(strings.SplitN(m.Method, ".", 2)[0], true)
 	case "Page.disable", "Network.disable", "DOM.disable", "Log.disable", "Performance.disable", "Security.disable", "Inspector.disable":
 		s.setDomain(strings.SplitN(m.Method, ".", 2)[0], false)
 		if m.Method == "DOM.disable" {
-			s.domInspector = nil
+			s.domIncludeWhitespace = false
+			s.clearDOMInspector()
 			s.domSearches = nil
 			s.releaseInspectorTurn()
 		}

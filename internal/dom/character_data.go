@@ -31,7 +31,46 @@ func (d *Document) SetCharacterDataJSON(id int64, data string) error {
 	}
 	d.markConnectedMutationLocked(id)
 	n.Text, n.TextJSON = scalar, data
+	d.publishCharacterDataLocked(n)
 	return nil
+}
+
+// CharacterDataChange describes a completed write, including same-value writes.
+// It contains only scalar data; observing it never reads JavaScript properties.
+type CharacterDataChange struct {
+	NodeID, ParentID int64
+	Type, Text       string
+}
+
+type characterDataSubscriber struct {
+	publish func(CharacterDataChange)
+}
+
+// SubscribeCharacterData is an opt-in native observer. Callbacks run under the
+// arena lock and may only accumulate scalar records; they must not reenter DOM
+// or JavaScript. Removing the subscription completes all prior callbacks.
+func (d *Document) SubscribeCharacterData(publish func(CharacterDataChange)) func() {
+	subscriber := &characterDataSubscriber{publish: publish}
+	d.mu.Lock()
+	if d.characterDataSubscribers == nil {
+		d.characterDataSubscribers = make(map[*characterDataSubscriber]struct{})
+	}
+	d.characterDataSubscribers[subscriber] = struct{}{}
+	d.mu.Unlock()
+	return func() {
+		d.mu.Lock()
+		delete(d.characterDataSubscribers, subscriber)
+		if len(d.characterDataSubscribers) == 0 {
+			d.characterDataSubscribers = nil
+		}
+		d.mu.Unlock()
+	}
+}
+
+func (d *Document) publishCharacterDataLocked(node *Node) {
+	for subscriber := range d.characterDataSubscribers {
+		subscriber.publish(CharacterDataChange{NodeID: node.ID, ParentID: node.Parent, Type: node.Type, Text: node.Text})
+	}
 }
 
 func (d *Document) TextContentJSON(id int64) string {

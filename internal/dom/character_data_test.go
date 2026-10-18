@@ -33,3 +33,42 @@ func TestCanonicalDOMStringPreservesLoneSurrogates(t *testing.T) {
 		t.Fatal(got)
 	}
 }
+
+func TestCharacterDataSubscriptionsPreserveWritesAndRelease(t *testing.T) {
+	d, _ := Parse("<main> </main>")
+	root, _ := d.Find("main")
+	text := d.Children(root.ID)[0]
+	var first, second []CharacterDataChange
+	removeFirst := d.SubscribeCharacterData(func(change CharacterDataChange) { first = append(first, change) })
+	removeSecond := d.SubscribeCharacterData(func(change CharacterDataChange) { second = append(second, change) })
+	for _, write := range []func() error{
+		func() error { return d.SetTextContent(text.ID, " ") },
+		func() error { return d.SetCharacterDataJSON(text.ID, `" "`) },
+	} {
+		if err := write(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(first) != 2 || len(second) != 2 {
+		t.Fatalf("same-value writes lost: %v %v", first, second)
+	}
+	for _, change := range first {
+		if change.NodeID != text.ID || change.ParentID != root.ID || change.Type != "text" || change.Text != " " {
+			t.Fatalf("change: %v", change)
+		}
+	}
+	removeFirst()
+	if err := d.SetTextContent(text.ID, "x"); err != nil {
+		t.Fatal(err)
+	}
+	if len(first) != 2 || len(second) != 3 {
+		t.Fatalf("subscriber isolation: %v %v", first, second)
+	}
+	removeSecond()
+	if d.characterDataSubscribers != nil {
+		t.Fatal("last subscription retained callbacks")
+	}
+	if got := d.TextContent(root.ID); got != "x" {
+		t.Fatalf("observer changed DOM: %q", got)
+	}
+}

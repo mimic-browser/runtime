@@ -113,26 +113,31 @@
   },
   "DOM.describeNode": {
     "status": "partial",
-    "notes": "Canonical document, child-frame and closed/open shadow-root inspection with Page-owned int32 handles. Old document/frame handles reject after navigation or detachment. Frontend bindings are allocated on request and released on disable/disconnect. Whitespace modes, distributed nodes and UA shadow trees are not modeled.",
+    "notes": "Canonical document, child-frame and closed/open shadow-root inspection with Page-owned int32 handles. Old document/frame handles reject after navigation or detachment. Frontend bindings are allocated on request and released on disable/disconnect. Session-local whitespace projection follows DOM.enable: default/none omit empty or ASCII-whitespace-only text; all includes it. JavaScript DOM nodes are unchanged. Distributed nodes and UA shadow trees are not modeled.",
     "tests": [
       "internal/cdp/dom_query_test.go#TestDOMQueryInitialDocumentBootstrapsRealm",
       "compatibility/cdp_automation.mjs#dom.selectors_element_evaluation",
       "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
-      "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles"
+      "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceModes"
     ]
   },
   "DOM.disable": {
     "status": "partial",
-    "notes": "Subscription state; includeWhitespace and complete incremental mutation tracking are not implemented.",
+    "notes": "Session-local includeWhitespace: default/none (and unknown strings, matching Chrome 152) omit empty or ASCII-whitespace-only text; all includes it. Repeated enable preserves the active mode; disable resets it and frontend bindings. Mutation delivery remains coalesced per Page turn.",
     "tests": [
-      "internal/cdp/dom_query_test.go#TestDOMQueriesShareRealmSelectorEngine"
+      "internal/cdp/dom_query_test.go#TestDOMQueriesShareRealmSelectorEngine",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceModes",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceCharacterCounterLifecycle"
     ]
   },
   "DOM.enable": {
     "status": "partial",
-    "notes": "Subscription state; includeWhitespace and complete incremental mutation tracking are not implemented.",
+    "notes": "Session-local includeWhitespace: default/none (and unknown strings, matching Chrome 152) omit empty or ASCII-whitespace-only text; all includes it. Repeated enable preserves the active mode; disable resets it and frontend bindings. Mutation delivery remains coalesced per Page turn.",
     "tests": [
-      "internal/cdp/dom_query_test.go#TestDOMQueriesShareRealmSelectorEngine"
+      "internal/cdp/dom_query_test.go#TestDOMQueriesShareRealmSelectorEngine",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceModes",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceCharacterCounterLifecycle"
     ]
   },
   "DOM.documentUpdated": {
@@ -160,11 +165,12 @@
   },
   "DOM.getAttributes": {
     "status": "partial",
-    "notes": "Canonical document, child-frame and closed/open shadow-root inspection with Page-owned int32 handles. Old document/frame handles reject after navigation or detachment. Frontend bindings are allocated on request and released on disable/disconnect. Whitespace modes, distributed nodes and UA shadow trees are not modeled.",
+    "notes": "Canonical document, child-frame and closed/open shadow-root inspection with Page-owned int32 handles. Old document/frame handles reject after navigation or detachment. Frontend bindings are allocated on request and released on disable/disconnect. Session-local whitespace projection follows DOM.enable: default/none omit empty or ASCII-whitespace-only text; all includes it. JavaScript DOM nodes are unchanged. Distributed nodes and UA shadow trees are not modeled.",
     "tests": [
       "compatibility/cdp_automation.mjs#dom.selectors_element_evaluation",
       "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
-      "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles"
+      "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceModes"
     ]
   },
   "DOM.getBoxModel": {
@@ -192,21 +198,23 @@
   },
   "DOM.getDocument": {
     "status": "partial",
-    "notes": "Canonical document, child-frame and closed/open shadow-root inspection with Page-owned int32 handles. Old document/frame handles reject after navigation or detachment. Frontend bindings are allocated on request and released on disable/disconnect. Whitespace modes, distributed nodes and UA shadow trees are not modeled.",
+    "notes": "Canonical document, child-frame and closed/open shadow-root inspection with Page-owned int32 handles. Old document/frame handles reject after navigation or detachment. Frontend bindings are allocated on request and released on disable/disconnect. Session-local whitespace projection follows DOM.enable: default/none omit empty or ASCII-whitespace-only text; all includes it. JavaScript DOM nodes are unchanged. Distributed nodes and UA shadow trees are not modeled.",
     "tests": [
       "internal/cdp/dom_query_test.go#TestDOMQueryInitialDocumentBootstrapsRealm",
       "compatibility/cdp_automation.mjs#dom.selectors_element_evaluation",
       "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
-      "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles"
+      "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceModes"
     ]
   },
   "DOM.getFrameOwner": {
     "status": "partial",
-    "notes": "Canonical document, child-frame and closed/open shadow-root inspection with Page-owned int32 handles. Old document/frame handles reject after navigation or detachment. Frontend bindings are allocated on request and released on disable/disconnect. Whitespace modes, distributed nodes and UA shadow trees are not modeled.",
+    "notes": "Canonical document, child-frame and closed/open shadow-root inspection with Page-owned int32 handles. Old document/frame handles reject after navigation or detachment. Frontend bindings are allocated on request and released on disable/disconnect. Session-local whitespace projection follows DOM.enable: default/none omit empty or ASCII-whitespace-only text; all includes it. JavaScript DOM nodes are unchanged. Distributed nodes and UA shadow trees are not modeled.",
     "tests": [
       "internal/cdp/dom_query_test.go#TestDOMGetFrameOwnerReturnsEmbeddingNode",
       "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
-      "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles"
+      "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceModes"
     ]
   },
   "DOM.getOuterHTML": {
@@ -220,24 +228,26 @@
   },
   "DOM.querySelector": {
     "status": "partial",
-    "notes": "Canonical document, child-frame and closed/open shadow-root inspection with Page-owned int32 handles. Old document/frame handles reject after navigation or detachment. Frontend bindings are allocated on request and released on disable/disconnect. Whitespace modes, distributed nodes and UA shadow trees are not modeled. Already published ancestor child lists are not republished by queries, preserving frontend DOMNode selection identity.",
+    "notes": "Canonical document, child-frame and closed/open shadow-root inspection with Page-owned int32 handles. Old document/frame handles reject after navigation or detachment. Frontend bindings are allocated on request and released on disable/disconnect. Session-local whitespace projection follows DOM.enable: default/none omit empty or ASCII-whitespace-only text; all includes it. JavaScript DOM nodes are unchanged. Distributed nodes and UA shadow trees are not modeled. Already published ancestor child lists are not republished by queries, preserving frontend DOMNode selection identity.",
     "tests": [
       "internal/cdp/dom_query_test.go#TestDOMQueriesShareRealmSelectorEngine",
       "internal/cdp/dom_query_projection_test.go#TestDOMQueriesPublishAncestorPathBeforeReply",
       "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
       "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles",
-      "internal/cdp/inspector_mutations_test.go#TestInspectorQueriesPreservePublishedTreeIdentity"
+      "internal/cdp/inspector_mutations_test.go#TestInspectorQueriesPreservePublishedTreeIdentity",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceModes"
     ]
   },
   "DOM.querySelectorAll": {
     "status": "partial",
-    "notes": "Canonical document, child-frame and closed/open shadow-root inspection with Page-owned int32 handles. Old document/frame handles reject after navigation or detachment. Frontend bindings are allocated on request and released on disable/disconnect. Whitespace modes, distributed nodes and UA shadow trees are not modeled. Already published ancestor child lists are not republished by queries, preserving frontend DOMNode selection identity.",
+    "notes": "Canonical document, child-frame and closed/open shadow-root inspection with Page-owned int32 handles. Old document/frame handles reject after navigation or detachment. Frontend bindings are allocated on request and released on disable/disconnect. Session-local whitespace projection follows DOM.enable: default/none omit empty or ASCII-whitespace-only text; all includes it. JavaScript DOM nodes are unchanged. Distributed nodes and UA shadow trees are not modeled. Already published ancestor child lists are not republished by queries, preserving frontend DOMNode selection identity.",
     "tests": [
       "internal/cdp/dom_query_test.go#TestDOMQueriesShareRealmSelectorEngine",
       "internal/cdp/dom_query_projection_test.go#TestDOMQueriesPublishAncestorPathBeforeReply",
       "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
       "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles",
-      "internal/cdp/inspector_mutations_test.go#TestInspectorQueriesPreservePublishedTreeIdentity"
+      "internal/cdp/inspector_mutations_test.go#TestInspectorQueriesPreservePublishedTreeIdentity",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceModes"
     ]
   },
   "DOM.removeAttribute": {
@@ -260,34 +270,39 @@
   },
   "DOM.requestChildNodes": {
     "status": "partial",
-    "notes": "Canonical document, child-frame and closed/open shadow-root inspection with Page-owned int32 handles. Old document/frame handles reject after navigation or detachment. Frontend bindings are allocated on request and released on disable/disconnect. Whitespace modes, distributed nodes and UA shadow trees are not modeled.",
+    "notes": "Canonical document, child-frame and closed/open shadow-root inspection with Page-owned int32 handles. Old document/frame handles reject after navigation or detachment. Frontend bindings are allocated on request and released on disable/disconnect. Session-local whitespace projection follows DOM.enable: default/none omit empty or ASCII-whitespace-only text; all includes it. JavaScript DOM nodes are unchanged. Distributed nodes and UA shadow trees are not modeled.",
     "tests": [
       "internal/cdp/dom_query_test.go#TestDOMQueryInitialDocumentBootstrapsRealm",
       "compatibility/cdp_automation.mjs#dom.selectors_element_evaluation",
       "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
-      "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles"
+      "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceModes",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceUnexpandedCharacterCounters",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceCharacterCounterFrameAndShadow"
     ]
   },
   "DOM.requestNode": {
     "status": "partial",
-    "notes": "Canonical document, child-frame and closed/open shadow-root inspection with Page-owned int32 handles. Old document/frame handles reject after navigation or detachment. Frontend bindings are allocated on request and released on disable/disconnect. Whitespace modes, distributed nodes and UA shadow trees are not modeled. Foreign Console wrappers retain their canonical frame/node owner; resolving into an explicit foreign execution context imports the same canonical reference.",
+    "notes": "Canonical document, child-frame and closed/open shadow-root inspection with Page-owned int32 handles. Old document/frame handles reject after navigation or detachment. Frontend bindings are allocated on request and released on disable/disconnect. Session-local whitespace projection follows DOM.enable: default/none omit empty or ASCII-whitespace-only text; all includes it. JavaScript DOM nodes are unchanged. Distributed nodes and UA shadow trees are not modeled. Foreign Console wrappers retain their canonical frame/node owner; resolving into an explicit foreign execution context imports the same canonical reference.",
     "tests": [
       "internal/browser/debugger_test.go#TestDebuggerCanonicalNodeAndSessionIsolation",
       "compatibility/cdp_automation.mjs#dom.selectors_element_evaluation",
       "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
       "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles",
-      "internal/cdp/inspector_command_line_frames_test.go#TestInspectorCommandLineChildSelection"
+      "internal/cdp/inspector_command_line_frames_test.go#TestInspectorCommandLineChildSelection",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceModes"
     ]
   },
   "DOM.resolveNode": {
     "status": "partial",
-    "notes": "Canonical document, child-frame and closed/open shadow-root inspection with Page-owned int32 handles. Old document/frame handles reject after navigation or detachment. Frontend bindings are allocated on request and released on disable/disconnect. Whitespace modes, distributed nodes and UA shadow trees are not modeled. Foreign Console wrappers retain their canonical frame/node owner; resolving into an explicit foreign execution context imports the same canonical reference.",
+    "notes": "Canonical document, child-frame and closed/open shadow-root inspection with Page-owned int32 handles. Old document/frame handles reject after navigation or detachment. Frontend bindings are allocated on request and released on disable/disconnect. Session-local whitespace projection follows DOM.enable: default/none omit empty or ASCII-whitespace-only text; all includes it. JavaScript DOM nodes are unchanged. Distributed nodes and UA shadow trees are not modeled. Foreign Console wrappers retain their canonical frame/node owner; resolving into an explicit foreign execution context imports the same canonical reference.",
     "tests": [
       "internal/browser/debugger_test.go#TestDebuggerCanonicalNodeAndSessionIsolation",
       "compatibility/cdp_automation.mjs#dom.selectors_element_evaluation",
       "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
       "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles",
-      "internal/cdp/inspector_command_line_frames_test.go#TestInspectorCommandLineChildSelection"
+      "internal/cdp/inspector_command_line_frames_test.go#TestInspectorCommandLineChildSelection",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceModes"
     ]
   },
   "DOM.scrollIntoViewIfNeeded": {
@@ -310,7 +325,7 @@
   },
   "DOM.setChildNodes": {
     "status": "partial",
-    "notes": "On-demand notifications for requested frontend nodes reflect canonical state at completed Page turns, including frame/shadow ownership. Mutation bursts are coalesced; exact native per-mutation delivery ordering, distributed nodes and UA shadow events are incomplete. Already published ancestor child lists are not republished by queries, preserving frontend DOMNode selection identity.",
+    "notes": "On-demand notifications for requested frontend nodes reflect canonical state at completed Page turns, including frame/shadow ownership. Mutation bursts are coalesced; exact native per-mutation delivery ordering, distributed nodes and UA shadow events are incomplete. Already published ancestor child lists are not republished by queries, preserving frontend DOMNode selection identity. Whitespace filtering matches the session projection, including sibling references and text visibility transitions. Unexpanded parents retain Chrome 152 frontend counters: each visible write to unbound character data increments the counter, including same-value writes; hidden text writes do not decrement it. Expansion returns canonical filtered children. Structural mutation bursts and their ordering relative to character-data writes remain coalesced per Page turn.",
     "tests": [
       "compatibility/cdp_automation.mjs#dom.selectors_element_evaluation",
       "internal/cdp/inspector_test.go#TestInspectorDOMNotificationsAndCleanup",
@@ -318,7 +333,13 @@
       "internal/cdp/inspector_mutations_test.go#TestInspectorChildFrameNotificationsAndSerialization",
       "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
       "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles",
-      "internal/cdp/inspector_mutations_test.go#TestInspectorQueriesPreservePublishedTreeIdentity"
+      "internal/cdp/inspector_mutations_test.go#TestInspectorQueriesPreservePublishedTreeIdentity",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceMutationSessions",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceUnexpandedCounts",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceFrameShadowAndQueryProjection",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceUnexpandedCharacterCounters",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceCharacterCounterSettersAndBurst",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceCharacterCounterLifecycle"
     ]
   },
   "DOM.setNodeValue": {
@@ -1632,10 +1653,11 @@
   },
   "DOM.pushNodesByBackendIdsToFrontend": {
     "status": "partial",
-    "notes": "Canonical document, child-frame and closed/open shadow-root inspection with Page-owned int32 handles. Old document/frame handles reject after navigation or detachment. Frontend bindings are allocated on request and released on disable/disconnect. Whitespace modes, distributed nodes and UA shadow trees are not modeled.",
+    "notes": "Canonical document, child-frame and closed/open shadow-root inspection with Page-owned int32 handles. Old document/frame handles reject after navigation or detachment. Frontend bindings are allocated on request and released on disable/disconnect. Session-local whitespace projection follows DOM.enable: default/none omit empty or ASCII-whitespace-only text; all includes it. JavaScript DOM nodes are unchanged. Distributed nodes and UA shadow trees are not modeled.",
     "tests": [
       "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
-      "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles"
+      "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceModes"
     ]
   },
   "DOM.setAttributesAsText": {
@@ -1903,18 +1925,24 @@
   },
   "DOM.characterDataModified": {
     "status": "partial",
-    "notes": "On-demand notifications for requested frontend nodes reflect canonical state at completed Page turns, including frame/shadow ownership. Mutation bursts are coalesced; exact native per-mutation delivery ordering, distributed nodes and UA shadow events are incomplete.",
+    "notes": "On-demand notifications for requested frontend nodes reflect canonical state at completed Page turns, including frame/shadow ownership. Mutation bursts are coalesced; exact native per-mutation delivery ordering, distributed nodes and UA shadow events are incomplete. Whitespace filtering matches the session projection, including sibling references and text visibility transitions. Unexpanded parents retain Chrome 152 frontend counters: each visible write to unbound character data increments the counter, including same-value writes; hidden text writes do not decrement it. Expansion returns canonical filtered children. Structural mutation bursts and their ordering relative to character-data writes remain coalesced per Page turn.",
     "tests": [
       "internal/cdp/inspector_test.go#TestInspectorDOMNotificationsAndCleanup",
       "internal/cdp/inspector_mutations_test.go#TestInspectorShadowAttachmentAndChildUpdates",
       "internal/cdp/inspector_mutations_test.go#TestInspectorChildFrameNotificationsAndSerialization",
       "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
-      "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles"
+      "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceMutationSessions",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceUnexpandedCounts",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceFrameShadowAndQueryProjection",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceUnexpandedCharacterCounters",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceCharacterCounterSettersAndBurst",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceCharacterCounterLifecycle"
     ]
   },
   "DOM.childNodeInserted": {
     "status": "partial",
-    "notes": "On-demand notifications for requested frontend nodes reflect canonical state at completed Page turns, including frame/shadow ownership. Mutation bursts are coalesced; exact native per-mutation delivery ordering, distributed nodes and UA shadow events are incomplete.",
+    "notes": "On-demand notifications for requested frontend nodes reflect canonical state at completed Page turns, including frame/shadow ownership. Mutation bursts are coalesced; exact native per-mutation delivery ordering, distributed nodes and UA shadow events are incomplete. Whitespace filtering matches the session projection, including sibling references and text visibility transitions. Unexpanded parents retain Chrome 152 frontend counters: each visible write to unbound character data increments the counter, including same-value writes; hidden text writes do not decrement it. Expansion returns canonical filtered children. Structural mutation bursts and their ordering relative to character-data writes remain coalesced per Page turn.",
     "tests": [
       "internal/cdp/inspector_test.go#TestInspectorDOMNotificationsAndCleanup",
       "internal/cdp/inspector_mutations_test.go#TestInspectorShadowAttachmentAndChildUpdates",
@@ -1922,12 +1950,18 @@
       "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
       "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles",
       "internal/cdp/inspector_performance_test.go#TestInspectorWideTreeInputPreservesBindings",
-      "internal/cdp/inspector_performance_test.go#TestInspectorChildDiffPreservesRelativeOrder"
+      "internal/cdp/inspector_performance_test.go#TestInspectorChildDiffPreservesRelativeOrder",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceMutationSessions",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceUnexpandedCounts",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceFrameShadowAndQueryProjection",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceUnexpandedCharacterCounters",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceCharacterCounterSettersAndBurst",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceCharacterCounterLifecycle"
     ]
   },
   "DOM.childNodeRemoved": {
     "status": "partial",
-    "notes": "On-demand notifications for requested frontend nodes reflect canonical state at completed Page turns, including frame/shadow ownership. Mutation bursts are coalesced; exact native per-mutation delivery ordering, distributed nodes and UA shadow events are incomplete.",
+    "notes": "On-demand notifications for requested frontend nodes reflect canonical state at completed Page turns, including frame/shadow ownership. Mutation bursts are coalesced; exact native per-mutation delivery ordering, distributed nodes and UA shadow events are incomplete. Whitespace filtering matches the session projection, including sibling references and text visibility transitions. Unexpanded parents retain Chrome 152 frontend counters: each visible write to unbound character data increments the counter, including same-value writes; hidden text writes do not decrement it. Expansion returns canonical filtered children. Structural mutation bursts and their ordering relative to character-data writes remain coalesced per Page turn.",
     "tests": [
       "internal/cdp/inspector_test.go#TestInspectorDOMNotificationsAndCleanup",
       "internal/cdp/inspector_mutations_test.go#TestInspectorShadowAttachmentAndChildUpdates",
@@ -1935,18 +1969,31 @@
       "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
       "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles",
       "internal/cdp/inspector_performance_test.go#TestInspectorWideTreeInputPreservesBindings",
-      "internal/cdp/inspector_performance_test.go#TestInspectorChildDiffPreservesRelativeOrder"
+      "internal/cdp/inspector_performance_test.go#TestInspectorChildDiffPreservesRelativeOrder",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceMutationSessions",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceUnexpandedCounts",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceFrameShadowAndQueryProjection",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceUnexpandedCharacterCounters",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceCharacterCounterSettersAndBurst",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceCharacterCounterLifecycle"
     ]
   },
   "DOM.childNodeCountUpdated": {
     "status": "partial",
-    "notes": "On-demand notifications for requested frontend nodes reflect canonical state at completed Page turns, including frame/shadow ownership. Mutation bursts are coalesced; exact native per-mutation delivery ordering, distributed nodes and UA shadow events are incomplete.",
+    "notes": "On-demand notifications for requested frontend nodes reflect canonical state at completed Page turns, including frame/shadow ownership. Mutation bursts are coalesced; exact native per-mutation delivery ordering, distributed nodes and UA shadow events are incomplete. Whitespace filtering matches the session projection, including sibling references and text visibility transitions. Unexpanded parents retain Chrome 152 frontend counters: each visible write to unbound character data increments the counter, including same-value writes; hidden text writes do not decrement it. Expansion returns canonical filtered children. Structural mutation bursts and their ordering relative to character-data writes remain coalesced per Page turn.",
     "tests": [
       "internal/cdp/inspector_test.go#TestInspectorDOMNotificationsAndCleanup",
       "internal/cdp/inspector_mutations_test.go#TestInspectorShadowAttachmentAndChildUpdates",
       "internal/cdp/inspector_mutations_test.go#TestInspectorChildFrameNotificationsAndSerialization",
       "internal/cdp/inspector_frames_test.go#TestInspectorFramesAndShadowEditing",
-      "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles"
+      "internal/cdp/inspector_navigation_test.go#TestInspectorNavigationInvalidatesNodeAndObjectHandles",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceMutationSessions",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceUnexpandedCounts",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceFrameShadowAndQueryProjection",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceUnexpandedCharacterCounters",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceCharacterCounterSettersAndBurst",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceCharacterCounterLifecycle",
+      "internal/cdp/dom_whitespace_test.go#TestDOMWhitespaceCharacterCounterFrameAndShadow"
     ]
   },
   "DOM.shadowRootPushed": {
