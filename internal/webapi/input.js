@@ -956,6 +956,14 @@
     enumerable: true,
     configurable: true,
   });
+  const pointerAncestors = (target) => {
+    const path = [];
+    for (let node = target; node && node.nodeType === 1; ) {
+      path.push(node);
+      node = node.parentElement || node.parentNode?.host || null;
+    }
+    return path;
+  };
   const mouseCommand = (params, hintedTarget, presentation = false) => {
     const x = Number(params.x),
       y = Number(params.y),
@@ -1018,12 +1026,37 @@
       return;
     }
     if (target !== pointerTarget) {
+      const oldPath = pointerAncestors(pointerTarget),
+        newPath = pointerAncestors(target);
+      while (
+        oldPath.length &&
+        newPath.length &&
+        oldPath[oldPath.length - 1] === newPath[newPath.length - 1]
+      ) {
+        oldPath.pop();
+        newPath.pop();
+      }
       if (pointerTarget) {
         emit(pointerTarget, 'PointerEvent', 'pointerout', { ...init, relatedNode: nodeID(target) });
         emit(pointerTarget, 'MouseEvent', 'mouseout', { ...init, relatedNode: nodeID(target) });
       }
+      for (const node of oldPath) {
+        const transition = { ...init, bubbles: false, cancelable: false, relatedNode: nodeID(target) };
+        emit(node, 'PointerEvent', 'pointerleave', transition);
+        emit(node, 'MouseEvent', 'mouseleave', transition);
+      }
       emit(target, 'PointerEvent', 'pointerover', { ...init, relatedNode: nodeID(pointerTarget) });
       emit(target, 'MouseEvent', 'mouseover', { ...init, relatedNode: nodeID(pointerTarget) });
+      for (let index = newPath.length - 1; index >= 0; index--) {
+        const transition = {
+          ...init,
+          bubbles: false,
+          cancelable: false,
+          relatedNode: nodeID(pointerTarget),
+        };
+        emit(newPath[index], 'PointerEvent', 'pointerenter', transition);
+        emit(newPath[index], 'MouseEvent', 'mouseenter', transition);
+      }
       pointerTarget = target;
     }
     pointerX = x;

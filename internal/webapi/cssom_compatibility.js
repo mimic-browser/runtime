@@ -64,6 +64,7 @@ const constructedStyleSheets = (() => {
   };
   const sourceCache = new WeakMap();
   const nativeEligibilityCache = new WeakMap();
+  const scrollbarCandidateCache = new WeakMap();
   const sheets = new WeakMap(),
     rules = new WeakMap(),
     adopted = new WeakMap(),
@@ -996,6 +997,71 @@ const constructedStyleSheets = (() => {
     inspect,
     /* dev_preview_sources */
     revision: () => revision,
+    authorScrollbarWidth(root) {
+      let winner = null;
+      let order = 0;
+      const candidatesFor = (sheet) => {
+        const cached = scrollbarCandidateCache.get(sheet);
+        if (cached?.revision === revision) return cached.candidates;
+        const candidates = [];
+        const visit = (rule, conditions) => {
+          const state = rules.get(rule);
+          if (!state) return;
+          const node = state.node;
+          if (node.type === 'Atrule') {
+            if (node.name === 'container') return;
+            const next = node.name === 'media' || node.name === 'supports'
+              ? [...conditions, [node.name, preludeText(node.prelude)]]
+              : conditions;
+            for (const child of state.children) visit(child, next);
+            return;
+          }
+          if (node.type !== 'Rule' || !node.block) return;
+          const widths = entriesForBlock(node.block).filter((entry) => entry.name === 'width');
+          if (!widths.length) return;
+          for (const selectorNode of node.prelude.children) {
+            const selector = preludeText(selectorNode).trim();
+            if (!/::-webkit-scrollbar$/i.test(selector)) continue;
+            const base = selector.replace(/::-webkit-scrollbar$/i, '').trim() || ':root';
+            const specificity =
+              (base.match(/#[\w-]+/g) || []).length * 100 +
+              (base.match(/\.[\w-]+|\[[^\]]+\]|::?[\w-]+/g) || []).length * 10 +
+              (base.match(/(^|[\s>+~])[a-zA-Z][\w-]*/g) || []).length;
+            candidates.push({ base, specificity, conditions, widths });
+          }
+        };
+        for (const rule of requireSheet(sheet).rules) visit(rule, []);
+        scrollbarCandidateCache.set(sheet, { revision, candidates });
+        return candidates;
+      };
+      for (const sheet of ownerCollection(document)) {
+        const state = requireSheet(sheet);
+        if (state.disabled || (state.media && !cssMediaMatches(state.media))) continue;
+        for (const candidate of candidatesFor(sheet)) {
+          if (candidate.conditions.some(([kind, query]) =>
+            kind === 'media' ? !cssMediaMatches(query) : !compatibilityCSSSupports.matches(query))) continue;
+          let matches = false;
+          try {
+            matches = compatibilitySelectors.matchesStyle(root, candidate.base);
+          } catch (error) {
+            if (error?.name !== 'SyntaxError') throw error;
+          }
+          if (!matches) continue;
+          for (const entry of candidate.widths) {
+            const important = entry.priority === 'important';
+            if (!winner || Number(important) > Number(winner.important) ||
+                (important === winner.important &&
+                 (candidate.specificity > winner.specificity ||
+                  (candidate.specificity === winner.specificity && order >= winner.order))))
+              winner = { value: entry.value, important, specificity: candidate.specificity, order };
+            order++;
+          }
+        }
+      }
+      if (!winner || winner.value === 'auto') return null;
+      const px = /^\s*(\d+(?:\.\d+)?)px\s*$/i.exec(winner.value);
+      return px ? Number(px[1]) : null;
+    },
     nativeSources(root) {
       if ((adopted.get(root) || []).length)
         return { unsupported: 'adopted stylesheet adapter pending', sheets: [] };
@@ -1215,6 +1281,8 @@ const readBlitzInputs = (knownSheetRevision = 0) => {
     }
   }
   const inputs = constructedStyleSheets.nativeSources(document);
+  if (!inputs.unsupported)
+    inputs.authorScrollbarWidth = constructedStyleSheets.authorScrollbarWidth(document.documentElement);
   if (!inputs.unsupported) {
     const current = inputs.sheets;
     if (
@@ -1284,6 +1352,7 @@ const readBlitzInputs = (knownSheetRevision = 0) => {
   // producer does not derive CHECKED from markup, so include controls even
   // when no author script has read their private slots yet.
   const stateNodes = new Set(compatibilityElementState.nativeStateControls?.() || []);
+  const selectedByOwner = new WeakMap();
   for (const node of blitzControlMembership)
     if (['INPUT', 'OPTION'].includes(elementSlot(node)?.tagName)) stateNodes.add(node);
   for (const node of focusAncestors) stateNodes.add(node);
@@ -1298,7 +1367,22 @@ const readBlitzInputs = (knownSheetRevision = 0) => {
     }
     if (slot.tagName === 'INPUT' || slot.tagName === 'OPTION') {
       mask |= 1;
-      if (compatibilityElementState.selectorChecked(node)) flags |= 1;
+      let checked;
+      if (slot.tagName === 'OPTION' && compatibilityElementState.nativeSelectedOptions) {
+        let owner = cssObservationParent(node);
+        while (owner && elementSlot(owner)?.tagName !== 'SELECT')
+          owner = cssObservationParent(owner);
+        if (owner) {
+          let selected = selectedByOwner.get(owner);
+          if (!selected) {
+            selected = new Set(compatibilityElementState.nativeSelectedOptions(owner));
+            selectedByOwner.set(owner, selected);
+          }
+          checked = selected.has(node);
+        }
+      }
+      if (checked === undefined) checked = compatibilityElementState.selectorChecked(node);
+      if (checked) flags |= 1;
     }
     // Only controls need explicit false overrides. Focus removals are handled
     // against the previous native transaction, without wrapping the whole DOM.

@@ -28,6 +28,12 @@ the Environment descriptor seed. See the [media profile contract](media-device-p
 Omitting profile means random generation. Omitting seed uses 256 random bits;
 explicit empty seeds, unknown selectors/fields, null and wrong types fail.
 Version/platform filter the installed bundle; they do not install a browser.
+Generated color scheme and reduced motion are selected environment settings;
+`matchMedia` exposes them from the Context's canonical preferences. Reuse a
+returned profile token when comparing runs. Ordinary `Target.createBrowserContext`
+inherits the installed baseline instead of generating a profile. Reduced-motion
+profiles currently use the JavaScript style/layout fallback because the native
+device adapter does not model that preference; this can materially affect latency.
 `Target.createTarget` without `browserContextId` keeps ordinary CDP behavior:
 the new Page belongs to the default Context and shares its cookies and storage.
 For separate accounts or machines, create one Mimic Context per identity and

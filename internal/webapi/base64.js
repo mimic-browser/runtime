@@ -3,6 +3,7 @@ const base64Alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123
 // Validation below admits only ASCII alphabet characters. Indexed lookup avoids
 // searching the alphabet for every input character; a quartet emits three bytes.
 const base64DecodeTable = new Uint8Array(128);
+base64DecodeTable.fill(255);
 for (let i = 0; i < base64Alphabet.length; i++) base64DecodeTable[base64Alphabet.charCodeAt(i)] = i;
 // Capture before author code runs. The intrinsic performs forgiving validation
 // and decoding together; its result is fresh storage with no author callbacks.
@@ -52,6 +53,59 @@ const { atob, btoa } = {
         throw invalidBase64();
       }
       return host.binaryStringFromBytes(bytes);
+    }
+    // Common short, already-clean inputs need neither whitespace copies nor
+    // regular-expression scans. Leave unusual and invalid inputs to the
+    // forgiving decoder below so its validation remains the single authority.
+    if (s.length < 64) {
+      let end = s.length;
+      if (end && s.charCodeAt(end - 1) === 61) {
+        if (end % 4 !== 0) end = -1;
+        else {
+          end--;
+          if (end && s.charCodeAt(end - 1) === 61) end--;
+        }
+      }
+      if (end >= 0 && end % 4 !== 1) {
+        let out = '',
+          i = 0,
+          clean = true;
+        for (; i + 3 < end; i += 4) {
+          const a = s.charCodeAt(i),
+            b = s.charCodeAt(i + 1),
+            c = s.charCodeAt(i + 2),
+            d = s.charCodeAt(i + 3);
+          if ((a | b | c | d) >= 128 ||
+              (base64DecodeTable[a] | base64DecodeTable[b] |
+                base64DecodeTable[c] | base64DecodeTable[d]) === 255) {
+            clean = false;
+            break;
+          }
+            const bits =
+              (base64DecodeTable[a] << 18) |
+              (base64DecodeTable[b] << 12) |
+              (base64DecodeTable[c] << 6) |
+              base64DecodeTable[d];
+            out += String.fromCharCode((bits >>> 16) & 255, (bits >>> 8) & 255, bits & 255);
+        }
+        if (clean && i + 1 < end) {
+          const a = s.charCodeAt(i),
+            b = s.charCodeAt(i + 1),
+            c = i + 2 < end ? s.charCodeAt(i + 2) : 65;
+          if ((a | b | c) >= 128 ||
+              (base64DecodeTable[a] | base64DecodeTable[b] | base64DecodeTable[c]) === 255)
+            clean = false;
+          else {
+            const bits =
+              (base64DecodeTable[a] << 12) |
+              (base64DecodeTable[b] << 6) |
+              (i + 2 < end ? base64DecodeTable[c] : 0);
+            out += String.fromCharCode((bits >>> 10) & 255);
+            if (i + 2 < end) out += String.fromCharCode((bits >>> 2) & 255);
+          }
+        }
+        if (clean) return out;
+      }
     }
     s = s.replace(/[\t\n\f\r ]/g, '');
     if (s.length % 4 === 0) s = s.replace(/={1,2}$/, '');

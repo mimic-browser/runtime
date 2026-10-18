@@ -49,3 +49,35 @@ func TestBlitzControlContentAdmission(t *testing.T) {
 		}
 	})
 }
+
+func TestBlitzOptionStatesTrackLargeSelect(t *testing.T) {
+	serialBrowserTest(t)
+	historyTestPages(t, func(t *testing.T, p *Page) {
+		navigateCapabilityFixture(t, p)
+		for _, step := range []struct {
+			script string
+			checked int
+		}{
+			{`document.body.innerHTML='<div id="box" style="width:20px;height:10px"></div><select id="pick">'+Array.from({length:256},(_,i)=>'<option>'+i+'</option>').join('')+'</select>';document.getElementById('box').getBoundingClientRect().width`, 1},
+			{`document.getElementById('pick').selectedIndex=173;document.getElementById('box').getBoundingClientRect().width`, 1},
+			{`document.getElementById('pick').selectedIndex=-1;document.getElementById('box').getBoundingClientRect().width`, 0},
+		} {
+			if _, err := p.Evaluate(context.Background(), step.script); err != nil {
+				t.Fatal(err)
+			}
+			state := p.Top.Realm.blitz
+			if state == nil || state.fallback != "" || state.document.Owner == nil {
+				t.Fatalf("native layout unavailable: %+v", state)
+			}
+			checked := 0
+			for _, element := range state.states {
+				if element.Flags&1 != 0 {
+					checked++
+				}
+			}
+			if checked != step.checked {
+				t.Fatalf("checked option states=%d, want %d", checked, step.checked)
+			}
+		}
+	})
+}

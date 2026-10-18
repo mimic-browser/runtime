@@ -1699,6 +1699,7 @@
         ':' +
         elementStateVersion,
       documentRevision = Number(canonicalHead[0]);
+    observation.documentRevision = documentRevision;
     if (
       !retain ||
       retainedGeometryVersion !== geometryVersion ||
@@ -1854,9 +1855,7 @@
     const record = domReadRecord(node);
     if (!record) return host.attributeNames(elementSlot(node).nodeId);
     if (!record.attributeNames)
-      record.attributeNames = record.observationState
-        ? Object.keys(record.observationState.attributes)
-        : host.attributeNames(elementSlot(node).nodeId);
+      record.attributeNames = host.attributeNames(elementSlot(node).nodeId);
     return record.attributeNames;
   };
   // All geometry projections consult the same canonical parent/child snapshot.
@@ -4048,13 +4047,25 @@
     withStyleReadCache(() => {
       const element = wrap(nodeID);
       if (!element) return [0, 0];
+      // The containing document can be asked for the same child viewport
+      // thousands of times in one validated style epoch. Its size depends on
+      // parent style/layout, not on the child read that prompted the query.
+      const cache =
+        !styleObservationDynamic &&
+        (styleReadCache.frameViewportReads || (styleReadCache.frameViewportReads = new WeakMap()));
+      const cached = cache?.get(element);
+      if (cached) return cached;
+      const remember = (size) => {
+        cache?.set(element, size);
+        return size;
+      };
       if (!isNodeConnected(element)) return [0, 0];
       for (let n = element; n instanceof Element; n = geometryParent(n))
         if (
           computedCSSDeclarations(n).some((e) => e.name === 'display' && e.value === 'none') ||
           host.getAttribute(elementSlot(n).nodeId, 'hidden') !== null
         )
-          return frameViewportSizes.get(element) || [0, 0];
+          return remember(frameViewportSizes.get(element) || [0, 0]);
       const entries = computedCSSDeclarations(element),
         get = (name) => geometryValue(element, entries.find((e) => e.name === name)?.value);
       const parent = geometryParent(element);
@@ -4084,7 +4095,7 @@
       };
       const size = [dimension('width', 300), dimension('height', 150)];
       frameViewportSizes.set(element, size);
-      return size;
+      return remember(size);
     });
   const frameHasLayout = (nodeID) =>
     withStyleReadCache(() => {
@@ -4110,6 +4121,9 @@
     });
   registerBootstrapCallback('installFrameViewport', readFrameViewport, frameHasLayout);
   const pseudoContentRules = new WeakMap();
+  const backgroundResourceRules = new WeakMap();
+  const canDeclareBackgroundImage = (entry) =>
+    entry.name === 'background-image' || entry.name === 'all';
   registerBootstrapCallback('installComputedStyleFlatTree', (nodeID, kind, name) => {
     if (kind === 'inspectorCSS')
       return JSON.stringify(constructedStyleSheets.inspect(JSON.parse(name)));
@@ -4144,9 +4158,12 @@
     if (kind === 'imageResources')
       return withStyleReadCache(() => {
         const sources = constructedStyleSheets.resourceSources(document);
+        // CSS escapes can spell the url() function. This is a conservative
+        // source preflight; parsed computed values remain authoritative below.
+        const possibleImageSource = (source) => /url\s*\(/i.test(source) || source.includes('\\');
         if (
-          !sources.some((source) => /url\s*\(/i.test(source)) &&
-          !host.blitzInlineStyles().some((source) => /url\s*\(/i.test(source))
+          !sources.some(possibleImageSource) &&
+          !host.blitzInlineStyles().some(possibleImageSource)
         )
           return '[]';
         const urls = new Set();
@@ -4172,7 +4189,43 @@
             styleReadCache.blitzPacked = checkpointBlitzPacked = null;
             checkpointBlitzEpoch = styleReadCache.blitzEpochKey;
           }
+          // background-image is not inherited by default. An element without
+          // an applicable declaration cannot contribute a URL. This is only a
+          // necessary-condition filter: the ordinary cascade still decides the
+          // winner, variables, explicit inheritance and visibility below.
+          // Shadow distribution and animation can supply values outside this
+          // document rule program; keep their canonical scalar walk.
+          const rules =
+            !shadowHosts.size && !styleObservationDynamic
+              ? styleSheetRules(document.documentElement, document)
+              : null;
+          let imageRules = rules && backgroundResourceRules.get(rules);
+          if (rules && !imageRules) {
+            imageRules = rules.filter((rule) =>
+              rule.declarations().some(canDeclareBackgroundImage),
+            );
+            backgroundResourceRules.set(rules, imageRules);
+          }
+          const candidates =
+            imageRules &&
+            (styleReadCache.backgroundResourceCandidates ||
+              (styleReadCache.backgroundResourceCandidates = new WeakMap()));
           for (const candidate of compatibilitySelectors.query(document, '*')) {
+            if (candidates) {
+              let possible = candidates.get(candidate);
+              if (possible === undefined) {
+                const inline = cssObservationNodeState(candidate).inline;
+                possible =
+                  (inline[0] === 'j'
+                    ? JSON.parse(inline.slice(1))
+                    : parseCSS(inline.slice(1))
+                  ).some(canDeclareBackgroundImage) ||
+                  compatibilitySelectors.matchingStyles(candidate, imageRules, '', false).length >
+                    0;
+                candidates.set(candidate, possible);
+              }
+              if (!possible) continue;
+            }
             const value = cssComputedValue(candidate, 'background-image');
             // Unlike the native resource walk, fallback visibility requires
             // extra cascade work. Resolve it only for actual image candidates.

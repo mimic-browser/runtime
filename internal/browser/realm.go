@@ -2256,6 +2256,17 @@ func (r *Realm) installBindingsOnOwner() error {
 		}
 		return r.val(map[string]any{"header": policy, "origin": origin, "clientHints": hints}), nil
 	})
+	host["permissionPolicyAllows"] = r.transientFn(func(_ engine.Value, args []engine.Value) (engine.Value, error) {
+		return r.val(r.selfPolicyAllows(strarg(args, 0))), nil
+	})
+	host["thirdPartyFrame"] = r.transientFn(func(engine.Value, []engine.Value) (engine.Value, error) {
+		for _, ancestor := range r.ancestorOrigins {
+			if ancestor != r.origin {
+				return r.val(true), nil
+			}
+		}
+		return r.val(false), nil
+	})
 	host["documentCookie"] = r.transientFn(func(engine.Value, []engine.Value) (engine.Value, error) {
 		if !p.environmentView().Network.CookiesEnabled {
 			return r.val(""), nil
@@ -2921,6 +2932,7 @@ func (r *Realm) prepareConnectedResource(childID int64, loadCallback, errorCallb
 		}
 	}
 	blockerReason := strings.ToLower(tag) + ":" + src
+	integrity := node.Attributes["integrity"]
 	blocksLoad := r.beginLoadBlocker(blockerReason)
 	r.agent.Page().trace.Add(trace.DOM, "dynamicResourceInsertion", map[string]any{"tag": tag, "src": src, "attributes": attrs, "realm": r.ID})
 	// Chrome schedules low-priority image fetching behind script fetching that
@@ -2964,7 +2976,7 @@ func (r *Realm) prepareConnectedResource(childID int64, loadCallback, errorCallb
 				return fire(ctx, loadCallback)
 			}
 			if loadErr == nil {
-				loadErr = scriptResponseError(*res)
+				loadErr = scriptResponseError(*res, integrity)
 			}
 			if loadErr != nil {
 				r.agent.Page().trace.Add(trace.Error, "dynamicScriptLoad", map[string]any{"url": u.String(), "error": loadErr.Error()})

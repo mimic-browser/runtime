@@ -9,6 +9,9 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	chrome152 "github.com/moreveal/mimic/chrome/152"
+	v8engine "github.com/moreveal/mimic/internal/engine/v8"
 )
 
 func deferredParserFixture(t *testing.T, module bool) *httptest.Server {
@@ -44,6 +47,66 @@ func deferredParserFixture(t *testing.T, module bool) *httptest.Server {
 			fmt.Fprint(w, `<!doctype html><head><script>events=[];document.addEventListener('DOMContentLoaded',()=>events.push('DCL'))</script><script defer>events.push('inline:'+document.readyState+':'+!!document.body)</script><script id=slow defer src='/slow.js' onload="events.push('load:slow')"></script>`+middle+`<script defer src='/missing.js' onerror="events.push('error:missing')"></script><script defer src='/throws.js' onload="events.push('load:throws')" onerror="events.push('wrong:error')"></script><script defer src='/fast.js' onload="events.push('load:fast')"></script></head><body><p id=tail>ready</p><script>events.push('tail')</script>`)
 		}
 	}))
+}
+
+func TestParserInsertedAsyncClassicDoesNotPauseParsing(t *testing.T) {
+	serialBrowserTest(t)
+	started := make(chan struct{})
+	parsed := make(chan struct{})
+	release := make(chan struct{})
+	var releaseOnce sync.Once
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/async.js" {
+			close(started)
+			select {
+			case <-release:
+				fmt.Fprint(w, `events.push('async:'+document.readyState+':'+!!document.getElementById('tail'))`)
+			case <-r.Context().Done():
+			}
+			return
+		}
+		if r.URL.Path == "/parsed" {
+			close(parsed)
+			return
+		}
+		fmt.Fprint(w, `<!doctype html><head><script>events=[]</script><script async defer src="/async.js"></script></head><body><div id="tail">ready</div><script>events.push('tail');fetch('/parsed')</script>`)
+	}))
+	defer server.Close()
+	defer releaseOnce.Do(func() { close(release) })
+	b, err := New(v8engine.Factory{}, chrome152.New())
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := b.NewContext()
+	defer c.Close()
+	p, err := c.NewPage()
+	if err != nil {
+		t.Fatal(err)
+	}
+	{
+		ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+		defer cancel()
+		navigation := make(chan error, 1)
+		go func() { navigation <- p.Navigate(ctx, server.URL) }()
+		select {
+		case <-started:
+		case <-ctx.Done():
+			t.Fatal("async script fetch did not start")
+		}
+		select {
+		case <-parsed:
+		case <-time.After(2 * time.Second):
+			t.Fatal("parser waited for async script response before executing tail")
+		}
+		releaseOnce.Do(func() { close(release) })
+		if err := <-navigation; err != nil {
+			t.Fatal(err)
+		}
+		got, err := p.Evaluate(ctx, `JSON.stringify({state:document.readyState,events})`)
+		if err != nil || got != `{"state":"complete","events":["tail","async:interactive:true"]}` {
+			t.Fatalf("async execution or load ordering: %v, %v", got, err)
+		}
+	}
 }
 
 func TestDeferredClassicParserLifecycle(t *testing.T) {

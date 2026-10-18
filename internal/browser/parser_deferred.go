@@ -16,6 +16,7 @@ type deferredParserScript struct {
 	code, name string
 	nodeID     int64
 	module     bool
+	integrity  string
 	pending    *scriptFetch
 }
 
@@ -44,7 +45,7 @@ func (r *Realm) queueDeferredClassic(s *documentStream, node dom.Node) (bool, er
 		}
 	}
 	r.document.MarkScriptStarted(node.ID)
-	s.deferred = append(s.deferred, deferredParserScript{name: target.String(), nodeID: node.ID, pending: r.fetchScript(s.ctx, request)})
+	s.deferred = append(s.deferred, deferredParserScript{name: target.String(), nodeID: node.ID, integrity: node.Attributes["integrity"], pending: r.fetchScript(s.ctx, request)})
 	return true, nil
 }
 
@@ -60,6 +61,9 @@ func (r *Realm) runDeferredParserScripts(s *documentStream, resume func() error)
 				return true, nil
 			}
 			response, err := script.pending.wait(s.ctx)
+			if err == nil {
+				err = scriptIntegrityError(response.Body, script.integrity)
+			}
 			if err != nil {
 				s.nextDeferred++
 				p.trace.Add(trace.Error, "scriptLoad", map[string]any{"url": script.name, "error": err.Error()})

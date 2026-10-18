@@ -91,6 +91,8 @@ if(seen.join()!=='a,b,marker,c'||walker.root!==root||walker.currentNode!==root.q
 if(walker.previousNode().data!=='marker'||walker.previousNode().id!=='b'||walker.previousSibling().id!=='a')return 'backward';
 walker.currentNode=root;if(walker.firstChild().id!=='a'||walker.nextSibling().id!=='b')return 'skipped parent';
 walker.currentNode=root;const p=document.createElement('p');p.id='new';root.append(p);if(walker.lastChild()!==p)return 'live mutation';
+const calls=[];const counted=document.createTreeWalker(root,NodeFilter.SHOW_ELEMENT,n=>{calls.push(n.id);return n.id==='skip'?NodeFilter.FILTER_SKIP:NodeFilter.FILTER_ACCEPT});
+if(counted.nextNode().id!=='a'||calls.join()!=='skip,a')return 'duplicate filter:'+calls;
 const documentWalker=document.createTreeWalker(document,NodeFilter.SHOW_ELEMENT);if(documentWalker.nextNode()!==document.documentElement)return 'document root';
 let recursive;recursive=document.createTreeWalker(root,NodeFilter.SHOW_ALL,()=>recursive.nextNode());let error='';try{recursive.nextNode()}catch(e){error=e.name}
 return error==='InvalidStateError'&&template.childNodes.length===0;

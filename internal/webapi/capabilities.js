@@ -410,6 +410,18 @@ const installNavigatorCapabilities = () => {
       throw error('SecurityError', 'Access to gamepads is disallowed by permissions policy.');
     return [null, null, null, null];
   });
+  // No gamepad objects are created without a device backend. The generated
+  // surface still exposes Gamepad.prototype.axes for reflection, but its
+  // semantic-missing fallback accepts arbitrary receivers. Blink's accessor
+  // rejects both a plain object and Gamepad.prototype with Illegal invocation.
+  const gamepad = globalThis.Gamepad;
+  const axes = gamepad && Object.getOwnPropertyDescriptor(gamepad.prototype, 'axes');
+  if (axes?.get) {
+    const getAxes = native(function () {
+      throw new IntrinsicTypeError('Illegal invocation');
+    }, 'axes', 'get ');
+    Object.defineProperty(gamepad.prototype, 'axes', { ...axes, get: getAxes });
+  }
   const domainSources = new Set(
     members.filter((m) => names.has(m.name)).map((m) => m.origin?.source),
   );
@@ -582,8 +594,27 @@ const installNavigatorCapabilities = () => {
   // One permission source feeds query, location, clipboard and media.
   const permissionNames = new Set(globalThis.__mimicPermissionNames || []);
   delete globalThis.__mimicPermissionNames;
-  const permission = (name) =>
-    documentPolicy.allowsFeature(name) ? state('permission', name) : 'denied';
+  // The environment's permission choice is only one input. A cross-origin
+  // document cannot use self-default policy-controlled features unless its
+  // embedding chain delegates them, even when the profile grants the origin.
+  const selfDefaultPermissionFeatures = new Set([
+    'geolocation', 'midi', 'camera', 'microphone', 'screen-wake-lock',
+    'display-capture', 'clipboard-read', 'clipboard-write',
+    'idle-detection', 'window-management', 'local-fonts',
+  ]);
+  const permission = (name) => {
+    if ((selfDefaultPermissionFeatures.has(name) && !host.permissionPolicyAllows(name)) ||
+        !documentPolicy.allowsFeature(name)) return 'denied';
+    const value = state('permission', name);
+    if (host.thirdPartyFrame() && !state('permissionExplicit', name)) {
+      if (name === 'notifications') return 'denied';
+      // These grants depend on the embedding relationship, not just the
+      // embedded origin. A first-party profile default is not an embedded grant.
+      if ((name === 'storage-access' || name === 'background-fetch') && value === 'granted')
+        return 'prompt';
+    }
+    return value;
+  };
   const permissionStatuses = new Set();
   const permissionStatusNames = {
     camera: 'video_capture',

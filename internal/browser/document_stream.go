@@ -195,6 +195,9 @@ func (r *Realm) closeDocumentStream() error {
 func (r *Realm) executeStreamScript(s *documentStream, node dom.Node) error {
 	r.preloadResources()
 	r.startDocumentImages()
+	if queued, err := r.queueParserAsyncClassic(s, node); queued || err != nil {
+		return err
+	}
 	if queued, err := r.queueDeferredClassic(s, node); queued || err != nil {
 		return err
 	}
@@ -224,13 +227,14 @@ func (r *Realm) executeStreamScript(s *documentStream, node dom.Node) error {
 			loaded = &streamScriptResponse{}
 			s.scripts[node.ID] = loaded
 			request := r.elementRequest(u, node.Attributes, network.Script)
+			integrity := node.Attributes["integrity"]
 			eventLoop := r.browserEventLoop()
 			r.resourceWG.Add(1)
 			go func() {
 				defer r.resourceWG.Done()
 				response, loadErr := r.loadResource(ctx, request)
 				if loadErr == nil {
-					loadErr = scriptResponseError(response)
+					loadErr = scriptResponseError(response, integrity)
 				}
 				if ctx.Err() != nil {
 					return

@@ -180,7 +180,7 @@
         offsetTop: 0,
         pageLeft: scroll.x,
         pageTop: scroll.y,
-        width: v.width,
+        width: document.documentElement?.clientWidth ?? v.width,
         height: v.height,
         scale: 1,
       };

@@ -120,6 +120,17 @@ pub extern "C" fn mimic_blitz_restyle_subtree(handle: *mut Handle) -> i32 {
 }
 
 #[unsafe(no_mangle)]
+pub unsafe extern "C" fn mimic_blitz_is_dirty(handle: *mut Handle, dirty: *mut u32) -> i32 {
+    if dirty.is_null() {
+        return -1;
+    }
+    call(handle, |owner| {
+        unsafe { *dirty = u32::from(owner.is_dirty()); }
+        Ok(())
+    })
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn mimic_blitz_detach(handle: *mut Handle, id: u64) -> i32 {
     call(handle, |owner| owner.detach(id).map_err(|_| ()))
 }
@@ -153,6 +164,14 @@ pub unsafe extern "C" fn mimic_blitz_has_computed_style(
 pub extern "C" fn mimic_blitz_viewport(handle: *mut Handle, width: u32, height: u32) -> i32 {
     call(handle, |owner| {
         owner.viewport(width, height);
+        Ok(())
+    })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn mimic_blitz_author_scrollbar_width(handle: *mut Handle, width: f32) -> i32 {
+    call(handle, |owner| {
+        owner.author_scrollbar_width(width);
         Ok(())
     })
 }

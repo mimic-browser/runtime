@@ -386,6 +386,59 @@ const compatibilitySelectors = (() => {
             staticStyleSelector(token.data)),
       ),
     );
+  // Descendant-dependent matches cannot use the ancestor-only styleContext.
+  // Retain these only while the mutation journal proves their inputs intact.
+  const journalStableRelationalSelector = (groups) =>
+    groups.every((group) =>
+      group.every(
+        (token) =>
+          ['tag', 'universal', 'attribute', 'descendant', 'child'].includes(token.type) ||
+          (token.type === 'pseudo' &&
+            (token.name === 'root' ||
+              (['has', 'is', 'where', 'not'].includes(token.name) &&
+                Array.isArray(token.data) &&
+                journalStableRelationalSelector(token.data)))),
+      ),
+    );
+  let retainedRelationalMatches = new WeakMap();
+  bootstrapRestoreHooks.push(() => {
+    retainedRelationalMatches = new WeakMap();
+  });
+  const matchJournalStableRelational = (node, rule, attributes) => {
+    const cache = styleReadCache;
+    if (!cache?.retainable) return rule.matches(node);
+    let byRule = retainedRelationalMatches.get(node);
+    const previous = byRule?.get(rule);
+    if (previous?.environment === cache.environmentVersion) {
+      if (previous.revision === cache.documentRevision) return previous.matches;
+      const journals = cache.mutationJournals || (cache.mutationJournals = new Map());
+      let journal = journals.get(previous.revision);
+      if (!journal) {
+        journal = JSON.parse(host.observationMutationJournal(previous.revision));
+        if (journals.size === 64) journals.delete(journals.keys().next().value);
+        journals.set(previous.revision, journal);
+      }
+      if (
+        !journal.overflow &&
+        journal.records.every(
+          (mutation) =>
+            mutation.kind === 'attribute' &&
+            !attributes.has(mutation.attribute.toLowerCase()),
+        )
+      ) {
+        previous.revision = cache.documentRevision;
+        return previous.matches;
+      }
+    }
+    const matches = rule.matches(node);
+    if (!byRule) retainedRelationalMatches.set(node, (byRule = new WeakMap()));
+    byRule.set(rule, {
+      revision: cache.documentRevision,
+      environment: cache.environmentVersion,
+      matches,
+    });
+    return matches;
+  };
   const styleContext = (node) => {
     const pending = [];
     let current = node,
@@ -553,6 +606,7 @@ const compatibilitySelectors = (() => {
         else if (key === '*' || key.startsWith('t:')) key = 'a:' + token.name.toLowerCase();
       } else if (key === '*' && token.type === 'tag' && token.namespace === null)
         key = 't:' + token.name.toLowerCase();
+      else if (key === '*' && token.type === 'pseudo' && token.name === 'root') key = 'p:root';
     }
     return key;
   }
@@ -618,7 +672,13 @@ const compatibilitySelectors = (() => {
         const previous = retained.pseudos.get(pseudo);
         if (previous) {
           const matched = previous.matches.slice();
-          for (const rule of previous.dynamic) if (rule.matches(node)) matched.push(rule);
+          for (const candidate of previous.dynamic)
+            if (
+              candidate.journalStableRelational
+                ? matchJournalStableRelational(node, candidate.rule, candidate.attributes)
+                : candidate.rule.matches(node)
+            )
+              matched.push(candidate.rule);
           return remember(matched.sort((a, b) => a.order - b.order));
         }
       }
@@ -634,13 +694,15 @@ const compatibilitySelectors = (() => {
           if (leaf.startsWith('a:')) index.hasAttributeKeys = true;
           let bucket = index.get(key);
           if (!bucket) index.set(key, (bucket = []));
-          let stable = false;
+          let stable = false,
+            journalStableRelational = false;
           try {
-            stable = staticStyleSelector(
-              library.parse(
-                rule.pseudo ? rule.selector.replace(/::?(before|after)$/, '') : rule.selector,
-              ),
+            const groups = library.parse(
+              rule.pseudo ? rule.selector.replace(/::?(before|after)$/, '') : rule.selector,
             );
+            stable = staticStyleSelector(groups);
+            journalStableRelational =
+              !stable && rule.selector.includes(':has(') && journalStableRelationalSelector(groups);
           } catch {}
           const dependencies = styleSelectorDependencies(rule);
           if (!dependencies) index.reusable = false;
@@ -648,7 +710,13 @@ const compatibilitySelectors = (() => {
             index.local &&= dependencies.local;
             for (const attribute of dependencies.attributes) index.attributes.add(attribute);
           }
-          bucket.push({ rule, stable, ancestors: ancestorRequirements(rule) });
+          bucket.push({
+            rule,
+            stable,
+            ancestors: ancestorRequirements(rule),
+            journalStableRelational,
+            attributes: dependencies?.attributes,
+          });
         }
         styleIndexes.set(rules, index);
       }
@@ -677,8 +745,13 @@ const compatibilitySelectors = (() => {
               );
           if (safe) {
             const matched = retainedAcrossRevision.matches.slice();
-            for (const rule of retainedAcrossRevision.dynamic)
-              if (rule.matches(node)) matched.push(rule);
+            for (const candidate of retainedAcrossRevision.dynamic)
+              if (
+                candidate.journalStableRelational
+                  ? matchJournalStableRelational(node, candidate.rule, candidate.attributes)
+                  : candidate.rule.matches(node)
+              )
+                matched.push(candidate.rule);
             return remember(matched.sort((a, b) => a.order - b.order));
           }
         }
@@ -686,6 +759,7 @@ const compatibilitySelectors = (() => {
       const keys = new Set(['*', 't:' + adapter.getName(node)]),
         id = attribute(node, 'id'),
         classes = attribute(node, 'class');
+      if (node === document.documentElement) keys.add('p:root');
       if (id !== undefined) keys.add('#' + id.toLowerCase());
       if (classes)
         for (const name of classes.split(/[\t\n\f\r ]+/))
@@ -700,20 +774,25 @@ const compatibilitySelectors = (() => {
         dynamic = [];
       let available;
       for (const key of keys)
-        for (const { rule, ancestors, stable } of index.get(pseudo + '|' + key) || []) {
+        for (const candidate of index.get(pseudo + '|' + key) || []) {
+          const { rule, ancestors, stable, journalStableRelational, attributes } = candidate;
           if (ancestors) {
             available = available || ancestorStyleBits(node);
             if (ancestors.some((required, i) => (available[i] & required) !== required)) continue;
           }
-          if (!stable) dynamic.push(rule);
-          if (rule.matches(node)) {
+          if (!stable) dynamic.push(candidate);
+          if (
+            journalStableRelational
+              ? matchJournalStableRelational(node, rule, attributes)
+              : rule.matches(node)
+          ) {
             matched.push(rule);
             if (stable) staticMatches.push(rule);
           }
         }
-      // Only attribute/ancestor selectors can reuse a result. Dynamic candidates
-      // are retained as a program, never as a truth value, and are always matched
-      // anew. Exact context and environment changes replace the entire record.
+      // Ordinary dynamic candidates are retained as programs, not truth values.
+      // Pure structural :has() candidates reuse a truth value only when the
+      // canonical mutation journal validates their descendant dependencies.
       if (retained) retained.pseudos.set(pseudo, { matches: staticMatches, dynamic });
       const sorted = matched.sort((a, b) => a.order - b.order);
       if (retainMatches && index.reusable && styleReadCache?.retainable) {

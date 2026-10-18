@@ -54,7 +54,7 @@ const validationCandidate = (e) => {
     e.localName === 'input'
       ? typeOf(e)
       : e.localName === 'button'
-        ? (e.getAttribute('type') || 'submit').toLowerCase()
+        ? buttonTypeOf(e)
         : '';
   return !['hidden', 'reset', 'button'].includes(type);
 };

@@ -17,6 +17,15 @@ pub unsafe extern "C" fn mimic_blitz_control_value(
             std::str::from_utf8(unsafe { std::slice::from_raw_parts(data, len) }).map_err(|_| ())?
         };
         let node = owner.node(id).map_err(|_| ())?;
+        if owner
+            .document
+            .get_node(node)
+            .and_then(|node| node.element_data())
+            .and_then(|element| element.text_input_data())
+            .is_some_and(|data| data.is_multiline == (multiline != 0) && data.editor.text() == value)
+        {
+            return Ok(());
+        }
         owner
             .document
             .set_canonical_control_value(node, value, multiline != 0);

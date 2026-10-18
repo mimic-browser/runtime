@@ -2,6 +2,7 @@ package browser
 
 import (
 	"context"
+	"fmt"
 	"testing"
 )
 
@@ -57,4 +58,40 @@ func TestBlitzRelationalSelectorsRetainUnsupportedPredicateFallback(t *testing.T
 			t.Fatal("unsupported native predicate did not retain the semantic fallback")
 		}
 	})
+}
+
+func TestBlitzRelationalNoopObservationDoesNotResolve(t *testing.T) {
+	parallelBrowserTest(t)
+	p := blitzStandardsPage(t)
+	navigateCapabilityFixture(t, p)
+	ctx := context.Background()
+	value, err := p.Evaluate(ctx, `(() => {
+	  document.head.innerHTML='<style>.host{width:10px}.host:has(> .flag){width:20px}</style>';
+	  document.body.innerHTML='<section class="host" data-probe=""><i></i><input type="checkbox"></section><aside></aside>';
+	  return getComputedStyle(document.querySelector('.host')).width;
+	})()`)
+	if err != nil || fmt.Sprint(value) != "10px" {
+		t.Fatalf("initial relational geometry: %v %v", value, err)
+	}
+	state := p.Top.Realm.blitz
+	if state == nil || state.document.Owner == nil || state.fallback != "" {
+		t.Fatal("native relational layout unavailable")
+	}
+	generation := state.generation
+	value, err = p.Evaluate(ctx, `(() => {
+	  const host=document.querySelector('.host');
+	  host.setAttribute('data-probe','');
+	  return getComputedStyle(host).width;
+	})()`)
+	if err != nil || fmt.Sprint(value) != "10px" || state.generation != generation {
+		t.Fatalf("no-op observation resolved native layout: value=%v err=%v generation=%d→%d", value, err, generation, state.generation)
+	}
+	value, err = p.Evaluate(ctx, `(() => {
+	  const host=document.querySelector('.host');
+	  host.firstElementChild.className='flag';
+	  return getComputedStyle(host).width;
+	})()`)
+	if err != nil || fmt.Sprint(value) != "20px" || state.generation <= generation {
+		t.Fatalf("real relational mutation did not resolve native layout: value=%v err=%v generation=%d→%d", value, err, generation, state.generation)
+	}
 }

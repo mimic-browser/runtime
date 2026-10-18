@@ -5,13 +5,61 @@
     REJECT = 2,
     SKIP = 3,
     slots = new WeakMap();
+  // Traversal algorithms read the canonical tree, never author-shadowed Node
+  // accessors. Reuse the existing revision-owned readbacks so repeated walks
+  // do not cross into the host for every edge. Filter callbacks can mutate the
+  // tree: the next read must observe the new canonical revision.
+  const firstChild = (node) => {
+    const fragment = fragmentSlots.get(node);
+    if (fragment) return fragment.children[0] || null;
+    const slot = elementSlot(node);
+    if (slot && (slot.type === 'text' || slot.type === 'comment')) return null;
+    const id = slot ? slot.nodeId : realmDocumentRootID;
+    const record = domReadRecord(node);
+    if (!record) return wrap(host.firstChild(id));
+    if (!Object.hasOwn(record, 'traversalFirstChild'))
+      record.traversalFirstChild = wrap(host.firstChild(id));
+    return record.traversalFirstChild;
+  };
+  const lastChild = (node) => {
+    const children = canonicalDOMChildren(node);
+    return children[children.length - 1] || null;
+  };
+  const siblingNode = (node, direction) => {
+    const slot = elementSlot(node);
+    if (slot && !syntheticParents.has(node)) {
+      const record = domReadRecord(node);
+      const key = direction === 1 ? 'traversalNextSibling' : 'traversalPreviousSibling';
+      if (!record) return wrap(host.sibling(slot.nodeId, direction));
+      if (!Object.hasOwn(record, key)) record[key] = wrap(host.sibling(slot.nodeId, direction));
+      return record[key];
+    }
+    const parent = canonicalDOMParent(node);
+    if (!parent) return null;
+    const children = canonicalDOMChildren(parent);
+    return children[children.indexOf(node) + direction] || null;
+  };
+  const nodeType = (node) => {
+    const slot = elementSlot(node);
+    if (slot)
+      return slot.type === 'element'
+        ? 1
+        : slot.type === 'text'
+          ? 3
+          : slot.type === 'comment'
+            ? 8
+            : slot.type === 'fragment'
+              ? 11
+              : 0;
+    return fragmentSlots.has(node) ? 11 : 9;
+  };
   const state = (receiver, kind) => {
     const value = slots.get(receiver);
     if (!value || value.kind !== kind) throw new TypeError('Illegal invocation');
     return value;
   };
   const accept = (s, node) => {
-    if (!(s.whatToShow & (1 << (node.nodeType - 1)))) return SKIP;
+    if (!(s.whatToShow & (1 << (nodeType(node) - 1)))) return SKIP;
     if (!s.filter) return ACCEPT;
     if (s.active) throw platformDOMException('The filter is already active.', 'InvalidStateError');
     s.active = true;
@@ -24,28 +72,32 @@
     }
   };
   const next = (root, node) => {
-    if (node.firstChild) return node.firstChild;
+    const child = firstChild(node);
+    if (child) return child;
     while (node && node !== root) {
-      if (node.nextSibling) return node.nextSibling;
-      node = node.parentNode;
+      const sibling = siblingNode(node, 1);
+      if (sibling) return sibling;
+      node = canonicalDOMParent(node);
     }
     return null;
   };
   const after = (root, node) => {
     while (node && node !== root) {
-      if (node.nextSibling) return node.nextSibling;
-      node = node.parentNode;
+      const sibling = siblingNode(node, 1);
+      if (sibling) return sibling;
+      node = canonicalDOMParent(node);
     }
     return null;
   };
   const previous = (root, node) => {
     if (node === root) return null;
-    if (node.previousSibling) {
-      node = node.previousSibling;
-      while (node.lastChild) node = node.lastChild;
+    const sibling = siblingNode(node, -1);
+    if (sibling) {
+      node = sibling;
+      for (let child; (child = lastChild(node)); ) node = child;
       return node;
     }
-    return node.parentNode;
+    return canonicalDOMParent(node);
   };
   const validate = (root, filter) => {
     if (!isDOMNode(root))
@@ -58,21 +110,21 @@
     const proto = globalThis.TreeWalker.prototype,
       walkerState = (receiver) => state(receiver, 'walker');
     const child = (s, reverse) => {
-      let node = reverse ? s.current.lastChild : s.current.firstChild;
+      let node = reverse ? lastChild(s.current) : firstChild(s.current);
       while (node) {
         const result = accept(s, node);
         if (result === ACCEPT) return (s.current = node);
-        if (result === SKIP && (reverse ? node.lastChild : node.firstChild)) {
-          node = reverse ? node.lastChild : node.firstChild;
+        if (result === SKIP && (reverse ? lastChild(node) : firstChild(node))) {
+          node = reverse ? lastChild(node) : firstChild(node);
           continue;
         }
         while (node) {
-          const sibling = reverse ? node.previousSibling : node.nextSibling;
+          const sibling = reverse ? siblingNode(node, -1) : siblingNode(node, 1);
           if (sibling) {
             node = sibling;
             break;
           }
-          node = node.parentNode;
+          node = canonicalDOMParent(node);
           if (!node || node === s.current) return null;
         }
       }
@@ -82,15 +134,15 @@
       if (s.current === s.root) return null;
       let node = s.current;
       while (node && node !== s.root) {
-        let candidate = reverse ? node.previousSibling : node.nextSibling;
+        let candidate = reverse ? siblingNode(node, -1) : siblingNode(node, 1);
         while (candidate) {
           const result = accept(s, candidate);
           if (result === ACCEPT) return (s.current = candidate);
-          if (result === SKIP && (reverse ? candidate.lastChild : candidate.firstChild))
-            candidate = reverse ? candidate.lastChild : candidate.firstChild;
-          else candidate = reverse ? candidate.previousSibling : candidate.nextSibling;
+          if (result === SKIP && (reverse ? lastChild(candidate) : firstChild(candidate)))
+            candidate = reverse ? lastChild(candidate) : firstChild(candidate);
+          else candidate = reverse ? siblingNode(candidate, -1) : siblingNode(candidate, 1);
         }
-        node = node.parentNode;
+        node = canonicalDOMParent(node);
         if (node && node !== s.root && accept(s, node) === ACCEPT) return null;
       }
       return null;
@@ -131,7 +183,7 @@
       parentNode: {
         value: function () {
           const s = walkerState(this);
-          for (let node = s.current.parentNode; node; node = node.parentNode) {
+          for (let node = canonicalDOMParent(s.current); node; node = canonicalDOMParent(node)) {
             if (node === s.root || accept(s, node) === ACCEPT) return (s.current = node);
           }
           return null;
@@ -170,20 +222,13 @@
       nextNode: {
         value: function () {
           const s = walkerState(this);
-          let node = s.current;
-          for (;;) {
-            node = next(s.root, node);
-            if (!node) return null;
+          let node = next(s.root, s.current);
+          while (node) {
             const result = accept(s, node);
             if (result === ACCEPT) return (s.current = node);
-            if (result === REJECT) node = after(s.root, node);
-            while (node) {
-              const result = accept(s, node);
-              if (result === ACCEPT) return (s.current = node);
-              node = result === REJECT ? after(s.root, node) : next(s.root, node);
-            }
-            return null;
+            node = result === REJECT ? after(s.root, node) : next(s.root, node);
           }
+          return null;
         },
         configurable: true,
         writable: true,
@@ -197,11 +242,11 @@
             if (result === ACCEPT) return (s.current = node);
             if (result === REJECT)
               while (
-                node.parentNode &&
-                node.parentNode !== s.root &&
-                accept(s, node.parentNode) === REJECT
+                canonicalDOMParent(node) &&
+                canonicalDOMParent(node) !== s.root &&
+                accept(s, canonicalDOMParent(node)) === REJECT
               )
-                node = node.parentNode;
+                node = canonicalDOMParent(node);
           }
           return null;
         },

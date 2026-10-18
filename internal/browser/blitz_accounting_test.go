@@ -48,6 +48,28 @@ func TestBlitzNativeGenerationTracksCleanAndMutatedObservations(t *testing.T) {
 	}
 }
 
+func TestBlitzDetachedConstructionDoesNotInvalidateLayout(t *testing.T) {
+	serialBrowserTest(t)
+	t.Setenv("MIMIC_STYLE_ENGINE", "blitz")
+	p := blitzStandardsPage(t)
+	ctx := context.Background()
+	if _, err := p.Evaluate(ctx, `document.body.innerHTML='<div id="box" style="width:40px"></div>';document.querySelector('#box').getBoundingClientRect().width`); err != nil {
+		t.Fatal(err)
+	}
+	state := p.Top.Realm.blitz
+	if state == nil || state.document.Owner == nil {
+		t.Fatal("native layout unavailable")
+	}
+	generation, updates := state.generation, state.document.Updates
+	value, err := p.Evaluate(ctx, `(()=>{const detached=document.createElement('div');for(let i=0;i<50;i++)detached.setAttribute('data-'+i,String(i));return document.querySelector('#box').getBoundingClientRect().width})()`)
+	if err != nil || fmt.Sprint(value) != "40" {
+		t.Fatalf("layout after detached construction: %v %v", value, err)
+	}
+	if state.generation != generation || state.document.Updates != updates {
+		t.Fatalf("detached construction invalidated native layout: generation %d→%d, updates %d→%d", generation, state.generation, updates, state.document.Updates)
+	}
+}
+
 func TestComputedUnknownPropertiesDoNotObserveLayout(t *testing.T) {
 	parallelBrowserTest(t)
 	p := blitzStandardsPage(t)

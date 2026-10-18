@@ -309,6 +309,25 @@
     const value = (controlAttribute(e, 'type') || 'text').toLowerCase();
     return types.has(value) ? value : 'text';
   };
+  const buttonTypes = new Set(['submit', 'reset', 'button']);
+  const buttonTypeOf = (button) => {
+    const value = (controlAttribute(button, 'type') || '').toLowerCase();
+    if (buttonTypes.has(value)) return value;
+    const parent = wrap(host.parentNode(elementSlot(button).nodeId));
+    return !controlHasAttribute(button, 'command') &&
+      !controlHasAttribute(button, 'commandfor') &&
+      elementSlot(parent)?.tagName !== 'SELECT'
+      ? 'submit'
+      : 'button';
+  };
+  define('HTMLButtonElement', 'type', {
+    get() {
+      return buttonTypeOf(this);
+    },
+    set(value) {
+      this.setAttribute('type', String(value));
+    },
+  });
   const labelable = (e) =>
     !!e &&
     (['button', 'meter', 'output', 'progress', 'select', 'textarea'].includes(e.localName) ||
@@ -665,6 +684,10 @@
     }
     return { list, selected };
   }
+  // Native layout admission examines every option in one immutable observation.
+  // Resolve a select's effective selection once for that batch: asking each
+  // option for its selected getter would recompute the entire option list.
+  compatibilityElementState.nativeSelectedOptions = (select) => selection(select).selected;
   function assignSelection(select, chosen) {
     const { list } = selection(select);
     for (const option of list) {
@@ -967,9 +990,7 @@
     formCandidates(form, 'button,input,select,textarea').filter((e) => formOwner(e) === form);
   const isSubmitButton = (control) =>
     control?.localName === 'button'
-      ? !['reset', 'button'].includes(
-          String(controlAttribute(control, 'type') || 'submit').toLowerCase(),
-        )
+      ? buttonTypeOf(control) === 'submit'
       : control?.localName === 'input' && ['submit', 'image'].includes(typeOf(control));
   const disabledForForm = (control) => {
     if (controlHasAttribute(control, 'disabled')) return true;
@@ -1286,7 +1307,7 @@
     if (!control?.isConnected || control.disabled) return;
     const type =
       control.localName === 'button'
-        ? String(controlAttribute(control, 'type') || 'submit').toLowerCase()
+        ? buttonTypeOf(control)
         : typeOf(control);
     if (type === 'reset') {
       formOwner(control)?.reset();

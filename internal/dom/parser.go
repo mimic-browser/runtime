@@ -102,7 +102,21 @@ func parseXMLDocument(source string) *Document {
 			for k, v := range spaces[len(spaces)-1] {
 				ns[k] = v
 			}
+			// XML namespace declarations precede ordinary attributes in the DOM
+			// attribute collection, even when they follow them in source text.
+			// Keep the source order within each group.
+			orderedAttrs := make([]xml.Attr, 0, len(t.Attr))
 			for _, a := range t.Attr {
+				if a.Name.Space == "xmlns" || a.Name.Space == "" && a.Name.Local == "xmlns" {
+					orderedAttrs = append(orderedAttrs, a)
+				}
+			}
+			for _, a := range t.Attr {
+				if a.Name.Space != "xmlns" && !(a.Name.Space == "" && a.Name.Local == "xmlns") {
+					orderedAttrs = append(orderedAttrs, a)
+				}
+			}
+			for _, a := range orderedAttrs {
 				if a.Name.Space == "xmlns" {
 					ns[a.Name.Local] = a.Value
 				} else if a.Name.Space == "" && a.Name.Local == "xmlns" {
@@ -118,7 +132,7 @@ func parseXMLDocument(source string) *Document {
 				name = t.Name.Space + ":" + name
 			}
 			n := &Node{Type: "element", TagName: name, QualifiedName: name, Namespace: ns[t.Name.Space]}
-			for _, a := range t.Attr {
+			for _, a := range orderedAttrs {
 				key := a.Name.Local
 				uri := ""
 				if a.Name.Space != "" {

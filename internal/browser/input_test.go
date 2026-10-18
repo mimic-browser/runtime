@@ -168,6 +168,38 @@ func TestProtocolMouseMoveCoalescedSampleMatchesChrome(t *testing.T) {
 	})
 }
 
+func TestProtocolPointerBoundaryEventsFollowElementAncestry(t *testing.T) {
+	parallelBrowserTest(t)
+	historyTestPages(t, func(t *testing.T, page *Page) {
+		navigateCapabilityFixture(t, page)
+		ctx := context.Background()
+		setup := `document.body.innerHTML='<div id="parent" style="position:absolute;left:10px;top:10px;width:200px;height:100px"><div id="left" style="position:absolute;left:0;top:0;width:80px;height:80px"></div><div id="right" style="position:absolute;left:100px;top:0;width:80px;height:80px"></div></div>';
+		globalThis.boundaryEvents=[];
+		for(const id of ['parent','left','right']){
+		  const element=document.getElementById(id);
+		  for(const type of ['pointerenter','mouseenter','pointerleave','mouseleave'])
+		    element.addEventListener(type,event=>boundaryEvents.push([type,id,event.relatedTarget?.id||null,event.bubbles,event.isTrusted]));
+		}
+		JSON.stringify([document.elementFromPoint(30,30)?.id,document.elementFromPoint(130,30)?.id])`
+		value, err := page.Evaluate(ctx, setup)
+		if err != nil || value != `["left","right"]` {
+			t.Fatalf("pointer fixture hit targets: %v %v", value, err)
+		}
+		for _, point := range [][2]int{{30, 30}, {130, 30}} {
+			if err := page.DispatchProtocolInput(ctx, "Input.dispatchMouseEvent", map[string]any{
+				"type": "mouseMoved", "x": point[0], "y": point[1],
+			}); err != nil {
+				t.Fatal(err)
+			}
+		}
+		value, err = page.Evaluate(ctx, `JSON.stringify(boundaryEvents)`)
+		want := `[["pointerenter","parent",null,false,true],["mouseenter","parent",null,false,true],["pointerenter","left",null,false,true],["mouseenter","left",null,false,true],["pointerleave","left","right",false,true],["mouseleave","left","right",false,true],["pointerenter","right","left",false,true],["mouseenter","right","left",false,true]]`
+		if err != nil || value != want {
+			t.Fatalf("pointer boundary transitions: %v %v", value, err)
+		}
+	})
+}
+
 func TestMouseEventCoordinatesMatchChromeIntegerBoundary(t *testing.T) {
 	parallelBrowserTest(t)
 	historyTestPages(t, func(t *testing.T, page *Page) {

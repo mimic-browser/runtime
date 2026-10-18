@@ -282,7 +282,11 @@
           return bigint(apply(stringSlice, value, [0, -1]));
         throw new ErrorClass('Unserializable value: ' + value);
       }
-      return a.value;
+      // Protocol metadata stays prototype-free, but an explicitly supplied JSON
+      // value enters author code as ordinary objects/arrays of this realm.
+      // The sanitized tree has no accessors or inherited toJSON hook; parsing
+      // its captured-intrinsic serialization invokes no author code.
+      return a.value === undefined ? undefined : parse(stringify(a.value));
     };
     return function (operation, encoded, value) {
       const p = parse(encoded, (_, value) =>

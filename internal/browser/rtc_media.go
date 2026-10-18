@@ -22,6 +22,7 @@ import (
 	"github.com/pion/interceptor"
 	"github.com/pion/rtcp"
 	"github.com/pion/rtp/codecs"
+	"github.com/pion/sdp/v3"
 	"github.com/pion/webrtc/v4"
 	"github.com/pion/webrtc/v4/pkg/media"
 	"github.com/pion/webrtc/v4/pkg/media/samplebuilder"
@@ -157,7 +158,17 @@ func (r *Realm) newRTCMedia(config webrtc.Configuration) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	settings.SetSDPGenerator(rtcChromeSDP)
+	catalog := r.agent.Page().environmentView().Capabilities.Media.RTP
+	var negotiatedPeer *webrtc.PeerConnection
+	settings.SetSDPGenerator(func(description *sdp.SessionDescription) error {
+		if err := rtcChromeSDP(description); err != nil {
+			return err
+		}
+		if negotiatedPeer != nil && negotiatedPeer.SignalingState() != webrtc.SignalingStateHaveRemoteOffer {
+			rtcChromeOfferCodecs(description, catalog)
+		}
+		return nil
+	})
 	settings.SetReserveUnappliedMIDs(true)
 	settings.SetSkipGatheringWithoutMedia(true)
 	settings.SetDataDescriptionOperations(true)
@@ -169,12 +180,7 @@ func (r *Realm) newRTCMedia(config webrtc.Configuration) (string, error) {
 		}
 	}()
 	m := &webrtc.MediaEngine{}
-	// Advertise only a codec we can actually encode. Packetization mode 1 is
-	// interoperable with Chrome's constrained baseline H264 negotiation.
-	if err := m.RegisterCodec(webrtc.RTPCodecParameters{RTPCodecCapability: webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeH264, ClockRate: 90000, SDPFmtpLine: "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f", RTCPFeedback: []webrtc.RTCPFeedback{{Type: "goog-remb"}, {Type: "transport-cc"}, {Type: "ccm", Parameter: "fir"}, {Type: "nack"}, {Type: "nack", Parameter: "pli"}}}, PayloadType: 108}, webrtc.RTPCodecTypeVideo); err != nil {
-		return "", err
-	}
-	if err := m.RegisterCodec(webrtc.RTPCodecParameters{RTPCodecCapability: webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeOpus, ClockRate: 48000, Channels: 2, SDPFmtpLine: "minptime=10;useinbandfec=1"}, PayloadType: 111}, webrtc.RTPCodecTypeAudio); err != nil {
+	if err := registerRTPCatalog(m, catalog); err != nil {
 		return "", err
 	}
 	registry := &interceptor.Registry{}
@@ -188,6 +194,7 @@ func (r *Realm) newRTCMedia(config webrtc.Configuration) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	negotiatedPeer = pc
 	id := uuid.NewString()
 	peer := &rtcMediaPeer{id: id, pc: pc, senders: map[string]*rtcMediaSender{}, transceivers: map[*webrtc.RTPTransceiver]*rtcMediaTransceiver{}, stats: stats, channels: map[string]*rtcMediaDataChannel{}, connected: make(chan struct{})}
 	peer.proxy, peer.hideHost = proxy, hideHost

@@ -3,6 +3,39 @@
 Mimic's performance claims describe specific measured workloads. They do not
 establish a universal speedup over Chrome or complete website compatibility.
 
+## Sparse CSS background resource discovery
+
+When native style admission fails, background resource discovery first matches
+only rules whose parsed declarations can set `background-image` (including
+shorthand expansion and `all`). Candidate elements still use the canonical
+computed style and visibility paths. Candidate decisions belong to the exact
+observation epoch; animated and shadow documents retain the full scalar walk.
+This avoids computing unrelated declarations across an entire document without
+introducing another cascade or relaxing native admission.
+
+`TestCSSBackgroundSparseCandidates` reproduces the fallback with reduced motion,
+1,800 unrelated elements and 180 matching non-image rules. Three runs per engine
+measured the first resource callback and two repeated reads, excluding navigation
+and loading. Median callback times on the measured Windows host were:
+
+| Engine | First read, previous/current | Repeated read, previous/current |
+| --- | ---: | ---: |
+| V8 | 102.59 / 59.62 ms | 1.032 / 0.514 ms |
+| Goja | 3981.00 / 251.15 ms | 39.50 / 9.55 ms |
+
+A separate instrumented control counted 1,810 full declaration computations
+before the change and eight afterward, with identical discovered URLs. Focused
+tests compare discovery with scalar computed styles across frame, media,
+device-scale, shadow and animation conditions and subsequent CSSOM/DOM changes.
+The E2E binaries were identified by SHA-256
+`3090d47dd5bd70ae676c6690e0442152e1ff7426fb2107be28609f985213f287`
+(control) and
+`6a01b0cdc368b839199fa53565db06836386b35becb43d40aa60a8709522c268`
+(candidate). Both failed the unchanged Wikipedia E2E gate while opening the
+main page with `locator.waitFor: TypeError: value.o is not iterable`, so no
+complete E2E improvement is established. These callback measurements do not
+establish throughput or memory gains.
+
 ## Base64 decoding and client dimension reads
 
 Large `atob` inputs use V8's private captured `Uint8Array.fromBase64` intrinsic
@@ -552,6 +585,33 @@ retention bound. Focused predicate, frozen readback, cache-limit and teardown
 tests passed, as did four unchanged Wikipedia E2E runs. The control binary
 SHA-256 is `d2bc91e42dab3ed91ca4a2d7c3fc4f87d5d764f832a2dc05d7c6f6410cc9650d`; the candidate is `c308a9e48bcd1e9921c22b5db696dfad03f1febb0474081bff783786d11be214`.
 Large JavaScript rasterization turns remain a material latency cost.
+
+## Canonical traversal reads
+
+TreeWalker and NodeIterator use canonical tree links and node types instead of
+author-replaceable Node accessors. Forward edge reads reuse the existing bounded,
+revision-owned DOM records; traversal stays lazy and filter mutations invalidate
+the next read. Focused regressions cover both engines, live template fragments,
+author-shadowed accessors and restored realms. CSS image discovery also admits
+escaped `url()` spellings in its conservative source preflight.
+
+Two alternating offline control/candidate pairs traversed the same retained
+960-element document and read each computed background image. The per-process
+warm medians were 15.0/6.5 ms and 15.4/6.4 ms. An observer yielding to a Promise
+every 128 elements measured 15.6/6.4 ms and 14.6/6.8 ms. Both builds returned the
+same element/image counts and fulfilled 62 requests from the same retained
+responses while blocking four unmatched requests. These are observer operation
+measurements with explicit light/reduce preferences and a 2493 by 1062 viewport,
+not full-page latency or throughput gains. Existing unrelated working-tree
+changes were present in both builds. Control SHA-256:
+`5628ed4502d4b2a36952680e2a7d808aa30fec3dfd690fe668402faed1dfc8cb`;
+candidate: `d2842bb01a3b28b72022881907b0f086e87abac1996c77b24bc558ad3a7ad656`.
+
+The unchanged Wikipedia E2E fails in both conditions with `value.o is not
+iterable`, so complete cold/warm acceptance is unavailable. The intercepted
+headful Chrome 152 control retains a gradient/background-value difference;
+this checkpoint does not establish Chrome parity. No new base64 optimization,
+memory reduction or native reduced-motion support is claimed.
 
 ## Remaining limits
 

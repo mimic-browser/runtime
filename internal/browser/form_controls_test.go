@@ -41,6 +41,34 @@ func TestFormControlAttributeReadsIgnoreAuthorMethods(t *testing.T) {
 	})
 }
 
+func TestButtonTypeReflectsEffectiveSubmitState(t *testing.T) {
+	parallelBrowserTest(t)
+	historyTestPages(t, func(t *testing.T, page *Page) {
+		value, err := page.Evaluate(context.Background(), `(() => {
+  const button = document.createElement('button');
+  document.body.append(button);
+  if (button.hasAttribute('type') || button.type !== 'submit') return false;
+  button.setAttribute('type', 'nonsense');
+  if (button.type !== 'submit') return false;
+  button.type = 'ReSeT';
+  if (button.getAttribute('type') !== 'ReSeT' || button.type !== 'reset') return false;
+  button.type = 'button';
+  if (button.type !== 'button') return false;
+  button.removeAttribute('type');
+  button.setAttribute('command', 'show-modal');
+  if (button.type !== 'button' || button.willValidate) return false;
+  button.removeAttribute('command');
+  button.setAttribute('commandfor', 'dialog');
+  if (button.type !== 'button') return false;
+  button.removeAttribute('commandfor');
+  return button.type === 'submit' && !button.hasAttribute('type');
+})()`)
+		if err != nil || value != true {
+			t.Fatalf("button type reflection: %v %v", value, err)
+		}
+	})
+}
+
 func TestFormControlDirtyValuesAndReset(t *testing.T) {
 	parallelBrowserTest(t)
 	b, err := New(v8engine.Factory{}, chrome152.New())

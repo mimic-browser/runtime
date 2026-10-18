@@ -765,7 +765,7 @@ func (p *Page) commitNavigationResponse(ctx, taskContext context.Context, u *url
 			}
 			if kind == "module" {
 				doc.MarkScriptStarted(s.ID)
-				streamState.deferred = append(streamState.deferred, deferredParserScript{module: true, name: su.String(), pending: realm.fetchModule(request), nodeID: s.ID})
+				streamState.deferred = append(streamState.deferred, deferredParserScript{module: true, name: su.String(), pending: realm.fetchModule(request), nodeID: s.ID, integrity: s.Attributes["integrity"]})
 				return nil
 			}
 			loaded := streamState.scripts[s.ID]
@@ -781,7 +781,7 @@ func (p *Page) commitNavigationResponse(ctx, taskContext context.Context, u *url
 			rr := loaded.response
 			err = loaded.err
 			if err == nil {
-				err = scriptResponseError(rr)
+				err = scriptResponseError(rr, s.Attributes["integrity"])
 			}
 			if err != nil {
 				p.trace.Add(trace.Error, "scriptLoad", map[string]any{"url": su.String(), "error": err.Error()})

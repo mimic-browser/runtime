@@ -61,12 +61,13 @@ func (r *Realm) executeChildNavigationScript(ctx context.Context, navigation *ch
 			stream.scripts[node.ID] = loaded
 			eventLoop := r.browserEventLoop()
 			request := realm.elementRequest(target, node.Attributes, network.Script)
+			integrity := node.Attributes["integrity"]
 			realm.resourceWG.Add(1)
 			go func() {
 				defer realm.resourceWG.Done()
 				response, loadErr := realm.loadResource(stream.ctx, request)
 				if loadErr == nil {
-					loadErr = scriptResponseError(response)
+					loadErr = scriptResponseError(response, integrity)
 				}
 				if stream.ctx.Err() != nil {
 					return

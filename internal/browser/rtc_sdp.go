@@ -2,10 +2,76 @@ package browser
 
 import (
 	"sort"
+	"strconv"
 	"strings"
 
+	"github.com/moreveal/mimic/internal/state"
 	"github.com/pion/sdp/v3"
 )
+
+// rtcChromeOfferCodecs projects the negotiated direction onto the profile's
+// codec catalog. A recvonly offer can include decoding formats that do not
+// appear in a sendrecv offer. Answers retain Pion's remote intersection.
+func rtcChromeOfferCodecs(description *sdp.SessionDescription, catalog state.RTPCatalog) {
+	for _, media := range description.MediaDescriptions {
+		kind := media.MediaName.Media
+		if kind != "audio" && kind != "video" {
+			continue
+		}
+		direction := "sendrecv"
+		for _, attribute := range media.Attributes {
+			switch attribute.Key {
+			case "recvonly", "sendonly", "sendrecv", "inactive":
+				direction = attribute.Key
+			}
+		}
+		policy := catalog.Media(kind, direction)
+		if len(policy.Payloads) == 0 {
+			continue
+		}
+		media.MediaName.Formats = media.MediaName.Formats[:0]
+		for _, payload := range policy.Payloads {
+			media.MediaName.Formats = append(media.MediaName.Formats, strconv.Itoa(payload))
+		}
+		attributes := make([]sdp.Attribute, 0, len(media.Attributes)+len(policy.Extensions)+len(policy.Attributes))
+		for _, attribute := range media.Attributes {
+			codecAttribute := false
+			for _, key := range []string{"extmap", "rtpmap", "fmtp", "rtcp-fb", "rtcp-xr"} {
+				if attribute.Key == key || strings.HasPrefix(attribute.Key, key+":") {
+					codecAttribute = true
+					break
+				}
+			}
+			if codecAttribute {
+				continue
+			}
+			attributes = append(attributes, attribute)
+		}
+		sort.SliceStable(attributes, func(i, j int) bool {
+			return rtcSDPAttributeRank(attributes[i].Key, false) < rtcSDPAttributeRank(attributes[j].Key, false)
+		})
+		insertPolicy := func(lines []string, beforeRank int) {
+			at := len(attributes)
+			for index, attribute := range attributes {
+				if rtcSDPAttributeRank(attribute.Key, false) >= beforeRank {
+					at = index
+					break
+				}
+			}
+			projected := make([]sdp.Attribute, 0, len(lines))
+			for _, line := range lines {
+				key, value, found := strings.Cut(strings.TrimPrefix(line, "a="), ":")
+				if found {
+					projected = append(projected, sdp.Attribute{Key: key, Value: value})
+				}
+			}
+			attributes = append(attributes[:at], append(projected, attributes[at:]...)...)
+		}
+		insertPolicy(policy.Extensions, rtcSDPAttributeRank("extmap", false))
+		insertPolicy(policy.Attributes, rtcSDPAttributeRank("rtcp-xr", false))
+		media.Attributes = attributes
+	}
+}
 
 // rtcChromeSDP is part of native SDP generation, before Pion records the offer
 // it will accept. It changes serialization conventions, never transport values

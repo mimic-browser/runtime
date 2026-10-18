@@ -811,12 +811,18 @@ const materializePrograms = (s) => {
               } else {
                 const { av, bv, cv } = component.varying;
                 const index = component.index;
-                colorScratch[channel] = Math.fround(
+                const interpolated = Math.fround(
                   (weights[0] * (index < 0 ? av : av[index]) * a[3] +
                     weights[1] * (index < 0 ? bv : bv[index]) * b[3] +
                     weights[2] * (index < 0 ? cv : cv[index]) * c[3]) /
                     reciprocalW,
                 );
+                // The frozen Chrome 152 D3D11 RGBA8 oracle matches a 12-bit
+                // fractional projection of direct varyings before output
+                // conversion. Floating attachments retain their own precision.
+                colorScratch[channel] = command.colorAttachment?.floatPixels
+                  ? interpolated
+                  : Math.floor(interpolated * 4096) / 4096;
               }
             }
             color = colorScratch;

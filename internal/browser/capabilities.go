@@ -13,14 +13,15 @@ import (
 // Origin capability state is owned by the context, shared by its same-origin
 // pages, and discarded with it. JS wrappers never own a second permission store.
 type originCapabilities struct {
-	permissionFallback string
-	permissions        map[string]string
-	clipboard          string
-	preventSilent      bool
-	login              string
-	buckets            map[string]*storageBucket
-	locks              []*capabilityLock
-	sequence           int64
+	permissionFallback  string
+	permissions         map[string]string
+	permissionOverrides map[string]bool
+	clipboard           string
+	preventSilent       bool
+	login               string
+	buckets             map[string]*storageBucket
+	locks               []*capabilityLock
+	sequence            int64
 }
 
 type storageBucket struct {
@@ -44,7 +45,7 @@ func (c *Context) originCapabilities(origin string) *originCapabilities {
 	}
 	s := c.capabilities[origin]
 	if s == nil {
-		s = &originCapabilities{permissions: map[string]string{}, permissionFallback: c.permissionDefaultFallback}
+		s = &originCapabilities{permissions: map[string]string{}, permissionOverrides: map[string]bool{}, permissionFallback: c.permissionDefaultFallback}
 		for name, value := range c.env.Permissions {
 			if value == "default" {
 				value = "prompt"
@@ -53,6 +54,7 @@ func (c *Context) originCapabilities(origin string) *originCapabilities {
 		}
 		for name, value := range c.permissionDefaults {
 			s.permissions[name] = value
+			s.permissionOverrides[name] = true
 		}
 		c.capabilities[origin] = s
 	}
@@ -94,6 +96,7 @@ func (c *Context) ResetPermissions() {
 			}
 			c.setPermissionLocked(origin, name, value)
 		}
+		clear(state.permissionOverrides)
 	}
 }
 
@@ -136,6 +139,7 @@ func (c *Context) GrantPermissions(origin string, permissions []string) {
 
 func (c *Context) setPermissionLocked(origin, name, value string) {
 	s := c.originCapabilities(origin)
+	s.permissionOverrides[name] = true
 	if s.permissions[name] == value {
 		return
 	}
@@ -388,6 +392,8 @@ func addCapabilityHosts(r *Realm, h map[string]any) {
 				value = "prompt"
 			}
 			return r.val(value), nil
+		case "permissionExplicit":
+			return r.val(s.permissionOverrides[strarg(a, 1)]), nil
 		case "permissionSet":
 			p.ctx.setPermissionLocked(r.origin, strarg(a, 1), strarg(a, 2))
 		case "clipboard":

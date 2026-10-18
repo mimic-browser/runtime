@@ -18,6 +18,7 @@ int32_t mimic_blitz_attribute(MimicBlitzHandle*, uint64_t, const char*, size_t, 
 int32_t mimic_blitz_append(MimicBlitzHandle*, uint64_t, uint64_t);
 int32_t mimic_blitz_state(MimicBlitzHandle*, uint64_t, uint32_t, uint32_t);
 int32_t mimic_blitz_restyle_subtree(MimicBlitzHandle*);
+int32_t mimic_blitz_is_dirty(MimicBlitzHandle*, uint32_t*);
 int32_t mimic_blitz_color_scheme(MimicBlitzHandle*, uint32_t);
 int32_t mimic_blitz_text(MimicBlitzHandle*, uint64_t, const char*, size_t, uint32_t);
 int32_t mimic_blitz_resolve(MimicBlitzHandle*, double, uint64_t*);
@@ -25,6 +26,7 @@ int32_t mimic_blitz_rect(MimicBlitzHandle*, uint64_t, MimicBlitzRect*);
 int32_t mimic_blitz_detach(MimicBlitzHandle*, uint64_t);
 int32_t mimic_blitz_has_computed_style(MimicBlitzHandle*, uint64_t, uint32_t*);
 int32_t mimic_blitz_viewport(MimicBlitzHandle*, uint32_t, uint32_t);
+int32_t mimic_blitz_author_scrollbar_width(MimicBlitzHandle*, float);
 int32_t mimic_blitz_base_url(MimicBlitzHandle*, const char*, size_t);
 int32_t mimic_blitz_clear_attribute(MimicBlitzHandle*, uint64_t, const char*, size_t, const char*, size_t);
 int32_t mimic_blitz_stylesheet(MimicBlitzHandle*, uint64_t, const char*, size_t);
@@ -109,6 +111,12 @@ func (o *Owner) RestyleSubtree() error {
 	return check(C.mimic_blitz_restyle_subtree(o.handle))
 }
 
+func (o *Owner) IsDirty() (bool, error) {
+	var dirty C.uint32_t
+	err := check(C.mimic_blitz_is_dirty(o.handle, &dirty))
+	return dirty != 0, err
+}
+
 func (o *Owner) ColorScheme(dark bool) error {
 	var flag C.uint32_t
 	if dark {
@@ -149,6 +157,9 @@ func (o *Owner) BaseURL(value string) error {
 func (o *Owner) Detach(id uint64) error { return check(C.mimic_blitz_detach(o.handle, C.uint64_t(id))) }
 func (o *Owner) Viewport(width, height uint32) error {
 	return check(C.mimic_blitz_viewport(o.handle, C.uint32_t(width), C.uint32_t(height)))
+}
+func (o *Owner) AuthorScrollbarWidth(width float64) error {
+	return check(C.mimic_blitz_author_scrollbar_width(o.handle, C.float(width)))
 }
 func (o *Owner) ClearAttribute(id uint64, namespace, name string) error {
 	status := C.mimic_blitz_clear_attribute(o.handle, C.uint64_t(id), chars(namespace), C.size_t(len(namespace)), chars(name), C.size_t(len(name)))

@@ -228,7 +228,7 @@ func (owner *Realm) observeBlitz(id int64, kind, property string) (any, error) {
 func (r *Realm) blitzKey() string {
 	environment := r.agent.Page().environmentView()
 	w := environment.Window
-	return fmt.Sprintf("%s:%d:%d:%d:%d:%d:%d:%d:%d:%s:%t:%g:%s", r.ID, r.document.Revision(), r.document.ObservationRevision(), r.styleDocumentRevision(), r.styleResourceRevision.Load(), r.resourceRevision.Load(), w.ViewportWidth, w.ViewportHeight, r.selectorTargetID, environment.Preferences.ColorScheme, environment.Preferences.ReducedMotion, environment.Display.DeviceScaleFactor, r.documentBaseURL())
+	return fmt.Sprintf("%s:%d:%d:%d:%d:%d:%d:%d:%s:%t:%g:%s", r.ID, r.document.ObservationRevision(), r.styleDocumentRevision(), r.styleResourceRevision.Load(), r.resourceRevision.Load(), w.ViewportWidth, w.ViewportHeight, r.selectorTargetID, environment.Preferences.ColorScheme, environment.Preferences.ReducedMotion, environment.Display.DeviceScaleFactor, r.documentBaseURL())
 }
 
 func (r *Realm) prepareBlitz() (resultErr error) {
@@ -268,13 +268,14 @@ func (r *Realm) prepareBlitz() (resultErr error) {
 		return nil
 	}
 	var inputs struct {
-		Unsupported     string                 `json:"unsupported"`
-		RestyleOnChange bool                   `json:"restyleOnChange"`
-		States          []blitzElementState    `json:"states"`
-		Sheets          []blitzStylesheetInput `json:"sheets"`
-		SheetRevision   uint64                 `json:"sheetRevision"`
-		SheetsUnchanged bool                   `json:"sheetsUnchanged"`
-		Controls        []blitzControlValue    `json:"controls"`
+		Unsupported          string                 `json:"unsupported"`
+		RestyleOnChange      bool                   `json:"restyleOnChange"`
+		States               []blitzElementState    `json:"states"`
+		Sheets               []blitzStylesheetInput `json:"sheets"`
+		SheetRevision        uint64                 `json:"sheetRevision"`
+		SheetsUnchanged      bool                   `json:"sheetsUnchanged"`
+		AuthorScrollbarWidth *float64               `json:"authorScrollbarWidth"`
+		Controls             []blitzControlValue    `json:"controls"`
 	}
 	if r.blitzInputs == nil {
 		return fmt.Errorf("blitz: owner input adapter not initialized")
@@ -397,6 +398,13 @@ func (r *Realm) prepareBlitz() (resultErr error) {
 		state.sheetInputRevision = inputs.SheetRevision
 	}
 	accounting.mark("sheets")
+	scrollbarWidth := -1.0
+	if inputs.AuthorScrollbarWidth != nil {
+		scrollbarWidth = *inputs.AuthorScrollbarWidth
+	}
+	if err := state.document.Owner.AuthorScrollbarWidth(scrollbarWidth); err != nil {
+		return err
+	}
 	currentStates := make(map[uint64]blitzElementState, len(inputs.States)+1)
 	for _, element := range inputs.States {
 		currentStates[element.ID] = element
@@ -428,11 +436,17 @@ func (r *Realm) prepareBlitz() (resultErr error) {
 	}
 	accounting.mark("controls")
 	if inputs.RestyleOnChange {
-		// Rematch reverse dependencies once per changed canonical epoch while
-		// retaining nodes, parsed stylesheets and fonts. Clean reads return at
-		// the key fast path above; they never pay for another style traversal.
-		if err := state.document.Owner.RestyleSubtree(); err != nil {
+		dirty, err := state.document.Owner.IsDirty()
+		if err != nil {
 			return err
+		}
+		if dirty {
+			// Rematch reverse dependencies once per changed canonical epoch while
+			// retaining nodes, parsed stylesheets and fonts. Clean reads return at
+			// the key fast path above; they never pay for another style traversal.
+			if err := state.document.Owner.RestyleSubtree(); err != nil {
+				return err
+			}
 		}
 	}
 	generation, err := state.document.Owner.Resolve(0)

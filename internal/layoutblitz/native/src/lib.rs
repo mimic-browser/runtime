@@ -25,6 +25,7 @@ pub struct Owner {
     color_scheme: ColorScheme,
     viewport_width: u32,
     viewport_height: u32,
+    author_scrollbar_width: Option<f32>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -51,6 +52,9 @@ pub struct Rect {
 }
 
 impl Owner {
+    pub fn is_dirty(&self) -> bool {
+        self.dirty
+    }
     pub fn new(root: u64, width: u32, height: u32) -> Self {
         // Parsing is process policy, not mutable Page state. The pinned Stylo
         // defaults disable :has(); reverse invalidation is handled by Mimic's
@@ -73,6 +77,7 @@ impl Owner {
             color_scheme: ColorScheme::Light,
             viewport_width: width,
             viewport_height: height,
+            author_scrollbar_width: None,
         }
     }
 
@@ -193,6 +198,14 @@ impl Owner {
         self.dirty = true;
     }
 
+    pub fn author_scrollbar_width(&mut self, width: f32) {
+        let width = if width.is_finite() && width >= 0.0 { Some(width) } else { None };
+        if self.author_scrollbar_width != width {
+            self.author_scrollbar_width = width;
+            self.dirty = true;
+        }
+    }
+
     pub fn color_scheme(&mut self, dark: bool) {
         let scheme = if dark {
             ColorScheme::Dark
@@ -277,7 +290,7 @@ impl Owner {
                 || ((overflow == "auto" || overflow == "visible")
                     && self.document.get_node(root).unwrap().scroll_height() > height)
             {
-                if scrollbar_width == "thin" { 10.0 } else { 15.0 }
+                if scrollbar_width == "thin" { 10.0 } else { self.author_scrollbar_width.unwrap_or(15.0) }
             } else {
                 0.0
             };
