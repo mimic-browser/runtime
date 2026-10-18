@@ -64,12 +64,23 @@ func (r *Realm) elementRequest(u *url.URL, attributes map[string]string, initiat
 		}
 	}
 	request := network.Request{Credentials: credentials, ContextID: r.agent.ContextID(), URL: u, Referrer: referrer, SourceURL: r.documentURL(), Headers: headers, Initiator: initiator, Mode: mode}
+	request.FetchPriority = attributes["fetchpriority"]
 	if initiator == network.Image {
 		request.ContentPolicyDirective = "img-src"
 		request.ContentPolicy = r.contentPolicy()
 		request.ContentPolicyURL = r.documentURL()
 	}
 	r.applyClientHints(&request)
+	return request
+}
+
+// Parser script scheduling is an element property. An explicit link preload
+// with as=script must not inherit unrelated async/defer attributes from a link.
+func (r *Realm) parserScriptRequest(u *url.URL, attributes map[string]string) network.Request {
+	request := r.elementRequest(u, attributes, network.Script)
+	_, async := attributes["async"]
+	_, deferred := attributes["defer"]
+	request.ScriptNonBlocking = async || (deferred && scriptExecutionKind(attributes["type"], attributes["language"]) == "classic")
 	return request
 }
 

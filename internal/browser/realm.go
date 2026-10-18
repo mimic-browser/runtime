@@ -3053,6 +3053,9 @@ func (r *Realm) prepareConnectedResource(childID int64, loadCallback, errorCallb
 		}
 	}
 	request := r.elementRequest(u, node.Attributes, initiator)
+	if tag == "SCRIPT" {
+		request.ScriptNonBlocking = true
+	}
 	var ordered *orderedScript
 	orderOwner := r
 	if r.mainWorld != nil {

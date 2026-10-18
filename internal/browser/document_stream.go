@@ -226,7 +226,7 @@ func (r *Realm) executeStreamScript(s *documentStream, node dom.Node) error {
 		if loaded == nil {
 			loaded = &streamScriptResponse{}
 			s.scripts[node.ID] = loaded
-			request := r.elementRequest(u, node.Attributes, network.Script)
+			request := r.parserScriptRequest(u, node.Attributes)
 			integrity := node.Attributes["integrity"]
 			eventLoop := r.browserEventLoop()
 			r.resourceWG.Add(1)

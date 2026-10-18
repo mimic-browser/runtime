@@ -98,6 +98,10 @@ type Request struct {
 	AuthorHeaderOrder []string
 	Body              []byte
 	Initiator         Initiator
+	// Browser-owned scheduling inputs, captured before asynchronous dispatch.
+	// These never come from an author HTTP Priority header.
+	ScriptNonBlocking bool   `json:"-"`
+	FetchPriority     string `json:"-"`
 	// Mode and Destination are Fetch-layer properties, not transport guesses.
 	// They are populated by browser consumers when an element changes the
 	// default request mode (for example, a crossorigin classic script).
@@ -700,7 +704,8 @@ func (l *Loader) Load(ctx context.Context, r Request) (response Response, loadEr
 	if _, observed := l.transport.(interface{ WantsResourceMetadata() }); observed {
 		req = req.WithContext(context.WithValue(req.Context(), resourceRequestKey{}, r))
 	}
-	req = req.WithContext(withBrowserHeaderLayout(req.Context(), r.Initiator, r.AuthorHeaderOrder))
+	requestContext := withBrowserHeaderLayout(req.Context(), r.Initiator, r.AuthorHeaderOrder)
+	req = req.WithContext(withBrowserRequestPriority(requestContext, r))
 	req = req.WithContext(withTransportTiming(httptrace.WithClientTrace(req.Context(), timing.standardTrace()), timing))
 	raw, err := l.roundTrip(req)
 	if err != nil {

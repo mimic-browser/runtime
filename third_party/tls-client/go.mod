@@ -35,4 +35,4 @@ replace github.com/bogdanfinn/quic-go-utls => ../quic-go-utls
 
 //replace github.com/bogdanfinn/websocket => ../websocket
 
-//replace github.com/bogdanfinn/fhttp => ../fhttp
+replace github.com/bogdanfinn/fhttp => ../fhttp

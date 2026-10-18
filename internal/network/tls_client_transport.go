@@ -14,6 +14,7 @@ import (
 	"unicode/utf16"
 
 	fhttp "github.com/bogdanfinn/fhttp"
+	fhttp2 "github.com/bogdanfinn/fhttp/http2"
 	fhttptrace "github.com/bogdanfinn/fhttp/httptrace"
 	tls_client "github.com/bogdanfinn/tls-client"
 	"github.com/bogdanfinn/tls-client/profiles"
@@ -169,6 +170,13 @@ func (t *TLSClientTransport) roundTrip(request *http.Request, client tls_client.
 		nativeRequest.Header[name] = append([]string(nil), values...)
 	}
 	initiator, authorOrder := browserHeaderLayout(request.Context())
+	// The browser owns network priority; an author Priority header is wire data
+	// and must not change the connection's dependency graph.
+	priority, ok := request.Context().Value(browserRequestPriorityKey{}).(fhttp2.RequestPriority)
+	if !ok {
+		priority = browserRequestPriority(Request{Initiator: initiator})
+	}
+	nativeRequest = nativeRequest.WithContext(fhttp2.WithRequestPriority(nativeRequest.Context(), priority))
 	orderHeaders := request.Header.Clone()
 	if len(body) > 0 && orderHeaders.Get("Content-Length") == "" {
 		orderHeaders.Set("Content-Length", "0") // order marker; fhttp writes the actual length
@@ -272,6 +280,50 @@ func requestBytes(request *http.Request) ([]byte, error) {
 	}
 	request.Body = io.NopCloser(bytes.NewReader(body))
 	return body, nil
+}
+
+type browserRequestPriorityKey struct{}
+
+func withBrowserRequestPriority(ctx context.Context, request Request) context.Context {
+	return context.WithValue(ctx, browserRequestPriorityKey{}, browserRequestPriority(request))
+}
+
+func browserRequestPriority(request Request) fhttp2.RequestPriority {
+	highHint := strings.EqualFold(request.FetchPriority, "high")
+	lowHint := strings.EqualFold(request.FetchPriority, "low")
+	if request.Destination == "font" || request.Kind == "font" {
+		return fhttp2.PriorityVeryHigh
+	}
+	switch request.Initiator {
+	case Navigation, Iframe:
+		return fhttp2.PriorityVeryHigh
+	case Stylesheet:
+		if lowHint {
+			return fhttp2.PriorityHigh
+		}
+		return fhttp2.PriorityVeryHigh
+	case Script:
+		// Parser-blocking scripts keep their High floor even with a low hint.
+		// Async, defer and dynamically inserted scripts start at Low; a high
+		// hint raises them without changing execution or parser ordering.
+		if request.ScriptNonBlocking && !highHint {
+			return fhttp2.PriorityLow
+		}
+		return fhttp2.PriorityHigh
+	case Image:
+		switch {
+		case highHint:
+			return fhttp2.PriorityHigh
+		case lowHint:
+			return fhttp2.PriorityLow
+		}
+		return fhttp2.PriorityMedium
+	default:
+		if lowHint {
+			return fhttp2.PriorityLow
+		}
+		return fhttp2.PriorityHigh
+	}
 }
 
 type browserHeaderLayoutKey struct{}

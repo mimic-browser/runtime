@@ -91,8 +91,11 @@ type Transport struct {
 	// uncompressed.
 	DisableCompression bool
 
-	HeaderPriority  *PriorityParam
-	HeaderTableSize uint32 // if nil, will use global initialHeaderTableSize
+	HeaderPriority *PriorityParam
+	// NewHeaderPriorities owns per-connection stream dependency state. Calls
+	// run under ClientConn.mu; callbacks must not enter application code.
+	NewHeaderPriorities func() HeaderPriorities
+	HeaderTableSize     uint32 // if nil, will use global initialHeaderTableSize
 
 	// IdleConnTimeout is the maximum amount of time an idle (keep-alive)
 	// connection will remain idle before closing itself. Zero means no limit.
@@ -308,14 +311,15 @@ func (t *Transport) initConnPool() {
 // ClientConn is the state of a single HTTP/2 client connection to an
 // HTTP/2 server.
 type ClientConn struct {
-	br         *bufio.Reader
-	bw         *bufio.Writer
-	closed     bool
-	closing    bool
-	cond       *sync.Cond // hold mu; broadcast on flow/closed changes
-	dialedAddr string     // addr dialed to create tconn; not set with NewClientConn
-	flow       flow       // our conn-level flow control quota (cs.flow is per stream)
-	fr         *Framer
+	headerPriorities HeaderPriorities
+	br               *bufio.Reader
+	bw               *bufio.Writer
+	closed           bool
+	closing          bool
+	cond             *sync.Cond // hold mu; broadcast on flow/closed changes
+	dialedAddr       string     // addr dialed to create tconn; not set with NewClientConn
+	flow             flow       // our conn-level flow control quota (cs.flow is per stream)
+	fr               *Framer
 
 	goAway      *GoAwayFrame // if non-nil, the GoAwayFrame we received
 	goAwayDebug string       // goAway frame's debug data, retained as a string
@@ -772,6 +776,10 @@ func (t *Transport) newClientConn(c net.Conn, addr string, singleUse bool) (*Cli
 		pings:                 make(map[[8]byte]chan struct{}),
 	}
 
+	if t.NewHeaderPriorities != nil {
+		cc.headerPriorities = t.NewHeaderPriorities()
+	}
+
 	// ------------------------------------------------------------------
 	// FIX: Initialize dynamic flow control variables correctly
 	// ------------------------------------------------------------------
@@ -1106,6 +1114,9 @@ func (cc *ClientConn) closeForError(err error) error {
 		}
 		cs.bufPipe.CloseWithError(err)
 		delete(cc.streams, id)
+		if cc.headerPriorities != nil {
+			cc.headerPriorities.CloseStream(id)
+		}
 	}
 	cc.closed = true
 
@@ -1239,6 +1250,11 @@ func (cc *ClientConn) roundTrip(req *http.Request) (res *http.Response, gotErrAf
 
 	cs := cc.newStream()
 	cs.req = req
+	var priority *PriorityParam
+	if cc.headerPriorities != nil {
+		value := cc.headerPriorities.OpenStream(req, cs.ID)
+		priority = &value
+	}
 	cs.trace = httptrace.ContextClientTrace(req.Context())
 	cs.requestedGzip = requestedGzip
 	bodyWriter := cc.t.getBodyWriterState(cs, body)
@@ -1255,7 +1271,7 @@ func (cc *ClientConn) roundTrip(req *http.Request) (res *http.Response, gotErrAf
 
 	cc.wmu.Lock()
 	endStream := !hasBody && !hasTrailers
-	werr := cc.writeHeaders(cs.ID, endStream, int(cc.maxFrameSize), hdrs)
+	werr := cc.writeHeaders(cs.ID, endStream, int(cc.maxFrameSize), hdrs, priority)
 	cc.wmu.Unlock()
 	traceWroteHeaders(cs.trace)
 	cc.mu.Unlock()
@@ -1425,7 +1441,7 @@ func (cc *ClientConn) awaitOpenSlotForRequest(req *http.Request) error {
 }
 
 // requires cc.wmu be held
-func (cc *ClientConn) writeHeaders(streamID uint32, endStream bool, maxFrameSize int, hdrs []byte) error {
+func (cc *ClientConn) writeHeaders(streamID uint32, endStream bool, maxFrameSize int, hdrs []byte, priority *PriorityParam) error {
 	first := true // first frame written (HEADERS is first, then CONTINUATION)
 	for len(hdrs) > 0 && cc.werr == nil {
 		chunk := hdrs
@@ -1443,6 +1459,9 @@ func (cc *ClientConn) writeHeaders(streamID uint32, endStream bool, maxFrameSize
 
 			if cc.t.HeaderPriority != nil {
 				defaultHeaderPriorityParam = *cc.t.HeaderPriority
+			}
+			if priority != nil {
+				defaultHeaderPriorityParam = *priority
 			}
 
 			cc.fr.WriteHeaders(HeadersFrameParam{
@@ -1656,7 +1675,7 @@ func (cs *clientStream) writeRequestBody(body io.Reader, bodyCloser io.Closer) (
 	// Two ways to send END_STREAM: either with trailers, or
 	// with an empty DATA frame.
 	if len(trls) > 0 {
-		err = cc.writeHeaders(cs.ID, true, maxFrameSize, trls)
+		err = cc.writeHeaders(cs.ID, true, maxFrameSize, trls, nil)
 	} else {
 		err = cc.fr.WriteData(cs.ID, true, nil)
 	}
@@ -2037,6 +2056,9 @@ func (cc *ClientConn) streamByID(id uint32, andRemove bool) *clientStream {
 	if andRemove && cs != nil && !cc.closed {
 		cc.lastActive = time.Now()
 		delete(cc.streams, id)
+		if cc.headerPriorities != nil {
+			cc.headerPriorities.CloseStream(id)
+		}
 		if len(cc.streams) == 0 && cc.idleTimer != nil {
 			cc.idleTimer.Reset(cc.idleTimeout)
 			cc.lastIdle = time.Now()

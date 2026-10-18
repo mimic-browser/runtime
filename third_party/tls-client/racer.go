@@ -136,35 +136,38 @@ func (pr *protocolRacer) race(req *http.Request, addr string, getTransportFunc f
 
 func (pr *protocolRacer) getOrCreateTransport(protocol, addr string, req *http.Request, getTransportFunc func(*http.Request, string) error) (http.RoundTripper, error) {
 	transportKey := pr.getTransportKey(protocol, addr)
-
+	if protocol != "h3" {
+		// The round tripper coalesces initialization per address and publishes
+		// under its own cache lock. A TLS handshake must not own the global map.
+		for {
+			pr.cachedTransportsLck.Lock()
+			cached := pr.cachedTransports[transportKey]
+			pr.cachedTransportsLck.Unlock()
+			if cached != nil {
+				return cached, nil
+			}
+			if err := getTransportFunc(req, transportKey); err != nil {
+				return nil, err
+			}
+			pr.cachedTransportsLck.Lock()
+			transport := pr.cachedTransports[transportKey]
+			pr.cachedTransportsLck.Unlock()
+			if transport != nil {
+				return transport, nil
+			}
+		}
+	}
 	pr.cachedTransportsLck.Lock()
 	defer pr.cachedTransportsLck.Unlock()
-
 	if transport, exists := pr.cachedTransports[transportKey]; exists {
 		return transport, nil
 	}
-
-	transport, err := pr.createTransportForProtocol(protocol, addr, req, getTransportFunc)
+	transport, err := buildHTTP3Transport(pr.getHTTP3Config())
 	if err != nil {
 		return nil, err
 	}
-
 	pr.cachedTransports[transportKey] = transport
 	return transport, nil
-}
-
-func (pr *protocolRacer) createTransportForProtocol(protocol, addr string, req *http.Request, getTransportFunc func(*http.Request, string) error) (http.RoundTripper, error) {
-	if protocol == "h3" {
-		return buildHTTP3Transport(pr.getHTTP3Config())
-	}
-
-	// For HTTP/2, use the standard transport creation
-	transportKey := pr.getTransportKey(protocol, addr)
-	if err := getTransportFunc(req, transportKey); err != nil {
-		return nil, err
-	}
-
-	return pr.cachedTransports[transportKey], nil
 }
 
 func (pr *protocolRacer) startRace(req *http.Request, addr string, getTransportFunc func(*http.Request, string) error) (*http.Response, error) {

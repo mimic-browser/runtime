@@ -52,14 +52,13 @@ type roundTripper struct {
 	// strings would throw away a perfectly good transport when a load balancer
 	// omits ALPN on one connection.
 	//
-	// It has a mutex of its own rather than sharing cachedTransportsLck, because
-	// dialTLS runs both with that lock held, on the first dial through
-	// getTransport, and without it, on a reconnect from the transport's own
-	// dialer. Taking it here would deadlock the first of those.
+	// Reconnects inspect the negotiated kind without holding the transport map
+	// lock. Publication and eviction take the map lock before this mutex.
 	cachedKinds    map[string]transportKind
 	cachedKindsLck sync.Mutex
 
 	headerPriority      *http2.PriorityParam
+	headerPriorities    func() http2.HeaderPriorities
 	settings            map[http2.SettingID]uint32
 	transportOptions    *TransportOptions
 	serverNameOverwrite string
@@ -69,6 +68,7 @@ type roundTripper struct {
 	sync.Mutex
 
 	cachedTransportsLck sync.Mutex
+	transportSelections map[string]chan struct{}
 	connectionFlow      uint32
 
 	forceHttp1   bool
@@ -158,12 +158,11 @@ func (rt *roundTripper) dropCachedTransport(addr string, stale http.RoundTripper
 	rt.cachedTransportsLck.Lock()
 	if rt.cachedTransports[addr] == stale {
 		delete(rt.cachedTransports, addr)
+		rt.cachedKindsLck.Lock()
+		delete(rt.cachedKinds, addr)
+		rt.cachedKindsLck.Unlock()
 	}
 	rt.cachedTransportsLck.Unlock()
-
-	rt.cachedKindsLck.Lock()
-	delete(rt.cachedKinds, addr)
-	rt.cachedKindsLck.Unlock()
 
 	if closer, ok := stale.(interface{ CloseIdleConnections() }); ok {
 		closer.CloseIdleConnections()
@@ -318,21 +317,18 @@ func (rt *roundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 		return rt.racer.race(req, addr, rt.getTransport)
 	}
 
-	rt.cachedTransportsLck.Lock()
-	if _, ok := rt.cachedTransports[addr]; !ok {
+	var t http.RoundTripper
+	for t == nil {
 		if err := rt.getTransport(req, addr); err != nil {
-			rt.cachedTransportsLck.Unlock()
-
 			if errors.Is(err, ErrBadPinDetected) && rt.badPinHandlerFunc != nil {
 				rt.badPinHandlerFunc(req)
 			}
-
 			return nil, err
 		}
+		rt.cachedTransportsLck.Lock()
+		t = rt.cachedTransports[addr]
+		rt.cachedTransportsLck.Unlock()
 	}
-
-	t := rt.cachedTransports[addr]
-	rt.cachedTransportsLck.Unlock()
 
 	resp, err := t.RoundTrip(req)
 	if err != nil && errors.Is(err, errProtocolChanged) {
@@ -342,10 +338,48 @@ func (rt *roundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	return resp, err
 }
 
+// Share initialization only within one address. Never hold the cache lock
+// across DNS, TCP or TLS: an unrelated origin may be stalled indefinitely.
 func (rt *roundTripper) getTransport(req *http.Request, addr string) error {
+	for {
+		if err := req.Context().Err(); err != nil {
+			return err
+		}
+		rt.cachedTransportsLck.Lock()
+		if rt.cachedTransports[addr] != nil {
+			rt.cachedTransportsLck.Unlock()
+			return nil
+		}
+		if pending := rt.transportSelections[addr]; pending != nil {
+			rt.cachedTransportsLck.Unlock()
+			select {
+			case <-pending:
+				continue
+			case <-req.Context().Done():
+				return req.Context().Err()
+			}
+		}
+		if rt.transportSelections == nil {
+			rt.transportSelections = make(map[string]chan struct{})
+		}
+		pending := make(chan struct{})
+		rt.transportSelections[addr] = pending
+		rt.cachedTransportsLck.Unlock()
+		err := rt.initializeTransport(req, addr)
+		rt.cachedTransportsLck.Lock()
+		delete(rt.transportSelections, addr)
+		close(pending)
+		rt.cachedTransportsLck.Unlock()
+		return err
+	}
+}
+
+func (rt *roundTripper) initializeTransport(req *http.Request, addr string) error {
 	switch strings.ToLower(req.URL.Scheme) {
 	case "http":
+		rt.cachedTransportsLck.Lock()
 		rt.cachedTransports[addr] = rt.buildHttp1Transport()
+		rt.cachedTransportsLck.Unlock()
 		return nil
 	case "https":
 	default:
@@ -367,15 +401,15 @@ func (rt *roundTripper) getTransport(req *http.Request, addr string) error {
 
 func (rt *roundTripper) dialTLS(ctx context.Context, network, addr string) (net.Conn, error) {
 	rt.Lock()
-	defer rt.Unlock()
 
 	// If we have the connection from when we determined the HTTPS
 	// cachedTransports to use, return that.
 	if conn := rt.cachedConnections[addr]; conn != nil {
 		delete(rt.cachedConnections, addr)
-
+		rt.Unlock()
 		return conn, nil
 	}
+	rt.Unlock()
 
 	if network == "tcp" && rt.disableIPV6 {
 		network = "tcp4"
@@ -452,6 +486,7 @@ func (rt *roundTripper) dialTLS(ctx context.Context, network, addr string) (net.
 	// No usable http.Transport for this address yet, create one based on the
 	// results of ALPN if no http1 is enforced.
 
+	var transport http.RoundTripper
 	switch negotiatedProtocol {
 	case http2.NextProtoTLS:
 		utlsConfig := &tls.Config{ClientSessionCache: rt.clientSessionCache, InsecureSkipVerify: rt.insecureSkipVerify, OmitEmptyPsk: true}
@@ -471,13 +506,17 @@ func (rt *roundTripper) dialTLS(ctx context.Context, network, addr string) (net.
 		}
 
 		t2 := http2.Transport{
-			DialTLS:         rt.dialTLSHTTP2,
-			TLSClientConfig: utlsConfig,
-			ConnectionFlow:  rt.connectionFlow,
-			HeaderPriority:  rt.headerPriority,
-			IdleConnTimeout: idleConnectionTimeout,
-			InitialStreamID: rt.initialStreamID,
-			AllowHTTP:       rt.allowHTTP,
+			DialTLS:             rt.dialTLSHTTP2,
+			TLSClientConfig:     utlsConfig,
+			ConnectionFlow:      rt.connectionFlow,
+			HeaderPriority:      rt.headerPriority,
+			NewHeaderPriorities: rt.headerPriorities,
+			IdleConnTimeout:     idleConnectionTimeout,
+			InitialStreamID:     rt.initialStreamID,
+			AllowHTTP:           rt.allowHTTP,
+			// A peer's stream limit queues work on the established session.
+			// Opening another TLS session stalls the pool and bypasses that limit.
+			StrictMaxConcurrentStreams: rt.headerPriorities != nil,
 		}
 
 		if rt.transportOptions != nil {
@@ -534,8 +573,7 @@ func (rt *roundTripper) dialTLS(ctx context.Context, network, addr string) (net.
 		t2.Priorities = rt.priorities
 
 		t2.PushHandler = &http2.DefaultPushHandler{}
-		rt.cachedTransports[addr] = &t2
-		rt.setCachedKind(addr, transportHTTP2)
+		transport = &t2
 	case http3.NextProtoH3:
 		t3, err := buildHTTP3Transport(&http3Config{
 			quicConfig:             rt.quicConfig,
@@ -553,17 +591,20 @@ func (rt *roundTripper) dialTLS(ctx context.Context, network, addr string) (net.
 		if err != nil {
 			return nil, err
 		}
-		rt.cachedTransports[addr] = t3
-		rt.setCachedKind(addr, transportHTTP3)
+		transport = t3
 	default:
-		rt.cachedTransports[addr] = rt.buildHttp1Transport()
-		rt.setCachedKind(addr, transportHTTP1)
+		transport = rt.buildHttp1Transport()
 	}
 
 	// Stash the connection just established for use servicing the
 	// actual request (should be near-immediate).
+	rt.Lock()
 	rt.cachedConnections[addr] = conn
-
+	rt.Unlock()
+	rt.cachedTransportsLck.Lock()
+	rt.setCachedKind(addr, negotiatedKind)
+	rt.cachedTransports[addr] = transport
+	rt.cachedTransportsLck.Unlock()
 	return nil, errProtocolNegotiated
 }
 
@@ -705,6 +746,7 @@ func newRoundTripper(clientProfile profiles.ClientProfile, transportOptions *Tra
 		settingsOrder:               clientProfile.GetSettingsOrder(),
 		priorities:                  clientProfile.GetPriorities(),
 		headerPriority:              clientProfile.GetHeaderPriority(),
+		headerPriorities:            clientProfile.GetHeaderPriorities(),
 		pseudoHeaderOrder:           clientProfile.GetPseudoHeaderOrder(),
 		insecureSkipVerify:          insecureSkipVerify,
 		forceHttp1:                  forceHttp1,

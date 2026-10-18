@@ -98,6 +98,7 @@ type ClientProfile struct {
 	quicConfigFactory      func() *quic.Config
 	clientHelloId          tls.ClientHelloID
 	headerPriority         *http2.PriorityParam
+	headerPriorities       func() http2.HeaderPriorities
 	settings               map[http2.SettingID]uint32
 	settingsOrder          []http2.SettingID
 	priorities             []http2.Priority
@@ -209,3 +210,5 @@ func (c ClientProfile) GetQUICConfig() *quic.Config {
 	}
 	return c.quicConfigFactory()
 }
+
+func (c ClientProfile) GetHeaderPriorities() func() http2.HeaderPriorities { return c.headerPriorities }

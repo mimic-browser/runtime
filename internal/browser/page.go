@@ -754,7 +754,7 @@ func (p *Page) commitNavigationResponse(ctx, taskContext context.Context, u *url
 			if !realm.allowsScript(su, false, false, s.Nonce) {
 				return nil
 			}
-			request := realm.elementRequest(su, s.Attributes, network.Script)
+			request := realm.parserScriptRequest(su, s.Attributes)
 			if _, crossOrigin := s.Attributes["crossorigin"]; crossOrigin || kind == "module" {
 				request.Mode = "cors"
 				if !strings.EqualFold(s.Attributes["crossorigin"], "use-credentials") {

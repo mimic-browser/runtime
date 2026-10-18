@@ -170,3 +170,36 @@ Pass fresh `--before`, `--after`, the pinned `--chrome` executable, and a new
 Use `--cases static:100 --order before after` for a bounded repeated comparison.
 The output records binary hashes, per-Page latency, wave throughput and RSS
 before/while targets are retained/250 ms after teardown, without forced GC.
+
+## HTTP/2 critical-resource scheduling
+
+`TestHTTP2PriorityPageWorkload` is an optional local SDK diagnostic. It uses an
+HTTP/2 server with a priority write scheduler, a three-millisecond delay per
+connection write, sixteen asynchronous 512 KiB scripts, a stylesheet with 32 KiB
+of padding, and a parser-blocking script. The blocking script verifies that the
+stylesheet has applied. Every run then waits for all nineteen requests and all
+asynchronous scripts before closing the Page. Nothing is blocked or omitted.
+
+Provide fresh control/candidate executables and a client project containing
+`mimic-browser` with its Playwright dependencies. For example, from this checkout
+in PowerShell:
+
+```powershell
+$env:MIMIC_PRIORITY_PAGE_SCRIPT = (Resolve-Path tools/performance/http2_priority_page.mjs).Path
+$env:MIMIC_PRIORITY_CLIENT_DIR = 'C:\bench\client'
+$env:MIMIC_PRIORITY_CONTROL = 'C:\bench\control.exe'
+$env:MIMIC_PRIORITY_CANDIDATE = 'C:\bench\candidate.exe'
+$env:MIMIC_PRIORITY_OUTPUT = Join-Path (Get-Location) '.build/http2-priority'
+python tools/testing/run_focused.py ./internal/network --run '^TestHTTP2PriorityPageWorkload$'
+```
+
+The default is five alternating fresh-process pairs; `MIMIC_PRIORITY_ROUNDS`
+changes the count. The JSON output retains binary SHA-256 identities, every
+navigation and complete-load time, resource counts, results and JavaScript
+errors. Keep the output in ignored local storage and preserve failed logs.
+
+This is a network-modified scheduling diagnostic: its self-signed loopback
+certificate is accepted explicitly through CDP. It is not a trusted-server
+acceptance oracle or a replacement for the unchanged live workload. The fixed
+pacing intentionally exposes HTTP/2 queueing; it does not establish Internet
+latency or general throughput gains.

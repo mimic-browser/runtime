@@ -3,6 +3,77 @@
 Mimic's performance claims describe specific measured workloads. They do not
 establish a universal speedup over Chrome or complete website compatibility.
 
+## Transport isolation and critical-resource scheduling
+
+Transport initialization coalesces only requests for the same address. DNS,
+TCP and TLS work no longer holds a transport-map or cached-socket lock across
+unrelated origins. Protocol selection still races connections; application
+requests and POST bodies are submitted once.
+
+The Chrome 152 HTTP/2 profile queues at the peer's stream limit instead of
+dialing additional sessions. Each connection owns its active stream dependency
+graph. Initial priorities distinguish blocking scripts from async, defer and
+dynamically inserted scripts, and preserve supported element hints independently
+of author HTTP Priority headers. State is removed on completion, cancellation
+and connection failure. This is not a complete model of viewport-based or later
+request reprioritization.
+
+Conservative parser lookahead discovers stylesheet links alongside classic
+scripts, through the existing preload registry and security checks. Only the
+normal parser inserts the link, applies its sheet and dispatches events. Focused
+tests cover top-level and frame parsing, script/microtask ordering, stylesheet
+reuse, queued cancellation, HTTP/1 and HTTP/2 origin isolation, protocol changes,
+request-body ownership and initial HTTP/2 wire priorities.
+
+Wire expectations come from directly launched, headful Chrome 152.0.7977.82
+with its original `navigator.webdriver === false`. Loopback wire fixtures
+explicitly accepted a self-signed certificate through CDP: these are
+network-modified priority diagnostics, not trusted-server acceptance oracles.
+
+Control SHA-256:
+`33eedecbf77f95717525de1503188e3aca5f41d48908de12539aec983f2e413e`.
+Candidate SHA-256:
+`d616166652611caa98b4c3f44990b7161d3b5516f0a04524c2d6dbfde518a26c`.
+The control includes the selector-analysis optimization below. Build commands,
+source manifests, workload hashes, raw outcomes and reference identities are
+retained with local evidence.
+
+A two-Page fixture delays one origin's TLS handshake by 1200 ms. Across three
+alternating pairs, independent warmed-origin navigation has medians of
+1236.0/33.2 ms (control/candidate); both Pages complete every time.
+
+The [reproducible HTTP/2 SDK fixture](../../tools/performance/README.md#http2-critical-resource-scheduling)
+uses fixed write pacing and five alternating fresh-process pairs. Navigation
+medians are 425.9/378.0 ms; all five paired candidate navigations improve.
+Complete-load medians are 3887.6/3862.0 ms: this shows earlier critical-resource
+completion, not a throughput gain. All nineteen requests complete, all sixteen
+async scripts execute, the blocking script sees applied CSS, and there are no
+JavaScript errors or blocked resources.
+
+The unchanged live extraction workload runs both binaries at the same executable
+path in control/candidate/candidate/control batches. All six executions per
+binary return HTTP 200 and the expected extraction. Navigation medians are
+2043.5/1865.5 ms, an 8.7% reduction; ranges are 1973-2068 and 1761-1886 ms.
+Installed Chrome 155.0.8059.80 headless has a 1369.0 ms median during candidate
+batches and remains faster. Internet variance is substantial; these samples do
+not establish a universal speedup or eliminate every network tail.
+
+Five alternating offline replay pairs, each with two fresh contexts, isolate
+runtime from acquisition. All twenty complete results are identical, with no
+missing responses or JavaScript errors. Navigation medians are 773.3/765.9 ms;
+navigation, selector wait and extraction medians are 992.3/990.7 ms. A separate
+three-pair diagnostic has six bracketed CPU samples per binary: median runtime
+CPU is 1632.8/1593.8 ms, active peak RSS is 428.8/427.4 MiB and RSS roughly
+200 ms after context closure is 301.1/298.7 MiB. Three four-Page waves complete
+all twenty-four extractions, with median wave times of 1536.4/1380.6 ms.
+These samples establish no throughput or memory reduction. CSSOM input
+construction and fallback cascade compilation remain material runtime costs.
+
+All four unchanged Wikipedia E2E workflows pass: control durations are
+10.083/9.918 s and candidate durations are 10.000/10.117 s. This small series
+does not establish a stable Wikipedia speedup. Focused Windows and Linux
+transport tests, including race checks, pass; the broad local suite was not run.
+
 ## Shared selector analysis during style indexing
 
 Style index construction parses each selector once for the leaf bucket, static
@@ -32,7 +103,7 @@ oracle. Profiling is disabled for the latency series.
 | Navigation to DOMContentLoaded | 897.9 ms | 779.1 ms |
 | Navigation, selector and extraction | 1121.1 ms | 996.9 ms |
 
-Complete extraction latency improves in every paired execution (6.2–16.0%).
+Complete extraction latency improves in every paired execution (6.2-16.0%).
 A separate three-pair diagnostic series measures repeated-context runtime CPU
 at 1953/1703 ms, active peak RSS at 434.9/420.6 MiB and post-context-teardown
 RSS at 296.5/294.0 MiB (previous/current medians). CPU uses the three repeated
@@ -42,7 +113,7 @@ median full-wave time, including context creation and teardown, is 1636/1461 ms.
 These small samples do not establish general memory or throughput gains.
 
 All eight unchanged Wikipedia E2E executions pass. Previous/current medians are
-14.601/13.234 s, with ranges 11.298–17.069/11.993–17.348 s; the variation does
+14.601/13.234 s, with ranges 11.298-17.069/11.993-17.348 s; the variation does
 not establish a stable Wikipedia improvement. Focused Goja/V8 tests cover
 ancestor and relational dependencies, attribute and CSSOM mutations, escaped
 selectors, unsupported-selector handling, cross-realm reads and navigation.

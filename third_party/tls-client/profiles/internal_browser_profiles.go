@@ -6,6 +6,7 @@ import (
 )
 
 var Chrome_152_PSK = ClientProfile{
+	headerPriorities:  newChrome152HeaderPriorities,
 	quicConfigFactory: chrome152QUICConfig,
 	clientHelloId: tls.ClientHelloID{
 		Client:               "Chrome",
@@ -145,6 +146,7 @@ var Chrome_152_PSK = ClientProfile{
 }
 
 var Chrome_152 = ClientProfile{
+	headerPriorities:  newChrome152HeaderPriorities,
 	quicConfigFactory: chrome152QUICConfig,
 	clientHelloId: tls.ClientHelloID{
 		Client:               "Chrome",

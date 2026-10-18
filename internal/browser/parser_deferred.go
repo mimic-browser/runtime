@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/moreveal/mimic/internal/dom"
-	"github.com/moreveal/mimic/internal/network"
 	"github.com/moreveal/mimic/internal/scheduler"
 	"github.com/moreveal/mimic/internal/trace"
 )
@@ -37,7 +36,7 @@ func (r *Realm) queueDeferredClassic(s *documentStream, node dom.Node) (bool, er
 	if !r.allowsScript(target, false, false, node.Nonce) {
 		return true, nil
 	}
-	request := r.elementRequest(target, node.Attributes, network.Script)
+	request := r.parserScriptRequest(target, node.Attributes)
 	if _, cors := node.Attributes["crossorigin"]; cors {
 		request.Mode = "cors"
 		if !strings.EqualFold(node.Attributes["crossorigin"], "use-credentials") {
