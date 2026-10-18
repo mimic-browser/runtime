@@ -1007,10 +1007,11 @@
   },
   "Runtime.callFunctionOn": {
     "status": "partial",
-    "notes": "Realm/session-owned handles, by-value JSON, promises, unserializable arguments, exceptions and context/uniqueContextId selection. Deep serialization rejects. Previews, side-effect restrictions, REPL/CLI mode, userGesture and complete debugger options are not implemented. Unnamed evaluation origins and engine-direct function entry preserve author stacks and caller observations without debugger helper frames. Requests with throwOnSideEffect=true explicitly reject without executing author code; eager preview is unavailable. Result transport serializes own data properties only; enumerable accessors and opaque Proxy/foreign values reject without executing author code. Exceptions/rejection values are retained without author coercion or lazy stack formatting.",
+    "notes": "Realm/session-owned handles, by-value JSON, promises, unserializable arguments, exceptions and context/uniqueContextId selection. Explicit JSON call arguments use ordinary target-realm Object/Array prototypes; passive metadata remains prototype-free. Deep serialization rejects. Previews, side-effect restrictions, REPL/CLI mode, userGesture and complete debugger options are not implemented. Unnamed evaluation origins and engine-direct function entry preserve author stacks and caller observations without debugger helper frames. Requests with throwOnSideEffect=true explicitly reject without executing author code; eager preview is unavailable. Result transport serializes own data properties only; enumerable accessors and opaque Proxy/foreign values reject without executing author code. Exceptions/rejection values are retained without author coercion or lazy stack formatting.",
     "tests": [
       "internal/browser/debugger_test.go#TestDebuggerRemoteValuesMatchChrome152",
       "internal/browser/debugger_test.go#TestDebuggerPreservesHandlesAndDescriptorSemantics",
+      "internal/browser/debugger_arguments_test.go#TestDebuggerCallArgumentsHaveRealmPrototypes",
       "internal/cdp/runtime_test.go#TestCDPAwaitPromiseAllowsSameSessionResolverAndMultipleWaiters",
       "internal/browser/debugger_source_boundary_test.go#TestDebuggerSourceAndInvocationBoundary",
       "internal/cdp/inspector_editing_test.go#TestInspectorEagerEvaluationDoesNotExecute",
